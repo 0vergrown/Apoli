@@ -1,0 +1,34 @@
+{
+	"schemaVersion": 1,
+	"id": "apoli",
+	"version": "${version}",
+	"name": "Apoli",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Overgrown"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/apoli/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"dev.overgrown.apoli.Apoli"
+		],
+		"client": [
+			"dev.overgrown.apoli.ApoliClient"
+		]
+	},
+	"mixins": [
+		"apoli.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.2",
+		"minecraft": "~1.20.1",
+		"java": ">=17",
+		"fabric-api": "*"
+	}
+}
