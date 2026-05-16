@@ -1,0 +1,13 @@
+{
+  "itemGroup.apoli": "Example Mod Tab",
+  "block.apoli.example_block": "Example Block",
+  "item.apoli.example_item": "Example Item",
+
+  "apoli.configuration.title": "Apoli Configs",
+  "apoli.configuration.section.apoli.common.toml": "Apoli Configs",
+  "apoli.configuration.section.apoli.common.toml.title": "Apoli Configs",
+  "apoli.configuration.items": "Item List",
+  "apoli.configuration.logDirtBlock": "Log Dirt Block",
+  "apoli.configuration.magicNumberIntroduction": "Magic Number Text",
+  "apoli.configuration.magicNumber": "Magic Number"
+}
