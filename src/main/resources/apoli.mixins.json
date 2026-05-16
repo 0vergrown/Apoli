@@ -1,0 +1,16 @@
+{
+	"required": true,
+	"package": "dev.overgrown.apoli.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [],
+	"client": [
+		"keybinding.OptionsAccessor",
+		"keybinding.KeyMappingCategoryAccessor"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
