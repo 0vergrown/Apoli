@@ -5,7 +5,11 @@ import dev.overgrown.apoli.codec.DispatchedTypeCodec;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import net.minecraft.resources.ResourceLocation;
 
-public record BiEntityCondition(ResourceLocation typeId, Object config) {
+public record BiEntityCondition(ResourceLocation typeId, Object config, boolean inverted) {
+    public BiEntityCondition(ResourceLocation typeId, Object config) {
+        this(typeId, config, false);
+    }
+
     public BiEntityCondition {
         typeId = ConditionTypes.BI_ENTITY.resolveId(typeId);
     }
@@ -15,10 +19,10 @@ public record BiEntityCondition(ResourceLocation typeId, Object config) {
         if (type == null) return true;
         @SuppressWarnings({"unchecked", "rawtypes"})
         boolean result = ((ConditionType) type).test(config, ctx);
-        return result;
+        return inverted != result;
     }
 
-    public static final Codec<BiEntityCondition> CODEC = DispatchedTypeCodec.create(
+    public static final Codec<BiEntityCondition> CODEC = DispatchedTypeCodec.createInvertible(
         "bi_entity_condition",
         id -> {
             ResourceLocation canonical = ConditionTypes.BI_ENTITY.resolveId(id);
@@ -27,6 +31,7 @@ public record BiEntityCondition(ResourceLocation typeId, Object config) {
         },
         BiEntityCondition::new,
         BiEntityCondition::typeId,
-        BiEntityCondition::config
+        BiEntityCondition::config,
+        BiEntityCondition::inverted
     );
 }

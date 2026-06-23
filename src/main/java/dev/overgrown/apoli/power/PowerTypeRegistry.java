@@ -1,8 +1,10 @@
 package dev.overgrown.apoli.power;
 
+import com.google.gson.JsonObject;
 import dev.overgrown.apoli.alias.AliasRegistry;
 import dev.overgrown.apoli.alias.AliasingMapCodec;
 import dev.overgrown.apoli.alias.AliasingOptions;
+import dev.overgrown.apoli.alias.NamespaceAlias;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
@@ -14,16 +16,47 @@ import java.util.Map;
 public final class PowerTypeRegistry {
     private static final Map<ResourceLocation, PowerType<?>> BY_ID = new HashMap<>();
     private static final AliasRegistry ALIASES = new AliasRegistry();
+    private static final Map<ResourceLocation, JsonObject> ALIAS_DEFAULTS = new HashMap<>();
+    private static final Map<ResourceLocation, Map<String, String>> ALIAS_FIELD_RENAMES = new HashMap<>();
 
     private PowerTypeRegistry() {}
 
-    /** Per-registry alias map for PowerType ids. */
+    public static void registerAliasDefaults(ResourceLocation aliasId, JsonObject defaults) {
+        ALIAS_DEFAULTS.merge(aliasId, defaults, (a, b) -> {
+            JsonObject merged = new JsonObject();
+            a.entrySet().forEach(e -> merged.add(e.getKey(), e.getValue()));
+            b.entrySet().forEach(e -> merged.add(e.getKey(), e.getValue()));
+            return merged;
+        });
+    }
+
+    public static @Nullable JsonObject aliasDefaults(ResourceLocation aliasId) {
+        return ALIAS_DEFAULTS.get(aliasId);
+    }
+
+    public static void registerAliasFieldRenames(ResourceLocation aliasId, Map<String, String> oldToNew) {
+        ALIAS_FIELD_RENAMES.merge(aliasId, Map.copyOf(oldToNew), (a, b) -> {
+            Map<String, String> merged = new HashMap<>(a);
+            merged.putAll(b);
+            return Map.copyOf(merged);
+        });
+    }
+
+    public static Map<String, String> aliasFieldRenames(ResourceLocation aliasId) {
+        return ALIAS_FIELD_RENAMES.getOrDefault(aliasId, Map.of());
+    }
+
     public static AliasRegistry aliases() {
         return ALIASES;
     }
 
     public static ResourceLocation resolveId(ResourceLocation id) {
-        return ALIASES.resolve(id);
+        ResourceLocation typeResolved = ALIASES.resolve(id);
+        if (BY_ID.containsKey(typeResolved)) return typeResolved;
+        if (NamespaceAlias.hasAlias(id.getNamespace())) {
+            return ALIASES.resolve(NamespaceAlias.resolve(id));
+        }
+        return typeResolved;
     }
 
     public static <T extends PowerType<?>> T register(ResourceLocation id, T type) {
@@ -50,7 +83,12 @@ public final class PowerTypeRegistry {
     }
 
     public static @Nullable PowerType<?> get(ResourceLocation id) {
-        return BY_ID.get(ALIASES.resolve(id));
+        PowerType<?> direct = BY_ID.get(ALIASES.resolve(id));
+        if (direct != null) return direct;
+        if (NamespaceAlias.hasAlias(id.getNamespace())) {
+            return BY_ID.get(ALIASES.resolve(NamespaceAlias.resolve(id)));
+        }
+        return null;
     }
 
     public static Map<ResourceLocation, PowerType<?>> view() {

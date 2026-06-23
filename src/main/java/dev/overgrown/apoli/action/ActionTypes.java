@@ -1,7 +1,9 @@
 package dev.overgrown.apoli.action;
 
 import dev.overgrown.apoli.action.builtin.bientity.BiEntityActions;
+import dev.overgrown.apoli.action.builtin.block.BlockActions;
 import dev.overgrown.apoli.action.builtin.entity.EntityActions;
+import dev.overgrown.apoli.action.builtin.item.ItemActions;
 import dev.overgrown.apoli.action.builtin.meta.MetaActions;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.BlockCtx;
@@ -19,6 +21,8 @@ public final class ActionTypes {
     public static void bootstrap() {
         EntityActions.register();
         BiEntityActions.register();
+        BlockActions.register();
+        ItemActions.register();
         MetaActions.registerEntity();
         MetaActions.registerBiEntity();
         MetaActions.registerBlock();

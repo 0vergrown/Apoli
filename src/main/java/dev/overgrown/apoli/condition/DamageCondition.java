@@ -5,7 +5,11 @@ import dev.overgrown.apoli.codec.DispatchedTypeCodec;
 import dev.overgrown.apoli.condition.context.DamageCtx;
 import net.minecraft.resources.ResourceLocation;
 
-public record DamageCondition(ResourceLocation typeId, Object config) {
+public record DamageCondition(ResourceLocation typeId, Object config, boolean inverted) {
+    public DamageCondition(ResourceLocation typeId, Object config) {
+        this(typeId, config, false);
+    }
+
     public DamageCondition {
         typeId = ConditionTypes.DAMAGE.resolveId(typeId);
     }
@@ -15,10 +19,10 @@ public record DamageCondition(ResourceLocation typeId, Object config) {
         if (type == null) return true;
         @SuppressWarnings({"unchecked", "rawtypes"})
         boolean result = ((ConditionType) type).test(config, ctx);
-        return result;
+        return inverted != result;
     }
 
-    public static final Codec<DamageCondition> CODEC = DispatchedTypeCodec.create(
+    public static final Codec<DamageCondition> CODEC = DispatchedTypeCodec.createInvertible(
         "damage_condition",
         id -> {
             ResourceLocation canonical = ConditionTypes.DAMAGE.resolveId(id);
@@ -27,6 +31,7 @@ public record DamageCondition(ResourceLocation typeId, Object config) {
         },
         DamageCondition::new,
         DamageCondition::typeId,
-        DamageCondition::config
+        DamageCondition::config,
+        DamageCondition::inverted
     );
 }

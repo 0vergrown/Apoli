@@ -2,11 +2,15 @@ package dev.overgrown.apoli.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.ExpressionContext;
 import dev.overgrown.apoli.data.HudRender;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
+import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.power.PowerTypeRegistry;
 import dev.overgrown.apoli.power.builtin.ActionOnKeyPressPower;
+import dev.overgrown.apoli.power.builtin.CooldownPower;
+import dev.overgrown.apoli.power.builtin.ResourcePower;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
@@ -19,8 +23,11 @@ import net.minecraft.world.entity.LivingEntity;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 @Environment(EnvType.CLIENT)
 public final class PowerHudRenderer {
@@ -28,13 +35,13 @@ public final class PowerHudRenderer {
     private static final int BAR_HEIGHT = 8;
     private static final int EMPTY_BAR_HEIGHT = 5;
     private static final int ICON_SIZE = 8;
-    private static final int BAR_INDEX_OFFSET = BAR_HEIGHT + 2; // 10
-    private static final int ICON_INDEX_OFFSET = ICON_SIZE + 1; // 9
-    private static final int ICONS_U_OFFSET = BAR_WIDTH + 2; // 73
+    private static final int BAR_INDEX_OFFSET = BAR_HEIGHT + 2;
+    private static final int ICON_INDEX_OFFSET = ICON_SIZE + 1;
+    private static final int ICONS_U_OFFSET = BAR_WIDTH + 2;
 
     private PowerHudRenderer() {}
 
-    public static void render(GuiGraphics graphics, net.minecraft.client.DeltaTracker deltaTracker) {
+    public static void render(GuiGraphics graphics, float partialTick) {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
         if (player == null || mc.options.hideGui) return;
@@ -52,17 +59,33 @@ public final class PowerHudRenderer {
         int y = graphics.guiHeight() - yOffset;
 
         EntityCtx ctx = new EntityCtx(player, player.level());
+        Map<String, Double> resourceVars = buildClientResourceVars();
 
         List<Renderable> renderables = new ArrayList<>();
         for (ResourceLocation powerId : ClientPowerState.localPowers()) {
             Power power = ApoliPowers.get(powerId);
             if (power == null) continue;
-            if (!(PowerTypeRegistry.get(power.typeId()) instanceof ActionOnKeyPressPower)) continue;
-            if (!(power.config() instanceof ActionOnKeyPressPower.Config cfg)) continue;
-            HudRender hud = cfg.hudRender();
+            PowerType<?> type = PowerTypeRegistry.get(power.typeId());
+
+            HudRender hud;
+            float fill;
+
+            if (type instanceof ActionOnKeyPressPower && power.config() instanceof ActionOnKeyPressPower.Config cfg) {
+                if (ClientPowerState.getCooldown(powerId) <= 0) continue;
+                hud = cfg.hudRender();
+                fill = cooldownFill(powerId, cfg);
+            } else if (type instanceof CooldownPower && power.config() instanceof ResourcePower.Cfg cfg) {
+                hud = cfg.hudRender();
+                fill = 1.0F - resourceFill(player, powerId, cfg, resourceVars);
+            } else if (type instanceof ResourcePower && power.config() instanceof ResourcePower.Cfg cfg) {
+                hud = cfg.hudRender();
+                fill = resourceFill(player, powerId, cfg, resourceVars);
+            } else {
+                continue;
+            }
+
             Optional<HudRender.Entry> selected = hud.select(ctx);
             if (selected.isEmpty()) continue;
-            float fill = cooldownFill(powerId, cfg);
             int order = selected.get().order().orElse(0);
             renderables.add(new Renderable(selected.get(), fill, order));
         }
@@ -78,6 +101,23 @@ public final class PowerHudRenderer {
         int remaining = ClientPowerState.getCooldown(powerId);
         if (cfg.cooldown() <= 0) return 1.0F;
         return 1.0F - (remaining / (float) cfg.cooldown());
+    }
+
+    private static float resourceFill(LocalPlayer player, ResourceLocation powerId, ResourcePower.Cfg cfg, Map<String, Double> resourceVars) {
+        OptionalInt cur = ClientPowerState.getAuxInt(powerId);
+        if (cur.isEmpty()) return 0.0F;
+        int value = cur.getAsInt();
+        Map<String, Double> vars = ExpressionContext.forResource(player, value);
+        int min = cfg.min().evalInt(vars, resourceVars);
+        int max = cfg.max().evalInt(vars, resourceVars);
+        if (max == min) return value >= max ? 1.0F : 0.0F;
+        return Mth.clamp((value - min) / (float) (max - min), 0.0F, 1.0F);
+    }
+
+    private static Map<String, Double> buildClientResourceVars() {
+        Map<String, Double> out = new HashMap<>();
+        ClientPowerState.localAuxInt().forEach((id, v) -> out.put(id.toString(), v.doubleValue()));
+        return out;
     }
 
     private static void drawEntry(GuiGraphics graphics, int x, int y, HudRender.Entry entry, float fill) {

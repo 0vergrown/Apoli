@@ -3,8 +3,10 @@ package dev.overgrown.apoli.power;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
@@ -16,17 +18,51 @@ import java.util.Set;
 
 public final class PowerContainerImpl implements PowerContainer {
     private final Map<ResourceLocation, Set<ResourceLocation>> bySources = new HashMap<>();
-    private @Nullable LivingEntity owner;
+    private final Map<ResourceLocation, Integer> auxInt = new HashMap<>();
+    private final Map<ResourceLocation, CompoundTag> auxNbt = new HashMap<>();
+    private final Map<ResourceLocation, Set<ResourceLocation>> suppressedBySources = new HashMap<>();
+    private @Nullable Entity owner;
     private boolean dirty;
+    private boolean structureDirty;
 
     public PowerContainerImpl() {}
 
-    public void attachOwner(LivingEntity entity) {
+    public java.util.OptionalInt getAuxInt(ResourceLocation powerId) {
+        Integer v = auxInt.get(powerId);
+        return v == null ? java.util.OptionalInt.empty() : java.util.OptionalInt.of(v);
+    }
+
+    public void setAuxInt(ResourceLocation powerId, int value) {
+        Integer prev = auxInt.put(powerId, value);
+        if (prev == null || prev != value) markDirty();
+    }
+
+    public void removeAux(ResourceLocation powerId) {
+        boolean changed = auxInt.remove(powerId) != null;
+        if (auxNbt.remove(powerId) != null) changed = true;
+        if (changed) markDirty();
+    }
+
+    public Map<ResourceLocation, Integer> auxIntSnapshot() {
+        return Map.copyOf(auxInt);
+    }
+
+    public @Nullable CompoundTag getAuxNbt(ResourceLocation powerId) {
+        return auxNbt.get(powerId);
+    }
+
+    public void setAuxNbt(ResourceLocation powerId, CompoundTag tag) {
+        auxNbt.put(powerId, tag);
+    }
+
+    public void attachOwner(Entity entity) {
         this.owner = entity;
+        if (entity != null && !bySources.isEmpty()) PoweredEntities.register(entity);
     }
 
     @Override
     public boolean addPower(ResourceLocation power, ResourceLocation source) {
+        boolean wasEmpty = bySources.isEmpty();
         Set<ResourceLocation> sources = bySources.computeIfAbsent(power, k -> new HashSet<>());
         boolean first = sources.isEmpty();
         boolean added = sources.add(source);
@@ -37,7 +73,8 @@ public final class PowerContainerImpl implements PowerContainer {
                 if (type != null) invokeOnAdded(type, power, loaded.config(), source);
             }
         }
-        if (added) markDirty();
+        if (added) markStructureDirty();
+        if (wasEmpty && !bySources.isEmpty()) PoweredEntities.register(owner);
         return added;
     }
 
@@ -48,6 +85,8 @@ public final class PowerContainerImpl implements PowerContainer {
         boolean removed = sources.remove(source);
         if (sources.isEmpty()) {
             bySources.remove(power);
+            suppressedBySources.remove(power);
+            releaseSuppressionSource(power);
             if (removed && owner != null && owner.level() instanceof ServerLevel) {
                 Power loaded = ApoliPowers.get(power);
                 if (loaded != null) {
@@ -55,8 +94,9 @@ public final class PowerContainerImpl implements PowerContainer {
                     if (type != null) invokeOnRemoved(type, power, loaded.config(), source);
                 }
             }
+            if (auxInt.remove(power) != null) markDirty();
         }
-        if (removed) markDirty();
+        if (removed) markStructureDirty();
         return removed;
     }
 
@@ -73,7 +113,10 @@ public final class PowerContainerImpl implements PowerContainer {
     public boolean removePowerCompletely(ResourceLocation power) {
         Set<ResourceLocation> sources = bySources.remove(power);
         if (sources == null) return false;
-        markDirty();
+        suppressedBySources.remove(power);
+        releaseSuppressionSource(power);
+        if (auxInt.remove(power) != null) markDirty();
+        markStructureDirty();
         return true;
     }
 
@@ -81,7 +124,12 @@ public final class PowerContainerImpl implements PowerContainer {
     public void clear() {
         if (bySources.isEmpty()) return;
         bySources.clear();
-        markDirty();
+        suppressedBySources.clear();
+        if (!auxInt.isEmpty()) {
+            auxInt.clear();
+            markDirty();
+        }
+        markStructureDirty();
     }
 
     @Override
@@ -109,7 +157,54 @@ public final class PowerContainerImpl implements PowerContainer {
     }
 
     @Override
+    public boolean suppressPower(ResourceLocation power, ResourceLocation source) {
+        Set<ResourceLocation> sources = suppressedBySources.computeIfAbsent(power, k -> new HashSet<>());
+        boolean wasSuppressed = !sources.isEmpty();
+        boolean added = sources.add(source);
+        if (added && !wasSuppressed) markStructureDirty();
+        return added;
+    }
+
+    @Override
+    public boolean unsuppressPower(ResourceLocation power, ResourceLocation source) {
+        Set<ResourceLocation> sources = suppressedBySources.get(power);
+        if (sources == null) return false;
+        boolean removed = sources.remove(source);
+        if (sources.isEmpty()) suppressedBySources.remove(power);
+        if (removed && !isSuppressed(power)) markStructureDirty();
+        return removed;
+    }
+
+    @Override
+    public boolean isSuppressed(ResourceLocation power) {
+        return suppressedBySources.containsKey(power);
+    }
+
+    @Override
+    public Set<ResourceLocation> suppressedPowers() {
+        return Set.copyOf(suppressedBySources.keySet());
+    }
+
+    private void releaseSuppressionSource(ResourceLocation source) {
+        boolean changed = false;
+        for (var it = suppressedBySources.values().iterator(); it.hasNext(); ) {
+            Set<ResourceLocation> set = it.next();
+            if (set.remove(source)) {
+                changed = true;
+                if (set.isEmpty()) it.remove();
+            }
+        }
+        if (changed) markStructureDirty();
+    }
+
+    @Override
     public LivingEntity owner() {
+        if (owner == null) throw new IllegalStateException("PowerContainer not attached to an entity");
+        return owner instanceof LivingEntity le ? le : null;
+    }
+
+    @Override
+    public Entity rawOwner() {
         if (owner == null) throw new IllegalStateException("PowerContainer not attached to an entity");
         return owner;
     }
@@ -119,12 +214,25 @@ public final class PowerContainerImpl implements PowerContainer {
         this.dirty = true;
     }
 
+    private void markStructureDirty() {
+        this.structureDirty = true;
+        this.dirty = true;
+    }
+
     public boolean isDirty() {
         return dirty;
     }
 
     public void clearDirty() {
         this.dirty = false;
+    }
+
+    public boolean isStructureDirty() {
+        return structureDirty;
+    }
+
+    public void clearStructureDirty() {
+        this.structureDirty = false;
     }
 
     public Map<ResourceLocation, Set<ResourceLocation>> snapshot() {
@@ -140,14 +248,15 @@ public final class PowerContainerImpl implements PowerContainer {
 
     public void tickActive() {
         if (owner == null || !(owner.level() instanceof ServerLevel level)) return;
-        EntityCtx ctx = new EntityCtx(owner, level);
-        for (var entry : bySources.entrySet()) {
-            ResourceLocation powerId = entry.getKey();
+        EntityCtx ctx = EntityCtx.of(owner, level);
+        for (ResourceLocation powerId : List.copyOf(bySources.keySet())) {
+            if (!bySources.containsKey(powerId)) continue;
+            if (isSuppressed(powerId)) continue;
             Power loaded = ApoliPowers.get(powerId);
             if (loaded == null) continue;
             PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
             if (type == null) continue;
-            if (loaded.condition().isPresent() && !loaded.condition().get().test(ctx)) continue;
+            if (!(owner instanceof LivingEntity) && !type.ticksNonLivingEntities()) continue;
             if (!isActive(type, powerId, loaded.config(), ctx)) continue;
             invokeTick(type, powerId, loaded.config());
         }
@@ -180,10 +289,26 @@ public final class PowerContainerImpl implements PowerContainer {
                 Map<ResourceLocation, List<ResourceLocation>> out = new HashMap<>(c.bySources.size());
                 c.bySources.forEach((k, v) -> out.put(k, List.copyOf(v)));
                 return out;
+            }),
+        Codec.unboundedMap(ResourceLocation.CODEC, Codec.INT)
+            .optionalFieldOf("aux_int", Map.of())
+            .forGetter(c -> Map.copyOf(c.auxInt)),
+        Codec.unboundedMap(ResourceLocation.CODEC, CompoundTag.CODEC)
+            .optionalFieldOf("aux_nbt", Map.of())
+            .forGetter(c -> Map.copyOf(c.auxNbt)),
+        Codec.unboundedMap(ResourceLocation.CODEC, Codec.list(ResourceLocation.CODEC))
+            .optionalFieldOf("suppressed", Map.of())
+            .forGetter(c -> {
+                Map<ResourceLocation, List<ResourceLocation>> out = new HashMap<>(c.suppressedBySources.size());
+                c.suppressedBySources.forEach((k, v) -> out.put(k, List.copyOf(v)));
+                return out;
             })
-    ).apply(instance, powers -> {
+    ).apply(instance, (powers, aux, nbt, suppressed) -> {
         PowerContainerImpl c = new PowerContainerImpl();
         powers.forEach((k, v) -> c.bySources.put(k, new HashSet<>(v)));
+        c.auxInt.putAll(aux);
+        c.auxNbt.putAll(nbt);
+        suppressed.forEach((k, v) -> c.suppressedBySources.put(k, new HashSet<>(v)));
         return c;
     }));
 }

@@ -6,6 +6,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.OptionalInt;
 import java.util.Set;
 
 public interface PowerContainer {
@@ -27,9 +28,21 @@ public interface PowerContainer {
 
     Set<ResourceLocation> allSources();
 
+    boolean suppressPower(ResourceLocation power, ResourceLocation source);
+
+    boolean unsuppressPower(ResourceLocation power, ResourceLocation source);
+
+    boolean isSuppressed(ResourceLocation power);
+
+    Set<ResourceLocation> suppressedPowers();
+
     LivingEntity owner();
 
+    Entity rawOwner();
+
     void markDirty();
+
+    OptionalInt getAuxInt(ResourceLocation powerId);
 
     static @Nullable PowerContainer of(Entity entity) {
         return PowerContainerAttachment.get(entity);

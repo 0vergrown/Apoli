@@ -1,8 +1,11 @@
 package dev.overgrown.apoli.action;
 
+import com.mojang.serialization.MapCodec;
 import dev.overgrown.apoli.alias.AliasRegistry;
 import dev.overgrown.apoli.alias.AliasingMapCodec;
 import dev.overgrown.apoli.alias.AliasingOptions;
+import dev.overgrown.apoli.alias.DefaultInjectingMapCodec;
+import dev.overgrown.apoli.alias.NamespaceAlias;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,6 +16,7 @@ public final class TypedActionRegistry<CTX> {
     private final String groupName;
     private final Map<ResourceLocation, Entry<CTX, ?>> byId = new HashMap<>();
     private final AliasRegistry aliases = new AliasRegistry();
+    private final Map<ResourceLocation, Map<String, String>> aliasDefaults = new HashMap<>();
 
     public TypedActionRegistry(String groupName) {
         this.groupName = groupName;
@@ -22,13 +26,17 @@ public final class TypedActionRegistry<CTX> {
         return groupName;
     }
 
-    /** Per-registry alias map. See note on {@link AliasRegistry}. */
     public AliasRegistry aliases() {
         return aliases;
     }
 
     public ResourceLocation resolveId(ResourceLocation id) {
-        return aliases.resolve(id);
+        ResourceLocation typeResolved = aliases.resolve(id);
+        if (byId.containsKey(typeResolved)) return typeResolved;
+        if (NamespaceAlias.hasAlias(id.getNamespace())) {
+            return aliases.resolve(NamespaceAlias.resolve(id));
+        }
+        return typeResolved;
     }
 
     public <C> ActionType<CTX, C> register(ResourceLocation id, ActionType<CTX, C> type) {
@@ -46,12 +54,25 @@ public final class TypedActionRegistry<CTX> {
         for (ResourceLocation old : opts.typeAliases()) {
             aliases.registerTypeAlias(old, id);
         }
+        aliasDefaults.putAll(opts.typeAliasDefaults());
         return wrapped;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public MapCodec<?> applyAliasDefaults(ResourceLocation originalId, MapCodec<?> codec) {
+        Map<String, String> defaults = aliasDefaults.get(originalId);
+        if (defaults == null || defaults.isEmpty()) return codec;
+        return DefaultInjectingMapCodec.wrap((MapCodec) codec, defaults);
     }
 
     public @Nullable ActionType<CTX, ?> get(ResourceLocation id) {
         Entry<CTX, ?> e = byId.get(aliases.resolve(id));
-        return e == null ? null : e.type;
+        if (e != null) return e.type;
+        if (NamespaceAlias.hasAlias(id.getNamespace())) {
+            e = byId.get(aliases.resolve(NamespaceAlias.resolve(id)));
+            if (e != null) return e.type;
+        }
+        return null;
     }
 
     public Map<ResourceLocation, Entry<CTX, ?>> view() {
