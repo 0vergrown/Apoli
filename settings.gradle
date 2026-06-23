@@ -7,3 +7,8 @@ pluginManagement {
 plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
+
+// Must match the mod id so publishToMavenLocal publishes as `dev.overgrown.apoli:apoli`
+// (matches the Fabric repos). Without this, Gradle uses the directory name as the
+// artifactId, and addon mods depending on `dev.overgrown.apoli:apoli` can't resolve it.
+rootProject.name = 'apoli'

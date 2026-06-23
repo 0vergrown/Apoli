@@ -5,26 +5,31 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
+import dev.overgrown.apoli.alias.AliasingMapCodec;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.StatusEffectInstanceCodec;
 import net.minecraft.world.effect.MobEffectInstance;
 
 import java.util.List;
+import java.util.Map;
 
 public final class ApplyEffectAction implements ActionType<EntityCtx, ApplyEffectAction.Cfg> {
     public record Cfg(List<MobEffectInstance> effects) {}
 
     @Override
     public MapCodec<Cfg> codec() {
-        return RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.either(StatusEffectInstanceCodec.CODEC, Codec.list(StatusEffectInstanceCodec.CODEC))
-                .xmap(
-                    either -> either.map(List::of, list -> list),
-                    list -> list.size() == 1 ? Either.left(list.get(0)) : Either.right(list)
-                )
-                .fieldOf("effect")
-                .forGetter(Cfg::effects)
-        ).apply(i, Cfg::new));
+        return AliasingMapCodec.wrap(
+            RecordCodecBuilder.<Cfg>mapCodec(i -> i.group(
+                Codec.either(StatusEffectInstanceCodec.CODEC, Codec.list(StatusEffectInstanceCodec.CODEC))
+                    .xmap(
+                        either -> either.map(List::of, list -> list),
+                        list -> list.size() == 1 ? Either.left(list.get(0)) : Either.right(list)
+                    )
+                    .fieldOf("effect")
+                    .forGetter(Cfg::effects)
+            ).apply(i, Cfg::new)),
+            Map.of("effects", "effect")
+        );
     }
 
     @Override

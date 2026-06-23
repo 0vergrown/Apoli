@@ -5,8 +5,8 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.EntityCondition;
+import dev.overgrown.apoli.data.TextComponent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Optional;
@@ -16,6 +16,7 @@ public record Power(
     Optional<Component> name,
     Optional<Component> description,
     Optional<EntityCondition> condition,
+    boolean hidden,
     Object config
 ) {
     public Power {
@@ -26,7 +27,18 @@ public record Power(
         return PowerTypeRegistry.get(typeId);
     }
 
-    // 1.21.1 partialDispatch returns DataResult<? extends MapCodec<? extends E>> — no .codec() unwrap.
+    public Component displayName(ResourceLocation id) {
+        return name.orElseGet(() -> Component.translatable(translationKey(id, "name")));
+    }
+
+    public Component displayDescription(ResourceLocation id) {
+        return description.orElseGet(() -> Component.translatable(translationKey(id, "description")));
+    }
+
+    public static String translationKey(ResourceLocation id, String suffix) {
+        return TextComponent.autoKey(id, suffix);
+    }
+
     public static final Codec<Power> CODEC = ResourceLocation.CODEC.partialDispatch(
         "type",
         (Power p) -> DataResult.success(p.typeId()),
@@ -40,14 +52,15 @@ public record Power(
 
     private static <C> MapCodec<Power> buildMapCodec(ResourceLocation typeId, PowerType<C> type) {
         return RecordCodecBuilder.mapCodec(instance -> instance.group(
-            ComponentSerialization.CODEC.optionalFieldOf("name").forGetter(Power::name),
-            ComponentSerialization.CODEC.optionalFieldOf("description").forGetter(Power::description),
+            TextComponent.CODEC.optionalFieldOf("name").forGetter(Power::name),
+            TextComponent.CODEC.optionalFieldOf("description").forGetter(Power::description),
             EntityCondition.CODEC.optionalFieldOf("condition").forGetter(Power::condition),
+            Codec.BOOL.optionalFieldOf("hidden", false).forGetter(Power::hidden),
             type.configCodec().forGetter((Power p) -> {
                 @SuppressWarnings("unchecked")
                 C cfg = (C) p.config();
                 return cfg;
             })
-        ).apply(instance, (name, desc, cond, cfg) -> new Power(typeId, name, desc, cond, cfg)));
+        ).apply(instance, (name, desc, cond, hidden, cfg) -> new Power(typeId, name, desc, cond, hidden, cfg)));
     }
 }

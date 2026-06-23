@@ -21,6 +21,7 @@ public final class MetaActions {
     private static final ResourceLocation RANDOM_CHANCE = Apoli.id("random_chance");
     private static final ResourceLocation CHOICE = Apoli.id("choice");
     private static final ResourceLocation DELAY = Apoli.id("delay");
+    private static final ResourceLocation LOOP = Apoli.id("loop");
     private static final ResourceLocation IF_ELSE = Apoli.id("if_else");
     private static final ResourceLocation IF_ELSE_LIST = Apoli.id("if_else_list");
 
@@ -34,6 +35,7 @@ public final class MetaActions {
         reg.register(RANDOM_CHANCE, new RandomChanceMetaAction<>(EntityAction.CODEC, EntityAction::run), chanceAliases());
         reg.register(CHOICE, new ChoiceMetaAction<>(EntityAction.CODEC, EntityAction::run));
         reg.register(DELAY, new DelayMetaAction<>(EntityAction.CODEC, EntityAction::run));
+        reg.register(LOOP, new LoopMetaAction<>(EntityAction.CODEC, EntityAction::run));
         reg.register(IF_ELSE, new IfElseMetaAction<>(EntityCondition.CODEC, EntityAction.CODEC,
             EntityCondition::test, EntityAction::run));
         reg.register(IF_ELSE_LIST, new IfElseListMetaAction<>(EntityCondition.CODEC, EntityAction.CODEC,
@@ -46,6 +48,7 @@ public final class MetaActions {
         reg.register(RANDOM_CHANCE, new RandomChanceMetaAction<>(BiEntityAction.CODEC, BiEntityAction::run), chanceAliases());
         reg.register(CHOICE, new ChoiceMetaAction<>(BiEntityAction.CODEC, BiEntityAction::run));
         reg.register(DELAY, new DelayMetaAction<>(BiEntityAction.CODEC, BiEntityAction::run));
+        reg.register(LOOP, new LoopMetaAction<>(BiEntityAction.CODEC, BiEntityAction::run));
         reg.register(IF_ELSE, new IfElseMetaAction<>(BiEntityCondition.CODEC, BiEntityAction.CODEC,
             BiEntityCondition::test, BiEntityAction::run));
         reg.register(IF_ELSE_LIST, new IfElseListMetaAction<>(BiEntityCondition.CODEC, BiEntityAction.CODEC,
@@ -58,6 +61,7 @@ public final class MetaActions {
         reg.register(RANDOM_CHANCE, new RandomChanceMetaAction<>(BlockAction.CODEC, BlockAction::run), chanceAliases());
         reg.register(CHOICE, new ChoiceMetaAction<>(BlockAction.CODEC, BlockAction::run));
         reg.register(DELAY, new DelayMetaAction<>(BlockAction.CODEC, BlockAction::run));
+        reg.register(LOOP, new LoopMetaAction<>(BlockAction.CODEC, BlockAction::run));
         reg.register(IF_ELSE, new IfElseMetaAction<>(BlockCondition.CODEC, BlockAction.CODEC,
             BlockCondition::test, BlockAction::run));
         reg.register(IF_ELSE_LIST, new IfElseListMetaAction<>(BlockCondition.CODEC, BlockAction.CODEC,
@@ -70,6 +74,7 @@ public final class MetaActions {
         reg.register(RANDOM_CHANCE, new RandomChanceMetaAction<>(ItemAction.CODEC, ItemAction::run), chanceAliases());
         reg.register(CHOICE, new ChoiceMetaAction<>(ItemAction.CODEC, ItemAction::run));
         reg.register(DELAY, new DelayMetaAction<>(ItemAction.CODEC, ItemAction::run));
+        reg.register(LOOP, new LoopMetaAction<>(ItemAction.CODEC, ItemAction::run));
         reg.register(IF_ELSE, new IfElseMetaAction<>(ItemCondition.CODEC, ItemAction.CODEC,
             ItemCondition::test, ItemAction::run));
         reg.register(IF_ELSE_LIST, new IfElseListMetaAction<>(ItemCondition.CODEC, ItemAction.CODEC,

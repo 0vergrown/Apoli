@@ -5,19 +5,18 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.EntityAction;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.power.ApoliPowers;
+import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
+import dev.overgrown.apoli.power.PowerContainerImpl;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 public final class ActionOverTimePower extends PowerType<ActionOverTimePower.Config> {
-    private final Map<StateKey, State> states = new HashMap<>();
 
     public record Config(
         int interval,
@@ -37,38 +36,58 @@ public final class ActionOverTimePower extends PowerType<ActionOverTimePower.Con
     }
 
     @Override
+    public boolean ticksNonLivingEntities() {
+        return true;
+    }
+
+    @Override
     public void tick(ResourceLocation powerId, Config cfg, PowerContainer holder) {
-        LivingEntity owner = holder.owner();
+        Entity owner = holder.rawOwner();
+
+        int interval = cfg.interval > 0 ? cfg.interval : 1;
+        int phase = Math.floorMod(powerId.hashCode() + owner.getId(), interval);
+        if (owner.tickCount % interval != phase) return;
+
         if (!(owner.level() instanceof ServerLevel level)) return;
-        EntityCtx ctx = new EntityCtx(owner, level);
-        StateKey key = new StateKey(owner.getUUID(), powerId);
-        State state = states.computeIfAbsent(key, k -> new State());
-        state.tickCount++;
-        if (cfg.interval > 0 && state.tickCount % cfg.interval == 0) {
+
+        boolean wasActive = holder.getAuxInt(powerId).orElse(0) != 0;
+        boolean active = conditionHolds(owner, level, powerId);
+
+        if (active) {
+            EntityCtx ctx = EntityCtx.of(owner, level);
+            if (!wasActive) {
+                cfg.risingAction.ifPresent(a -> a.run(ctx));
+                setActiveFlag(holder, powerId, true);
+            }
             cfg.entityAction.ifPresent(a -> a.run(ctx));
-        }
-        if (!state.previouslyActive) {
-            cfg.risingAction.ifPresent(a -> a.run(ctx));
-            state.previouslyActive = true;
+        } else if (wasActive) {
+            cfg.fallingAction.ifPresent(a -> a.run(EntityCtx.of(owner, level)));
+            setActiveFlag(holder, powerId, false);
         }
     }
 
     @Override
     public void onRemoved(ResourceLocation powerId, Config cfg, PowerContainer holder, ResourceLocation source) {
-        if (!holder.allPowers().contains(powerId)) {
-            StateKey key = new StateKey(holder.owner().getUUID(), powerId);
-            State state = states.remove(key);
-            if (state != null && state.previouslyActive
-                && holder.owner().level() instanceof ServerLevel level) {
-                cfg.fallingAction.ifPresent(a -> a.run(new EntityCtx(holder.owner(), level)));
-            }
+        if (holder.hasPower(powerId)) return;
+        if (holder.getAuxInt(powerId).orElse(0) != 0
+            && holder.rawOwner().level() instanceof ServerLevel level) {
+            cfg.fallingAction.ifPresent(a -> a.run(EntityCtx.of(holder.rawOwner(), level)));
         }
+        setActiveFlag(holder, powerId, false);
     }
 
-    private record StateKey(UUID entity, ResourceLocation powerId) {}
+    private static boolean conditionHolds(Entity entity, ServerLevel level, ResourceLocation powerId) {
+        Power loaded = ApoliPowers.get(powerId);
+        if (loaded == null || loaded.condition().isEmpty()) return true;
+        return loaded.condition().get().test(EntityCtx.of(entity, level));
+    }
 
-    private static final class State {
-        long tickCount;
-        boolean previouslyActive;
+    private static void setActiveFlag(PowerContainer holder, ResourceLocation powerId, boolean activeNow) {
+        if (!(holder instanceof PowerContainerImpl impl)) return;
+        if (activeNow) {
+            impl.setAuxInt(powerId, 1);
+        } else {
+            impl.removeAux(powerId);
+        }
     }
 }

@@ -2,49 +2,186 @@ package dev.overgrown.apoli.loader;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.JsonOps;
+import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.ApoliNetwork;
+import dev.overgrown.apoli.alias.NamespaceAlias;
+import dev.overgrown.apoli.network.payload.SyncPowersS2C;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
+import dev.overgrown.apoli.power.PowerTypeRegistry;
+import dev.overgrown.apoli.power.builtin.MultiplePower;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
 import org.slf4j.Logger;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
-/**
- * Parses {@code data/<ns>/powers/<id>.json} into {@link ApoliPowers}. Sync to
- * clients is handled by NeoForge's {@code OnDatapackSyncEvent} in
- * {@code Apoli.onDatapackSync}, so this listener is intentionally
- * side-effect-free beyond populating the registry — that's important because
- * NeoForge's reload pipeline also runs server-data listeners during
- * {@code CreateWorldScreen.openFresh} (the world-selection screen's datapack
- * inspection), where no server is actually running.
- */
 public final class ApoliReloadListener extends SimpleJsonResourceReloadListener {
     private static final Logger LOG = LogUtils.getLogger();
     private static final Gson GSON = new GsonBuilder().setLenient().create();
     private static final String DIR = "powers";
+    private static final ResourceLocation MULTIPLE = Apoli.id("multiple");
+    private static final String STAR = "*:*";
+
+    private MinecraftServer server;
 
     public ApoliReloadListener() {
         super(GSON, DIR);
     }
 
+    public void attachServer(MinecraftServer server) {
+        this.server = server;
+    }
+
     @Override
     protected void apply(Map<ResourceLocation, JsonElement> data, ResourceManager rm, ProfilerFiller profiler) {
-        Map<ResourceLocation, Power> loaded = new HashMap<>(data.size());
+        Map<ResourceLocation, JsonElement> expanded = new LinkedHashMap<>(data.size());
         for (Map.Entry<ResourceLocation, JsonElement> e : data.entrySet()) {
             ResourceLocation id = e.getKey();
-            JsonElement json = e.getValue();
+            try {
+                expandMultiples(id, e.getValue(), expanded);
+            } catch (Exception ex) {
+                LOG.error("[Apoli] Failed to expand power {}: {}", id, ex.getMessage());
+            }
+        }
+
+        Map<ResourceLocation, Power> loaded = new HashMap<>(expanded.size());
+        for (Map.Entry<ResourceLocation, JsonElement> e : expanded.entrySet()) {
+            ResourceLocation id = e.getKey();
+            JsonElement json = applyAliasFieldRenames(e.getValue());
+            json = applyAliasDefaults(json);
             Power.CODEC.parse(JsonOps.INSTANCE, json)
                 .resultOrPartial(err -> LOG.error("Failed to parse power {}: {}", id, err))
                 .ifPresent(power -> loaded.put(id, power));
         }
         ApoliPowers.replaceAll(loaded);
         LOG.info("[Apoli] Loaded {} power(s).", loaded.size());
+
+        if (server != null) {
+            ApoliNetwork.broadcastPowers(server, SyncPowersS2C.fromCurrent());
+        }
+    }
+
+    private static void expandMultiples(ResourceLocation id, JsonElement json, Map<ResourceLocation, JsonElement> out) {
+        if (!(json instanceof JsonObject obj) || !isMultiple(obj)) {
+            out.put(id, json);
+            return;
+        }
+        List<ResourceLocation> subIds = new ArrayList<>();
+        JsonObject superJson = new JsonObject();
+        for (Map.Entry<String, JsonElement> field : obj.entrySet()) {
+            String key = field.getKey();
+            JsonElement value = field.getValue();
+            if (MultiplePower.RESERVED_FIELDS.contains(key)) {
+                superJson.add(key, value);
+                continue;
+            }
+            if (!(value instanceof JsonObject subObj)) {
+                continue;
+            }
+            ResourceLocation subId = subPowerId(id, key);
+            if (subId == null) {
+                LOG.error("[Apoli] Sub-power key '{}' on {} would produce an invalid identifier — skipping.", key, id);
+                continue;
+            }
+            JsonObject substituted = (JsonObject) substituteWildcards(subObj.deepCopy(), id);
+            if (isMultiple(substituted)) {
+                LOG.error("[Apoli] Nested apoli:multiple is not allowed (sub-power '{}' of {}) — skipping.", key, id);
+                continue;
+            }
+            if (out.containsKey(subId)) {
+                LOG.warn("[Apoli] Sub-power id {} (from {}/{}) collides with an existing power — overwriting.", subId, id, key);
+            }
+            out.put(subId, substituted);
+            subIds.add(subId);
+        }
+        superJson.addProperty("type", MULTIPLE.toString());
+        JsonArray subPowers = new JsonArray();
+        for (ResourceLocation sub : subIds) subPowers.add(sub.toString());
+        superJson.add("sub_powers", subPowers);
+        out.put(id, superJson);
+    }
+
+    private static JsonElement applyAliasFieldRenames(JsonElement json) {
+        if (!(json instanceof JsonObject obj)) return json;
+        JsonElement typeEl = obj.get("type");
+        if (typeEl == null || !typeEl.isJsonPrimitive()) return json;
+        ResourceLocation aliasId = ResourceLocation.tryParse(typeEl.getAsString());
+        if (aliasId == null) return json;
+        Map<String, String> renames = PowerTypeRegistry.aliasFieldRenames(aliasId);
+        if (renames.isEmpty() && NamespaceAlias.hasAlias(aliasId.getNamespace())) {
+            renames = PowerTypeRegistry.aliasFieldRenames(NamespaceAlias.resolve(aliasId));
+        }
+        if (renames.isEmpty()) return json;
+        for (Map.Entry<String, String> rename : renames.entrySet()) {
+            String oldName = rename.getKey();
+            String newName = rename.getValue();
+            if (obj.has(oldName) && !obj.has(newName)) {
+                obj.add(newName, obj.get(oldName));
+                obj.remove(oldName);
+            }
+        }
+        return obj;
+    }
+
+    private static JsonElement applyAliasDefaults(JsonElement json) {
+        if (!(json instanceof JsonObject obj)) return json;
+        JsonElement typeEl = obj.get("type");
+        if (typeEl == null || !typeEl.isJsonPrimitive()) return json;
+        ResourceLocation aliasId = ResourceLocation.tryParse(typeEl.getAsString());
+        if (aliasId == null) return json;
+        JsonObject defaults = PowerTypeRegistry.aliasDefaults(aliasId);
+        if ((defaults == null || defaults.size() == 0) && NamespaceAlias.hasAlias(aliasId.getNamespace())) {
+            defaults = PowerTypeRegistry.aliasDefaults(NamespaceAlias.resolve(aliasId));
+        }
+        if (defaults == null || defaults.size() == 0) return json;
+        for (Map.Entry<String, JsonElement> def : defaults.entrySet()) {
+            if (!obj.has(def.getKey())) obj.add(def.getKey(), def.getValue());
+        }
+        return obj;
+    }
+
+    private static boolean isMultiple(JsonObject obj) {
+        JsonElement type = obj.get("type");
+        if (type == null || !type.isJsonPrimitive()) return false;
+        ResourceLocation parsed = ResourceLocation.tryParse(type.getAsString());
+        if (parsed == null) return false;
+        return MULTIPLE.equals(PowerTypeRegistry.resolveId(parsed));
+    }
+
+    private static ResourceLocation subPowerId(ResourceLocation superId, String key) {
+        return ResourceLocation.tryParse(superId.getNamespace() + ":" + superId.getPath() + "_" + key);
+    }
+
+    private static JsonElement substituteWildcards(JsonElement json, ResourceLocation superId) {
+        String replacement = superId.getNamespace() + ":" + superId.getPath();
+        if (json instanceof JsonObject obj) {
+            for (Map.Entry<String, JsonElement> e : new ArrayList<>(obj.entrySet())) {
+                obj.add(e.getKey(), substituteWildcards(e.getValue(), superId));
+            }
+            return obj;
+        }
+        if (json instanceof JsonArray arr) {
+            for (int i = 0; i < arr.size(); i++) arr.set(i, substituteWildcards(arr.get(i), superId));
+            return arr;
+        }
+        if (json instanceof JsonPrimitive p && p.isString()) {
+            String s = p.getAsString();
+            if (s.contains(STAR)) return new JsonPrimitive(s.replace(STAR, replacement));
+        }
+        return json;
     }
 }

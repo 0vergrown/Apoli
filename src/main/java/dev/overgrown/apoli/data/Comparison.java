@@ -3,8 +3,6 @@ package dev.overgrown.apoli.data;
 import com.mojang.serialization.Codec;
 import net.minecraft.util.StringRepresentable;
 
-import java.util.function.Function;
-
 public enum Comparison implements StringRepresentable {
     LESS("<", (a, b) -> a < b),
     LESS_EQUAL("<=", (a, b) -> a <= b),

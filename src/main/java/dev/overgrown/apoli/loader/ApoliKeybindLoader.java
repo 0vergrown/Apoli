@@ -16,12 +16,6 @@ import org.slf4j.Logger;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Parses {@code data/<ns>/keybinds/<id>.json} into {@link ApoliKeybinds}. Sync
- * to clients is owned by {@code OnDatapackSyncEvent} in {@code Apoli.java}.
- * See {@link ApoliReloadListener} for the reason this listener avoids
- * touching the network from {@link #apply}.
- */
 public final class ApoliKeybindLoader extends SimpleJsonResourceReloadListener {
     private static final Logger LOG = LogUtils.getLogger();
     private static final Gson GSON = new GsonBuilder().setLenient().create();

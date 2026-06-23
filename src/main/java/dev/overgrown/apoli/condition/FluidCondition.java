@@ -5,7 +5,11 @@ import dev.overgrown.apoli.codec.DispatchedTypeCodec;
 import dev.overgrown.apoli.condition.context.FluidCtx;
 import net.minecraft.resources.ResourceLocation;
 
-public record FluidCondition(ResourceLocation typeId, Object config) {
+public record FluidCondition(ResourceLocation typeId, Object config, boolean inverted) {
+    public FluidCondition(ResourceLocation typeId, Object config) {
+        this(typeId, config, false);
+    }
+
     public FluidCondition {
         typeId = ConditionTypes.FLUID.resolveId(typeId);
     }
@@ -15,10 +19,10 @@ public record FluidCondition(ResourceLocation typeId, Object config) {
         if (type == null) return true;
         @SuppressWarnings({"unchecked", "rawtypes"})
         boolean result = ((ConditionType) type).test(config, ctx);
-        return result;
+        return inverted != result;
     }
 
-    public static final Codec<FluidCondition> CODEC = DispatchedTypeCodec.create(
+    public static final Codec<FluidCondition> CODEC = DispatchedTypeCodec.createInvertible(
         "fluid_condition",
         id -> {
             ResourceLocation canonical = ConditionTypes.FLUID.resolveId(id);
@@ -27,6 +31,7 @@ public record FluidCondition(ResourceLocation typeId, Object config) {
         },
         FluidCondition::new,
         FluidCondition::typeId,
-        FluidCondition::config
+        FluidCondition::config,
+        FluidCondition::inverted
     );
 }

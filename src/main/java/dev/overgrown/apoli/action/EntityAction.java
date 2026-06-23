@@ -23,7 +23,9 @@ public record EntityAction(ResourceLocation typeId, Object config) {
         id -> {
             ResourceLocation canonical = ActionTypes.ENTITY.resolveId(id);
             ActionType<EntityCtx, ?> t = ActionTypes.ENTITY.get(canonical);
-            return t == null ? null : new DispatchedTypeCodec.CodecLookup.Resolution(canonical, t.codec());
+            if (t == null) return null;
+            return new DispatchedTypeCodec.CodecLookup.Resolution(canonical,
+                ActionTypes.ENTITY.applyAliasDefaults(id, t.codec()));
         },
         EntityAction::new,
         EntityAction::typeId,

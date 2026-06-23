@@ -27,7 +27,7 @@ sourceSets.main.resources {
 }
 
 repositories {
-    // Add here additional repositories if required by some of the dependencies below.
+    mavenCentral()
 }
 
 base {
@@ -139,6 +139,18 @@ dependencies {
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
+
+    // mXparser — expression engine used by Expression (Data Type).
+    // jarJar bundles it into the mod jar so addon mods don't need to depend on mavenCentral.
+    // In dev runtime the jarJar isn't extracted, so we also add it to each run's
+    // additionalRuntimeClasspath so the mod's ModuleClassLoader can resolve it.
+    implementation 'org.mariuszgromada.math:MathParser.org-mXparser:6.0.0'
+    jarJar(implementation('org.mariuszgromada.math:MathParser.org-mXparser')) {
+        version { strictly '[6.0.0,6.0.1)' }
+    }
+    ['client', 'server', 'gameTestServer', 'data'].each { runName ->
+        add("${runName}AdditionalRuntimeClasspath", 'org.mariuszgromada.math:MathParser.org-mXparser:6.0.0')
+    }
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
@@ -170,6 +182,8 @@ publishing {
     publications {
         register('mavenJava', MavenPublication) {
             from components.java
+            // Publish under the loader+MC-qualified coordinate; the jar/neoforge.mods.toml keep mod_version.
+            version = project.maven_version
         }
     }
     repositories {

@@ -12,12 +12,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Supplier;
 
-/**
- * NeoForge's native typed attachment system replaces the Capability boilerplate
- * required on legacy Forge. Persistence + copy-on-death are declared on the
- * builder; everything else (NBT round-trip, slot allocation, save/load hooks)
- * is handled by the engine.
- */
 public final class PowerContainerAttachment {
     public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES =
         DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, Apoli.MOD_ID);
@@ -34,16 +28,25 @@ public final class PowerContainerAttachment {
         ATTACHMENT_TYPES.register(modBus);
     }
 
+    private static java.util.function.Function<Entity, PowerContainer> CLIENT_LOOKUP = e -> null;
+
+    public static void setClientLookup(java.util.function.Function<Entity, PowerContainer> lookup) {
+        CLIENT_LOOKUP = lookup;
+    }
+
     public static @Nullable PowerContainer get(Entity entity) {
-        if (!(entity instanceof LivingEntity living)) return null;
-        PowerContainerImpl impl = living.getData(POWER_CONTAINER.get());
-        impl.attachOwner(living);
+        if (entity.level().isClientSide()) {
+            return CLIENT_LOOKUP.apply(entity);
+        }
+        if (!entity.hasData(POWER_CONTAINER.get())) return null;
+        PowerContainerImpl impl = entity.getData(POWER_CONTAINER.get());
+        impl.attachOwner(entity);
         return impl;
     }
 
     public static @Nullable PowerContainer getOrCreate(Entity entity) {
-        // The default initializer means getData always returns a real instance;
-        // there is no separate "create" call to make.
-        return get(entity);
+        PowerContainerImpl impl = entity.getData(POWER_CONTAINER.get());
+        impl.attachOwner(entity);
+        return impl;
     }
 }

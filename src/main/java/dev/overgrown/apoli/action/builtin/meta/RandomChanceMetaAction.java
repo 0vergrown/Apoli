@@ -4,7 +4,9 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
+import dev.overgrown.apoli.alias.AliasingMapCodec;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
@@ -21,11 +23,14 @@ public final class RandomChanceMetaAction<CTX, W> implements ActionType<CTX, Ran
 
     @Override
     public MapCodec<Cfg<W>> codec() {
-        return RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.FLOAT.fieldOf("chance").forGetter(Cfg<W>::chance),
-            wrapperCodec.fieldOf("action").forGetter(Cfg<W>::action),
-            wrapperCodec.optionalFieldOf("fail_action").forGetter(Cfg<W>::failAction)
-        ).apply(i, Cfg::new));
+        return AliasingMapCodec.wrap(
+            RecordCodecBuilder.mapCodec(i -> i.group(
+                Codec.FLOAT.fieldOf("chance").forGetter(Cfg<W>::chance),
+                wrapperCodec.fieldOf("action").forGetter(Cfg<W>::action),
+                wrapperCodec.optionalFieldOf("fail_action").forGetter(Cfg<W>::failAction)
+            ).apply(i, Cfg::new)),
+            Map.of("success_action", "action")
+        );
     }
 
     @Override

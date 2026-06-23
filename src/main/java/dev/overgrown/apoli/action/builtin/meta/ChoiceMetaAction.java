@@ -39,7 +39,9 @@ public final class ChoiceMetaAction<CTX, W> implements ActionType<CTX, ChoiceMet
         int roll = (int) Math.floor(Math.random() * total);
         for (Weighted<W> w : cfg.actions) {
             roll -= Math.max(0, w.weight);
-            if (roll < 0) { runner.accept(w.element, ctx); return; }
+            if (roll < 0) {
+                runner.accept(w.element, ctx); return;
+            }
         }
     }
 }

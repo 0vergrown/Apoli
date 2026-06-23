@@ -1,37 +1,36 @@
 package dev.overgrown.apoli.action;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public final class DelayedActionQueue {
-    private static final Deque<Entry> QUEUE = new ArrayDeque<>();
+
+    private static long currentTick;
+
+    private static final Map<Long, List<Runnable>> BUCKETS = new HashMap<>();
 
     private DelayedActionQueue() {}
 
     public static synchronized void schedule(int ticks, Runnable action) {
-        QUEUE.add(new Entry(ticks, action));
+        long fireTick = currentTick + Math.max(1, ticks);
+        BUCKETS.computeIfAbsent(fireTick, k -> new ArrayList<>()).add(action);
     }
 
     public static synchronized void tick() {
-        if (QUEUE.isEmpty()) return;
-        Iterator<Entry> it = QUEUE.iterator();
-        while (it.hasNext()) {
-            Entry e = it.next();
-            if (--e.remaining <= 0) {
-                it.remove();
-                try { e.action.run(); } catch (Throwable t) {
-                    /* swallowed, logged elsewhere */
-                }
+        List<Runnable> due = BUCKETS.remove(++currentTick);
+        if (due == null) return;
+        for (int i = 0; i < due.size(); i++) {
+            try {
+                due.get(i).run();
+            } catch (Throwable t) {
             }
         }
     }
 
-    private static final class Entry {
-        int remaining;
-        final Runnable action;
-        Entry(int remaining, Runnable action) {
-            this.remaining = remaining; this.action = action;
-        }
+    public static synchronized void clear() {
+        BUCKETS.clear();
+        currentTick = 0;
     }
 }
