@@ -16,4 +16,8 @@ public abstract class PowerType<C> {
     public boolean isActive(ResourceLocation powerId, C cfg, EntityCtx ctx) {
         return true;
     }
+
+    public boolean ticksNonLivingEntities() {
+        return false;
+    }
 }

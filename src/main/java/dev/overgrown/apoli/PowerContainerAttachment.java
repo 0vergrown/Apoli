@@ -8,11 +8,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Owns the single {@link AttachmentType} that backs every {@link PowerContainer}
- * on a {@link LivingEntity}. Fabric writes/reads this slot to NBT automatically
- * via the supplied {@link PowerContainerImpl#CODEC persistence codec}.
- */
 public final class PowerContainerAttachment {
     public static final AttachmentType<PowerContainerImpl> TYPE = AttachmentRegistry.<PowerContainerImpl>builder()
         .initializer(PowerContainerImpl::new)
@@ -22,18 +17,26 @@ public final class PowerContainerAttachment {
 
     private PowerContainerAttachment() {}
 
+    private static java.util.function.Function<Entity, PowerContainer> CLIENT_LOOKUP = e -> null;
+
+    public static void setClientLookup(java.util.function.Function<Entity, PowerContainer> lookup) {
+        CLIENT_LOOKUP = lookup;
+    }
+
     public static @Nullable PowerContainer get(Entity entity) {
-        if (!(entity instanceof LivingEntity living)) return null;
-        PowerContainerImpl impl = living.getAttached(TYPE);
+        if (entity.level().isClientSide()) {
+            PowerContainer client = CLIENT_LOOKUP.apply(entity);
+            if (client != null) return client;
+        }
+        PowerContainerImpl impl = entity.getAttached(TYPE);
         if (impl == null) return null;
-        impl.attachOwner(living);
+        impl.attachOwner(entity);
         return impl;
     }
 
     public static @Nullable PowerContainer getOrCreate(Entity entity) {
-        if (!(entity instanceof LivingEntity living)) return null;
-        PowerContainerImpl impl = living.getAttachedOrCreate(TYPE);
-        impl.attachOwner(living);
+        PowerContainerImpl impl = entity.getAttachedOrCreate(TYPE);
+        impl.attachOwner(entity);
         return impl;
     }
 }

@@ -5,7 +5,11 @@ import dev.overgrown.apoli.codec.DispatchedTypeCodec;
 import dev.overgrown.apoli.condition.context.BiomeCtx;
 import net.minecraft.resources.ResourceLocation;
 
-public record BiomeCondition(ResourceLocation typeId, Object config) {
+public record BiomeCondition(ResourceLocation typeId, Object config, boolean inverted) {
+    public BiomeCondition(ResourceLocation typeId, Object config) {
+        this(typeId, config, false);
+    }
+
     public BiomeCondition {
         typeId = ConditionTypes.BIOME.resolveId(typeId);
     }
@@ -15,10 +19,10 @@ public record BiomeCondition(ResourceLocation typeId, Object config) {
         if (type == null) return true;
         @SuppressWarnings({"unchecked", "rawtypes"})
         boolean result = ((ConditionType) type).test(config, ctx);
-        return result;
+        return inverted != result;
     }
 
-    public static final Codec<BiomeCondition> CODEC = DispatchedTypeCodec.create(
+    public static final Codec<BiomeCondition> CODEC = DispatchedTypeCodec.createInvertible(
         "biome_condition",
         id -> {
             ResourceLocation canonical = ConditionTypes.BIOME.resolveId(id);
@@ -27,6 +31,7 @@ public record BiomeCondition(ResourceLocation typeId, Object config) {
         },
         BiomeCondition::new,
         BiomeCondition::typeId,
-        BiomeCondition::config
+        BiomeCondition::config,
+        BiomeCondition::inverted
     );
 }

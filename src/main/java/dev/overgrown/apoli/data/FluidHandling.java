@@ -2,6 +2,7 @@ package dev.overgrown.apoli.data;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.material.FluidState;
 
 public enum FluidHandling implements StringRepresentable {
@@ -35,4 +36,12 @@ public enum FluidHandling implements StringRepresentable {
     }
 
     public abstract boolean test(FluidState state);
+
+    public ClipContext.Fluid vanilla() {
+        return switch (this) {
+            case ANY -> ClipContext.Fluid.ANY;
+            case NONE -> ClipContext.Fluid.NONE;
+            case SOURCE_ONLY -> ClipContext.Fluid.SOURCE_ONLY;
+        };
+    }
 }

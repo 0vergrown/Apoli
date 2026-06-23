@@ -21,6 +21,6 @@ public final class EntityTypeCondition implements ConditionType<EntityCtx, Entit
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
         EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(cfg.entityType);
-        return type != null && ctx.entity().getType().equals(type);
+        return type != null && ctx.raw().getType().equals(type);
     }
 }

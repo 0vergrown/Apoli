@@ -1,20 +1,22 @@
 package dev.overgrown.apoli;
 
+import dev.overgrown.apoli.network.payload.ApplyVelocityS2C;
 import dev.overgrown.apoli.network.payload.PowerActivatedS2C;
+import dev.overgrown.apoli.network.payload.RopeCreateS2C;
+import dev.overgrown.apoli.network.payload.RopeDeleteS2C;
+import dev.overgrown.apoli.network.payload.RopeVerletLengthS2C;
 import dev.overgrown.apoli.network.payload.SyncEntityPowersS2C;
 import dev.overgrown.apoli.network.payload.SyncKeybindsS2C;
 import dev.overgrown.apoli.network.payload.SyncPowersS2C;
 import io.netty.buffer.Unpooled;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 
-/**
- * Thin wrapper around {@link ServerPlayNetworking} that produces packed
- * {@link FriendlyByteBuf}s for Apoli's S2C payload records.
- */
 public final class ApoliNetwork {
     private ApoliNetwork() {}
 
@@ -32,6 +34,27 @@ public final class ApoliNetwork {
 
     public static void sendKeybinds(ServerPlayer recipient, SyncKeybindsS2C payload) {
         send(recipient, SyncKeybindsS2C.CHANNEL, payload::write);
+    }
+
+    public static void sendApplyVelocityToTrackers(Entity entity, ApplyVelocityS2C payload) {
+        for (ServerPlayer viewer : PlayerLookup.tracking(entity)) {
+            send(viewer, ApplyVelocityS2C.CHANNEL, payload::write);
+        }
+        if (entity instanceof ServerPlayer self) {
+            send(self, ApplyVelocityS2C.CHANNEL, payload::write);
+        }
+    }
+
+    public static void sendRopeCreate(ServerPlayer recipient, RopeCreateS2C payload) {
+        send(recipient, RopeCreateS2C.CHANNEL, payload::write);
+    }
+
+    public static void sendRopeDelete(ServerPlayer recipient, RopeDeleteS2C payload) {
+        send(recipient, RopeDeleteS2C.CHANNEL, payload::write);
+    }
+
+    public static void sendRopeVerletLength(ServerPlayer recipient, RopeVerletLengthS2C payload) {
+        send(recipient, RopeVerletLengthS2C.CHANNEL, payload::write);
     }
 
     public static void broadcastPowers(MinecraftServer server, SyncPowersS2C payload) {

@@ -53,6 +53,7 @@ public final class MetaConditions {
         reg.register(ANY_OF, new AnyOfMeta<>(BlockCondition.CODEC, BlockCondition::test), anyOfAliases());
         reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
+        reg.register(Apoli.id("offset"), new OffsetBlockMetaCondition());
     }
 
     public static void registerItem() {

@@ -9,7 +9,12 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public record SyncEntityPowersS2C(int entityId, Map<ResourceLocation, Set<ResourceLocation>> powersBySource) {
+public record SyncEntityPowersS2C(
+    int entityId,
+    Map<ResourceLocation, Set<ResourceLocation>> powersBySource,
+    Map<ResourceLocation, Integer> auxInt,
+    Set<ResourceLocation> suppressed
+) {
     public static final ResourceLocation CHANNEL = Apoli.id("sync_entity_powers");
 
     public void write(FriendlyByteBuf buf) {
@@ -19,6 +24,12 @@ public record SyncEntityPowersS2C(int entityId, Map<ResourceLocation, Set<Resour
             buf.writeResourceLocation(e.getKey());
             buf.writeCollection(e.getValue(), FriendlyByteBuf::writeResourceLocation);
         }
+        buf.writeVarInt(auxInt.size());
+        for (Map.Entry<ResourceLocation, Integer> e : auxInt.entrySet()) {
+            buf.writeResourceLocation(e.getKey());
+            buf.writeVarInt(e.getValue());
+        }
+        buf.writeCollection(suppressed, FriendlyByteBuf::writeResourceLocation);
     }
 
     public static SyncEntityPowersS2C read(FriendlyByteBuf buf) {
@@ -30,6 +41,14 @@ public record SyncEntityPowersS2C(int entityId, Map<ResourceLocation, Set<Resour
             Set<ResourceLocation> srcs = new HashSet<>(buf.readList(FriendlyByteBuf::readResourceLocation));
             map.put(key, srcs);
         }
-        return new SyncEntityPowersS2C(entityId, map);
+        int m = buf.readVarInt();
+        Map<ResourceLocation, Integer> aux = new HashMap<>(m);
+        for (int i = 0; i < m; i++) {
+            ResourceLocation key = buf.readResourceLocation();
+            int value = buf.readVarInt();
+            aux.put(key, value);
+        }
+        Set<ResourceLocation> suppressed = new HashSet<>(buf.readList(FriendlyByteBuf::readResourceLocation));
+        return new SyncEntityPowersS2C(entityId, map, aux, suppressed);
     }
 }

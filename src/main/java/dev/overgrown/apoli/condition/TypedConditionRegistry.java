@@ -3,6 +3,7 @@ package dev.overgrown.apoli.condition;
 import dev.overgrown.apoli.alias.AliasRegistry;
 import dev.overgrown.apoli.alias.AliasingMapCodec;
 import dev.overgrown.apoli.alias.AliasingOptions;
+import dev.overgrown.apoli.alias.NamespaceAlias;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
@@ -22,13 +23,17 @@ public final class TypedConditionRegistry<CTX> {
         return groupName;
     }
 
-    /** Per-registry alias map. Aliases declared here don't leak to other registries. */
     public AliasRegistry aliases() {
         return aliases;
     }
 
     public ResourceLocation resolveId(ResourceLocation id) {
-        return aliases.resolve(id);
+        ResourceLocation typeResolved = aliases.resolve(id);
+        if (byId.containsKey(typeResolved)) return typeResolved;
+        if (NamespaceAlias.hasAlias(id.getNamespace())) {
+            return aliases.resolve(NamespaceAlias.resolve(id));
+        }
+        return typeResolved;
     }
 
     public <C> ConditionType<CTX, C> register(ResourceLocation id, ConditionType<CTX, C> type) {
@@ -51,7 +56,12 @@ public final class TypedConditionRegistry<CTX> {
 
     public @Nullable ConditionType<CTX, ?> get(ResourceLocation id) {
         Entry<CTX, ?> e = byId.get(aliases.resolve(id));
-        return e == null ? null : e.type;
+        if (e != null) return e.type;
+        if (NamespaceAlias.hasAlias(id.getNamespace())) {
+            e = byId.get(aliases.resolve(NamespaceAlias.resolve(id)));
+            if (e != null) return e.type;
+        }
+        return null;
     }
 
     public Map<ResourceLocation, Entry<CTX, ?>> view() {

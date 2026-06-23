@@ -1,16 +1,51 @@
 {
-	"required": true,
-	"package": "dev.overgrown.apoli.mixin",
-	"compatibilityLevel": "JAVA_17",
-	"mixins": [],
-	"client": [
-		"keybinding.OptionsAccessor",
-		"keybinding.KeyMappingCategoryAccessor"
-	],
-	"injectors": {
-		"defaultRequire": 1
-	},
-	"overwrites": {
-		"requireAnnotations": true
+  "required": true,
+  "package": "dev.overgrown.apoli.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "damage.EntityInvulnerableMixin",
+    "damage.LivingEntityDamageMixin",
+    "damage.PlayerZeroDamageMixin",
+    "entityset.MobConvertToMixin",
+    "flag.EffectImmunityMixin",
+    "flag.EntityFlagMixin",
+    "flag.EntityIsInvisibleMixin",
+    "flag.EntityIsInWallMixin",
+    "flag.FoodDataRegenMixin",
+    "flag.InvisibilityMixin",
+    "flag.LivingEntityFlagMixin",
+    "flag.PhasingMixin",
+    "flag.PlayerElytraMixin",
+    "flag.PreventSleepMixin",
+    "flag.RestrictArmorTickMixin",
+    "flag.SwimmingMixin",
+    "flag.WalkOnFluidMixin",
+    "pose.EntityPoseMixin",
+    "pose.PlayerUpdatePoseMixin",
+    "power.ItemStackUseMixin",
+    "power.LivingEntityItemPowerMixin",
+    "power.PlayerExhaustionMixin",
+    "power.PlayerHarvestMixin",
+    "performance.ServerRecipeBookSnapshotMixin",
+    "recipe.CraftingMenuGateMixin",
+    "rope.PlayerRopeElytraMixin"
+  ],
+  "client": [
+    "flag.ElytraLayerRenderMixin",
+    "flag.EntityGlowMixin",
+    "flag.FogRendererPhasingMixin",
+    "flag.LivingEntityRendererModelColorMixin",
+    "flag.LocalPlayerElytraMixin",
+    "flag.ScreenEffectPhasingMixin",
+    "pose.LivingEntityRendererPoseMixin",
+    "pose.PlayerRendererPoseMixin",
+    "keybinding.KeyMappingCategoryAccessor",
+    "keybinding.OptionsAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
 	}
 }

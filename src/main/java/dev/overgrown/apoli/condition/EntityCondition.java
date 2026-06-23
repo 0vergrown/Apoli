@@ -5,7 +5,11 @@ import dev.overgrown.apoli.codec.DispatchedTypeCodec;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import net.minecraft.resources.ResourceLocation;
 
-public record EntityCondition(ResourceLocation typeId, Object config) {
+public record EntityCondition(ResourceLocation typeId, Object config, boolean inverted) {
+    public EntityCondition(ResourceLocation typeId, Object config) {
+        this(typeId, config, false);
+    }
+
     public EntityCondition {
         typeId = ConditionTypes.ENTITY.resolveId(typeId);
     }
@@ -15,10 +19,10 @@ public record EntityCondition(ResourceLocation typeId, Object config) {
         if (type == null) return true;
         @SuppressWarnings({"unchecked", "rawtypes"})
         boolean result = ((ConditionType) type).test(config, ctx);
-        return result;
+        return inverted != result;
     }
 
-    public static final Codec<EntityCondition> CODEC = DispatchedTypeCodec.create(
+    public static final Codec<EntityCondition> CODEC = DispatchedTypeCodec.createInvertible(
         "entity_condition",
         id -> {
             ResourceLocation canonical = ConditionTypes.ENTITY.resolveId(id);
@@ -27,6 +31,7 @@ public record EntityCondition(ResourceLocation typeId, Object config) {
         },
         EntityCondition::new,
         EntityCondition::typeId,
-        EntityCondition::config
+        EntityCondition::config,
+        EntityCondition::inverted
     );
 }
