@@ -8,6 +8,8 @@
     "damage.PlayerZeroDamageMixin",
     "entityset.MobConvertToMixin",
     "flag.EffectImmunityMixin",
+    "gameevent.EntityGameEventListenerMixin",
+    "gameevent.ServerLevelGameEventMixin",
     "flag.EntityFlagMixin",
     "flag.EntityIsInvisibleMixin",
     "flag.EntityIsInWallMixin",
@@ -26,6 +28,8 @@
     "power.LivingEntityItemPowerMixin",
     "power.PlayerExhaustionMixin",
     "power.PlayerHarvestMixin",
+    "power.LivingEntitySlipperinessMixin",
+    "power.EntityModifyVelocityMixin",
     "performance.ServerRecipeBookSnapshotMixin",
     "recipe.CraftingMenuGateMixin",
     "rope.PlayerRopeElytraMixin"
@@ -35,10 +39,19 @@
     "flag.EntityGlowMixin",
     "flag.FogRendererPhasingMixin",
     "flag.LivingEntityRendererModelColorMixin",
+    "flag.ModelPartModelColorMixin",
+    "flag.PlayerRendererModelColorMixin",
     "flag.LocalPlayerElytraMixin",
     "flag.ScreenEffectPhasingMixin",
+    "modelparts.HumanoidModelModifyPartsMixin",
     "pose.LivingEntityRendererPoseMixin",
+    "player_model.PlayerRendererModelSwapMixin",
     "pose.PlayerRendererPoseMixin",
+    "texture_overlay.CapeLayerHideMixin",
+    "texture_overlay.PlayerRendererTextureOverlayMixin",
+    "disguise.EntityRenderDispatcherDisguiseMixin",
+    "disguise.EntityRendererDisguiseNameMixin",
+    "disguise.PlayerRendererDisguiseSkinMixin",
     "keybinding.KeyMappingCategoryAccessor",
     "keybinding.OptionsAccessor"
   ],
@@ -47,5 +60,5 @@
   },
   "overwrites": {
     "requireAnnotations": true
-	}
+  }
 }

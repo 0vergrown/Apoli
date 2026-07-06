@@ -1,0 +1,12 @@
+{
+  "required": false,
+  "package": "dev.overgrown.apoli.compat.hardcorerevival.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "plugin": "dev.overgrown.apoli.compat.hardcorerevival.mixin.HardcoreRevivalCompatMixinPlugin",
+  "mixins": [
+    "HardcoreRevivalManagerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

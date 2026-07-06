@@ -3,6 +3,10 @@ package dev.overgrown.apoli.action.builtin.entity;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.action.ActionTypes;
 import dev.overgrown.apoli.alias.AliasingOptions;
+import dev.overgrown.apoli.compat.ModCompat;
+import dev.overgrown.apoli.compat.accessory.action.ModifyAccessoryAction;
+import dev.overgrown.apoli.compat.hardcorerevival.action.KnockOutAction;
+import dev.overgrown.apoli.compat.hardcorerevival.action.ReviveAction;
 
 public final class EntityActions {
     private EntityActions() {}
@@ -54,6 +58,13 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("modify_stat"), new ModifyStatAction());
         ActionTypes.ENTITY.register(Apoli.id("modify_death_ticks"), new ModifyDeathTicksAction());
         ActionTypes.ENTITY.register(Apoli.id("toggle"), new ToggleEntityAction());
+        ActionTypes.ENTITY.register(Apoli.id("modify_entity_data"), new ModifyEntityDataAction(),
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("set_entity_data"))
+                .addTypeAlias(Apoli.id("change_entity_data"))
+                .addTypeAlias(Apoli.id("set_no_gravity"), java.util.Map.of("data", "no_gravity"))
+                .addTypeAlias(Apoli.id("set_gravity"), java.util.Map.of("data", "no_gravity"))
+                .build());
 
         ActionTypes.ENTITY.register(Apoli.id("advancement"), new AdvancementAction(false));
         ActionTypes.ENTITY.register(Apoli.id("grant_advancement"), new AdvancementAction(false));
@@ -76,6 +87,13 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("spawn_entity"), new SpawnEntityAction());
         ActionTypes.ENTITY.register(Apoli.id("spawn_effect_cloud"), new SpawnEffectCloudAction());
         ActionTypes.ENTITY.register(Apoli.id("spawn_particles"), new SpawnParticlesAction());
+        ActionTypes.ENTITY.register(Apoli.id("summon_clone"), new SummonCloneAction());
+        ActionTypes.ENTITY.register(Apoli.id("summon_minion"), new SummonMinionAction());
+        ActionTypes.ENTITY.register(Apoli.id("set_summon_max_life"), new SetSummonMaxLifeAction(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("set_summon_max_life_ticks")).build());
+        ActionTypes.ENTITY.register(Apoli.id("disguise_as"), new DisguiseAsAction(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("disguise_as_player")).build());
+        ActionTypes.ENTITY.register(Apoli.id("remove_disguise"), new RemoveDisguiseAction());
 
         ActionTypes.ENTITY.register(Apoli.id("block_action_at"), new BlockActionAtAction());
         ActionTypes.ENTITY.register(Apoli.id("area_of_effect"), new AreaOfEffectAction());
@@ -86,5 +104,23 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("fire_projectile"), new FireProjectileEntityAction());
 
         ActionTypes.ENTITY.register(Apoli.id("attach_rope"), new AttachRopeAction());
+        ActionTypes.ENTITY.register(Apoli.id("detach_rope"), new DetachRopeAction());
+        ActionTypes.ENTITY.register(Apoli.id("rope_pull"), new RopePullAction());
+        ActionTypes.ENTITY.register(Apoli.id("reset_skills"), new ResetSkillsAction());
+
+        ActionTypes.ENTITY.register(Apoli.id("add_skill_points"), new AddSkillPointsAction());
+
+        
+        
+        if (ModCompat.anyAccessory()) {
+            ActionTypes.ENTITY.register(Apoli.id("modify_accessory"), new ModifyAccessoryAction(),
+                AliasingOptions.builder().addTypeAlias(Apoli.id("modify_trinket")).build());
+        }
+
+        
+        if (ModCompat.HARDCORE_REVIVAL) {
+            ActionTypes.ENTITY.register(Apoli.id("knock_out"), new KnockOutAction());
+            ActionTypes.ENTITY.register(Apoli.id("revive"), new ReviveAction());
+        }
     }
 }

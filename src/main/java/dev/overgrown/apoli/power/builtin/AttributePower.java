@@ -11,11 +11,15 @@ import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.protocol.game.ClientboundSetHealthPacket;
+import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -130,6 +134,17 @@ public final class AttributePower extends PowerType<AttributePower.Cfg> {
         } else {
             entity.setHealth(Math.min(prevHealth, newMax));
         }
+        syncMaxHealthAndHealth(entity);
+    }
+
+    private static void syncMaxHealthAndHealth(LivingEntity entity) {
+        if (!(entity instanceof ServerPlayer player) || player.connection == null) return;
+        AttributeInstance maxHealth = player.getAttribute(Attributes.MAX_HEALTH);
+        if (maxHealth != null) {
+            player.connection.send(new ClientboundUpdateAttributesPacket(player.getId(), java.util.List.of(maxHealth)));
+        }
+        player.connection.send(new ClientboundSetHealthPacket(
+            player.getHealth(), player.getFoodData().getFoodLevel(), player.getFoodData().getSaturationLevel()));
     }
 
     private static boolean conditionHolds(LivingEntity entity, ResourceLocation powerId) {

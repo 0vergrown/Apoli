@@ -6,9 +6,12 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.EntityCondition;
 import dev.overgrown.apoli.data.TextComponent;
+import dev.overgrown.apoli.skill.Skill;
+import dev.overgrown.apoli.skill.SkillInfo;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.List;
 import java.util.Optional;
 
 public record Power(
@@ -17,10 +20,18 @@ public record Power(
     Optional<Component> description,
     Optional<EntityCondition> condition,
     boolean hidden,
+    Optional<SkillInfo> skill,
     Object config
 ) {
     public Power {
         typeId = PowerTypeRegistry.resolveId(typeId);
+    }
+
+    public Optional<Skill> toSkill(ResourceLocation id) {
+        return skill.map(info -> new Skill(
+            id, info.parent(), displayName(id), displayDescription(id), info.icon(),
+            List.of(id), List.of(), info.background(), info.condition(), info.visibilityCondition(),
+            info.excludes(), info.cost(), info.order()));
     }
 
     public PowerType<?> type() {
@@ -56,11 +67,12 @@ public record Power(
             TextComponent.CODEC.optionalFieldOf("description").forGetter(Power::description),
             EntityCondition.CODEC.optionalFieldOf("condition").forGetter(Power::condition),
             Codec.BOOL.optionalFieldOf("hidden", false).forGetter(Power::hidden),
+            SkillInfo.CODEC.optionalFieldOf("skill").forGetter(Power::skill),
             type.configCodec().forGetter((Power p) -> {
                 @SuppressWarnings("unchecked")
                 C cfg = (C) p.config();
                 return cfg;
             })
-        ).apply(instance, (name, desc, cond, hidden, cfg) -> new Power(typeId, name, desc, cond, hidden, cfg)));
+        ).apply(instance, (name, desc, cond, hidden, skill, cfg) -> new Power(typeId, name, desc, cond, hidden, skill, cfg)));
     }
 }

@@ -4,6 +4,8 @@ import dev.overgrown.apoli.client.ApoliKeyHandler;
 import dev.overgrown.apoli.client.ClientPowerContainer;
 import dev.overgrown.apoli.client.ClientPowerState;
 import dev.overgrown.apoli.client.DynamicKeyMappingManager;
+import dev.overgrown.apoli.client.KeyPressWatcher;
+import dev.overgrown.apoli.keybind.HeldKeys;
 import dev.overgrown.apoli.client.OverlayRenderer;
 import dev.overgrown.apoli.client.PhasingRenderState;
 import dev.overgrown.apoli.client.PowerHudRenderer;
@@ -11,6 +13,7 @@ import dev.overgrown.apoli.client.rope.RopeClientManager;
 import dev.overgrown.apoli.client.rope.RopeRenderer;
 import dev.overgrown.apoli.client.rope.VerletRopeState;
 import dev.overgrown.apoli.network.payload.ApplyVelocityS2C;
+import dev.overgrown.apoli.network.payload.KeyHeldC2S;
 import dev.overgrown.apoli.network.payload.PowerActivatedS2C;
 import dev.overgrown.apoli.network.payload.RopeCreateS2C;
 import dev.overgrown.apoli.network.payload.RopeDeleteS2C;
@@ -24,18 +27,52 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import io.netty.buffer.Unpooled;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.FriendlyByteBuf;
 
 public final class ApoliClient implements ClientModInitializer {
+    private static final net.minecraft.client.KeyMapping SKILL_TREE_KEY = new net.minecraft.client.KeyMapping(
+        "key.apoli.skill_tree", com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
+        org.lwjgl.glfw.GLFW.GLFW_KEY_K, "key.categories.apoli");
+
     @Override
     public void onInitializeClient() {
+        net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper.registerKeyBinding(SKILL_TREE_KEY);
         net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
             dev.overgrown.apoli.entity.ApoliEntities.CUSTOM_PROJECTILE,
             dev.overgrown.apoli.client.CustomProjectileRenderer::new);
+
+        net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry.registerModelLayer(
+            dev.overgrown.apoli.client.summon.SummonModelLayers.MINION,
+            dev.overgrown.apoli.client.summon.MinionModel::createBodyLayer);
+        net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry.registerModelLayer(
+            dev.overgrown.apoli.client.summon.SummonModelLayers.CLONE,
+            () -> net.minecraft.client.model.geom.builders.LayerDefinition.create(
+                net.minecraft.client.model.PlayerModel.createMesh(net.minecraft.client.model.geom.builders.CubeDeformation.NONE, false), 64, 64));
+        net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry.registerModelLayer(
+            dev.overgrown.apoli.client.summon.SummonModelLayers.CLONE_SLIM,
+            () -> net.minecraft.client.model.geom.builders.LayerDefinition.create(
+                net.minecraft.client.model.PlayerModel.createMesh(net.minecraft.client.model.geom.builders.CubeDeformation.NONE, true), 64, 64));
+        net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
+            dev.overgrown.apoli.entity.ApoliEntities.MINION,
+            dev.overgrown.apoli.client.summon.MinionRenderer::new);
+        net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
+            dev.overgrown.apoli.entity.ApoliEntities.CLONE,
+            dev.overgrown.apoli.client.summon.CloneRenderer::new);
 
         PowerContainerAttachment.setClientLookup(entity ->
             dev.overgrown.apoli.client.ClientPowerState.powersFor(entity.getId()).isEmpty()
                 ? null
                 : new ClientPowerContainer(entity));
+
+        HeldKeys.setClientLookup((entity, key) ->
+            entity == Minecraft.getInstance().player && KeyPressWatcher.isLocalHeld(key));
+        KeyPressWatcher.setSender(keys -> {
+            FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+            new KeyHeldC2S(keys).write(buf);
+            ClientPlayNetworking.send(KeyHeldC2S.CHANNEL, buf);
+        });
 
         ClientPlayNetworking.registerGlobalReceiver(SyncPowersS2C.CHANNEL, (mc, handler, buf, sender) -> {
             SyncPowersS2C payload = SyncPowersS2C.read(buf);
@@ -68,21 +105,54 @@ public final class ApoliClient implements ClientModInitializer {
             });
         });
 
+        dev.overgrown.apoli.client.disguise.ClientDisguiseManager.install();
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.DisguiseUpdateS2C.CHANNEL, (mc, handler, buf, sender) -> {
+            dev.overgrown.apoli.network.payload.DisguiseUpdateS2C payload = dev.overgrown.apoli.network.payload.DisguiseUpdateS2C.read(buf);
+            mc.execute(() -> payload.data().ifPresentOrElse(
+                data -> dev.overgrown.apoli.client.disguise.ClientDisguiseManager.apply(payload.entityId(), data),
+                () -> dev.overgrown.apoli.client.disguise.ClientDisguiseManager.remove(payload.entityId())));
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.ProtocolVersionPayload.CHANNEL, (mc, handler, buf, sender) -> {
+            dev.overgrown.apoli.network.payload.ProtocolVersionPayload payload =
+                dev.overgrown.apoli.network.payload.ProtocolVersionPayload.read(buf);
+            mc.execute(() -> dev.overgrown.apoli.client.ClientProtocolState.setServerVersion(payload.version()));
+        });
+
+        
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+            FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+            new dev.overgrown.apoli.network.payload.ProtocolVersionPayload(
+                dev.overgrown.apoli.network.ProtocolCompat.VERSION).write(buf);
+            ClientPlayNetworking.send(dev.overgrown.apoli.network.payload.ProtocolVersionPayload.CHANNEL, buf);
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SkillDefsSyncS2C.CHANNEL, (mc, handler, buf, sender) -> {
+            dev.overgrown.apoli.network.payload.SkillDefsSyncS2C payload = dev.overgrown.apoli.network.payload.SkillDefsSyncS2C.read(buf);
+            mc.execute(() -> dev.overgrown.apoli.client.skill.ClientSkillState.applyDefs(payload));
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SkillStateSyncS2C.CHANNEL, (mc, handler, buf, sender) -> {
+            dev.overgrown.apoli.network.payload.SkillStateSyncS2C payload = dev.overgrown.apoli.network.payload.SkillStateSyncS2C.read(buf);
+            mc.execute(() -> dev.overgrown.apoli.client.skill.ClientSkillState.applyState(payload));
+        });
+
         ClientPlayNetworking.registerGlobalReceiver(RopeCreateS2C.CHANNEL, (mc, handler, buf, sender) -> {
             RopeCreateS2C payload = RopeCreateS2C.read(buf);
-            mc.execute(() -> RopeClientManager.attach(
-                payload.owner(), payload.anchor(), payload.length(), payload.maxLength(), payload.texture()));
+            mc.execute(() -> {
+                if (mc.level != null) RopeClientManager.attach(payload, mc.level);
+            });
         });
 
         ClientPlayNetworking.registerGlobalReceiver(RopeDeleteS2C.CHANNEL, (mc, handler, buf, sender) -> {
             RopeDeleteS2C payload = RopeDeleteS2C.read(buf);
-            mc.execute(() -> RopeClientManager.detach(payload.owner()));
+            mc.execute(() -> RopeClientManager.detach(payload.id()));
         });
 
         ClientPlayNetworking.registerGlobalReceiver(RopeVerletLengthS2C.CHANNEL, (mc, handler, buf, sender) -> {
             RopeVerletLengthS2C payload = RopeVerletLengthS2C.read(buf);
             mc.execute(() -> {
-                VerletRopeState rope = RopeClientManager.get(payload.owner());
+                VerletRopeState rope = RopeClientManager.get(payload.id());
                 if (rope != null) rope.targetLength = payload.length();
             });
         });
@@ -92,12 +162,40 @@ public final class ApoliClient implements ClientModInitializer {
                 DynamicKeyMappingManager.unregisterAll();
                 ClientPowerState.clear();
                 RopeClientManager.clear();
+                KeyPressWatcher.reset();
+                dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
+                dev.overgrown.apoli.client.skill.ClientSkillState.clear();
+                dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.clear();
+                dev.overgrown.apoli.client.ClientProtocolState.reset();
             }));
 
+        net.fabricmc.fabric.api.resource.ResourceManagerHelper.get(net.minecraft.server.packs.PackType.CLIENT_RESOURCES)
+            .registerReloadListener(new net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener() {
+                @Override
+                public net.minecraft.resources.ResourceLocation getFabricId() {
+                    return Apoli.id("figura_avatars");
+                }
+
+                @Override
+                public void onResourceManagerReload(net.minecraft.server.packs.resources.ResourceManager manager) {
+                    dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.onResourcesReloaded();
+                }
+            });
+
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
-            if (mc.player != null && !mc.isPaused()) ApoliKeyHandler.onClientTick();
+            if (mc.player != null && !mc.isPaused()) {
+                ApoliKeyHandler.onClientTick();
+                while (SKILL_TREE_KEY.consumeClick()) {
+                    if (mc.screen == null && dev.overgrown.apoli.client.skill.ClientSkillState.hasAnyTree()) {
+                        mc.setScreen(new dev.overgrown.apoli.client.skill.SkillTreeScreen());
+                    }
+                }
+            }
             PhasingRenderState.clientTick(mc);
             RopeClientManager.tick();
+            if (dev.overgrown.apoli.compat.ModCompat.FIGURA) {
+                dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.tick(mc);
+            }
         });
 
         WorldRenderEvents.AFTER_ENTITIES.register(RopeRenderer::render);

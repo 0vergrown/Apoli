@@ -1,14 +1,19 @@
 package dev.overgrown.apoli.mixin.power;
 
+import dev.overgrown.apoli.power.builtin.ActionOnItemUsePower;
+import dev.overgrown.apoli.power.builtin.ItemUseActionHandler;
 import dev.overgrown.apoli.power.builtin.PreventItemUseHandler;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ItemStack.class)
@@ -20,5 +25,64 @@ public abstract class ItemStackUseMixin {
         if (PreventItemUseHandler.isBlocked(player, self, level)) {
             cir.setReturnValue(InteractionResultHolder.fail(self));
         }
+    }
+
+    @Inject(method = "use", at = @At("HEAD"))
+    private void apoli$itemUseBefore(Level level, Player player, InteractionHand hand,
+                                     CallbackInfoReturnable<InteractionResultHolder<ItemStack>> cir) {
+        ItemStack self = (ItemStack) (Object) this;
+        ItemUseActionHandler.fire(level, player, self, apoli$useTrigger(self), ItemUseActionHandler.Phase.BEFORE);
+    }
+
+    @Inject(method = "use", at = @At("RETURN"))
+    private void apoli$itemUseAfter(Level level, Player player, InteractionHand hand,
+                                    CallbackInfoReturnable<InteractionResultHolder<ItemStack>> cir) {
+        InteractionResultHolder<ItemStack> result = cir.getReturnValue();
+        if (result == null || !result.getResult().consumesAction()) return;
+        ItemStack self = (ItemStack) (Object) this;
+        ItemUseActionHandler.fire(level, player, self, apoli$useTrigger(self), ItemUseActionHandler.Phase.AFTER);
+    }
+
+    @Inject(method = "onUseTick", at = @At("HEAD"))
+    private void apoli$itemUseDuringBefore(Level level, LivingEntity user, int remainingUseTicks, CallbackInfo ci) {
+        ItemUseActionHandler.fire(level, user, (ItemStack) (Object) this,
+            ActionOnItemUsePower.Trigger.DURING, ItemUseActionHandler.Phase.BEFORE);
+    }
+
+    @Inject(method = "onUseTick", at = @At("RETURN"))
+    private void apoli$itemUseDuringAfter(Level level, LivingEntity user, int remainingUseTicks, CallbackInfo ci) {
+        ItemUseActionHandler.fire(level, user, (ItemStack) (Object) this,
+            ActionOnItemUsePower.Trigger.DURING, ItemUseActionHandler.Phase.AFTER);
+    }
+
+    @Inject(method = "releaseUsing", at = @At("HEAD"))
+    private void apoli$itemUseStopBefore(Level level, LivingEntity user, int remainingUseTicks, CallbackInfo ci) {
+        ItemUseActionHandler.fire(level, user, (ItemStack) (Object) this,
+            ActionOnItemUsePower.Trigger.STOP, ItemUseActionHandler.Phase.BEFORE);
+    }
+
+    @Inject(method = "releaseUsing", at = @At("RETURN"))
+    private void apoli$itemUseStopAfter(Level level, LivingEntity user, int remainingUseTicks, CallbackInfo ci) {
+        ItemUseActionHandler.fire(level, user, (ItemStack) (Object) this,
+            ActionOnItemUsePower.Trigger.STOP, ItemUseActionHandler.Phase.AFTER);
+    }
+
+    @Inject(method = "finishUsingItem", at = @At("HEAD"))
+    private void apoli$itemUseFinishBefore(Level level, LivingEntity user, CallbackInfoReturnable<ItemStack> cir) {
+        ItemUseActionHandler.fire(level, user, (ItemStack) (Object) this,
+            ActionOnItemUsePower.Trigger.FINISH, ItemUseActionHandler.Phase.BEFORE);
+    }
+
+    @Inject(method = "finishUsingItem", at = @At("RETURN"))
+    private void apoli$itemUseFinishAfter(Level level, LivingEntity user, CallbackInfoReturnable<ItemStack> cir) {
+        ItemUseActionHandler.fire(level, user, (ItemStack) (Object) this,
+            ActionOnItemUsePower.Trigger.FINISH, ItemUseActionHandler.Phase.AFTER);
+    }
+
+    @Unique
+    private ActionOnItemUsePower.Trigger apoli$useTrigger(ItemStack stack) {
+        return stack.getUseDuration() == 0
+            ? ActionOnItemUsePower.Trigger.INSTANT
+            : ActionOnItemUsePower.Trigger.START;
     }
 }

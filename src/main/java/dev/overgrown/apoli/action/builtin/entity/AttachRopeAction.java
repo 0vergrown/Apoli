@@ -5,41 +5,59 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.action.ActionType;
+import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.rope.RopeAnchor;
+import dev.overgrown.apoli.rope.RopeEndpointSource;
 import dev.overgrown.apoli.rope.RopeManager;
+import dev.overgrown.apoli.rope.RopeParams;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Optional;
+
 
 public final class AttachRopeAction implements ActionType<EntityCtx, AttachRopeAction.Cfg> {
-    public record Cfg(float maxLength, ResourceLocation texture) {}
+
+    public record Cfg(RopeEndpointSource from, RopeEndpointSource to, Optional<String> slot,
+                      ResourceLocation texture, boolean toggle, RopeParams params) {}
+
+    public static final MapCodec<Cfg> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+        RopeEndpointSource.CODEC.codec().optionalFieldOf("from", RopeEndpointSource.self()).forGetter(Cfg::from),
+        RopeEndpointSource.CODEC.codec().optionalFieldOf("to", RopeEndpointSource.raycastBlock(30f)).forGetter(Cfg::to),
+        Codec.STRING.optionalFieldOf("slot").forGetter(Cfg::slot),
+        ResourceLocation.CODEC.optionalFieldOf("texture", Apoli.id("textures/rope/rope.png")).forGetter(Cfg::texture),
+        Codec.BOOL.optionalFieldOf("toggle", true).forGetter(Cfg::toggle),
+        RopeParams.CODEC.forGetter(Cfg::params)
+    ).apply(i, Cfg::new));
 
     @Override
-    public MapCodec<Cfg> codec() {
-        return RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.FLOAT.optionalFieldOf("max_length", 30f).forGetter(Cfg::maxLength),
-            ResourceLocation.CODEC.optionalFieldOf("texture", Apoli.id("textures/rope/rope.png")).forGetter(Cfg::texture)
-        ).apply(i, Cfg::new));
-    }
+    public MapCodec<Cfg> codec() { return CODEC; }
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        if (!(ctx.entity() instanceof ServerPlayer player)) return;
+        apply(cfg, ctx.raw(), null, ctx.level());
+    }
 
-        if (RopeManager.get(player.getUUID()) != null) {
-            RopeManager.detach(player);
-            return;
-        }
+    static void apply(Cfg cfg, @Nullable Entity actor, @Nullable Entity target, Level level) {
+        if (actor == null || !(level instanceof ServerLevel serverLevel)) return;
 
-        Vec3 from = player.getEyePosition(1.0f);
-        Vec3 to = from.add(player.getViewVector(1.0f).scale(cfg.maxLength));
-        BlockHitResult hit = player.level().clip(new ClipContext(
-            from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        
+        if (cfg.toggle && cfg.slot.isEmpty() && RopeManager.detachControllable(actor.getUUID())) return;
 
-        if (hit.getType() != HitResult.Type.BLOCK) return;
-        RopeManager.attach(player, hit.getLocation(), cfg.maxLength, cfg.texture);
+        RopeAnchor from = cfg.from.resolve(actor, target, level);
+        RopeAnchor to = cfg.to.resolve(actor, target, level);
+        if (from == null || to == null) return;
+
+        RopeManager.create(serverLevel, from, to, cfg.slot.orElse(null), actor.getUUID(), cfg.params, cfg.texture);
+    }
+
+    
+    public static final class BiEntity implements ActionType<BiEntityCtx, Cfg> {
+        @Override public MapCodec<Cfg> codec() { return CODEC; }
+        @Override public void run(Cfg cfg, BiEntityCtx ctx) { apply(cfg, ctx.actor(), ctx.target(), ctx.level()); }
     }
 }

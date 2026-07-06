@@ -27,5 +27,9 @@ public final class BiEntityActions {
             new RemoveFromEntitySetAction(),
             AliasingOptions.builder().addTypeAlias(Apoli.id("remove_from_set")).build()
         );
+        ActionTypes.BI_ENTITY.register(Apoli.id("disguise"), new DisguiseBiEntityAction());
+        ActionTypes.BI_ENTITY.register(Apoli.id("transfer"), new TransferAction());
+        ActionTypes.BI_ENTITY.register(Apoli.id("attach_rope"),
+            new dev.overgrown.apoli.action.builtin.entity.AttachRopeAction.BiEntity());
     }
 }

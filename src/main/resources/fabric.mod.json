@@ -3,13 +3,13 @@
 	"id": "apoli",
 	"version": "${version}",
 	"name": "Apoli",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "A data-driven power system library.",
 	"authors": [
 		"Overgrown"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"homepage": "https://modrinth.com/mod/opoli",
+		"sources": "https://github.com/0vergrown/Apoli/tree/Fabric-1.20.1"
 	},
 	"license": "CC0-1.0",
 	"icon": "assets/apoli/icon.png",
@@ -23,7 +23,11 @@
 		]
 	},
 	"mixins": [
-		"apoli.mixins.json"
+		"apoli.mixins.json",
+		"apoli-icarus.mixins.json",
+		"apoli-figura.mixins.json",
+		"apoli-accessory.mixins.json",
+		"apoli-hardcorerevival.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.19.2",
