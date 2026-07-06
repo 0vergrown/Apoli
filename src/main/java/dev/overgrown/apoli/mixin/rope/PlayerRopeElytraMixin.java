@@ -13,7 +13,7 @@ public abstract class PlayerRopeElytraMixin {
     @Inject(method = "tryToStartFallFlying", at = @At("HEAD"), cancellable = true)
     private void apoli$blockRopeElytra(CallbackInfoReturnable<Boolean> cir) {
         Player self = (Player) (Object) this;
-        if (RopeManager.get(self.getUUID()) != null) {
+        if (RopeManager.controllableRopeOf(self.getUUID()) != null) {
             cir.setReturnValue(false);
         }
     }

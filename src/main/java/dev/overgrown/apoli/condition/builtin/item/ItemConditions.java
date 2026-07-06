@@ -2,6 +2,8 @@ package dev.overgrown.apoli.condition.builtin.item;
 
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.alias.AliasingOptions;
+import dev.overgrown.apoli.compat.ModCompat;
+import dev.overgrown.apoli.compat.accessory.condition.item.AccessoryCondition;
 import dev.overgrown.apoli.condition.ConditionTypes;
 
 public final class ItemConditions {
@@ -30,5 +32,12 @@ public final class ItemConditions {
         ConditionTypes.ITEM.register(Apoli.id("power_count"), new PowerCountItemCondition());
         ConditionTypes.ITEM.register(Apoli.id("relative_durability"), new RelativeDurabilityItemCondition());
         ConditionTypes.ITEM.register(Apoli.id("smeltable"), new SmeltableItemCondition());
+
+        
+        
+        if (ModCompat.anyAccessory()) {
+            ConditionTypes.ITEM.register(Apoli.id("accessory"), new AccessoryCondition(),
+                AliasingOptions.builder().addTypeAlias(Apoli.id("trinket")).build());
+        }
     }
 }

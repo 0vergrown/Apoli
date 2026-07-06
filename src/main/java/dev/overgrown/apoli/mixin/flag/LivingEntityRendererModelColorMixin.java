@@ -1,9 +1,13 @@
 package dev.overgrown.apoli.mixin.flag;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.overgrown.apoli.client.render.ModelColorState;
+import dev.overgrown.apoli.client.render.ModelPartLookup;
 import dev.overgrown.apoli.power.builtin.ModelColorPower;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
@@ -14,15 +18,38 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArgs;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
+
+import java.util.Map;
 
 @Mixin(LivingEntityRenderer.class)
 @Environment(EnvType.CLIENT)
 public abstract class LivingEntityRendererModelColorMixin {
 
+    private static final String RENDER = "render(Lnet/minecraft/world/entity/LivingEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V";
+
+    @Inject(method = RENDER, at = @At("HEAD"))
+    private void apoli$setupPartColors(LivingEntity entity, float entityYaw, float partialTick,
+                                       PoseStack pose, MultiBufferSource buffer, int packedLight, CallbackInfo ci) {
+        ModelColorState.clear();
+        if (!ModelColorPower.hasPartColors(entity)) return;
+        EntityModel<?> model = ((LivingEntityRenderer<?, ?>) (Object) this).getModel();
+        if (!(model instanceof HumanoidModel<?> humanoid)) return;
+        Map<String, float[]> parts = ModelColorPower.partColorsFor(entity);
+        if (parts == null) return;
+        ModelColorState.set(ModelPartLookup.buildColorMap(humanoid, parts));
+    }
+
+    @Inject(method = RENDER, at = @At("RETURN"))
+    private void apoli$clearPartColors(LivingEntity entity, float entityYaw, float partialTick,
+                                       PoseStack pose, MultiBufferSource buffer, int packedLight, CallbackInfo ci) {
+        ModelColorState.clear();
+    }
+
     @ModifyArgs(
-        method = "render(Lnet/minecraft/world/entity/LivingEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+        method = RENDER,
         at = @At(value = "INVOKE",
                  target = "Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V"))
     private void apoli$applyModelColor(Args args,
@@ -43,9 +70,7 @@ public abstract class LivingEntityRendererModelColorMixin {
                                         boolean useTranslucent, CallbackInfoReturnable<RenderType> cir) {
         if (!isVisible) return;
         if (isInvisibleToPlayer) return;
-        float[] color = ModelColorPower.colorFor(entity);
-        if (color == ModelColorPower.IDENTITY) return;
-        if (color[3] >= 0.999f) return;
+        if (ModelColorPower.minAlpha(entity) >= 0.999f) return;
         @SuppressWarnings("unchecked")
         LivingEntityRenderer<LivingEntity, ?> self = (LivingEntityRenderer<LivingEntity, ?>) (Object) this;
         ResourceLocation tex = self.getTextureLocation(entity);

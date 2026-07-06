@@ -6,8 +6,46 @@ plugins {
 version = project.mod_version
 group = project.maven_group
 
+loom {
+	runs {
+		client {
+			// Pin a stable dev username so runClient reuses the same offline UUID (and player save)
+			// each launch. Without it Loom assigns a random "PlayerNNN" per run → a brand-new player
+			// save every time → resources/origins/inventory all look "reset" on relog. That is a dev
+			// harness artifact, NOT a real persistence bug (NeoForge dev already uses a fixed "Dev").
+			programArgs("--username", "Dev")
+		}
+	}
+}
+
 repositories {
 	mavenCentral()
+	// Icarus (optional compile-time dependency for the apoli:wings compat power type).
+	maven {
+		name = "Modrinth"
+		url = "https://api.modrinth.com/maven"
+		content { includeGroup "maven.modrinth" }
+	}
+	// Trinkets (accessory-slot compat backend).
+	maven {
+		name = "TerraformersMC"
+		url = "https://maven.terraformersmc.com/releases"
+	}
+	// Cardinal Components API — Trinkets' transitive dependency (TrinketComponent extends ComponentV3).
+	maven {
+		name = "Ladysnake"
+		url = "https://maven.ladysnake.org/releases"
+	}
+	// Accessories (accessory-slot compat backend).
+	maven {
+		name = "Wispforest"
+		url = "https://maven.wispforest.io/releases"
+	}
+	// Blay09 mods (Balm + Hardcore Revival) for the revival compat.
+	maven {
+		name = "TwelveIterations"
+		url = "https://maven.twelveiterations.com/repository/maven-public/"
+	}
 }
 
 dependencies {
@@ -18,6 +56,22 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	modCompileOnly "maven.modrinth:icarus:${project.icarus_version}"
+
+	// Figura (compile-only, optional at runtime) — modify_player_model equips Figura avatars.
+	// Gated at runtime by ModCompat.FIGURA / FiguraCompatMixinPlugin, so Apoli runs fine without it.
+	modCompileOnly "maven.modrinth:figura:${project.figura_version}"
+
+	// Trinkets + Accessories (compile-only, optional at runtime) — the unified accessory compat types.
+	// Gated at runtime by ModCompat / the Accessories facade, so Apoli runs fine with neither present.
+	modCompileOnly "dev.emi:trinkets:${project.trinkets_version}"
+	modCompileOnly "io.wispforest:accessories-fabric:${project.accessories_version}"
+
+	// Hardcore Revival + Balm (compile-only, optional at runtime) — the revival compat types.
+	// Gated at runtime by ModCompat.HARDCORE_REVIVAL, so Apoli runs fine without them.
+	modCompileOnly "net.blay09.mods:balm-fabric:${project.balm_version}"
+	modCompileOnly "net.blay09.mods:hardcorerevival-fabric:${project.hardcore_revival_version}"
 
 	// mXparser — expression engine used by Expression (Data Type). Bundled into the jar.
 	include implementation("org.mariuszgromada.math:MathParser.org-mXparser:6.0.0")

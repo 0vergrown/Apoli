@@ -50,5 +50,6 @@ public final class ApoliKeyHandler {
                 ClientPlayNetworking.send(new PowerToggleC2S(powerId));
             }
         }
+        KeyPressWatcher.tick();
     }
 }

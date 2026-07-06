@@ -23,8 +23,14 @@ public final class DistanceFromCoordinatesCondition implements ConditionType<Ent
 
         public static final Codec<Reference> CODEC = StringRepresentable.fromEnum(Reference::values);
         private final String name;
-        Reference(String n) { this.name = n; }
-        @Override public String getSerializedName() { return name; }
+        Reference(String n) {
+            this.name = n;
+        }
+
+        @Override
+        public String getSerializedName() {
+            return name;
+        }
     }
 
     public record Cfg(
@@ -88,7 +94,7 @@ public final class DistanceFromCoordinatesCondition implements ConditionType<Ent
         double dz = cfg.ignoreZ ? 0 : e.getZ() - refZ;
         double dist = switch (cfg.shape) {
             case CUBE -> Math.max(Math.abs(dx), Math.max(Math.abs(dy), Math.abs(dz)));
-            case SPHERE -> Math.sqrt(dx * dx + dy * dy + dz * dz);
+            case SPHERE, CONE -> Math.sqrt(dx * dx + dy * dy + dz * dz);
             case STAR -> Math.abs(dx) + Math.abs(dy) + Math.abs(dz);
         };
         if (cfg.roundToDigit.isPresent()) {

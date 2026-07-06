@@ -1,0 +1,14 @@
+{
+  "required": false,
+  "package": "dev.overgrown.apoli.compat.accessory.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "plugin": "dev.overgrown.apoli.compat.accessory.mixin.AccessoryCompatMixinPlugin",
+  "mixins": [
+    "trinkets.TrinketInventoryMixin",
+    "trinkets.TrinketSlotMixin",
+    "trinkets.SurvivalTrinketSlotMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

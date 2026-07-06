@@ -1,0 +1,12 @@
+{
+  "required": false,
+  "package": "dev.overgrown.apoli.compat.figura.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [],
+  "client": [
+    "AvatarManagerAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

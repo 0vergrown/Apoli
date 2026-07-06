@@ -2,6 +2,7 @@ package dev.overgrown.apoli.action.builtin.bientity;
 
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.action.ActionTypes;
+import dev.overgrown.apoli.action.builtin.entity.AttachRopeAction;
 import dev.overgrown.apoli.alias.AliasingOptions;
 
 public final class BiEntityActions {
@@ -27,5 +28,8 @@ public final class BiEntityActions {
             new RemoveFromEntitySetAction(),
             AliasingOptions.builder().addTypeAlias(Apoli.id("remove_from_set")).build()
         );
+        ActionTypes.BI_ENTITY.register(Apoli.id("disguise"), new DisguiseBiEntityAction());
+        ActionTypes.BI_ENTITY.register(Apoli.id("transfer"), new TransferAction());
+        ActionTypes.BI_ENTITY.register(Apoli.id("attach_rope"), new AttachRopeAction.BiEntity());
     }
 }

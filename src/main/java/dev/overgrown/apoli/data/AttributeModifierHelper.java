@@ -24,6 +24,10 @@ public final class AttributeModifierHelper {
     }
 
     public static float apply(float baseValue, List<AttributeModifier> mods, LivingEntity entity) {
+        return (float) apply((double) baseValue, mods, entity);
+    }
+
+    public static double apply(double baseValue, List<AttributeModifier> mods, LivingEntity entity) {
         if (mods.isEmpty()) return baseValue;
         Map<String, Double> vars = entity != null ? ExpressionContext.entityStats(entity) : Map.of();
         Map<String, Double> resources = entity != null
@@ -42,6 +46,6 @@ public final class AttributeModifierHelper {
             total = r.total();
             if (mod.operation().phase() == AttributeModifierOperation.Phase.BASE) total = base;
         }
-        return (float) total;
+        return total;
     }
 }

@@ -65,6 +65,7 @@ public final class PowerHudRenderer {
         for (ResourceLocation powerId : ClientPowerState.localPowers()) {
             Power power = ApoliPowers.get(powerId);
             if (power == null) continue;
+            if (power.condition().isPresent() && !power.condition().get().test(ctx)) continue;
             PowerType<?> type = PowerTypeRegistry.get(power.typeId());
 
             HudRender hud;

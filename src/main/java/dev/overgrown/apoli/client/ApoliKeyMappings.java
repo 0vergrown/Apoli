@@ -40,6 +40,15 @@ public final class ApoliKeyMappings {
         return continuous ? st.down() : st.tap();
     }
 
+    public static boolean isDown(KeyMapping km) {
+        KeyState st = TICK_CACHE.get(km);
+        if (st == null) {
+            st = computeState(km);
+            TICK_CACHE.put(km, st);
+        }
+        return st.down();
+    }
+
     private static KeyState computeState(KeyMapping km) {
         boolean down = isHeld(km);
         boolean wasDown = WAS_DOWN.getOrDefault(km, false);
