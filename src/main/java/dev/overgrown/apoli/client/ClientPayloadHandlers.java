@@ -43,16 +43,31 @@ public final class ClientPayloadHandlers {
         e.setDeltaMovement(msg.set() ? delta : e.getDeltaMovement().add(delta));
     }
 
+    public static void onDisguiseUpdate(dev.overgrown.apoli.network.payload.DisguiseUpdateS2C msg) {
+        msg.data().ifPresentOrElse(
+            data -> dev.overgrown.apoli.client.disguise.ClientDisguiseManager.apply(msg.entityId(), data),
+            () -> dev.overgrown.apoli.client.disguise.ClientDisguiseManager.remove(msg.entityId()));
+    }
+
+    public static void onSkillDefs(dev.overgrown.apoli.network.payload.SkillDefsSyncS2C msg) {
+        dev.overgrown.apoli.client.skill.ClientSkillState.applyDefs(msg);
+    }
+
+    public static void onSkillState(dev.overgrown.apoli.network.payload.SkillStateSyncS2C msg) {
+        dev.overgrown.apoli.client.skill.ClientSkillState.applyState(msg);
+    }
+
     public static void onRopeCreate(RopeCreateS2C msg) {
-        RopeClientManager.attach(msg.owner(), msg.anchor(), msg.length(), msg.maxLength(), msg.texture());
+        net.minecraft.client.multiplayer.ClientLevel level = net.minecraft.client.Minecraft.getInstance().level;
+        if (level != null) RopeClientManager.attach(msg, level);
     }
 
     public static void onRopeDelete(RopeDeleteS2C msg) {
-        RopeClientManager.detach(msg.owner());
+        RopeClientManager.detach(msg.id());
     }
 
     public static void onRopeVerletLength(RopeVerletLengthS2C msg) {
-        VerletRopeState rope = RopeClientManager.get(msg.owner());
+        VerletRopeState rope = RopeClientManager.get(msg.id());
         if (rope != null) rope.targetLength = msg.length();
     }
 }

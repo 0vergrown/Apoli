@@ -33,10 +33,10 @@ public enum Hand implements StringRepresentable {
 
     public static DataResult<Hand> byName(String name) {
         return switch (name) {
-            case "main_hand", "mainhand" -> DataResult.success(MAIN_HAND);
-            case "off_hand", "offhand" -> DataResult.success(OFF_HAND);
+            case "main_hand", "mainhand", "MAIN_HAND", "MAINHAND" -> DataResult.success(MAIN_HAND);
+            case "off_hand", "offhand", "OFF_HAND", "OFFHAND" -> DataResult.success(OFF_HAND);
             default -> DataResult.error(() -> "Unknown hand: '" + name
-                + "' (expected main_hand/mainhand or off_hand/offhand)");
+                + "' (expected main_hand/mainhand or off_hand/offhand, upper case accepted)");
         };
     }
 

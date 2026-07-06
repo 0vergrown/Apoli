@@ -29,5 +29,7 @@ public final class BiEntityConditions {
         ConditionTypes.BI_ENTITY.register(Apoli.id("attack_target"), new AttackTargetCondition());
         ConditionTypes.BI_ENTITY.register(Apoli.id("relative_rotation"), new RelativeRotationCondition());
         ConditionTypes.BI_ENTITY.register(Apoli.id("invert"), new InvertBiEntityCondition());
+        ConditionTypes.BI_ENTITY.register(Apoli.id("disguised"), new DisguisedBiCondition());
+        ConditionTypes.BI_ENTITY.register(Apoli.id("roped_together"), new RopedTogetherCondition());
     }
 }

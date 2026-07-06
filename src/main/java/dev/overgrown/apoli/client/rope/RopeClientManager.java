@@ -1,38 +1,37 @@
 package dev.overgrown.apoli.client.rope;
 
 import dev.overgrown.apoli.network.payload.RopeChangeLengthC2S;
+import dev.overgrown.apoli.network.payload.RopeCreateS2C;
 import dev.overgrown.apoli.network.payload.RopeSwingC2S;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 import static dev.overgrown.apoli.rope.RopeConstants.*;
 
 public final class RopeClientManager {
     private RopeClientManager() {}
 
-    private static final Map<UUID, VerletRopeState> ROPES = new HashMap<>();
+    private static final Map<Integer, VerletRopeState> ROPES = new HashMap<>();
 
-    public static void attach(UUID owner, Vec3 anchor, double length, float maxLength, ResourceLocation texture) {
-        ROPES.put(owner, new VerletRopeState(owner, anchor, length, maxLength, texture));
+    public static void attach(RopeCreateS2C p, ClientLevel level) {
+        ROPES.put(p.id(), new VerletRopeState(p.id(), p.from(), p.to(), p.length(), p.maxLength(),
+            p.texture(), p.owner(), p.controllable(), level));
     }
 
-    public static void detach(UUID owner) {
-        ROPES.remove(owner);
+    public static void detach(int id) {
+        ROPES.remove(id);
     }
 
-    public static VerletRopeState get(UUID uuid) {
-        return ROPES.get(uuid);
+    public static VerletRopeState get(int id) {
+        return ROPES.get(id);
     }
 
     public static Collection<VerletRopeState> getAll() {
@@ -44,7 +43,12 @@ public final class RopeClientManager {
     }
 
     private static void verletStep(VerletRopeState rope) {
-        for (int i = 1; i < rope.points.size(); i++) {
+        int last = rope.points.size() - 1;
+        RopePoint first = rope.points.get(0);
+        first.prevPos = first.pos;
+        RopePoint end = rope.points.get(last);
+        end.prevPos = end.pos;
+        for (int i = 1; i < last; i++) {
             RopePoint p = rope.points.get(i);
             Vec3 vel = p.pos.subtract(p.prevPos).scale(ROPE_DAMPING);
             p.prevPos = p.pos;
@@ -52,75 +56,67 @@ public final class RopeClientManager {
         }
     }
 
-    private static void applyRopeConstraints(VerletRopeState rope, Vec3 playerPos) {
-        rope.points.get(0).pos = rope.anchor;
-        rope.points.get(rope.points.size() - 1).pos = playerPos;
+    private static void applyConstraints(VerletRopeState rope, Vec3 fromPos, Vec3 toPos) {
+        int last = rope.points.size() - 1;
+        rope.points.get(0).pos = fromPos;
+        rope.points.get(last).pos = toPos;
 
-        for (int i = 0; i < rope.points.size() - 1; i++) {
+        for (int i = 0; i < last; i++) {
             RopePoint a = rope.points.get(i);
             RopePoint b = rope.points.get(i + 1);
-
             Vec3 delta = b.pos.subtract(a.pos);
             double dist = delta.length();
+            if (dist < 1e-6) continue;
             double diff = (dist - rope.segmentLength) / dist;
-
             Vec3 offset = delta.scale(ROPE_STIFFNESS * diff);
             a.pos = a.pos.add(offset);
             b.pos = b.pos.subtract(offset);
         }
 
-        rope.points.get(0).pos = rope.anchor;
-        rope.points.get(rope.points.size() - 1).pos = playerPos;
+        rope.points.get(0).pos = fromPos;
+        rope.points.get(last).pos = toPos;
     }
 
-    private static void changeRopeLength(VerletRopeState rope, Minecraft client) {
-        double delta = 0f;
-        if (client.options.keyJump.isDown()) delta -= ROPE_LENGTH_CHANGE_STEP;
-        if (client.options.keyShift.isDown()) delta += ROPE_LENGTH_CHANGE_STEP;
-        if (delta != 0f) PacketDistributor.sendToServer(new RopeChangeLengthC2S(delta));
+    private static void resegment(VerletRopeState rope) {
+        if (rope.targetLength == rope.length) return;
+        rope.length = Mth.lerp(0.33, rope.length, rope.targetLength);
 
-        if (rope.targetLength != rope.length) {
-            rope.length = Mth.lerp(0.33, rope.length, rope.targetLength);
+        int desiredSegments = Math.max(2, (int) Math.ceil(rope.length / GOAL_ROPE_SEGMENT_LENGTH));
+        desiredSegments = Math.min(desiredSegments, (int) Math.ceil(rope.maxLength / GOAL_ROPE_SEGMENT_LENGTH));
 
-            int desiredSegments = Math.max(2, (int) Math.ceil(rope.length / GOAL_ROPE_SEGMENT_LENGTH));
-            desiredSegments = Mth.clamp(
-                desiredSegments,
-                Math.round(MIN_ROPE_LENGTH * GOAL_ROPE_SEGMENT_LENGTH),
-                Math.round(rope.maxLength * GOAL_ROPE_SEGMENT_LENGTH));
-
-            if (rope.points.size() - 1 > desiredSegments) {
-                rope.points.remove(1);
-            }
-            if (rope.points.size() - 1 < desiredSegments) {
-                RopePoint last = rope.points.get(0);
-                RopePoint prev = rope.points.get(1);
-                Vec3 dir = last.pos.subtract(prev.pos).normalize();
-                Vec3 newPos = last.pos.add(dir.scale(GOAL_ROPE_SEGMENT_LENGTH));
-
-                RopePoint p = new RopePoint(newPos);
-                Vec3 vel = last.pos.subtract(last.prevPos);
-                p.prevPos = newPos.subtract(vel);
-
-                rope.points.add(p);
-            }
-
-            rope.segmentLength = rope.length / (rope.points.size() - 1);
+        if (rope.points.size() - 1 > desiredSegments && rope.points.size() > 2) {
+            rope.points.remove(1);
         }
+        if (rope.points.size() - 1 < desiredSegments) {
+            RopePoint anchor = rope.points.get(0);
+            RopePoint next = rope.points.get(1);
+            RopePoint p = new RopePoint(anchor.pos.lerp(next.pos, 0.5));
+            p.prevPos = anchor.prevPos.lerp(next.prevPos, 0.5);
+            rope.points.add(1, p);
+        }
+        rope.segmentLength = rope.length / (rope.points.size() - 1);
     }
 
-    private static void swing(Minecraft client) {
+    private static void driveLocalRope(VerletRopeState rope, Minecraft client, ClientLevel level) {
         Options opts = client.options;
 
-        double x = 0;
-        double z = 0;
-        if (opts.keyUp.isDown())    z += 1;
-        if (opts.keyDown.isDown())  z -= 1;
-        if (opts.keyRight.isDown()) x += 1;
-        if (opts.keyLeft.isDown())  x -= 1;
-        if (x == 0 && z == 0) return;
+        double delta = 0;
+        if (opts.keyJump.isDown()) delta -= ROPE_LENGTH_CHANGE_STEP;
+        if (opts.keyShift.isDown()) delta += ROPE_LENGTH_CHANGE_STEP;
+        if (delta != 0) PacketDistributor.sendToServer(new RopeChangeLengthC2S(rope.id, delta));
 
+        Vec3 anchor = rope.anchorAwayFrom(client.player.getId(), level);
+        Vec3 playerPos = client.player.getBoundingBox().getCenter();
+        if (anchor == null || anchor.y <= playerPos.y || playerPos.distanceTo(anchor) < rope.length * 0.98) return;
+
+        double x = 0, z = 0;
+        if (opts.keyUp.isDown()) z += 1;
+        if (opts.keyDown.isDown()) z -= 1;
+        if (opts.keyRight.isDown()) x += 1;
+        if (opts.keyLeft.isDown()) x -= 1;
+        if (x == 0 && z == 0) return;
         Vec3 dir = new Vec3(x, 0, z);
-        PacketDistributor.sendToServer(new RopeSwingC2S(dir.lengthSqr() > 1 ? dir.normalize() : dir));
+        PacketDistributor.sendToServer(new RopeSwingC2S(rope.id, dir.lengthSqr() > 1 ? dir.normalize() : dir));
     }
 
     public static void tick() {
@@ -128,27 +124,16 @@ public final class RopeClientManager {
         ClientLevel level = client.level;
         if (level == null || client.player == null) return;
 
-        UUID localUuid = client.player.getUUID();
-        VerletRopeState localRope = ROPES.get(localUuid);
-        if (localRope != null) {
-            changeRopeLength(localRope, client);
-
-            Vec3 clientPos = client.player.getBoundingBox().getCenter();
-            double dist = clientPos.subtract(localRope.anchor).length();
-            if (localRope.anchor.y > clientPos.y && dist >= localRope.length * 0.98) {
-                swing(client);
-            }
-        }
-
         for (VerletRopeState rope : ROPES.values()) {
-            Player player = level.getPlayerByUUID(rope.owner);
-            if (player == null) continue;
-            Vec3 playerPos = player.getBoundingBox().getCenter();
+            if (rope.drivenBy(client.player.getUUID())) driveLocalRope(rope, client, level);
+
+            resegment(rope);
+            Vec3 fromPos = rope.from.position(level);
+            Vec3 toPos = rope.to.position(level);
+            if (fromPos == null || toPos == null) continue;
 
             verletStep(rope);
-            for (int i = 0; i < 10; i++) {
-                applyRopeConstraints(rope, playerPos);
-            }
+            for (int i = 0; i < 10; i++) applyConstraints(rope, fromPos, toPos);
         }
     }
 }

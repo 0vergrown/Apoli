@@ -53,5 +53,6 @@ public final class ApoliKeyHandler {
                 PacketDistributor.sendToServer(new PowerToggleC2S(powerId));
             }
         }
+        KeyPressWatcher.tick();
     }
 }

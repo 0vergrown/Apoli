@@ -28,6 +28,33 @@ sourceSets.main.resources {
 
 repositories {
     mavenCentral()
+    // Icarus (optional compile-time dependency for the apoli:wings compat power type).
+    maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+        content { includeGroup "maven.modrinth" }
+    }
+    // Accessories (accessory-slot compat backend).
+    maven {
+        name = "Wispforest"
+        url = "https://maven.wispforest.io/releases"
+    }
+    // Curios (accessory-slot compat backend).
+    maven {
+        name = "TheIllusiveC4"
+        url = "https://maven.theillusivec4.top/"
+    }
+    // Sinytra — hosts org.sinytra.forgified-fabric-api, a transitive of accessories-neoforge that
+    // supplies the Fabric event API (AccessoryChangeCallback) shim on NeoForge.
+    maven {
+        name = "Sinytra"
+        url = "https://maven.su5ed.dev/releases"
+    }
+    // Blay09 mods (Balm + Hardcore Revival) for the revival compat.
+    maven {
+        name = "TwelveIterations"
+        url = "https://maven.twelveiterations.com/repository/maven-public/"
+    }
 }
 
 base {
@@ -118,6 +145,27 @@ configurations {
 }
 
 dependencies {
+    // Icarus — compiled against, never bundled and not a runtime dependency. The apoli:wings power
+    // and its mixins are gated on Icarus being present (ModCompat.ICARUS / IcarusCompatMixinPlugin),
+    // so Apoli runs fine without it. NeoForge artifacts ship in the official mappings, so no remap
+    // is needed (plain compileOnly). Adjust icarus_version per the Icarus file you target.
+    compileOnly "maven.modrinth:icarus:${project.icarus_version}"
+
+    // Figura — compiled against, never bundled. modify_player_model equips Figura avatars; the
+    // compat code and its mixin are gated on Figura being present (ModCompat.FIGURA /
+    // FiguraCompatMixinPlugin), so Apoli runs fine without it.
+    compileOnly "maven.modrinth:figura:${project.figura_version}"
+
+    // Accessories + Curios (compile-only, optional at runtime) — the unified accessory compat types.
+    // Gated at runtime by ModCompat / the Accessories facade, so Apoli runs fine with neither present.
+    compileOnly "io.wispforest:accessories-neoforge:${project.accessories_version}"
+    compileOnly "top.theillusivec4.curios:curios-neoforge:${project.curios_version}"
+
+    // Hardcore Revival + Balm (compile-only, optional at runtime) — the revival compat types.
+    // Gated at runtime by ModCompat.HARDCORE_REVIVAL, so Apoli runs fine without them.
+    compileOnly "net.blay09.mods:balm-neoforge:${project.balm_version}"
+    compileOnly "net.blay09.mods:hardcorerevival-neoforge:${project.hardcore_revival_version}"
+
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
     // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"

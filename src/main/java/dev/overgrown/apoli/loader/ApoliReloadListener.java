@@ -70,6 +70,12 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
         ApoliPowers.replaceAll(loaded);
         LOG.info("[Apoli] Loaded {} power(s).", loaded.size());
 
+        Map<ResourceLocation, dev.overgrown.apoli.skill.Skill> powerSkills = new HashMap<>();
+        for (Map.Entry<ResourceLocation, Power> e : loaded.entrySet()) {
+            e.getValue().toSkill(e.getKey()).ifPresent(skill -> powerSkills.put(e.getKey(), skill));
+        }
+        dev.overgrown.apoli.skill.SkillRegistry.setPowerSkills(powerSkills);
+
         if (server != null) {
             ApoliNetwork.broadcastPowers(server, SyncPowersS2C.fromCurrent());
         }

@@ -2,6 +2,10 @@ package dev.overgrown.apoli.condition.builtin.entity;
 
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.alias.AliasingOptions;
+import dev.overgrown.apoli.compat.ModCompat;
+import dev.overgrown.apoli.compat.accessory.condition.entity.AccessoryEquippedCountCondition;
+import dev.overgrown.apoli.compat.accessory.condition.entity.AccessorySlotCountCondition;
+import dev.overgrown.apoli.compat.hardcorerevival.condition.KnockedOutCondition;
 import dev.overgrown.apoli.condition.ConditionTypes;
 
 public final class EntityConditions {
@@ -11,6 +15,14 @@ public final class EntityConditions {
         ConditionTypes.ENTITY.register(Apoli.id("entity_type"), new EntityTypeCondition());
         ConditionTypes.ENTITY.register(Apoli.id("invisible"), new InvisibleCondition());
         ConditionTypes.ENTITY.register(Apoli.id("sneaking"), new SneakingCondition());
+        ConditionTypes.ENTITY.register(
+            Apoli.id("key_pressed"),
+            new KeyPressedCondition(),
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("key_held"))
+                .addTypeAlias(Apoli.id("held_key"))
+                .build()
+        );
         ConditionTypes.ENTITY.register(Apoli.id("status_effect"), new StatusEffectCondition());
         ConditionTypes.ENTITY.register(
             Apoli.id("entity_set_size"),
@@ -95,5 +107,20 @@ public final class EntityConditions {
         ConditionTypes.ENTITY.register(Apoli.id("raycast"), new RaycastEntityCondition());
 
         ConditionTypes.ENTITY.register(Apoli.id("attached_to_rope"), new AttachedToRopeCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("disguised"), new DisguisedCondition());
+
+        
+        
+        if (ModCompat.anyAccessory()) {
+            ConditionTypes.ENTITY.register(Apoli.id("accessory_equipped_count"), new AccessoryEquippedCountCondition(),
+                AliasingOptions.builder().addTypeAlias(Apoli.id("equipped_trinket_count")).build());
+            ConditionTypes.ENTITY.register(Apoli.id("accessory_slot_count"), new AccessorySlotCountCondition(),
+                AliasingOptions.builder().addTypeAlias(Apoli.id("trinket_slot_count")).build());
+        }
+
+        
+        if (ModCompat.HARDCORE_REVIVAL) {
+            ConditionTypes.ENTITY.register(Apoli.id("knocked_out"), new KnockedOutCondition());
+        }
     }
 }

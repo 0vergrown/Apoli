@@ -1,16 +1,18 @@
 package dev.overgrown.apoli.network.payload;
 
 import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.rope.RopeAnchor;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 
-public record RopeCreateS2C(UUID owner, Vec3 anchor, double length, float maxLength, ResourceLocation texture)
+public record RopeCreateS2C(int id, RopeAnchor from, RopeAnchor to, double length, float maxLength,
+                            ResourceLocation texture, @Nullable UUID owner, boolean controllable)
     implements CustomPacketPayload {
 
     public static final Type<RopeCreateS2C> TYPE = new Type<>(Apoli.id("rope_create"));
@@ -19,19 +21,27 @@ public record RopeCreateS2C(UUID owner, Vec3 anchor, double length, float maxLen
         RopeCreateS2C::read);
 
     public void write(FriendlyByteBuf buf) {
-        buf.writeUUID(owner);
-        buf.writeDouble(anchor.x);
-        buf.writeDouble(anchor.y);
-        buf.writeDouble(anchor.z);
+        buf.writeVarInt(id);
+        from.write(buf);
+        to.write(buf);
         buf.writeDouble(length);
         buf.writeFloat(maxLength);
         buf.writeResourceLocation(texture);
+        buf.writeBoolean(owner != null);
+        if (owner != null) buf.writeUUID(owner);
+        buf.writeBoolean(controllable);
     }
 
     public static RopeCreateS2C read(FriendlyByteBuf buf) {
-        UUID owner = buf.readUUID();
-        Vec3 anchor = new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
-        return new RopeCreateS2C(owner, anchor, buf.readDouble(), buf.readFloat(), buf.readResourceLocation());
+        int id = buf.readVarInt();
+        RopeAnchor from = RopeAnchor.read(buf);
+        RopeAnchor to = RopeAnchor.read(buf);
+        double length = buf.readDouble();
+        float maxLength = buf.readFloat();
+        ResourceLocation texture = buf.readResourceLocation();
+        UUID owner = buf.readBoolean() ? buf.readUUID() : null;
+        boolean controllable = buf.readBoolean();
+        return new RopeCreateS2C(id, from, to, length, maxLength, texture, owner, controllable);
     }
 
     @Override

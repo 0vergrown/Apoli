@@ -36,6 +36,7 @@ public final class ClientPowerState {
             Power.CODEC.parse(JsonOps.INSTANCE, element).result().ifPresent(p -> decoded.put(id, p));
         });
         ApoliPowers.replaceAll(decoded);
+        KeyPressWatcher.rebuild(payload.rawPowers());
     }
 
     public static void applyEntityPowersSync(SyncEntityPowersS2C payload) {

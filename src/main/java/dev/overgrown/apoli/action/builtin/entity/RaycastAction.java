@@ -1,6 +1,9 @@
 package dev.overgrown.apoli.action.builtin.entity;
 
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
@@ -22,6 +25,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ClipContext;
@@ -31,6 +35,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -38,7 +43,24 @@ import java.util.List;
 import java.util.Optional;
 
 public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.Cfg> {
-    public record Cfg(Params params, Hooks hooks) {}
+    public record Cfg(Params params, Hooks hooks, Optional<Cfg> chain) {}
+
+    public enum ChainDirection implements StringRepresentable {
+        FORWARD("forward"),
+        REFLECT("reflect"),
+        CUSTOM("custom");
+
+        public static final Codec<ChainDirection> CODEC = StringRepresentable.fromEnum(ChainDirection::values);
+        private final String name;
+        ChainDirection(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String getSerializedName() {
+            return name;
+        }
+    }
 
     public record Params(
         Optional<Float> distance,
@@ -52,7 +74,10 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         Optional<ParticleEffect> particle,
         float spacing,
         Optional<Float> entityDistance,
-        Optional<Float> blockDistance
+        Optional<Float> blockDistance,
+        Optional<Vector> radius,
+        Optional<Float> coneAngle,
+        ChainDirection chainDirection
     ) {}
 
     public record Hooks(
@@ -72,6 +97,8 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
 
     private record EntityHit(LivingEntity target, Vec3 pos, double distSq) {}
 
+    private static final int MAX_CHAIN_DEPTH = 32;
+
     private static final MapCodec<Params> PARAMS = RecordCodecBuilder.mapCodec(i -> i.group(
         Codec.FLOAT.optionalFieldOf("distance").forGetter(Params::distance),
         Codec.BOOL.optionalFieldOf("block", true).forGetter(Params::block),
@@ -84,7 +111,10 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         ParticleEffect.CODEC.optionalFieldOf("particle").forGetter(Params::particle),
         Codec.FLOAT.optionalFieldOf("spacing", 0.5f).forGetter(Params::spacing),
         Codec.FLOAT.optionalFieldOf("entity_distance").forGetter(Params::entityDistance),
-        Codec.FLOAT.optionalFieldOf("block_distance").forGetter(Params::blockDistance)
+        Codec.FLOAT.optionalFieldOf("block_distance").forGetter(Params::blockDistance),
+        Vector.SCALAR_OR_VECTOR.optionalFieldOf("radius").forGetter(Params::radius),
+        Codec.FLOAT.optionalFieldOf("cone_angle").forGetter(Params::coneAngle),
+        ChainDirection.CODEC.optionalFieldOf("chain_direction", ChainDirection.FORWARD).forGetter(Params::chainDirection)
     ).apply(i, Params::new));
 
     private static final MapCodec<Hooks> HOOKS = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -102,24 +132,52 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         Codec.BOOL.optionalFieldOf("command_along_ray_only_on_hit", false).forGetter(Hooks::commandAlongRayOnlyOnHit)
     ).apply(i, Hooks::new));
 
-    @Override
-    public MapCodec<Cfg> codec() {
+    private static MapCodec<Cfg> buildCodec(Codec<Cfg> chainCodec) {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             PARAMS.forGetter(Cfg::params),
-            HOOKS.forGetter(Cfg::hooks)
+            HOOKS.forGetter(Cfg::hooks),
+            chainCodec.optionalFieldOf("chain").forGetter(Cfg::chain)
         ).apply(i, Cfg::new));
+    }
+
+    private static final Codec<Cfg> CHAIN_CODEC;
+    static {
+        LazyCodec<Cfg> lazy = new LazyCodec<>();
+        lazy.delegate = buildCodec(lazy).codec();
+        CHAIN_CODEC = lazy;
+    }
+
+    private static final class LazyCodec<A> implements Codec<A> {
+        private Codec<A> delegate;
+
+        @Override
+        public <T> DataResult<Pair<A, T>> decode(DynamicOps<T> ops, T input) {
+            return delegate.decode(ops, input);
+        }
+
+        @Override
+        public <T> DataResult<T> encode(A input, DynamicOps<T> ops, T prefix) {
+            return delegate.encode(input, ops, prefix);
+        }
+    }
+
+    @Override
+    public MapCodec<Cfg> codec() {
+        return buildCodec(CHAIN_CODEC);
     }
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
+        cast(cfg, ctx, ctx.entity().getEyePosition(), null, null, 0);
+    }
+
+    private void cast(Cfg cfg, EntityCtx ctx, Vec3 origin, @Nullable Vec3 incomingDir, @Nullable Vec3 incomingNormal, int depth) {
+        if (depth > MAX_CHAIN_DEPTH) return;
         LivingEntity source = ctx.entity();
         Level level = ctx.level();
         cfg.hooks.beforeAction.ifPresent(a -> a.run(ctx));
 
-        Vec3 origin = source.getEyePosition();
-        Vec3 dir = cfg.params.direction.isPresent()
-            ? cfg.params.space.toGlobal(source, new Vec3(cfg.params.direction.get().x(), cfg.params.direction.get().y(), cfg.params.direction.get().z()))
-            : source.getViewVector(1f);
+        Vec3 dir = resolveDirection(cfg, source, incomingDir, incomingNormal);
         if (dir.lengthSqr() < 1.0e-6) dir = source.getViewVector(1f);
         dir = dir.normalize();
 
@@ -135,22 +193,45 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         }
         double blockHitDistSq = blockHit != null ? origin.distanceToSqr(blockHit.getLocation()) : Double.POSITIVE_INFINITY;
 
+        double rx = cfg.params.radius.map(r -> (double) r.x()).orElse(0.0);
+        double ry = cfg.params.radius.map(r -> (double) r.y()).orElse(0.0);
+        double rz = cfg.params.radius.map(r -> (double) r.z()).orElse(0.0);
+        double maxRadius = Math.max(rx, Math.max(ry, rz));
+
         boolean anyEntityHit = false;
         Vec3 nearestEntityHit = null;
         double nearestEntityHitDistSq = Double.POSITIVE_INFINITY;
+        boolean coneMode = cfg.params.coneAngle.isPresent();
+        double coneCos = coneMode ? Math.cos(Math.toRadians(cfg.params.coneAngle.get())) : -1.0;
         if (cfg.params.entity) {
             Vec3 endE = origin.add(dir.scale(entityDist));
-            AABB box = new AABB(origin, endE).inflate(1.0);
+            AABB box = coneMode
+                ? AABB.ofSize(origin, entityDist * 2.0, entityDist * 2.0, entityDist * 2.0)
+                : new AABB(origin, endE).inflate(1.0 + maxRadius);
             List<Entity> candidates = level.getEntities(source, box, e ->
                 e != source && e instanceof LivingEntity && e.isPickable());
             List<EntityHit> hits = new ArrayList<>();
             for (Entity cand : candidates) {
                 if (!(cand instanceof LivingEntity targetLiving)) continue;
-                Optional<Vec3> inter = cand.getBoundingBox().clip(origin, endE);
-                if (inter.isEmpty()) continue;
-                double dSq = origin.distanceToSqr(inter.get());
+                Vec3 hitPos;
+                double dSq;
+                if (coneMode) {
+                    Vec3 center = cand.getBoundingBox().getCenter();
+                    Vec3 toEntity = center.subtract(origin);
+                    double dist = toEntity.length();
+                    if (dist > entityDist) continue;
+                    if (dist > 1.0e-4 && toEntity.scale(1.0 / dist).dot(dir) < coneCos) continue;
+                    hitPos = center;
+                    dSq = dist * dist;
+                } else {
+                    AABB targetBox = maxRadius > 0 ? cand.getBoundingBox().inflate(rx, ry, rz) : cand.getBoundingBox();
+                    Optional<Vec3> inter = targetBox.clip(origin, endE);
+                    if (inter.isEmpty()) continue;
+                    hitPos = inter.get();
+                    dSq = origin.distanceToSqr(hitPos);
+                }
                 if (!cfg.params.pierce && dSq > blockHitDistSq) continue;
-                hits.add(new EntityHit(targetLiving, inter.get(), dSq));
+                hits.add(new EntityHit(targetLiving, hitPos, dSq));
             }
             hits.sort(Comparator.comparingDouble(EntityHit::distSq));
             for (EntityHit hit : hits) {
@@ -217,5 +298,35 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
                 }
             }
         }
+
+        if (cfg.chain.isPresent()) {
+            Vec3 hitNormal = (blockHit != null && !entityStops)
+                ? Vec3.atLowerCornerOf(blockHit.getDirection().getNormal())
+                : null;
+            Vec3 chainOrigin = hitNormal != null ? rayEnd.add(hitNormal.scale(0.01)) : rayEnd;
+            cast(cfg.chain.get(), ctx, chainOrigin, dir, hitNormal, depth + 1);
+        }
+    }
+
+    private static Vec3 resolveDirection(Cfg cfg, LivingEntity source, @Nullable Vec3 incomingDir, @Nullable Vec3 incomingNormal) {
+        if (incomingDir == null) {
+            return customOrView(cfg, source, source.getViewVector(1f));
+        }
+        return switch (cfg.params.chainDirection) {
+            case FORWARD -> incomingDir;
+            case REFLECT -> incomingNormal != null ? reflect(incomingDir, incomingNormal) : incomingDir;
+            case CUSTOM -> customOrView(cfg, source, incomingDir);
+        };
+    }
+
+    private static Vec3 customOrView(Cfg cfg, LivingEntity source, Vec3 fallback) {
+        if (cfg.params.direction.isEmpty()) return fallback;
+        Vector v = cfg.params.direction.get();
+        return cfg.params.space.toGlobal(source, new Vec3(v.x(), v.y(), v.z()));
+    }
+
+    private static Vec3 reflect(Vec3 d, Vec3 n) {
+        Vec3 unit = n.normalize();
+        return d.subtract(unit.scale(2 * d.dot(unit)));
     }
 }

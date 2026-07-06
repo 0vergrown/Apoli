@@ -7,7 +7,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.phys.Vec3;
 
-public record RopeSwingC2S(Vec3 inputDir) implements CustomPacketPayload {
+public record RopeSwingC2S(int ropeId, Vec3 inputDir) implements CustomPacketPayload {
 
     public static final Type<RopeSwingC2S> TYPE = new Type<>(Apoli.id("rope_swing"));
     public static final StreamCodec<RegistryFriendlyByteBuf, RopeSwingC2S> STREAM_CODEC = StreamCodec.of(
@@ -15,13 +15,15 @@ public record RopeSwingC2S(Vec3 inputDir) implements CustomPacketPayload {
         RopeSwingC2S::read);
 
     public void write(FriendlyByteBuf buf) {
+        buf.writeVarInt(ropeId);
         buf.writeDouble(inputDir.x);
         buf.writeDouble(inputDir.y);
         buf.writeDouble(inputDir.z);
     }
 
     public static RopeSwingC2S read(FriendlyByteBuf buf) {
-        return new RopeSwingC2S(new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()));
+        int ropeId = buf.readVarInt();
+        return new RopeSwingC2S(ropeId, new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()));
     }
 
     @Override

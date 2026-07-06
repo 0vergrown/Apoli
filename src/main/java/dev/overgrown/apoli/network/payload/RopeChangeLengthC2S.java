@@ -6,7 +6,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
-public record RopeChangeLengthC2S(double delta) implements CustomPacketPayload {
+public record RopeChangeLengthC2S(int ropeId, double delta) implements CustomPacketPayload {
 
     public static final Type<RopeChangeLengthC2S> TYPE = new Type<>(Apoli.id("rope_change_length"));
     public static final StreamCodec<RegistryFriendlyByteBuf, RopeChangeLengthC2S> STREAM_CODEC = StreamCodec.of(
@@ -14,11 +14,12 @@ public record RopeChangeLengthC2S(double delta) implements CustomPacketPayload {
         RopeChangeLengthC2S::read);
 
     public void write(FriendlyByteBuf buf) {
+        buf.writeVarInt(ropeId);
         buf.writeDouble(delta);
     }
 
     public static RopeChangeLengthC2S read(FriendlyByteBuf buf) {
-        return new RopeChangeLengthC2S(buf.readDouble());
+        return new RopeChangeLengthC2S(buf.readVarInt(), buf.readDouble());
     }
 
     @Override

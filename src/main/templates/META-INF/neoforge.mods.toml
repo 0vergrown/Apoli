@@ -53,6 +53,15 @@ Data-pack-driven Powers library for NeoForge 1.21.1.
 [[mixins]]
 config="${mod_id}.mixins.json"
 
+# Optional Icarus compatibility (apoli:wings). Its IMixinConfigPlugin no-ops when Icarus is absent.
+[[mixins]]
+config="${mod_id}-icarus.mixins.json"
+
+# Optional Figura compatibility (apoli:modify_player_model avatars). The accessor mixin is @Pseudo,
+# so it silently skips when Figura is absent.
+[[mixins]]
+config="${mod_id}-figura.mixins.json"
+
 # The [[accessTransformers]] block allows you to declare where your AT file is.
 # If this block is omitted, a fallback attempt will be made to load an AT from META-INF/accesstransformer.cfg
 #[[accessTransformers]]

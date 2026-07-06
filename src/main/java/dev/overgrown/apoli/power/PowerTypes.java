@@ -4,6 +4,14 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.alias.AliasingOptions;
+import dev.overgrown.apoli.compat.ModCompat;
+import dev.overgrown.apoli.compat.accessory.power.ActionOnAccessoryChangePower;
+import dev.overgrown.apoli.compat.accessory.power.ModifyAccessorySlotsPower;
+import dev.overgrown.apoli.compat.accessory.power.PreventAccessoryEquipPower;
+import dev.overgrown.apoli.compat.accessory.power.PreventAccessoryUnequipPower;
+import dev.overgrown.apoli.compat.hardcorerevival.power.ActionOnKnockoutPower;
+import dev.overgrown.apoli.compat.hardcorerevival.power.ActionOnRevivePower;
+import dev.overgrown.apoli.compat.icarus.WingsPower;
 import dev.overgrown.apoli.power.builtin.ActionOnBlockBreakPower;
 import dev.overgrown.apoli.power.builtin.ActionOnBlockPlacePower;
 import dev.overgrown.apoli.power.builtin.ActionOnBlockUsePower;
@@ -39,9 +47,11 @@ import dev.overgrown.apoli.power.builtin.IgnoreFluidPower;
 import dev.overgrown.apoli.power.builtin.InventoryPower;
 import dev.overgrown.apoli.power.builtin.InvisibilityPower;
 import dev.overgrown.apoli.power.builtin.InvulnerabilityPower;
+import dev.overgrown.apoli.power.builtin.EntityTextureOverlayPower;
 import dev.overgrown.apoli.power.builtin.ItemOnItemPower;
 import dev.overgrown.apoli.power.builtin.KeepInventoryPower;
 import dev.overgrown.apoli.power.builtin.ModelColorPower;
+import dev.overgrown.apoli.power.builtin.ModifyModelPartsPower;
 import dev.overgrown.apoli.power.builtin.ModifyBlockRenderPower;
 import dev.overgrown.apoli.power.builtin.ModifyBreakSpeedPower;
 import dev.overgrown.apoli.power.builtin.ModifyCameraSubmersionPower;
@@ -56,6 +66,7 @@ import dev.overgrown.apoli.power.builtin.ModifyHarvestPower;
 import dev.overgrown.apoli.power.builtin.ModifyHealingPower;
 import dev.overgrown.apoli.power.builtin.ModifyInsomniaTicksPower;
 import dev.overgrown.apoli.power.builtin.ModifyJumpPower;
+import dev.overgrown.apoli.power.builtin.ModifyPlayerModelPower;
 import dev.overgrown.apoli.power.builtin.ModifyPlayerSpawnPower;
 import dev.overgrown.apoli.power.builtin.ModifyProjectileDamagePower;
 import dev.overgrown.apoli.power.builtin.ModifySlipperinessPower;
@@ -275,6 +286,8 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("prevent_powers"), new PreventPowersPower());
 
         PowerTypeRegistry.register(Apoli.id("model_color"), new ModelColorPower());
+        PowerTypeRegistry.register(Apoli.id("modify_model_parts"), new ModifyModelPartsPower());
+        PowerTypeRegistry.register(Apoli.id("entity_texture_overlay"), new EntityTextureOverlayPower());
         PowerTypeRegistry.register(Apoli.id("overlay"), new OverlayPower());
         PowerTypeRegistry.register(Apoli.id("shader"), new ShaderPower());
         PowerTypeRegistry.register(Apoli.id("status_bar_texture"), new StatusBarTexturePower());
@@ -282,6 +295,7 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("particle"), new ParticlePower());
         PowerTypeRegistry.register(Apoli.id("modify_fluid_render"), new ModifyFluidRenderPower());
         PowerTypeRegistry.register(Apoli.id("pose"), new PosePower());
+        PowerTypeRegistry.register(Apoli.id("modify_player_model"), new ModifyPlayerModelPower());
 
         PowerTypeRegistry.register(Apoli.id("inventory"), new InventoryPower());
         PowerTypeRegistry.register(Apoli.id("recipe"), new RecipePower());
@@ -292,6 +306,35 @@ public final class PowerTypes {
 
         PowerTypeRegistry.register(Apoli.id("fire_projectile"), new FireProjectilePower());
         PowerTypeRegistry.register(Apoli.id("game_event_listener"), new GameEventListenerPower());
+
+        
+        
+        
+        if (ModCompat.ICARUS) {
+            PowerTypeRegistry.register(Apoli.id("wings"), new WingsPower());
+        }
+
+        
+        
+        if (ModCompat.anyAccessory()) {
+            PowerTypeRegistry.register(Apoli.id("action_on_accessory_change"), new ActionOnAccessoryChangePower(),
+                AliasingOptions.builder().addTypeAlias(Apoli.id("action_on_trinket_change")).build());
+            PowerTypeRegistry.register(Apoli.id("prevent_accessory_equip"), new PreventAccessoryEquipPower(),
+                AliasingOptions.builder().addTypeAlias(Apoli.id("prevent_trinket_equip")).build());
+            PowerTypeRegistry.register(Apoli.id("prevent_accessory_unequip"), new PreventAccessoryUnequipPower(),
+                AliasingOptions.builder().addTypeAlias(Apoli.id("prevent_trinket_unequip")).build());
+            PowerTypeRegistry.register(Apoli.id("modify_accessory_slots"), new ModifyAccessorySlotsPower(),
+                AliasingOptions.builder()
+                    .addTypeAlias(Apoli.id("modify_trinket_slot"))
+                    .addTypeAlias(Apoli.id("modify_trinket_slots"))
+                    .build());
+        }
+
+        
+        if (ModCompat.HARDCORE_REVIVAL) {
+            PowerTypeRegistry.register(Apoli.id("action_on_knockout"), new ActionOnKnockoutPower());
+            PowerTypeRegistry.register(Apoli.id("action_on_revive"), new ActionOnRevivePower());
+        }
     }
 
     private static JsonObject selfGlowTarget(boolean value) {
