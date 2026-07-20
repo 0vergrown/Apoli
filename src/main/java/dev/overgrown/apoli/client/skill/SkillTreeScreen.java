@@ -60,6 +60,17 @@ public class SkillTreeScreen extends Screen {
         layout();
     }
 
+    public void refreshFromState() {
+        this.roots.clear();
+        for (ResourceLocation r : ClientSkillState.roots()) {
+            if (!ClientSkillState.isHidden(r)) this.roots.add(r);
+        }
+        if (currentRoot == null || !roots.contains(currentRoot)) {
+            this.currentRoot = roots.isEmpty() ? null : roots.get(0);
+        }
+        layout();
+    }
+
     private void layout() {
         positions.clear();
         treeSkills.clear();
@@ -192,7 +203,7 @@ public class SkillTreeScreen extends Screen {
             ResourceLocation frame = isObtained(e) ? FRAME_OBTAINED : FRAME_UNOBTAINED;
             g.blitSprite(frame, ox + pos[0] + 3, oy + pos[1], 26, 26);
             g.renderFakeItem(e.icon(), ox + pos[0] + 8, oy + pos[1] + 5);
-            
+
             if (ClientSkillState.isLocked(id)) {
                 g.fill(ox + pos[0] + 3, oy + pos[1], ox + pos[0] + 29, oy + pos[1] + 26, 0xB0000000);
             }
@@ -291,7 +302,12 @@ public class SkillTreeScreen extends Screen {
         List<Component> parts = new ArrayList<>();
         if (!e.description().getString().isEmpty()) parts.add(e.description().copy().withStyle(ChatFormatting.GRAY));
         if (isObtained(e)) {
-            if (!e.powers().isEmpty()) parts.add(Component.translatable("screen.apoli.skill_tree.purchased").withStyle(ChatFormatting.GREEN));
+            if (!e.powers().isEmpty()) {
+                parts.add(Component.translatable("screen.apoli.skill_tree.purchased").withStyle(ChatFormatting.GREEN));
+                if (ClientSkillState.canRefund(e.id())) {
+                    parts.add(Component.translatable("screen.apoli.skill_tree.refund", e.cost()).withStyle(ChatFormatting.YELLOW));
+                }
+            }
         } else {
             parts.add(Component.translatable("screen.apoli.skill_tree.cost", e.cost()).withStyle(ChatFormatting.GOLD));
             if (!ClientSkillState.parentSatisfied(e) || ClientSkillState.isLocked(e.id())) {
@@ -334,7 +350,13 @@ public class SkillTreeScreen extends Screen {
                     if (e == null || pos == null) continue;
                     int wx = k + pos[0], wy = l + pos[1];
                     if (localX >= wx && localX <= wx + 26 && localY >= wy && localY <= wy + 26) {
-                        if (ClientSkillState.canBuy(e)) ClientPlayNetworking.send(new BuySkillC2S(id));
+                        if (hasShiftDown() && ClientSkillState.canRefund(id)) {
+                            if (ClientPlayNetworking.canSend(dev.overgrown.apoli.network.payload.RefundSkillC2S.TYPE)) {
+                                ClientPlayNetworking.send(new dev.overgrown.apoli.network.payload.RefundSkillC2S(id));
+                            }
+                        } else if (ClientSkillState.canBuy(e)) {
+                            ClientPlayNetworking.send(new BuySkillC2S(id));
+                        }
                         return true;
                     }
                 }

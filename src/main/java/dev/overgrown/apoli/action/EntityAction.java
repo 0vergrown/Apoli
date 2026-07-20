@@ -13,6 +13,7 @@ public record EntityAction(ResourceLocation typeId, Object config) {
     public void run(EntityCtx ctx) {
         ActionType<EntityCtx, ?> type = ActionTypes.ENTITY.get(typeId);
         if (type == null) return;
+        if (ctx.entity() == null && (ctx.raw() == null || !type.acceptsNonLiving())) return;
         @SuppressWarnings({"unchecked", "rawtypes"})
         ActionType raw = type;
         raw.run(config, ctx);

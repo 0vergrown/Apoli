@@ -20,7 +20,12 @@ public final class InBlockCondition implements ConditionType<EntityCtx, InBlockC
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        BlockPos pos = ctx.entity().blockPosition();
+        BlockPos pos = ctx.raw().blockPosition();
         return cfg.blockCondition.test(new BlockCtx(pos, ctx.level().getBlockState(pos), ctx.level()));
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

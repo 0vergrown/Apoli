@@ -11,7 +11,6 @@ import com.mojang.serialization.JsonOps;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.ApoliNetwork;
 import dev.overgrown.apoli.alias.NamespaceAlias;
-import dev.overgrown.apoli.network.payload.SyncPowersS2C;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerTypeRegistry;
@@ -77,7 +76,7 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
         dev.overgrown.apoli.skill.SkillRegistry.setPowerSkills(powerSkills);
 
         if (server != null) {
-            ApoliNetwork.broadcastPowers(server, SyncPowersS2C.fromCurrent());
+            ApoliNetwork.broadcastPowers(server);
         }
     }
 
@@ -104,6 +103,10 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
                 continue;
             }
             JsonObject substituted = (JsonObject) substituteWildcards(subObj.deepCopy(), id);
+            if (!substituted.has("type")) {
+                LOG.error("[Apoli] Sub-power '{}' of {} has no 'type' field — skipping. (If this was meant to be power data rather than a sub-power, it is not a recognized field of apoli:multiple.)", key, id);
+                continue;
+            }
             if (isMultiple(substituted)) {
                 LOG.error("[Apoli] Nested apoli:multiple is not allowed (sub-power '{}' of {}) — skipping.", key, id);
                 continue;

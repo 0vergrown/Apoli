@@ -1,7 +1,9 @@
 package dev.overgrown.apoli.skill;
 
+import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -11,9 +13,11 @@ import java.util.List;
 import java.util.Map;
 
 public final class SkillRegistry {
+    private static final Logger LOG = LogUtils.getLogger();
+
     private SkillRegistry() {}
 
-    private static volatile Map<ResourceLocation, Skill> fileSkills = Map.of();
+    private static volatile Map<ResourceLocation, SkillTree> trees = Map.of();
     private static volatile Map<ResourceLocation, Skill> powerSkills = Map.of();
 
     private static volatile Map<ResourceLocation, Skill> byId = Map.of();
@@ -21,8 +25,8 @@ public final class SkillRegistry {
     private static volatile List<ResourceLocation> roots = List.of();
     private static volatile Map<ResourceLocation, ResourceLocation> rootCache = Map.of();
 
-    public static void setFileSkills(Map<ResourceLocation, Skill> skills) {
-        fileSkills = Map.copyOf(skills);
+    public static void setTrees(Map<ResourceLocation, SkillTree> loaded) {
+        trees = Map.copyOf(loaded);
         rebuild();
     }
 
@@ -32,36 +36,58 @@ public final class SkillRegistry {
     }
 
     private static synchronized void rebuild() {
-        Map<ResourceLocation, Skill> map = new LinkedHashMap<>(powerSkills);
-        map.putAll(fileSkills);
+        Map<ResourceLocation, SkillTree> treeMap = trees;
+        Map<ResourceLocation, Skill> candidates = new LinkedHashMap<>(powerSkills);
+
+        Map<ResourceLocation, ResourceLocation> rc = new HashMap<>();
+        Map<ResourceLocation, Skill> valid = new LinkedHashMap<>();
+        for (Skill skill : candidates.values()) {
+            ResourceLocation cur = skill.id();
+            ResourceLocation root = null;
+            int guard = 0;
+            while (guard++ <= 256) {
+                Skill s = candidates.get(cur);
+                if (s == null) break;
+                ResourceLocation parent = s.parent();
+                if (treeMap.containsKey(parent)) {
+                    root = parent;
+                    break;
+                }
+                if (!candidates.containsKey(parent)) break;
+                cur = parent;
+            }
+            if (root == null) {
+                LOG.warn("[Apoli] Skill {} has no skill tree at the top of its parent chain (parent '{}'); it will not appear anywhere. Point its 'parent' at a skill_trees file id or another skill.",
+                    skill.id(), skill.parent());
+                continue;
+            }
+            valid.put(skill.id(), skill);
+            rc.put(skill.id(), root);
+        }
 
         Map<ResourceLocation, List<ResourceLocation>> kids = new HashMap<>();
-        List<ResourceLocation> rootList = new ArrayList<>();
-        for (Skill skill : map.values()) {
-            if (skill.parent().isPresent() && map.containsKey(skill.parent().get())) {
-                kids.computeIfAbsent(skill.parent().get(), k -> new ArrayList<>()).add(skill.id());
-            } else {
-                rootList.add(skill.id());
-            }
+        for (Skill skill : valid.values()) {
+            kids.computeIfAbsent(skill.parent(), k -> new ArrayList<>()).add(skill.id());
         }
-        java.util.Comparator<ResourceLocation> byOrder = java.util.Comparator.comparingInt(id -> map.get(id).order());
+        java.util.Comparator<ResourceLocation> byOrder = java.util.Comparator.comparingInt(id -> valid.get(id).order());
         for (List<ResourceLocation> siblings : kids.values()) siblings.sort(byOrder);
-        rootList.sort(byOrder);
-        Map<ResourceLocation, ResourceLocation> rc = new HashMap<>();
-        for (ResourceLocation id : map.keySet()) {
-            ResourceLocation cur = id;
-            int guard = 0;
-            while (true) {
-                Skill s = map.get(cur);
-                if (s == null || s.parent().isEmpty() || !map.containsKey(s.parent().get()) || guard++ > 256) break;
-                cur = s.parent().get();
-            }
-            rc.put(id, cur);
-        }
-        byId = Map.copyOf(map);
+
+        List<ResourceLocation> rootList = new ArrayList<>(treeMap.keySet());
+        rootList.sort(java.util.Comparator.comparingInt(id -> treeMap.get(id).order()));
+
+        byId = Map.copyOf(valid);
         children = Map.copyOf(kids);
         roots = List.copyOf(rootList);
         rootCache = Map.copyOf(rc);
+    }
+
+    @Nullable
+    public static SkillTree tree(ResourceLocation id) {
+        return trees.get(id);
+    }
+
+    public static Collection<SkillTree> trees() {
+        return trees.values();
     }
 
     @Nullable

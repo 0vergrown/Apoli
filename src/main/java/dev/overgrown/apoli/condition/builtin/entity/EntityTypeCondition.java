@@ -23,4 +23,9 @@ public final class EntityTypeCondition implements ConditionType<EntityCtx, Entit
         EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(cfg.entityType);
         return type != null && ctx.raw().getType().equals(type);
     }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
+    }
 }

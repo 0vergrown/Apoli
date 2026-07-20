@@ -12,12 +12,8 @@ public class IcarusCompatMixinPlugin implements IMixinConfigPlugin {
     private static final boolean ICARUS_PRESENT = classExists("dev.cammiescorner.icarus.api.IcarusPlayerValues");
 
     private static boolean classExists(String name) {
-        try {
-            Class.forName(name, false, IcarusCompatMixinPlugin.class.getClassLoader());
-            return true;
-        } catch (Throwable ignored) {
-            return false;
-        }
+        String path = name.replace('.', '/') + ".class";
+        return IcarusCompatMixinPlugin.class.getClassLoader().getResource(path) != null;
     }
 
     @Override

@@ -15,7 +15,6 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 
 import java.util.List;
 
-
 public final class ModifyAccessorySlotsPower extends PowerType<ModifyAccessorySlotsPower.Config> {
     public static final ResourceLocation CANONICAL = Apoli.id("modify_accessory_slots");
 
@@ -45,7 +44,7 @@ public final class ModifyAccessorySlotsPower extends PowerType<ModifyAccessorySl
 
     @Override
     public void onRemoved(ResourceLocation powerId, Config cfg, PowerContainer holder, ResourceLocation source) {
-        if (holder.hasPower(powerId)) return; 
+        if (holder.hasPower(powerId)) return;
         LivingEntity entity = holder.owner();
         if (entity == null || entity.level().isClientSide()) return;
         Accessories.removeSlotModifiers(entity, build(cfg));

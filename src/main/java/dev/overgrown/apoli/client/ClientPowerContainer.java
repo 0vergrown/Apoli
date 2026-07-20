@@ -35,6 +35,10 @@ public final class ClientPowerContainer implements PowerContainer {
         return s == null ? Set.of() : s;
     }
 
+    @Override public boolean isEmpty() {
+        return ClientPowerState.powersFor(entity.getId()).isEmpty();
+    }
+
     @Override public Set<ResourceLocation> allPowers() {
         return ClientPowerState.powersFor(entity.getId()).keySet();
     }
@@ -56,6 +60,11 @@ public final class ClientPowerContainer implements PowerContainer {
     @Override public OptionalInt getAuxInt(ResourceLocation powerId) {
         Integer v = ClientPowerState.auxFor(entity.getId()).get(powerId);
         return v == null ? OptionalInt.empty() : OptionalInt.of(v);
+    }
+
+    @Override public int getAuxIntOr(ResourceLocation powerId, int fallback) {
+        Integer v = ClientPowerState.auxFor(entity.getId()).get(powerId);
+        return v == null ? fallback : v;
     }
 
     @Override public boolean suppressPower(ResourceLocation power, ResourceLocation source) { return false; }

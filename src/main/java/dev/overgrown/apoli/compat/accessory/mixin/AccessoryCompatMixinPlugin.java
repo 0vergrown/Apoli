@@ -7,18 +7,13 @@ import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import java.util.List;
 import java.util.Set;
 
-
 public class AccessoryCompatMixinPlugin implements IMixinConfigPlugin {
 
     private static final boolean TRINKETS_PRESENT = classExists("dev.emi.trinkets.api.TrinketInventory");
 
     private static boolean classExists(String name) {
-        try {
-            Class.forName(name, false, AccessoryCompatMixinPlugin.class.getClassLoader());
-            return true;
-        } catch (Throwable ignored) {
-            return false;
-        }
+        String path = name.replace('.', '/') + ".class";
+        return AccessoryCompatMixinPlugin.class.getClassLoader().getResource(path) != null;
     }
 
     @Override

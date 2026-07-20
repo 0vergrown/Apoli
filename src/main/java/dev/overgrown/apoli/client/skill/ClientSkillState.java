@@ -24,6 +24,7 @@ public final class ClientSkillState {
     private static final Set<ResourceLocation> PURCHASED = new HashSet<>();
     private static final Set<ResourceLocation> HIDDEN = new HashSet<>();
     private static final Set<ResourceLocation> LOCKED = new HashSet<>();
+    private static final Set<ResourceLocation> NON_REFUNDABLE = new HashSet<>();
 
     public static void applyDefs(SkillDefsSyncS2C payload) {
         DEFS.clear();
@@ -62,6 +63,11 @@ public final class ClientSkillState {
         HIDDEN.addAll(payload.hidden());
         LOCKED.clear();
         LOCKED.addAll(payload.locked());
+        NON_REFUNDABLE.clear();
+        NON_REFUNDABLE.addAll(payload.nonRefundable());
+        if (net.minecraft.client.Minecraft.getInstance().screen instanceof SkillTreeScreen screen) {
+            screen.refreshFromState();
+        }
     }
 
     public static void clear() {
@@ -77,6 +83,15 @@ public final class ClientSkillState {
 
     public static boolean isHidden(ResourceLocation id) {
         return HIDDEN.contains(id);
+    }
+
+    public static boolean canRefund(ResourceLocation id) {
+        if (!isPurchased(id) || isHidden(id)) return false;
+        if (NON_REFUNDABLE.contains(rootOf(id))) return false;
+        for (ResourceLocation child : childrenOf(id)) {
+            if (isPurchased(child)) return false;
+        }
+        return true;
     }
 
     public static boolean isLocked(ResourceLocation id) {

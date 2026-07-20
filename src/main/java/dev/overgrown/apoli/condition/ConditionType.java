@@ -5,4 +5,8 @@ import com.mojang.serialization.MapCodec;
 public interface ConditionType<CTX, C> {
     MapCodec<C> codec();
     boolean test(C config, CTX ctx);
+
+    default boolean acceptsNonLiving() {
+        return false;
+    }
 }

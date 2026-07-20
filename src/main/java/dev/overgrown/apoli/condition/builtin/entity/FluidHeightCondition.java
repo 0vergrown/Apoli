@@ -26,7 +26,12 @@ public final class FluidHeightCondition implements ConditionType<EntityCtx, Flui
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
         TagKey<Fluid> tag = TagKey.create(Registries.FLUID, cfg.fluid);
-        double h = ctx.entity().getFluidHeight(tag);
+        double h = ctx.raw().getFluidHeight(tag);
         return cfg.comparison.compare((float) h, cfg.compareTo);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

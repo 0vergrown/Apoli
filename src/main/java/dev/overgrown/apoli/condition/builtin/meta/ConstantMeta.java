@@ -19,4 +19,9 @@ public final class ConstantMeta<CTX> implements ConditionType<CTX, ConstantMeta.
     public boolean test(Cfg cfg, CTX ctx) {
         return cfg.value;
     }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
+    }
 }

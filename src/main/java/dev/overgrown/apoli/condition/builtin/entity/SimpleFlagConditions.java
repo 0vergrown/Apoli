@@ -6,6 +6,7 @@ import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.shared.EmptyCfg;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.player.Abilities;
@@ -35,7 +36,7 @@ public final class SimpleFlagConditions {
     }
     public static ConditionType<EntityCtx, EmptyCfg> fallFlying()   { return new FlagCondition(LivingEntity::isFallFlying); }
     public static ConditionType<EntityCtx, EmptyCfg> glowing()      {
-        return new FlagCondition(e -> e.isCurrentlyGlowing() || PowerLookup.hasActive(e, Apoli.id("entity_glow")));
+        return new FlagCondition(e -> e.isCurrentlyGlowing() || PowerLookup.hasActive(e, ApoliIds.ENTITY_GLOW));
     }
     public static ConditionType<EntityCtx, EmptyCfg> inRain()       { return new FlagCondition(e -> e.level().isRainingAt(e.blockPosition())); }
     public static ConditionType<EntityCtx, EmptyCfg> inSnow()       {

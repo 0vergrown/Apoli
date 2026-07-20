@@ -32,7 +32,7 @@ public final class BiomeCondition implements ConditionType<EntityCtx, BiomeCondi
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        BlockPos pos = ctx.entity().blockPosition();
+        BlockPos pos = ctx.raw().blockPosition();
         Holder<Biome> here = ctx.level().getBiome(pos);
         ResourceLocation id = here.unwrapKey().map(k -> k.location()).orElse(null);
 
@@ -44,5 +44,10 @@ public final class BiomeCondition implements ConditionType<EntityCtx, BiomeCondi
             return cfg.condition.get().test(new BiomeCtx(here, pos, ctx.level()));
         }
         return false;
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

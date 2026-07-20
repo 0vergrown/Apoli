@@ -12,7 +12,6 @@ import net.minecraft.world.entity.LivingEntity;
 
 import java.util.List;
 
-
 public final class AccessorySlotCountCondition implements ConditionType<EntityCtx, AccessorySlotCountCondition.Cfg> {
     public record Cfg(Comparison comparison, int compareTo, List<AccessorySlot> slots) {}
 

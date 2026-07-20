@@ -3,6 +3,7 @@ package dev.overgrown.apoli.mixin.flag;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.builtin.InvisibilityPower;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -16,7 +17,7 @@ public abstract class EntityIsInvisibleMixin {
     private void apoli$invisibilityFlag(CallbackInfoReturnable<Boolean> cir) {
         if (!((Object) this instanceof LivingEntity self)) return;
         boolean[] hide = new boolean[]{false};
-        PowerLookup.forEach(self, Apoli.id("invisibility"), InvisibilityPower.Config.class, cfg -> {
+        PowerLookup.forEach(self, ApoliIds.INVISIBILITY, InvisibilityPower.Config.class, cfg -> {
             if (hide[0]) return;
             if (cfg.bientityCondition().isEmpty()) hide[0] = true;
         });

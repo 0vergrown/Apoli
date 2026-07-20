@@ -21,6 +21,7 @@ import dev.overgrown.apoli.power.builtin.ActionOnHitPower;
 import dev.overgrown.apoli.power.builtin.ActionOnItemPickupPower;
 import dev.overgrown.apoli.power.builtin.ActionOnItemUsePower;
 import dev.overgrown.apoli.power.builtin.ActionOnKeyPressPower;
+import dev.overgrown.apoli.power.builtin.ActionOnKeySequencePower;
 import dev.overgrown.apoli.power.builtin.ActionOnKillPower;
 import dev.overgrown.apoli.power.builtin.ActionOnLandPower;
 import dev.overgrown.apoli.power.builtin.ActionOnUsePower;
@@ -54,23 +55,20 @@ import dev.overgrown.apoli.power.builtin.ModelColorPower;
 import dev.overgrown.apoli.power.builtin.ModifyModelPartsPower;
 import dev.overgrown.apoli.power.builtin.ModifyBlockRenderPower;
 import dev.overgrown.apoli.power.builtin.ModifyBreakSpeedPower;
-import dev.overgrown.apoli.power.builtin.ModifyCameraSubmersionPower;
 import dev.overgrown.apoli.power.builtin.ModifyCraftingPower;
 import dev.overgrown.apoli.power.builtin.ModifyDamagePower;
 import dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelPower;
-import dev.overgrown.apoli.power.builtin.ModifyFluidRenderPower;
 import dev.overgrown.apoli.power.builtin.ModifyGrindstonePower;
 import dev.overgrown.apoli.power.builtin.ModifyExhaustionPower;
 import dev.overgrown.apoli.power.builtin.ModifyFallingPower;
 import dev.overgrown.apoli.power.builtin.ModifyHarvestPower;
 import dev.overgrown.apoli.power.builtin.ModifyHealingPower;
-import dev.overgrown.apoli.power.builtin.ModifyInsomniaTicksPower;
 import dev.overgrown.apoli.power.builtin.ModifyJumpPower;
+import dev.overgrown.apoli.power.builtin.ModifyLabelRenderPower;
 import dev.overgrown.apoli.power.builtin.ModifyPlayerModelPower;
 import dev.overgrown.apoli.power.builtin.ModifyPlayerSpawnPower;
 import dev.overgrown.apoli.power.builtin.ModifyProjectileDamagePower;
 import dev.overgrown.apoli.power.builtin.ModifySlipperinessPower;
-import dev.overgrown.apoli.power.builtin.ModifyStatusEffectAmplifierPower;
 import dev.overgrown.apoli.power.builtin.ModifySwimSpeedPower;
 import dev.overgrown.apoli.power.builtin.ModifyVelocityPower;
 import dev.overgrown.apoli.power.builtin.ModifyXpGainPower;
@@ -103,7 +101,6 @@ import dev.overgrown.apoli.power.builtin.ShakingPower;
 import dev.overgrown.apoli.power.builtin.SimplePower;
 import dev.overgrown.apoli.power.builtin.StackingStatusEffectPower;
 import dev.overgrown.apoli.power.builtin.StartingEquipmentPower;
-import dev.overgrown.apoli.power.builtin.StatusBarTexturePower;
 import dev.overgrown.apoli.power.builtin.SwimmingPower;
 import dev.overgrown.apoli.power.builtin.TogglePower;
 import dev.overgrown.apoli.power.builtin.TooltipPower;
@@ -127,6 +124,11 @@ public final class PowerTypes {
             Apoli.id("action_on_key_press"),
             ACTION_ON_KEY_PRESS,
             AliasingOptions.builder().addTypeAlias(Apoli.id("active_self")).build()
+        );
+        PowerTypeRegistry.register(
+            Apoli.id("action_on_key_sequence"),
+            new ActionOnKeySequencePower(),
+            AliasingOptions.builder().addTypeAlias("sync:action_on_key_sequence").build()
         );
         PowerTypeRegistry.register(Apoli.id("entity_set"), new EntitySetPower());
         PowerTypeRegistry.register(Apoli.id("entity_group"), new EntityGroupPower());
@@ -210,18 +212,15 @@ public final class PowerTypes {
 
         PowerTypeRegistry.register(Apoli.id("modify_block_render"), new ModifyBlockRenderPower());
         PowerTypeRegistry.register(Apoli.id("modify_break_speed"), new ModifyBreakSpeedPower());
-        PowerTypeRegistry.register(Apoli.id("modify_camera_submersion"), new ModifyCameraSubmersionPower());
         PowerTypeRegistry.register(Apoli.id("modify_enchantment_level"), new ModifyEnchantmentLevelPower());
         PowerTypeRegistry.register(Apoli.id("modify_exhaustion"), new ModifyExhaustionPower());
         PowerTypeRegistry.register(Apoli.id("modify_falling"), new ModifyFallingPower());
         PowerTypeRegistry.register(Apoli.id("modify_harvest"), new ModifyHarvestPower());
         PowerTypeRegistry.register(Apoli.id("modify_healing"), new ModifyHealingPower());
-        PowerTypeRegistry.register(Apoli.id("modify_insomnia_ticks"), new ModifyInsomniaTicksPower());
         PowerTypeRegistry.register(Apoli.id("modify_jump"), new ModifyJumpPower());
         PowerTypeRegistry.register(Apoli.id("modify_player_spawn"), new ModifyPlayerSpawnPower());
         PowerTypeRegistry.register(Apoli.id("modify_projectile_damage"), new ModifyProjectileDamagePower());
         PowerTypeRegistry.register(Apoli.id("modify_slipperiness"), new ModifySlipperinessPower());
-        PowerTypeRegistry.register(Apoli.id("modify_status_effect_amplifier"), new ModifyStatusEffectAmplifierPower());
         PowerTypeRegistry.register(Apoli.id("modify_swim_speed"), new ModifySwimSpeedPower());
         PowerTypeRegistry.register(Apoli.id("modify_velocity"), new ModifyVelocityPower());
         PowerTypeRegistry.register(Apoli.id("modify_xp_gain"), new ModifyXpGainPower());
@@ -290,12 +289,14 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("entity_texture_overlay"), new EntityTextureOverlayPower());
         PowerTypeRegistry.register(Apoli.id("overlay"), new OverlayPower());
         PowerTypeRegistry.register(Apoli.id("shader"), new ShaderPower());
-        PowerTypeRegistry.register(Apoli.id("status_bar_texture"), new StatusBarTexturePower());
         PowerTypeRegistry.register(Apoli.id("tooltip"), new TooltipPower());
         PowerTypeRegistry.register(Apoli.id("particle"), new ParticlePower());
-        PowerTypeRegistry.register(Apoli.id("modify_fluid_render"), new ModifyFluidRenderPower());
         PowerTypeRegistry.register(Apoli.id("pose"), new PosePower());
         PowerTypeRegistry.register(Apoli.id("modify_player_model"), new ModifyPlayerModelPower());
+        PowerTypeRegistry.register(Apoli.id("modify_label_render"), new ModifyLabelRenderPower(),
+            dev.overgrown.apoli.alias.AliasingOptions.builder()
+                .addTypeAlias("sync:modify_label_render")
+                .build());
 
         PowerTypeRegistry.register(Apoli.id("inventory"), new InventoryPower());
         PowerTypeRegistry.register(Apoli.id("recipe"), new RecipePower());
@@ -311,8 +312,6 @@ public final class PowerTypes {
             PowerTypeRegistry.register(Apoli.id("wings"), new WingsPower());
         }
 
-        
-        
         if (ModCompat.anyAccessory()) {
             PowerTypeRegistry.register(Apoli.id("action_on_accessory_change"), new ActionOnAccessoryChangePower(),
                 AliasingOptions.builder().addTypeAlias(Apoli.id("action_on_trinket_change")).build());
@@ -327,7 +326,6 @@ public final class PowerTypes {
                     .build());
         }
 
-        
         if (ModCompat.HARDCORE_REVIVAL) {
             PowerTypeRegistry.register(Apoli.id("action_on_knockout"), new ActionOnKnockoutPower());
             PowerTypeRegistry.register(Apoli.id("action_on_revive"), new ActionOnRevivePower());

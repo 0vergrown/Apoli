@@ -1,37 +1,37 @@
 {
-	"schemaVersion": 1,
-	"id": "apoli",
-	"version": "${version}",
-	"name": "Apoli",
-	"description": "A data-driven power system library.",
-	"authors": [
-		"Overgrown"
-	],
-	"contact": {
-		"homepage": "https://modrinth.com/project/opoli",
-		"sources": "https://github.com/0vergrown/Apoli/tree/Fabric-1.21.1"
-	},
-	"license": "CC0-1.0",
-	"icon": "assets/apoli/icon.png",
-	"environment": "*",
-	"entrypoints": {
-		"main": [
-			"dev.overgrown.apoli.Apoli"
-		],
-		"client": [
-			"dev.overgrown.apoli.client.ApoliClient"
-		]
-	},
-	"mixins": [
-		"apoli.mixins.json",
-		"apoli-icarus.mixins.json",
-		"apoli-figura.mixins.json",
-		"apoli-accessory.mixins.json"
-	],
-	"depends": {
-		"fabricloader": ">=0.19.2",
-		"minecraft": "~1.21.1",
-		"java": ">=21",
-		"fabric-api": "*"
-	}
+   "schemaVersion":1,
+   "id":"apoli",
+   "version":"${version}",
+   "name":"Apoli",
+   "description":"A data-driven power system that's build for custom abilities, mechanics, and entire origin systems from JSON alone!",
+   "authors":[
+      "Overgrown"
+   ],
+   "contact":{
+      "homepage":"https://modrinth.com/project/opoli",
+      "sources":"https://github.com/0vergrown/Apoli/tree/Fabric-1.21.1"
+   },
+   "license":"CC0-1.0",
+   "icon":"assets/apoli/icon.png",
+   "environment":"*",
+   "entrypoints":{
+      "main":[
+         "dev.overgrown.apoli.Apoli"
+      ],
+      "client":[
+         "dev.overgrown.apoli.client.ApoliClient"
+      ]
+   },
+   "mixins":[
+      "apoli.mixins.json",
+      "apoli-icarus.mixins.json",
+      "apoli-figura.mixins.json",
+      "apoli-accessory.mixins.json"
+   ],
+   "depends":{
+      "fabricloader":">=0.19.3",
+      "minecraft":"~1.21.1",
+      "java":">=21",
+      "fabric-api":"*"
+   }
 }

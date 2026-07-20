@@ -17,7 +17,6 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 import java.util.Optional;
 
-
 public abstract class BasePreventAccessoryPower extends PowerType<BasePreventAccessoryPower.Config> {
     public record Config(List<AccessorySlot> slots, Optional<ItemCondition> itemCondition, boolean allowInCreative) {}
 
@@ -29,7 +28,6 @@ public abstract class BasePreventAccessoryPower extends PowerType<BasePreventAcc
         ).apply(i, Config::new));
     }
 
-    
     public static boolean isPrevented(LivingEntity entity, ResourceLocation canonical, AccessorySlotRef ref, ItemStack stack) {
         boolean creative = entity instanceof Player p && p.getAbilities().instabuild;
         ItemCtx itemCtx = new ItemCtx(stack, entity.level(), entity);

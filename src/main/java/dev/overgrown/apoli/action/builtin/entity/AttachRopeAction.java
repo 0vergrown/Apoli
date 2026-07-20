@@ -67,4 +67,9 @@ public final class AttachRopeAction implements ActionType<EntityCtx, AttachRopeA
             apply(cfg, ctx.actor(), ctx.target(), ctx.level());
         }
     }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
+    }
 }

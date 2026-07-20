@@ -20,9 +20,14 @@ public final class MovingCondition implements ConditionType<EntityCtx, MovingCon
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        Vec3 v = ctx.entity().getDeltaMovement();
+        Vec3 v = ctx.raw().getDeltaMovement();
         boolean h = v.x * v.x + v.z * v.z > 1.0e-6;
         boolean ve = Math.abs(v.y) > 1.0e-3;
         return (cfg.horizontally && h) || (cfg.vertically && ve);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

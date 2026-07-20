@@ -39,4 +39,9 @@ public final class IfElseMetaAction<CTX, COND, ACTION> implements ActionType<CTX
         if (condTester.test(cfg.condition, ctx)) actionRunner.accept(cfg.ifAction, ctx);
         else cfg.elseAction.ifPresent(a -> actionRunner.accept(a, ctx));
     }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
+    }
 }

@@ -105,9 +105,7 @@ public final class RopeClientManager {
         if (opts.keyShift.isDown()) delta += ROPE_LENGTH_CHANGE_STEP;
         if (delta != 0) ClientPlayNetworking.send(new RopeChangeLengthC2S(rope.id, delta));
 
-        Vec3 anchor = rope.anchorAwayFrom(client.player.getId(), level);
-        Vec3 playerPos = client.player.getBoundingBox().getCenter();
-        if (anchor == null || anchor.y <= playerPos.y || playerPos.distanceTo(anchor) < rope.length * 0.98) return;
+        if (client.player.onGround()) return;
 
         double x = 0, z = 0;
         if (opts.keyUp.isDown()) z += 1;

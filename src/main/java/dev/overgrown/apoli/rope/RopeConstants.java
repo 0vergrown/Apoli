@@ -15,6 +15,7 @@ public final class RopeConstants {
     public static final float SPRING_SCALING = 0.65f;
     public static final float SWING_BOOST = 1.08f;
     public static final float MAX_SWING_SPEED = 0.7f;
+    public static final float SWING_CONTROL_ACCEL = 0.08f;
     public static final float ELYTRA_LENGTH_MOD = 5;
     public static final int ELYTRA_TIME_LIMIT = 10;
 

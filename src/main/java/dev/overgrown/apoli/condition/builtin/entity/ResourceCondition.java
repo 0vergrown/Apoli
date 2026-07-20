@@ -6,12 +6,10 @@ import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Comparison;
 import dev.overgrown.apoli.data.Expression;
-import dev.overgrown.apoli.data.ExpressionContext;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.builtin.ResourcePower;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.Map;
 import java.util.OptionalInt;
 
 public final class ResourceCondition implements ConditionType<EntityCtx, ResourceCondition.Cfg> {
@@ -32,9 +30,7 @@ public final class ResourceCondition implements ConditionType<EntityCtx, Resourc
         if (container == null) return false;
         OptionalInt value = ResourcePower.readValue(container, cfg.resource);
         if (value.isEmpty()) return false;
-        Map<String, Double> vars = ExpressionContext.forResource(ctx.entity(), value.getAsInt());
-        Map<String, Double> resources = ExpressionContext.resourceValues(container);
-        int rhs = cfg.compareTo.evalInt(vars, resources);
+        int rhs = cfg.compareTo.evalIntWith(ctx.entity(), container, value.getAsInt());
         return cfg.comparison.compare(value.getAsInt(), rhs);
     }
 }

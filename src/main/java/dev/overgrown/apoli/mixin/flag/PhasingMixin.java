@@ -4,6 +4,7 @@ import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.builtin.PhasingPower;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -35,7 +36,7 @@ public abstract class PhasingMixin {
         Entity entity = esc.getEntity();
         if (!(entity instanceof LivingEntity living)) return;
         boolean isPlayer = entity instanceof Player;
-        if (!PowerLookup.hasActive(living, Apoli.id("phasing"))) {
+        if (!PowerLookup.hasActive(living, ApoliIds.PHASING)) {
             if (DEBUG && isPlayer) Apoli.LOGGER.info("[phasing] {} hasActive=false — phasing not granted or its top-level condition (power_active:phantomize) failed",
                 entity.level().isClientSide() ? "CLIENT" : "SERVER");
             return;
@@ -45,7 +46,7 @@ public abstract class PhasingMixin {
         Level level = living.level();
         boolean standingOnTop = isStandingOnTop(living, original, pos);
         boolean[] allow = new boolean[]{false};
-        PowerLookup.forEach(living, Apoli.id("phasing"), PhasingPower.Config.class, cfg -> {
+        PowerLookup.forEach(living, ApoliIds.PHASING, PhasingPower.Config.class, cfg -> {
             if (allow[0]) return;
             boolean allowsBlock = PhasingPower.allowsPhasing(cfg, level, pos, state);
             boolean blockedByPhaseDown = standingOnTop && !phaseDownAllowed(cfg, living, level);

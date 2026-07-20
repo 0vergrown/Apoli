@@ -254,10 +254,16 @@ public class CloneEntity extends Monster implements OwnableEntity, CrossbowAttac
 
     @Nullable
     public ResourceLocation getCustomTexture(boolean slim) {
-        ResourceLocation wide = ResourceLocation.tryParse(this.entityData.get(WIDE_TEXTURE));
-        ResourceLocation slimTex = ResourceLocation.tryParse(this.entityData.get(SLIM_TEXTURE));
+
+        ResourceLocation wide = parseTexture(this.entityData.get(WIDE_TEXTURE));
+        ResourceLocation slimTex = parseTexture(this.entityData.get(SLIM_TEXTURE));
         if (slim) return slimTex != null ? slimTex : wide;
         return wide != null ? wide : slimTex;
+    }
+
+    @Nullable
+    private static ResourceLocation parseTexture(String raw) {
+        return raw.isEmpty() ? null : ResourceLocation.tryParse(raw);
     }
 
     public void setCanAttack(boolean canAttack) {

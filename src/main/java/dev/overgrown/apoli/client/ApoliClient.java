@@ -62,6 +62,9 @@ public final class ApoliClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(SyncPowersS2C.TYPE, (payload, context) ->
             context.client().execute(() -> ClientPowerState.applyPowersSync(payload)));
 
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SyncPowersChunkS2C.TYPE, (payload, context) ->
+            context.client().execute(() -> ClientPowerState.applyPowersChunk(payload)));
+
         ClientPlayNetworking.registerGlobalReceiver(SyncEntityPowersS2C.TYPE, (payload, context) ->
             context.client().execute(() -> ClientPowerState.applyEntityPowersSync(payload)));
 
@@ -89,7 +92,11 @@ public final class ApoliClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.ProtocolVersionPayload.TYPE, (payload, context) ->
             context.client().execute(() -> ClientProtocolState.setServerVersion(payload.version())));
 
-        
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.TextDisplayS2C.TYPE, (payload, context) ->
+            context.client().execute(() -> TextOverlayRenderer.apply(payload)));
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.LabelUpdateS2C.TYPE, (payload, context) ->
+            context.client().execute(() -> ClientLabelState.apply(payload.entityId(), payload.texts())));
+
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) ->
             ClientPlayNetworking.send(new dev.overgrown.apoli.network.payload.ProtocolVersionPayload(
                 dev.overgrown.apoli.network.ProtocolCompat.VERSION)));
@@ -98,6 +105,9 @@ public final class ApoliClient implements ClientModInitializer {
             context.client().execute(() -> dev.overgrown.apoli.client.skill.ClientSkillState.applyDefs(payload)));
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SkillStateSyncS2C.TYPE, (payload, context) ->
             context.client().execute(() -> dev.overgrown.apoli.client.skill.ClientSkillState.applyState(payload)));
+
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.TYPE, (payload, context) ->
+            context.client().execute(() -> context.client().setScreen(new dev.overgrown.apoli.client.radial.RadialMenuScreen(payload))));
 
         ClientPlayNetworking.registerGlobalReceiver(RopeCreateS2C.TYPE, (payload, context) ->
             context.client().execute(() -> {
@@ -117,6 +127,8 @@ public final class ApoliClient implements ClientModInitializer {
             mc.execute(() -> {
                 DynamicKeyMappingManager.unregisterAll();
                 ClientPowerState.clear();
+                TextOverlayRenderer.clear();
+                ClientLabelState.clear();
                 RopeClientManager.clear();
                 KeyPressWatcher.reset();
                 dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
@@ -144,11 +156,15 @@ public final class ApoliClient implements ClientModInitializer {
             if (mc.player != null && !mc.isPaused()) ApoliKeyHandler.onClientTick();
             PhasingRenderState.clientTick(mc);
             RopeClientManager.tick();
+            TextOverlayRenderer.tick();
             if (dev.overgrown.apoli.compat.ModCompat.FIGURA) {
                 dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.tick(mc);
             }
             while (SKILL_TREE_KEY.consumeClick()) {
                 if (mc.screen == null && dev.overgrown.apoli.client.skill.ClientSkillState.hasAnyTree()) {
+                    if (net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.canSend(dev.overgrown.apoli.network.payload.RequestSkillStateC2S.TYPE)) {
+                        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(dev.overgrown.apoli.network.payload.RequestSkillStateC2S.INSTANCE);
+                    }
                     mc.setScreen(new dev.overgrown.apoli.client.skill.SkillTreeScreen());
                 }
             }
@@ -158,6 +174,7 @@ public final class ApoliClient implements ClientModInitializer {
 
         HudRenderCallback.EVENT.register((gfx, tracker) -> OverlayRenderer.renderBelowHud(gfx, tracker.getGameTimeDeltaPartialTick(false)));
         HudRenderCallback.EVENT.register((gfx, tracker) -> PowerHudRenderer.render(gfx, tracker.getGameTimeDeltaPartialTick(false)));
+        HudRenderCallback.EVENT.register((gfx, tracker) -> TextOverlayRenderer.render(gfx, tracker.getGameTimeDeltaPartialTick(false)));
         HudRenderCallback.EVENT.register((gfx, tracker) -> OverlayRenderer.renderAboveHud(gfx, tracker.getGameTimeDeltaPartialTick(false)));
     }
 }

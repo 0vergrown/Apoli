@@ -25,7 +25,6 @@ import java.util.UUID;
 
 import static dev.overgrown.apoli.rope.RopeConstants.*;
 
-
 public final class RopeManager {
     private RopeManager() {}
 
@@ -35,9 +34,6 @@ public final class RopeManager {
     private static int nextId = 1;
     private static @Nullable MinecraftServer server;
 
-    
-
-    
     public static Rope create(ServerLevel level, RopeAnchor from, RopeAnchor to, @Nullable String slot,
                               @Nullable UUID owner, RopeParams params, ResourceLocation texture) {
         server = level.getServer();
@@ -55,7 +51,6 @@ public final class RopeManager {
         Rope rope = new Rope(id, from, to, fromEntity, toEntity, slot, owner, params, texture,
             level.dimension(), length);
 
-        
         if (params.controllable() && owner != null) {
             Player p = level.getServer().getPlayerList().getPlayer(owner);
             if (p != null && p.isFallFlying()) {
@@ -84,7 +79,6 @@ public final class RopeManager {
         if (level != null) ApoliNetwork.broadcastRopeDelete(level, new RopeDeleteS2C(id));
     }
 
-    
     public static int removeMatching(@Nullable UUID owner, @Nullable String slot, @Nullable UUID attachedTo) {
         List<Integer> doomed = new ArrayList<>();
         for (Rope rope : BY_ID.values()) {
@@ -97,7 +91,6 @@ public final class RopeManager {
         return doomed.size();
     }
 
-    
     public static boolean detachControllable(UUID owner) {
         List<Integer> doomed = new ArrayList<>();
         for (Rope rope : forOwner(owner)) if (rope.params.controllable()) doomed.add(rope.id);
@@ -105,7 +98,6 @@ public final class RopeManager {
         return !doomed.isEmpty();
     }
 
-    
     public static void onEntityGone(UUID entity) {
         Set<Integer> ids = BY_ENTITY.get(entity);
         if (ids == null) return;
@@ -118,8 +110,6 @@ public final class RopeManager {
         BY_OWNER.clear();
         server = null;
     }
-
-    
 
     public static @Nullable Rope get(int id) {
         return BY_ID.get(id);
@@ -141,19 +131,15 @@ public final class RopeManager {
         return out;
     }
 
-    
     public static boolean connected(UUID a, UUID b) {
         for (Rope rope : forEntity(a)) if (rope.touches(b)) return true;
         return false;
     }
 
-    
     public static @Nullable Rope controllableRopeOf(UUID owner) {
         for (Rope rope : forOwner(owner)) if (rope.params.controllable()) return rope;
         return null;
     }
-
-    
 
     public static void handleLengthChange(ServerPlayer player, int ropeId, double delta) {
         Rope rope = BY_ID.get(ropeId);
@@ -161,8 +147,6 @@ public final class RopeManager {
         ServerLevel level = serverLevel(rope);
         if (level == null) return;
 
-        
-        
         double step = Math.signum(delta) * rope.params.reelStep();
         Vec3 pa = rope.from.position(level);
         Vec3 pb = rope.to.position(level);
@@ -174,7 +158,6 @@ public final class RopeManager {
         ApoliNetwork.broadcastRopeVerletLength(level, new RopeVerletLengthS2C(ropeId, rope.length));
     }
 
-    
     public static void reel(int ropeId, double amount) {
         Rope rope = BY_ID.get(ropeId);
         if (rope == null) return;
@@ -186,17 +169,33 @@ public final class RopeManager {
     public static void applySwingInput(ServerPlayer player, int ropeId, Vec3 inputDir) {
         Rope rope = BY_ID.get(ropeId);
         if (rope == null || !rope.params.controllable() || !player.getUUID().equals(rope.owner)) return;
+        if (player.onGround()) return;
 
-        Vec3 forward = Vec3.directionFromRotation(player.getXRot(), player.getYRot());
-        Vec3 right = forward.cross(new Vec3(0, 1, 0)).normalize();
-        Vec3 localMomentum = forward.scale(inputDir.z).add(right.scale(inputDir.x));
+        double x = Mth.clamp(inputDir.x, -1.0, 1.0);
+        double z = Mth.clamp(inputDir.z, -1.0, 1.0);
+        if (x == 0 && z == 0) return;
 
-        double swingForce = 0.02;
-        player.setDeltaMovement(player.getDeltaMovement().add(localMomentum.scale(swingForce)));
+        float yaw = (float) Math.toRadians(player.getYRot());
+        double sin = Mth.sin(yaw);
+        double cos = Mth.cos(yaw);
+        Vec3 forward = new Vec3(-sin, 0, cos);
+        Vec3 right = new Vec3(-cos, 0, -sin);
+        Vec3 wish = forward.scale(z).add(right.scale(x));
+        double wishSq = wish.lengthSqr();
+        if (wishSq < 1.0e-6) return;
+        if (wishSq > 1.0) wish = wish.scale(1.0 / Math.sqrt(wishSq));
+
+        RopeParams p = rope.params;
+        Vec3 vel = player.getDeltaMovement();
+        Vec3 horizontal = new Vec3(vel.x, 0, vel.z);
+        Vec3 boosted = horizontal.add(wish.scale(p.controlAccel()));
+        double cap = Math.max(p.maxSwingSpeed(), horizontal.length());
+        if (boosted.lengthSqr() > cap * cap) {
+            boosted = boosted.normalize().scale(cap);
+        }
+        player.setDeltaMovement(boosted.x, vel.y, boosted.z);
         player.hurtMarked = true;
     }
-
-    
 
     public static void tick(MinecraftServer mc) {
         server = mc;
@@ -207,14 +206,12 @@ public final class RopeManager {
             ServerLevel level = mc.getLevel(rope.dimension);
             if (level == null) { remove(rope.id); continue; }
 
-            
             if (endpointDead(rope.from, level) || endpointDead(rope.to, level)) { remove(rope.id); continue; }
 
             Vec3 pa = rope.from.position(level);
             Vec3 pb = rope.to.position(level);
             if (pa == null || pb == null) { remove(rope.id); continue; }
 
-            
             if (rope.params.breakBeyond() > 0 && pa.distanceTo(pb) > rope.params.breakBeyond()) {
                 remove(rope.id);
                 continue;
@@ -223,7 +220,6 @@ public final class RopeManager {
             Entity ea = rope.from.entity(level);
             Entity eb = rope.to.entity(level);
 
-            
             Player controller = controllerOf(rope, ea, eb);
             if (controller != null) {
                 if (controller.isFallFlying()) {
@@ -242,7 +238,6 @@ public final class RopeManager {
         }
     }
 
-    
     private static void constrain(LivingEntity e, Vec3 anchor, Rope rope, double share, boolean controller) {
         RopeParams p = rope.params;
         Vec3 pos = e.getBoundingBox().getCenter();
@@ -252,19 +247,19 @@ public final class RopeManager {
         Vec3 dir = delta.normalize();
 
         switch (p.mode()) {
-            case SPRING -> { 
+            case SPRING -> {
                 if (dist <= rope.length) return;
                 double excess = dist - rope.length;
                 e.setDeltaMovement(e.getDeltaMovement().add(dir.scale(-excess * p.stiffness() * share)));
                 markMoved(e);
             }
-            case RIGID -> { 
+            case RIGID -> {
                 double diff = dist - rope.length;
                 if (Math.abs(diff) < 1.0e-4) return;
                 e.setDeltaMovement(e.getDeltaMovement().add(dir.scale(-diff * p.stiffness() * share)));
                 markMoved(e);
             }
-            default -> { 
+            default -> {
                 if (dist <= rope.length) return;
                 if (anchor.y > e.getY()) e.fallDistance = Math.max(0, e.fallDistance - 1.0f);
                 double excess = dist - rope.length;
@@ -288,8 +283,6 @@ public final class RopeManager {
         if (e instanceof ServerPlayer) e.hurtMarked = true;
         else e.hasImpulse = true;
     }
-
-    
 
     private static boolean endpointDead(RopeAnchor anchor, ServerLevel level) {
         if (!(anchor instanceof RopeAnchor.OfEntity)) return false;

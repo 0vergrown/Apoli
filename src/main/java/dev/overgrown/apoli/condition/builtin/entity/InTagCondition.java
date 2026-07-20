@@ -22,6 +22,11 @@ public final class InTagCondition implements ConditionType<EntityCtx, InTagCondi
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
         TagKey<EntityType<?>> tag = TagKey.create(Registries.ENTITY_TYPE, cfg.tag);
-        return ctx.entity().getType().is(tag);
+        return ctx.raw().getType().is(tag);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

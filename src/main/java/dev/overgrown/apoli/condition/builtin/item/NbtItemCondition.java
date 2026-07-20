@@ -5,8 +5,8 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.ItemCtx;
 import dev.overgrown.apoli.data.Nbt;
+import dev.overgrown.apoli.data.NbtComparison;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.nbt.NbtUtils;
 import net.minecraft.world.item.component.CustomData;
 
 public final class NbtItemCondition implements ConditionType<ItemCtx, NbtItemCondition.Cfg> {
@@ -20,9 +20,10 @@ public final class NbtItemCondition implements ConditionType<ItemCtx, NbtItemCon
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public boolean test(Cfg cfg, ItemCtx ctx) {
         CustomData data = ctx.stack().get(DataComponents.CUSTOM_DATA);
         if (data == null) return cfg.nbt.tag().isEmpty();
-        return NbtUtils.compareNbt(cfg.nbt.tag(), data.copyTag(), true);
+        return NbtComparison.matches(cfg.nbt.tag(), data.getUnsafe());
     }
 }

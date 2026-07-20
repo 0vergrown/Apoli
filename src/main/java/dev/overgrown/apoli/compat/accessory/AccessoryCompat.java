@@ -5,13 +5,12 @@ import dev.overgrown.apoli.compat.accessory.backend.AccessoriesBackend;
 import dev.overgrown.apoli.compat.accessory.backend.TrinketsBackend;
 import dev.overgrown.apoli.compat.accessory.power.ActionOnAccessoryChangePower;
 
-
 public final class AccessoryCompat {
     private AccessoryCompat() {}
 
     public static void init() {
         if (ModCompat.TRINKETS) {
-            
+
             Accessories.register(new TrinketsBackend());
         }
 

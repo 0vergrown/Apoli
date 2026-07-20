@@ -123,7 +123,9 @@ public class MinionEntity extends Mob implements OwnableEntity, Temporary {
     }
 
     public ResourceLocation getTexture() {
-        ResourceLocation parsed = ResourceLocation.tryParse(this.entityData.get(TEXTURE));
+
+        String raw = this.entityData.get(TEXTURE);
+        ResourceLocation parsed = raw.isEmpty() ? null : ResourceLocation.tryParse(raw);
         return parsed == null ? TEMPLATE_TEXTURE : parsed;
     }
 

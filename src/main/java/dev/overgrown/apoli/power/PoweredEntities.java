@@ -23,6 +23,10 @@ public final class PoweredEntities {
         if (entity != null) POWERED.remove(entity);
     }
 
+    public static int size() {
+        return POWERED.size();
+    }
+
     public static void clear() {
         POWERED.clear();
     }

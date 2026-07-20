@@ -30,7 +30,7 @@ public record Power(
     public Optional<Skill> toSkill(ResourceLocation id) {
         return skill.map(info -> new Skill(
             id, info.parent(), displayName(id), displayDescription(id), info.icon(),
-            List.of(id), List.of(), info.background(), info.condition(), info.visibilityCondition(),
+            List.of(id), info.condition(), info.visibilityCondition(),
             info.excludes(), info.cost(), info.order()));
     }
 

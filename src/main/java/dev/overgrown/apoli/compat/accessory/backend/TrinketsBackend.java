@@ -17,7 +17,6 @@ import net.minecraft.world.level.Level;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public final class TrinketsBackend implements AccessoryProvider {
     public static final String ID = "trinkets";
 
@@ -28,7 +27,7 @@ public final class TrinketsBackend implements AccessoryProvider {
 
     @Override
     public boolean isPresent() {
-        return true; 
+        return true;
     }
 
     @Override
@@ -46,7 +45,7 @@ public final class TrinketsBackend implements AccessoryProvider {
 
     @Override
     public List<AccessorySlotRef> equipped(LivingEntity entity) {
-        
+
         List<AccessorySlotRef> out = new ArrayList<>();
         for (AccessorySlotRef ref : slots(entity)) {
             if (!ref.getStack().isEmpty()) out.add(ref);
@@ -80,12 +79,10 @@ public final class TrinketsBackend implements AccessoryProvider {
         TrinketsApi.getTrinketComponent(entity).ifPresent(component -> component.removeModifiers(modifiers));
     }
 
-    
     public static AccessorySlotRef slotRef(SlotReference reference) {
         return new Ref(reference);
     }
 
-    
     public static void handleChange(TrinketInventory inventory, int slot, ItemStack oldStack, ItemStack newStack) {
         TrinketComponent comp = inventory.getComponent();
         if (comp == null) return;

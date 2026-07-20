@@ -35,4 +35,9 @@ public final class DelayMetaAction<CTX, W> implements ActionType<CTX, DelayMetaA
             DelayedActionQueue.schedule(cfg.ticks, () -> runner.accept(cfg.action, ctx));
         }
     }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
+    }
 }

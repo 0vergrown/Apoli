@@ -44,20 +44,29 @@ public final class DisguiseManager {
         if (!overwrite && DISGUISES.containsKey(actor.getUUID())) return;
         DISGUISES.put(actor.getUUID(), data);
         if (broadcaster != null) broadcaster.accept(actor, Optional.of(data));
+        refreshTabName(actor);
     }
 
     public static void applyAs(LivingEntity actor, Entity target, boolean overwrite) {
+        applyAs(actor, target, overwrite, true);
+    }
+
+    public static void applyAs(LivingEntity actor, Entity target, boolean overwrite, boolean changeName) {
         if (actor.level().isClientSide) return;
         if (!overwrite && DISGUISES.containsKey(actor.getUUID())) return;
         Optional<UUID> playerUuid = target instanceof Player ? Optional.of(target.getUUID()) : Optional.empty();
         CompoundTag nbt = new CompoundTag();
         target.saveWithoutId(nbt);
         String name = target.getName().getString();
+
+        Optional<String> disguiseName = changeName
+            ? Optional.ofNullable(name.isEmpty() ? null : name)
+            : Optional.of("");
         apply(actor, new DisguiseData(
             BuiltInRegistries.ENTITY_TYPE.getKey(target.getType()),
             playerUuid,
             Optional.of(nbt),
-            Optional.ofNullable(name.isEmpty() ? null : name)
+            disguiseName
         ), true);
     }
 
@@ -65,6 +74,13 @@ public final class DisguiseManager {
         if (actor.level().isClientSide) return;
         if (DISGUISES.remove(actor.getUUID()) != null && broadcaster != null) {
             broadcaster.accept(actor, Optional.empty());
+            refreshTabName(actor);
+        }
+    }
+
+    private static void refreshTabName(LivingEntity actor) {
+        if (actor instanceof net.minecraft.server.level.ServerPlayer player) {
+            dev.overgrown.apoli.power.builtin.ModifyLabelRenderPower.refreshTabName(player);
         }
     }
 

@@ -73,8 +73,11 @@ dependencies {
 	modCompileOnly "net.blay09.mods:balm-fabric:${project.balm_version}"
 	modCompileOnly "net.blay09.mods:hardcorerevival-fabric:${project.hardcore_revival_version}"
 
-	// mXparser — expression engine used by Expression (Data Type). Bundled into the jar.
-	include implementation("org.mariuszgromada.math:MathParser.org-mXparser:6.0.0")
+	modCompileOnly "me.lucko:fabric-permissions-api:0.3.1"
+
+	testImplementation platform("org.junit:junit-bom:5.10.2")
+	testImplementation "org.junit.jupiter:junit-jupiter"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 
 processResources {

@@ -25,5 +25,7 @@ public record ApplyVelocityS2C(int entityId, double x, double y, double z, boole
     }
 
     @Override
-    public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
+    }
 }

@@ -17,6 +17,7 @@ public record EntityCondition(ResourceLocation typeId, Object config, boolean in
     public boolean test(EntityCtx ctx) {
         ConditionType<EntityCtx, ?> type = ConditionTypes.ENTITY.get(typeId);
         if (type == null) return true;
+        if (ctx.entity() == null && (ctx.raw() == null || !type.acceptsNonLiving())) return inverted;
         @SuppressWarnings({"unchecked", "rawtypes"})
         boolean result = ((ConditionType) type).test(config, ctx);
         return inverted != result;

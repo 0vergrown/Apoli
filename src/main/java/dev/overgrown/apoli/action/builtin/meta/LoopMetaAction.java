@@ -37,8 +37,6 @@ public final class LoopMetaAction<CTX, W> implements ActionType<CTX, LoopMetaAct
         int iterations = cfg.value;
         if (iterations <= 0) return;
 
-        int interval = Math.max(1, cfg.ticks);
-
         cfg.beforeAction.ifPresent(a -> runner.accept(a, ctx));
 
         if (cfg.action.isEmpty()) {
@@ -47,14 +45,26 @@ public final class LoopMetaAction<CTX, W> implements ActionType<CTX, LoopMetaAct
         }
 
         W body = cfg.action.get();
+
+        if (cfg.ticks <= 0) {
+            int count = Math.min(iterations, MAX_SYNC_ITERATIONS);
+            for (int i = 0; i < count; i++) {
+                runner.accept(body, ctx);
+            }
+            cfg.afterAction.ifPresent(a -> runner.accept(a, ctx));
+            return;
+        }
+
         runner.accept(body, ctx);
 
         if (iterations == 1) {
             cfg.afterAction.ifPresent(a -> runner.accept(a, ctx));
         } else {
-            arm(iterations - 1, interval, body, cfg.afterAction, ctx);
+            arm(iterations - 1, cfg.ticks, body, cfg.afterAction, ctx);
         }
     }
+
+    private static final int MAX_SYNC_ITERATIONS = 4096;
 
     private void arm(int remaining, int interval, W body, Optional<W> afterAction, CTX ctx) {
         DelayedActionQueue.schedule(interval, () -> {
@@ -65,5 +75,10 @@ public final class LoopMetaAction<CTX, W> implements ActionType<CTX, LoopMetaAct
                 afterAction.ifPresent(a -> runner.accept(a, ctx));
             }
         });
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

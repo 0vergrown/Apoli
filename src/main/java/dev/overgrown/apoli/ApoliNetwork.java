@@ -18,8 +18,10 @@ import dev.overgrown.apoli.network.payload.RopeCreateS2C;
 import dev.overgrown.apoli.network.payload.RopeDeleteS2C;
 import dev.overgrown.apoli.network.payload.RopeSwingC2S;
 import dev.overgrown.apoli.network.payload.RopeVerletLengthS2C;
+import dev.overgrown.apoli.network.PowerSyncCache;
 import dev.overgrown.apoli.network.payload.SyncEntityPowersS2C;
 import dev.overgrown.apoli.network.payload.SyncKeybindsS2C;
+import dev.overgrown.apoli.network.payload.SyncPowersChunkS2C;
 import dev.overgrown.apoli.network.payload.SyncPowersS2C;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
@@ -36,17 +38,29 @@ public final class ApoliNetwork {
         PayloadTypeRegistry.playS2C().register(ProtocolVersionPayload.TYPE, ProtocolVersionPayload.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(ProtocolVersionPayload.TYPE, ProtocolVersionPayload.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SyncPowersS2C.TYPE, SyncPowersS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncPowersChunkS2C.TYPE, SyncPowersChunkS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SyncEntityPowersS2C.TYPE, SyncEntityPowersS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(PowerActivatedS2C.TYPE, PowerActivatedS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SyncKeybindsS2C.TYPE, SyncKeybindsS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(ApplyVelocityS2C.TYPE, ApplyVelocityS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(DisguiseUpdateS2C.TYPE, DisguiseUpdateS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.TextDisplayS2C.TYPE,
+            dev.overgrown.apoli.network.payload.TextDisplayS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.LabelUpdateS2C.TYPE,
+            dev.overgrown.apoli.network.payload.LabelUpdateS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SkillDefsSyncS2C.TYPE, SkillDefsSyncS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SkillStateSyncS2C.TYPE, SkillStateSyncS2C.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(BuySkillC2S.TYPE, BuySkillC2S.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(PowerActivationC2S.TYPE, PowerActivationC2S.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(PowerToggleC2S.TYPE, PowerToggleC2S.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.RequestSkillStateC2S.TYPE, dev.overgrown.apoli.network.payload.RequestSkillStateC2S.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.RefundSkillC2S.TYPE, dev.overgrown.apoli.network.payload.RefundSkillC2S.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(KeyHeldC2S.TYPE, KeyHeldC2S.STREAM_CODEC);
+
+        PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.TYPE,
+            dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.RadialMenuSelectC2S.TYPE,
+            dev.overgrown.apoli.network.payload.RadialMenuSelectC2S.STREAM_CODEC);
 
         PayloadTypeRegistry.playS2C().register(RopeCreateS2C.TYPE, RopeCreateS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(RopeDeleteS2C.TYPE, RopeDeleteS2C.STREAM_CODEC);
@@ -55,8 +69,6 @@ public final class ApoliNetwork {
         PayloadTypeRegistry.playC2S().register(RopeSwingC2S.TYPE, RopeSwingC2S.STREAM_CODEC);
     }
 
-    
-    
     public static void broadcastRopeCreate(ServerLevel level, RopeCreateS2C payload) {
         for (ServerPlayer p : level.players()) ServerPlayNetworking.send(p, payload);
     }
@@ -69,8 +81,8 @@ public final class ApoliNetwork {
         for (ServerPlayer p : level.players()) ServerPlayNetworking.send(p, payload);
     }
 
-    public static void sendPowers(ServerPlayer recipient, SyncPowersS2C payload) {
-        ServerPlayNetworking.send(recipient, payload);
+    public static void sendPowers(ServerPlayer recipient) {
+        PowerSyncCache.sendTo(recipient);
     }
 
     public static void sendEntityPowers(ServerPlayer recipient, SyncEntityPowersS2C payload) {
@@ -107,6 +119,27 @@ public final class ApoliNetwork {
         ServerPlayNetworking.send(recipient, payload);
     }
 
+    public static void sendTextDisplay(ServerPlayer recipient, dev.overgrown.apoli.network.payload.TextDisplayS2C payload) {
+        if (ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.TextDisplayS2C.TYPE)) {
+            ServerPlayNetworking.send(recipient, payload);
+        }
+    }
+
+    public static void broadcastLabel(Entity entity, dev.overgrown.apoli.network.payload.LabelUpdateS2C payload) {
+        for (ServerPlayer viewer : PlayerLookup.tracking(entity)) {
+            sendLabel(viewer, payload);
+        }
+        if (entity instanceof ServerPlayer self) {
+            sendLabel(self, payload);
+        }
+    }
+
+    public static void sendLabel(ServerPlayer recipient, dev.overgrown.apoli.network.payload.LabelUpdateS2C payload) {
+        if (ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.LabelUpdateS2C.TYPE)) {
+            ServerPlayNetworking.send(recipient, payload);
+        }
+    }
+
     public static void sendSkillDefs(ServerPlayer recipient) {
         boolean legacy = ProtocolCompat.useLegacyFormats(recipient);
         if (legacy) {
@@ -123,20 +156,31 @@ public final class ApoliNetwork {
         if (legacy) {
             ProtocolCompat.markSentLegacy(recipient);
         }
+        java.util.Set<net.minecraft.resources.ResourceLocation> nonRefundable = new java.util.HashSet<>();
+        for (dev.overgrown.apoli.skill.SkillTree tree : dev.overgrown.apoli.skill.SkillRegistry.trees()) {
+            if (!tree.refundable()) nonRefundable.add(tree.id());
+        }
         ServerPlayNetworking.send(recipient, new SkillStateSyncS2C(
             new java.util.HashMap<>(data.pointsView()), new java.util.HashSet<>(data.purchasedView()),
-            vis.hidden(), vis.locked(), legacy));
+            vis.hidden(), vis.locked(), nonRefundable, legacy));
     }
 
-    public static void broadcastPowers(MinecraftServer server, SyncPowersS2C payload) {
-        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            ServerPlayNetworking.send(p, payload);
-        }
+    public static void broadcastPowers(MinecraftServer server) {
+        PowerSyncCache.broadcast(server);
     }
 
     public static void broadcastKeybinds(MinecraftServer server, SyncKeybindsS2C payload) {
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             ServerPlayNetworking.send(p, payload);
         }
+    }
+
+    public static void openRadialMenu(ServerPlayer player,
+                                      java.util.Optional<net.minecraft.resources.ResourceLocation> sprite,
+                                      java.util.List<dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.Entry> display,
+                                      java.util.List<dev.overgrown.apoli.action.EntityAction> actions) {
+        if (!ServerPlayNetworking.canSend(player, dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.TYPE)) return;
+        int nonce = dev.overgrown.apoli.radial.RadialMenuManager.open(player, actions);
+        ServerPlayNetworking.send(player, new dev.overgrown.apoli.network.payload.RadialMenuOpenS2C(nonce, sprite, display));
     }
 }

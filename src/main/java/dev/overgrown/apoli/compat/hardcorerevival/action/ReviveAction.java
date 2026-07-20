@@ -8,7 +8,6 @@ import dev.overgrown.apoli.condition.context.EntityCtx;
 import net.blay09.mods.hardcorerevival.api.HardcoreRevivalAPI;
 import net.minecraft.world.entity.player.Player;
 
-
 public final class ReviveAction implements ActionType<EntityCtx, ReviveAction.Cfg> {
     public record Cfg(boolean applyEffects) {}
 

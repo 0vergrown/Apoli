@@ -14,7 +14,6 @@ import net.minecraft.world.entity.player.Player;
 
 import java.util.Optional;
 
-
 public final class ActionOnRevivePower extends PowerType<ActionOnRevivePower.Config> {
     public static final ResourceLocation CANONICAL = Apoli.id("action_on_revive");
 
@@ -28,14 +27,12 @@ public final class ActionOnRevivePower extends PowerType<ActionOnRevivePower.Con
         ).apply(i, Config::new));
     }
 
-    
     public static void handleRevived(Player player) {
         if (player.level().isClientSide()) return;
         EntityCtx ctx = EntityCtx.of(player, player.level());
         PowerLookup.forEach(player, CANONICAL, Config.class, cfg -> cfg.entityAction().ifPresent(a -> a.run(ctx)));
     }
 
-    
     public static void handleRescued(Player player, Player rescuer) {
         if (player.level().isClientSide()) return;
         BiEntityCtx ctx = new BiEntityCtx(rescuer, player, player.level());

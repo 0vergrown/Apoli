@@ -13,7 +13,10 @@ public final class EntityActions {
 
     public static void register() {
         ActionTypes.ENTITY.register(Apoli.id("add_velocity"), new AddVelocityAction());
+        ActionTypes.ENTITY.register(Apoli.id("nothing"), new NothingAction());
         ActionTypes.ENTITY.register(Apoli.id("apply_effect"), new ApplyEffectAction());
+        ActionTypes.ENTITY.register(Apoli.id("conjure_equipment"), new ConjureEquipmentAction());
+        ActionTypes.ENTITY.register(Apoli.id("release_grab"), new ReleaseGrabAction());
         ActionTypes.ENTITY.register(Apoli.id("execute_command"), new ExecuteCommandAction());
         ActionTypes.ENTITY.register(Apoli.id("exhaust"), new ExhaustAction());
         ActionTypes.ENTITY.register(Apoli.id("heal"), new HealAction());
@@ -55,7 +58,16 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("remove_power"), new RemovePowerAction());
         ActionTypes.ENTITY.register(Apoli.id("suppress_power"), new SuppressPowerAction());
         ActionTypes.ENTITY.register(Apoli.id("unsuppress_power"), new UnsuppressPowerAction());
-        ActionTypes.ENTITY.register(Apoli.id("modify_stat"), new ModifyStatAction());
+        ActionTypes.ENTITY.register(Apoli.id("modify_stat"), new ModifyStatAction(),
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("change_stat"))
+                .addTypeAlias(Apoli.id("set_stat"))
+                .build());
+        ActionTypes.ENTITY.register(Apoli.id("text"), new TextAction(),
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("text_bar"))
+                .addTypeAlias(Apoli.id("show_text"))
+                .build());
         ActionTypes.ENTITY.register(Apoli.id("modify_death_ticks"), new ModifyDeathTicksAction());
         ActionTypes.ENTITY.register(Apoli.id("toggle"), new ToggleEntityAction());
 
@@ -99,6 +111,8 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("remove_disguise"), new RemoveDisguiseAction());
 
         ActionTypes.ENTITY.register(Apoli.id("add_skill_points"), new AddSkillPointsAction());
+        ActionTypes.ENTITY.register(Apoli.id("grant_skill_tree"), new GrantSkillTreeAction());
+        ActionTypes.ENTITY.register(Apoli.id("revoke_skill_tree"), new RevokeSkillTreeAction());
 
         ActionTypes.ENTITY.register(Apoli.id("block_action_at"), new BlockActionAtAction());
         ActionTypes.ENTITY.register(Apoli.id("area_of_effect"), new AreaOfEffectAction());
@@ -112,6 +126,9 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("detach_rope"), new DetachRopeAction());
         ActionTypes.ENTITY.register(Apoli.id("rope_pull"), new RopePullAction());
         ActionTypes.ENTITY.register(Apoli.id("reset_skills"), new ResetSkillsAction());
+
+        ActionTypes.ENTITY.register(Apoli.id("radial_menu"), new RadialMenuAction(),
+            AliasingOptions.builder().addTypeAlias("sync:radial_menu").build());
 
         if (ModCompat.anyAccessory()) {
             ActionTypes.ENTITY.register(Apoli.id("modify_accessory"), new ModifyAccessoryAction(),

@@ -20,4 +20,9 @@ public final class ActorCondition implements ConditionType<BiEntityCtx, ActorCon
     public boolean test(Cfg cfg, BiEntityCtx ctx) {
         return cfg.condition.test(ctx.asActor());
     }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
+    }
 }

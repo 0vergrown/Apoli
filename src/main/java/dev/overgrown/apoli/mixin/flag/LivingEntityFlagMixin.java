@@ -4,6 +4,7 @@ import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.builtin.ClimbingPower;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -22,7 +23,7 @@ public abstract class LivingEntityFlagMixin {
     private void apoli$climbing(CallbackInfoReturnable<Boolean> cir) {
         if (cir.getReturnValueZ()) return;
         LivingEntity self = (LivingEntity) (Object) this;
-        if (self.isSpectator() || !PowerLookup.hasActive(self, Apoli.id("climbing"))) return;
+        if (self.isSpectator() || !PowerLookup.hasActive(self, ApoliIds.CLIMBING)) return;
         this.lastClimbablePos = Optional.of(self.blockPosition());
         cir.setReturnValue(true);
     }
@@ -33,7 +34,7 @@ public abstract class LivingEntityFlagMixin {
         EntityCtx ctx = new EntityCtx(self, self.level());
         boolean[] hasPower = {false};
         boolean[] canHold = {false};
-        PowerLookup.forEach(self, Apoli.id("climbing"), ClimbingPower.Config.class, cfg -> {
+        PowerLookup.forEach(self, ApoliIds.CLIMBING, ClimbingPower.Config.class, cfg -> {
             hasPower[0] = true;
             if (canHold[0] || !cfg.allowHolding()) return;
             boolean held = cfg.holdCondition().map(c -> c.test(ctx)).orElseGet(self::isShiftKeyDown);
