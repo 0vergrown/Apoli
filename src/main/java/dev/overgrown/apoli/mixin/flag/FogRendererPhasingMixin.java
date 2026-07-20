@@ -4,6 +4,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.builtin.PhasingPower;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Camera;
@@ -64,7 +65,7 @@ public abstract class FogRendererPhasingMixin {
 
     private static float blindnessViewDistance(LivingEntity entity) {
         float[] best = new float[]{-1.0F};
-        PowerLookup.forEach(entity, Apoli.id("phasing"), PhasingPower.Config.class, cfg -> {
+        PowerLookup.forEach(entity, ApoliIds.PHASING, PhasingPower.Config.class, cfg -> {
             if (cfg.renderType() != PhasingPower.RenderType.BLINDNESS) return;
             float v = cfg.viewDistance();
             if (best[0] < 0.0F || v < best[0]) best[0] = v;

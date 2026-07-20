@@ -2,6 +2,7 @@ package dev.overgrown.apoli.mixin.flag;
 
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.power.PowerLookup;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -15,7 +16,7 @@ public abstract class SwimmingMixin {
     private void apoli$swimming(CallbackInfo ci) {
         Entity self = (Entity) (Object) this;
         if (!(self instanceof LivingEntity living)) return;
-        if (!PowerLookup.hasActive(living, Apoli.id("swimming"))) return;
+        if (!PowerLookup.hasActive(living, ApoliIds.SWIMMING)) return;
         if (!self.isSprinting() || self.isPassenger()) {
             self.setSwimming(false);
             ci.cancel();

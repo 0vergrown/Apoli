@@ -34,7 +34,6 @@ public final class EntityConditions {
         ConditionTypes.ENTITY.register(Apoli.id("passenger"), new PassengerCondition());
         ConditionTypes.ENTITY.register(Apoli.id("riding"), new RidingCondition());
         ConditionTypes.ENTITY.register(Apoli.id("equipped_item"), new EquippedItemCondition());
-
         ConditionTypes.ENTITY.register(Apoli.id("climbing"), SimpleFlagConditions.climbing());
         ConditionTypes.ENTITY.register(Apoli.id("collided_horizontally"), SimpleFlagConditions.collidedHoriz());
         ConditionTypes.ENTITY.register(Apoli.id("creative_flying"), SimpleFlagConditions.creativeFly());
@@ -52,7 +51,6 @@ public final class EntityConditions {
         ConditionTypes.ENTITY.register(Apoli.id("swimming"), SimpleFlagConditions.swimming());
         ConditionTypes.ENTITY.register(Apoli.id("tamed"), SimpleFlagConditions.tamed());
         ConditionTypes.ENTITY.register(Apoli.id("using_effective_tool"), SimpleFlagConditions.usingEffectiveTool());
-
         ConditionTypes.ENTITY.register(Apoli.id("air"), new AirCondition());
         ConditionTypes.ENTITY.register(Apoli.id("attribute"), new AttributeCondition());
         ConditionTypes.ENTITY.register(Apoli.id("brightness"), new BrightnessCondition());
@@ -90,12 +88,20 @@ public final class EntityConditions {
         ConditionTypes.ENTITY.register(Apoli.id("on_block"), new OnBlockCondition());
         ConditionTypes.ENTITY.register(Apoli.id("block_collision"), new BlockCollisionCondition());
         ConditionTypes.ENTITY.register(Apoli.id("block_in_radius"), new BlockInRadiusCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("entity_in_radius"), new EntityInRadiusCondition());
 
         ConditionTypes.ENTITY.register(Apoli.id("power"), new PowerCondition());
         ConditionTypes.ENTITY.register(Apoli.id("power_active"), new PowerActiveCondition());
         ConditionTypes.ENTITY.register(Apoli.id("power_type"), new PowerTypeCondition());
 
         ConditionTypes.ENTITY.register(Apoli.id("scoreboard"), new ScoreboardCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("stat"), new StatCondition(),
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("stats"))
+                .addTypeAlias(Apoli.id("status"))
+                .addTypeAlias(Apoli.id("statistic"))
+                .renameField("status", "stat")
+                .build());
         ConditionTypes.ENTITY.register(Apoli.id("distance_from_coordinates"), new DistanceFromCoordinatesCondition());
 
         ConditionTypes.ENTITY.register(Apoli.id("passenger_recursive"), new PassengerRecursiveCondition());
@@ -109,8 +115,6 @@ public final class EntityConditions {
         ConditionTypes.ENTITY.register(Apoli.id("attached_to_rope"), new AttachedToRopeCondition());
         ConditionTypes.ENTITY.register(Apoli.id("disguised"), new DisguisedCondition());
 
-        
-        
         if (ModCompat.anyAccessory()) {
             ConditionTypes.ENTITY.register(Apoli.id("accessory_equipped_count"), new AccessoryEquippedCountCondition(),
                 AliasingOptions.builder().addTypeAlias(Apoli.id("equipped_trinket_count")).build());
@@ -118,7 +122,6 @@ public final class EntityConditions {
                 AliasingOptions.builder().addTypeAlias(Apoli.id("trinket_slot_count")).build());
         }
 
-        
         if (ModCompat.HARDCORE_REVIVAL) {
             ConditionTypes.ENTITY.register(Apoli.id("knocked_out"), new KnockedOutCondition());
         }

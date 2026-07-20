@@ -20,4 +20,9 @@ public final class EitherCondition implements ConditionType<BiEntityCtx, EitherC
     public boolean test(Cfg cfg, BiEntityCtx ctx) {
         return cfg.condition.test(ctx.asActor()) || cfg.condition.test(ctx.asTarget());
     }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
+    }
 }

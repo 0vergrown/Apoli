@@ -28,4 +28,9 @@ public final class SetSummonMaxLifeAction implements ActionType<EntityCtx, SetSu
         if (cfg.summonId.isPresent() && !cfg.summonId.get().equals(summon.getSummonId())) return;
         summon.setMaxLifeTime(cfg.amount);
     }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
+    }
 }

@@ -3,6 +3,7 @@ package dev.overgrown.apoli.mixin.gameevent;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.builtin.PreventGameEventPower;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.gameevent.GameEvent;
@@ -20,7 +21,7 @@ public class ServerLevelGameEventMixin {
         Entity source = context.sourceEntity();
         if (source == null) return;
         ServerLevel self = (ServerLevel) (Object) this;
-        PowerLookup.forEach(source, Apoli.id("prevent_game_event"), PreventGameEventPower.Config.class, cfg -> {
+        PowerLookup.forEach(source, ApoliIds.PREVENT_GAME_EVENT, PreventGameEventPower.Config.class, cfg -> {
             if (PreventGameEventPower.matches(cfg, gameEvent)) {
                 PreventGameEventPower.executeAction(cfg, self, source);
                 ci.cancel();

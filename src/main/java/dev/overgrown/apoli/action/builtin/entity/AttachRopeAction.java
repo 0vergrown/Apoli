@@ -19,7 +19,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
-
 public final class AttachRopeAction implements ActionType<EntityCtx, AttachRopeAction.Cfg> {
 
     public record Cfg(RopeEndpointSource from, RopeEndpointSource to, Optional<String> slot,
@@ -45,7 +44,6 @@ public final class AttachRopeAction implements ActionType<EntityCtx, AttachRopeA
     static void apply(Cfg cfg, @Nullable Entity actor, @Nullable Entity target, Level level) {
         if (actor == null || !(level instanceof ServerLevel serverLevel)) return;
 
-        
         if (cfg.toggle && cfg.slot.isEmpty() && RopeManager.detachControllable(actor.getUUID())) return;
 
         RopeAnchor from = cfg.from.resolve(actor, target, level);
@@ -55,9 +53,21 @@ public final class AttachRopeAction implements ActionType<EntityCtx, AttachRopeA
         RopeManager.create(serverLevel, from, to, cfg.slot.orElse(null), actor.getUUID(), cfg.params, cfg.texture);
     }
 
-    
     public static final class BiEntity implements ActionType<BiEntityCtx, Cfg> {
-        @Override public MapCodec<Cfg> codec() { return CODEC; }
-        @Override public void run(Cfg cfg, BiEntityCtx ctx) { apply(cfg, ctx.actor(), ctx.target(), ctx.level()); }
+
+        @Override
+        public MapCodec<Cfg> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public void run(Cfg cfg, BiEntityCtx ctx) {
+            apply(cfg, ctx.actor(), ctx.target(), ctx.level());
+        }
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

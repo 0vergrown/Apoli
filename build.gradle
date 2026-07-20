@@ -87,17 +87,11 @@ dependencies {
 		exclude group: "net.blay09.mods", module: "shared-bridge"
 	}
 
-	// mXparser — expression engine used by Expression (Data Type). Bundled into the jar so
-	// data-pack authors can use the full operator/function set without a separate dep.
-	include implementation("org.mariuszgromada.math:MathParser.org-mXparser:6.0.0")
+	modCompileOnly "me.lucko:fabric-permissions-api:0.3.1"
 
 	testImplementation platform("org.junit:junit-bom:5.10.2")
 	testImplementation "org.junit.jupiter:junit-jupiter"
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
-}
-
-tasks.named('test', Test) {
-	useJUnitPlatform()
 }
 
 processResources {

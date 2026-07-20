@@ -26,11 +26,16 @@ public final class CommandCondition implements ConditionType<EntityCtx, CommandC
         MinecraftServer server = ctx.level().getServer();
         if (server == null) return false;
         int[] result = new int[]{0};
-        CommandSourceStack source = ctx.entity().createCommandSourceStack()
+        CommandSourceStack source = ctx.raw().createCommandSourceStack()
             .withPermission(4)
             .withSuppressedOutput()
             .withCallback((commandContext, success, value) -> result[0] = value);
         server.getCommands().performPrefixedCommand(source, cfg.command);
         return cfg.comparison.compare(result[0], cfg.compareTo);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

@@ -4,7 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.context.EntityCtx;
-import dev.overgrown.apoli.data.StatusEffectInstanceCodec;
+import dev.overgrown.apoli.data.EffectSpec;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
@@ -12,7 +12,6 @@ import dev.overgrown.apoli.power.PowerContainerImpl;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.List;
@@ -24,8 +23,8 @@ public final class StackingStatusEffectPower extends PowerType<StackingStatusEff
         int maxStacks,
         int durationPerStack,
         int tickRate,
-        Optional<MobEffectInstance> effect,
-        Optional<List<MobEffectInstance>> effects
+        Optional<EffectSpec> effect,
+        Optional<List<EffectSpec>> effects
     ) {}
 
     @Override
@@ -35,8 +34,8 @@ public final class StackingStatusEffectPower extends PowerType<StackingStatusEff
             Codec.INT.fieldOf("max_stacks").forGetter(Config::maxStacks),
             Codec.INT.fieldOf("duration_per_stack").forGetter(Config::durationPerStack),
             Codec.INT.optionalFieldOf("tick_rate", 10).forGetter(Config::tickRate),
-            StatusEffectInstanceCodec.CODEC.optionalFieldOf("effect").forGetter(Config::effect),
-            Codec.list(StatusEffectInstanceCodec.CODEC).optionalFieldOf("effects").forGetter(Config::effects)
+            EffectSpec.CODEC.optionalFieldOf("effect").forGetter(Config::effect),
+            Codec.list(EffectSpec.CODEC).optionalFieldOf("effects").forGetter(Config::effects)
         ).apply(i, Config::new));
     }
 
@@ -70,19 +69,8 @@ public final class StackingStatusEffectPower extends PowerType<StackingStatusEff
 
     private static void reapplyEffects(LivingEntity owner, Config cfg, int stacks) {
         int duration = stacks * cfg.durationPerStack;
-        cfg.effect.ifPresent(e -> owner.addEffect(rebuild(e, duration)));
-        cfg.effects.ifPresent(list -> list.forEach(e -> owner.addEffect(rebuild(e, duration))));
-    }
-
-    private static MobEffectInstance rebuild(MobEffectInstance template, int duration) {
-        return new MobEffectInstance(
-            template.getEffect(),
-            duration,
-            template.getAmplifier(),
-            template.isAmbient(),
-            template.isVisible(),
-            template.showIcon()
-        );
+        cfg.effect.ifPresent(spec -> owner.addEffect(spec.resolveWithDuration(owner, duration)));
+        cfg.effects.ifPresent(list -> list.forEach(spec -> owner.addEffect(spec.resolveWithDuration(owner, duration))));
     }
 
     private static boolean conditionActive(ResourceLocation powerId, LivingEntity owner, ServerLevel level) {

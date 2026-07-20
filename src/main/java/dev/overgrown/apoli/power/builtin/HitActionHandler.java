@@ -4,6 +4,7 @@ import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.DamageCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.expr.ExprDamageContext;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
@@ -56,9 +57,14 @@ public final class HitActionHandler {
             if (cfg.damageCondition().isPresent()
                 && !cfg.damageCondition().get().test(damageCtx)) continue;
 
-            cfg.bientityAction().ifPresent(a -> a.run(biCtx));
-            cfg.selfAction().ifPresent(a -> a.run(new EntityCtx(attacker, level)));
-            cfg.targetAction().ifPresent(a -> a.run(new EntityCtx(target, level)));
+            double prevDamage = ExprDamageContext.set(amount);
+            try {
+                cfg.bientityAction().ifPresent(a -> a.run(biCtx));
+                cfg.selfAction().ifPresent(a -> a.run(new EntityCtx(attacker, level)));
+                cfg.targetAction().ifPresent(a -> a.run(new EntityCtx(target, level)));
+            } finally {
+                ExprDamageContext.restore(prevDamage);
+            }
             impl.setAuxInt(powerId, cfg.cooldown());
         }
     }
@@ -84,11 +90,16 @@ public final class HitActionHandler {
             if (cfg.damageCondition().isPresent()
                 && !cfg.damageCondition().get().test(damageCtx)) continue;
 
-            if (attacker != null) {
-                cfg.bientityAction().ifPresent(a -> a.run(new BiEntityCtx(attacker, target, level)));
-                cfg.attackerAction().ifPresent(a -> a.run(new EntityCtx(attacker, level)));
+            double prevDamage = ExprDamageContext.set(amount);
+            try {
+                if (attacker != null) {
+                    cfg.bientityAction().ifPresent(a -> a.run(new BiEntityCtx(attacker, target, level)));
+                    cfg.attackerAction().ifPresent(a -> a.run(new EntityCtx(attacker, level)));
+                }
+                cfg.selfAction().ifPresent(a -> a.run(new EntityCtx(target, level)));
+            } finally {
+                ExprDamageContext.restore(prevDamage);
             }
-            cfg.selfAction().ifPresent(a -> a.run(new EntityCtx(target, level)));
             impl.setAuxInt(powerId, cfg.cooldown());
         }
     }

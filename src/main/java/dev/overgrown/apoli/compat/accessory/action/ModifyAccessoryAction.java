@@ -18,7 +18,6 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 import java.util.Optional;
 
-
 public final class ModifyAccessoryAction implements ActionType<EntityCtx, ModifyAccessoryAction.Cfg> {
     public record Cfg(
         List<AccessorySlot> slots,
@@ -46,7 +45,7 @@ public final class ModifyAccessoryAction implements ActionType<EntityCtx, Modify
         LivingEntity e = ctx.entity();
         if (e == null) return;
         int processed = 0;
-        
+
         for (AccessorySlotRef ref : Accessories.equipped(e, cfg.slots())) {
             ItemStack stack = ref.getStack();
             ItemCtx itemCtx = new ItemCtx(stack, ctx.level(), e);

@@ -5,7 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.BlockCtx;
 import dev.overgrown.apoli.data.Nbt;
-import net.minecraft.nbt.NbtUtils;
+import dev.overgrown.apoli.data.NbtComparison;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 public final class NbtBlockCondition implements ConditionType<BlockCtx, NbtBlockCondition.Cfg> {
@@ -22,6 +22,6 @@ public final class NbtBlockCondition implements ConditionType<BlockCtx, NbtBlock
     public boolean test(Cfg cfg, BlockCtx ctx) {
         BlockEntity be = ctx.level().getBlockEntity(ctx.pos());
         if (be == null) return false;
-        return NbtUtils.compareNbt(cfg.nbt.tag(), be.saveWithoutMetadata(), true);
+        return NbtComparison.matches(cfg.nbt.tag(), be.saveWithoutMetadata());
     }
 }

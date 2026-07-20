@@ -26,6 +26,7 @@ public final class DisguiseAsAction implements ActionType<EntityCtx, DisguiseAsA
         Optional<String> playerUuid,
         Optional<Nbt> nbt,
         boolean overwrite,
+        boolean changeName,
         Optional<EntityAction> beforeAction,
         Optional<EntityAction> afterAction
     ) {}
@@ -38,6 +39,7 @@ public final class DisguiseAsAction implements ActionType<EntityCtx, DisguiseAsA
             Codec.STRING.optionalFieldOf("player_uuid").forGetter(Cfg::playerUuid),
             Nbt.CODEC.optionalFieldOf("nbt").forGetter(Cfg::nbt),
             Codec.BOOL.optionalFieldOf("overwrite", true).forGetter(Cfg::overwrite),
+            Codec.BOOL.optionalFieldOf("change_name", true).forGetter(Cfg::changeName),
             EntityAction.CODEC.optionalFieldOf("before_action").forGetter(Cfg::beforeAction),
             EntityAction.CODEC.optionalFieldOf("after_action").forGetter(Cfg::afterAction)
         ).apply(i, Cfg::new));
@@ -51,9 +53,10 @@ public final class DisguiseAsAction implements ActionType<EntityCtx, DisguiseAsA
 
         cfg.beforeAction.ifPresent(a -> a.run(ctx));
 
+        Optional<String> noName = cfg.changeName ? Optional.empty() : Optional.of("");
         Optional<DisguiseData> data = cfg.playerName.isPresent() || cfg.playerUuid.isPresent()
             ? resolvePlayer(cfg, ctx.level().getServer())
-            : cfg.entityType.map(type -> new DisguiseData(type, Optional.empty(), cfg.nbt.map(Nbt::tag), Optional.empty()));
+            : cfg.entityType.map(type -> new DisguiseData(type, Optional.empty(), cfg.nbt.map(Nbt::tag), noName));
 
         data.ifPresent(d -> DisguiseManager.apply(actor, d, cfg.overwrite));
         cfg.afterAction.ifPresent(a -> a.run(ctx));
@@ -77,6 +80,8 @@ public final class DisguiseAsAction implements ActionType<EntityCtx, DisguiseAsA
         }
         return profile.map(p -> new DisguiseData(
             PLAYER_TYPE, Optional.of(p.getId()), Optional.empty(),
-            Optional.ofNullable(p.getName() == null || p.getName().isEmpty() ? null : p.getName())));
+            cfg.changeName
+                ? Optional.ofNullable(p.getName() == null || p.getName().isEmpty() ? null : p.getName())
+                : Optional.of("")));
     }
 }

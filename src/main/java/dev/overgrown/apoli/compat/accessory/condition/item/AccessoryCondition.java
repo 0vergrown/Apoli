@@ -5,7 +5,6 @@ import dev.overgrown.apoli.compat.accessory.Accessories;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.ItemCtx;
 
-
 public final class AccessoryCondition implements ConditionType<ItemCtx, AccessoryCondition.Cfg> {
     public record Cfg() {}
 

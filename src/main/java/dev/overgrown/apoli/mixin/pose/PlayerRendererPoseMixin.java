@@ -25,7 +25,7 @@ public abstract class PlayerRendererPoseMixin {
     private static void apoli$overrideArmPose(AbstractClientPlayer player, InteractionHand hand,
                                               CallbackInfoReturnable<HumanoidModel.ArmPose> cir) {
         if (player instanceof ModifiedPoseHolder holder) {
-            ArmPoseReference ref = holder.apoli$getModifiedArmPose();
+            ArmPoseReference ref = holder.apoli$getModifiedArmPose(hand);
             if (ref != null) {
                 cir.setReturnValue(ArmPoseReferenceClient.toVanilla(ref));
             }

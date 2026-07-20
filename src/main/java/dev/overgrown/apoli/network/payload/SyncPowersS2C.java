@@ -4,7 +4,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import dev.overgrown.apoli.Apoli;
-import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -14,15 +13,6 @@ import java.util.Map;
 
 public record SyncPowersS2C(Map<ResourceLocation, String> rawPowers) {
     public static final ResourceLocation CHANNEL = Apoli.id("sync_powers");
-
-    public static SyncPowersS2C fromCurrent() {
-        Map<ResourceLocation, String> out = new HashMap<>();
-        for (Map.Entry<ResourceLocation, Power> e : ApoliPowers.view().entrySet()) {
-            Power.CODEC.encodeStart(JsonOps.INSTANCE, e.getValue()).result()
-                .ifPresent(json -> out.put(e.getKey(), json.toString()));
-        }
-        return new SyncPowersS2C(out);
-    }
 
     public void write(FriendlyByteBuf buf) {
         buf.writeVarInt(rawPowers.size());

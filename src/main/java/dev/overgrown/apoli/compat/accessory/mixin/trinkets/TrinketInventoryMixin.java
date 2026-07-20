@@ -7,7 +7,6 @@ import dev.overgrown.apoli.compat.accessory.backend.TrinketsBackend;
 import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 
-
 @Mixin(TrinketInventory.class)
 public abstract class TrinketInventoryMixin {
 

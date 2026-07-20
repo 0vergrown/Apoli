@@ -13,7 +13,8 @@ import net.minecraft.world.phys.Vec3;
 
 public final class AddVelocityAction implements ActionType<BiEntityCtx, AddVelocityAction.Cfg> {
     public enum Reference implements StringRepresentable {
-        POSITION("position"), ROTATION("rotation");
+        POSITION("position"),
+        ROTATION("rotation");
 
         public static final Codec<Reference> CODEC = StringRepresentable.fromEnum(Reference::values);
         private final String name;
@@ -22,7 +23,8 @@ public final class AddVelocityAction implements ActionType<BiEntityCtx, AddVeloc
             this.name = name;
         }
 
-        @Override public String getSerializedName() {
+        @Override
+        public String getSerializedName() {
             return name;
         }
     }

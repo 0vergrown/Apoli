@@ -1,6 +1,5 @@
 package dev.overgrown.apoli.client;
 
-
 public final class ClientProtocolState {
     private static int serverVersion = -1;
 

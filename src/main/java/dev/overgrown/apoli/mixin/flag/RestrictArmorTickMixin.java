@@ -4,6 +4,7 @@ import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.condition.context.ItemCtx;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.builtin.RestrictArmorPower;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -19,7 +20,7 @@ public abstract class RestrictArmorTickMixin {
     private void apoli$dropRestrictedArmor(CallbackInfo ci) {
         Player self = (Player) (Object) this;
         if (self.level().isClientSide()) return;
-        if (!PowerLookup.hasActive(self, Apoli.id("restrict_armor"))) return;
+        if (!PowerLookup.hasActive(self, ApoliIds.RESTRICT_ARMOR)) return;
         for (EquipmentSlot slot : new EquipmentSlot[]{
                 EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
             ItemStack stack = self.getItemBySlot(slot);
@@ -35,7 +36,7 @@ public abstract class RestrictArmorTickMixin {
     private static boolean stackBlocked(LivingEntity entity, EquipmentSlot slot, ItemStack stack) {
         boolean[] hit = new boolean[]{false};
         ItemCtx ctx = new ItemCtx(stack, entity.level(), entity);
-        PowerLookup.forEach(entity, Apoli.id("restrict_armor"), RestrictArmorPower.Config.class, cfg -> {
+        PowerLookup.forEach(entity, ApoliIds.RESTRICT_ARMOR, RestrictArmorPower.Config.class, cfg -> {
             if (hit[0]) return;
             if (RestrictArmorPower.blocks(cfg, slot, ctx)) hit[0] = true;
         });

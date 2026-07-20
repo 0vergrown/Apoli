@@ -5,8 +5,8 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.ItemCtx;
 import dev.overgrown.apoli.data.Nbt;
+import dev.overgrown.apoli.data.NbtComparison;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
 
 public final class NbtItemCondition implements ConditionType<ItemCtx, NbtItemCondition.Cfg> {
     public record Cfg(Nbt nbt) {}
@@ -22,6 +22,6 @@ public final class NbtItemCondition implements ConditionType<ItemCtx, NbtItemCon
     public boolean test(Cfg cfg, ItemCtx ctx) {
         CompoundTag tag = ctx.stack().getTag();
         if (tag == null) return cfg.nbt.tag().isEmpty();
-        return NbtUtils.compareNbt(cfg.nbt.tag(), tag, true);
+        return NbtComparison.matches(cfg.nbt.tag(), tag);
     }
 }

@@ -22,9 +22,14 @@ public final class OnBlockCondition implements ConditionType<EntityCtx, OnBlockC
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        if (!ctx.entity().onGround()) return false;
+        if (!ctx.raw().onGround()) return false;
         if (cfg.blockCondition.isEmpty()) return true;
-        BlockPos below = ctx.entity().blockPosition().below();
+        BlockPos below = ctx.raw().blockPosition().below();
         return cfg.blockCondition.get().test(new BlockCtx(below, ctx.level().getBlockState(below), ctx.level()));
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

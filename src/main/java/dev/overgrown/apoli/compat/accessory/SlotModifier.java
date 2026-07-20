@@ -9,7 +9,6 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 
 import java.util.List;
 
-
 public record SlotModifier(String slot, ResourceLocation id, double amount, AttributeModifierOperation operation) {
 
     public static final Codec<SlotModifier> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -19,13 +18,11 @@ public record SlotModifier(String slot, ResourceLocation id, double amount, Attr
         AttributeModifierOperation.CODEC.optionalFieldOf("operation", AttributeModifierOperation.ADD_BASE_EARLY).forGetter(SlotModifier::operation)
     ).apply(i, SlotModifier::new));
 
-    
     public static final Codec<List<SlotModifier>> LIST = Codec.either(CODEC, CODEC.listOf()).xmap(
         e -> e.map(List::of, l -> l),
         l -> l.size() == 1 ? Either.left(l.get(0)) : Either.right(l)
     );
 
-    
     public AttributeModifier toVanilla() {
         return new AttributeModifier(
             java.util.UUID.nameUUIDFromBytes(id.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)),

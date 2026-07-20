@@ -4,6 +4,7 @@ import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.builtin.PhasingPower;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -42,7 +43,7 @@ public abstract class PhasingMixin {
                 pos, entity.level().isClientSide() ? "C" : "S", entity.getName().getString());
         }
 
-        if (!PowerLookup.hasActive(living, Apoli.id("phasing"))) {
+        if (!PowerLookup.hasActive(living, ApoliIds.PHASING)) {
             if (DEBUG && isLocalPlayer) {
                 Apoli.LOGGER.info("[phasing] hasActive=false — phasing power not granted/condition fails");
             }
@@ -54,7 +55,7 @@ public abstract class PhasingMixin {
         boolean standingOnTop = isStandingOnTop(living, original, pos);
         boolean[] allow = new boolean[]{false};
         int[] candidates = new int[]{0};
-        PowerLookup.forEach(living, Apoli.id("phasing"), PhasingPower.Config.class, cfg -> {
+        PowerLookup.forEach(living, ApoliIds.PHASING, PhasingPower.Config.class, cfg -> {
             candidates[0]++;
             if (allow[0]) return;
             boolean allowsBlock = PhasingPower.allowsPhasing(cfg, level, pos, state);

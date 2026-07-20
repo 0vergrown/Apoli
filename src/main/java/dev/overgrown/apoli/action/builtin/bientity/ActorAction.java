@@ -20,4 +20,9 @@ public final class ActorAction implements ActionType<BiEntityCtx, ActorAction.Cf
     public void run(Cfg cfg, BiEntityCtx ctx) {
         cfg.action.run(ctx.asActor());
     }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
+    }
 }

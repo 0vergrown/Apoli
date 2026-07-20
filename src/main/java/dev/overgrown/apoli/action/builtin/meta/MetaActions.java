@@ -32,7 +32,9 @@ public final class MetaActions {
     public static void registerEntity() {
         TypedActionRegistry<dev.overgrown.apoli.condition.context.EntityCtx> reg = ActionTypes.ENTITY;
         reg.register(AND, new AndMetaAction<>(EntityAction.CODEC, EntityAction::run));
-        reg.register(RANDOM_CHANCE, new RandomChanceMetaAction<>(EntityAction.CODEC, EntityAction::run), chanceAliases());
+        reg.register(RANDOM_CHANCE, new RandomChanceMetaAction<>(EntityAction.CODEC, EntityAction::run,
+            dev.overgrown.apoli.condition.context.EntityCtx::entity,
+            dev.overgrown.apoli.condition.context.EntityCtx::level), chanceAliases());
         reg.register(CHOICE, new ChoiceMetaAction<>(EntityAction.CODEC, EntityAction::run));
         reg.register(DELAY, new DelayMetaAction<>(EntityAction.CODEC, EntityAction::run));
         reg.register(LOOP, new LoopMetaAction<>(EntityAction.CODEC, EntityAction::run));
@@ -45,7 +47,9 @@ public final class MetaActions {
     public static void registerBiEntity() {
         TypedActionRegistry<dev.overgrown.apoli.condition.context.BiEntityCtx> reg = ActionTypes.BI_ENTITY;
         reg.register(AND, new AndMetaAction<>(BiEntityAction.CODEC, BiEntityAction::run));
-        reg.register(RANDOM_CHANCE, new RandomChanceMetaAction<>(BiEntityAction.CODEC, BiEntityAction::run), chanceAliases());
+        reg.register(RANDOM_CHANCE, new RandomChanceMetaAction<>(BiEntityAction.CODEC, BiEntityAction::run,
+            dev.overgrown.apoli.condition.context.BiEntityCtx::actor,
+            dev.overgrown.apoli.condition.context.BiEntityCtx::level), chanceAliases());
         reg.register(CHOICE, new ChoiceMetaAction<>(BiEntityAction.CODEC, BiEntityAction::run));
         reg.register(DELAY, new DelayMetaAction<>(BiEntityAction.CODEC, BiEntityAction::run));
         reg.register(LOOP, new LoopMetaAction<>(BiEntityAction.CODEC, BiEntityAction::run));
@@ -58,7 +62,9 @@ public final class MetaActions {
     public static void registerBlock() {
         TypedActionRegistry<dev.overgrown.apoli.condition.context.BlockCtx> reg = ActionTypes.BLOCK;
         reg.register(AND, new AndMetaAction<>(BlockAction.CODEC, BlockAction::run));
-        reg.register(RANDOM_CHANCE, new RandomChanceMetaAction<>(BlockAction.CODEC, BlockAction::run), chanceAliases());
+        reg.register(RANDOM_CHANCE, new RandomChanceMetaAction<>(BlockAction.CODEC, BlockAction::run,
+            ctx -> null,
+            dev.overgrown.apoli.condition.context.BlockCtx::level), chanceAliases());
         reg.register(CHOICE, new ChoiceMetaAction<>(BlockAction.CODEC, BlockAction::run));
         reg.register(DELAY, new DelayMetaAction<>(BlockAction.CODEC, BlockAction::run));
         reg.register(LOOP, new LoopMetaAction<>(BlockAction.CODEC, BlockAction::run));
@@ -71,7 +77,9 @@ public final class MetaActions {
     public static void registerItem() {
         TypedActionRegistry<dev.overgrown.apoli.condition.context.ItemCtx> reg = ActionTypes.ITEM;
         reg.register(AND, new AndMetaAction<>(ItemAction.CODEC, ItemAction::run));
-        reg.register(RANDOM_CHANCE, new RandomChanceMetaAction<>(ItemAction.CODEC, ItemAction::run), chanceAliases());
+        reg.register(RANDOM_CHANCE, new RandomChanceMetaAction<>(ItemAction.CODEC, ItemAction::run,
+            dev.overgrown.apoli.condition.context.ItemCtx::holder,
+            dev.overgrown.apoli.condition.context.ItemCtx::level), chanceAliases());
         reg.register(CHOICE, new ChoiceMetaAction<>(ItemAction.CODEC, ItemAction::run));
         reg.register(DELAY, new DelayMetaAction<>(ItemAction.CODEC, ItemAction::run));
         reg.register(LOOP, new LoopMetaAction<>(ItemAction.CODEC, ItemAction::run));

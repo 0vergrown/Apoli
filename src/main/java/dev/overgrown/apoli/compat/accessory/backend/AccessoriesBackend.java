@@ -23,7 +23,6 @@ import net.minecraft.world.level.Level;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public final class AccessoriesBackend implements AccessoryProvider {
     public static final String ID = "accessories";
 
@@ -34,7 +33,7 @@ public final class AccessoriesBackend implements AccessoryProvider {
 
     @Override
     public boolean isPresent() {
-        return true; 
+        return true;
     }
 
     private static AccessoriesCapability capability(LivingEntity entity) {
@@ -93,7 +92,6 @@ public final class AccessoriesBackend implements AccessoryProvider {
         if (cap != null) cap.removeSlotModifiers(modifiers);
     }
 
-    
     public void registerEvents() {
         AccessoryChangeCallback.EVENT.register((prevStack, currentStack, reference, stateChange) -> {
             LivingEntity entity = reference.entity();

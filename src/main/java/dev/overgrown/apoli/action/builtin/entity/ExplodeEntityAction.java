@@ -8,7 +8,7 @@ import dev.overgrown.apoli.condition.BlockCondition;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.DestructionType;
 import dev.overgrown.apoli.data.ExplosionHelper;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 
 import java.util.Optional;
 
@@ -36,7 +36,7 @@ public final class ExplodeEntityAction implements ActionType<EntityCtx, ExplodeE
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        LivingEntity holder = ctx.entity();
+        Entity holder = ctx.raw();
         boolean wasInvulnerable = holder.isInvulnerable();
         if (!cfg.damageSelf) holder.setInvulnerable(true);
         try {
@@ -48,5 +48,10 @@ public final class ExplodeEntityAction implements ActionType<EntityCtx, ExplodeE
         } finally {
             if (!cfg.damageSelf) holder.setInvulnerable(wasInvulnerable);
         }
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

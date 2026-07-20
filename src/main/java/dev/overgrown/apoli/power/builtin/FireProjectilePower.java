@@ -100,12 +100,20 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         EntityAction.CODEC.optionalFieldOf("shooter_action").forGetter(Hooks::shooterAction)
     ).apply(i, Hooks::new));
 
+    public static final MapCodec<Config> CONFIG_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+        PARAMS.forGetter(Config::params),
+        HOOKS.forGetter(Config::hooks)
+    ).apply(i, Config::new));
+
     @Override
     public MapCodec<Config> configCodec() {
-        return RecordCodecBuilder.mapCodec(i -> i.group(
-            PARAMS.forGetter(Config::params),
-            HOOKS.forGetter(Config::hooks)
-        ).apply(i, Config::new));
+        return CONFIG_CODEC;
+    }
+
+    public static void fireBurst(LivingEntity owner, ServerLevel level, Config cfg) {
+        playSound(owner, level, cfg.params());
+        int count = Math.max(1, cfg.params().count());
+        for (int n = 0; n < count; n++) fireOne(owner, level, cfg);
     }
 
     private record StateKey(UUID entity, ResourceLocation power) {}
@@ -130,8 +138,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         Params p = cfg.params();
         st.cooldown = Math.max(1, p.cooldown());
         if (p.startDelay() <= 0 && p.interval() <= 0) {
-            playSound(owner, level, p);
-            for (int n = 0; n < Math.max(1, p.count()); n++) fireOne(owner, level, cfg);
+            fireBurst(owner, level, cfg);
         } else {
             st.firing = true;
             st.shotProjectiles = 0;
@@ -242,6 +249,9 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         });
 
         level.addFreshEntity(projectile);
+
+        cfg.hooks().tickBientityAction().ifPresent(a ->
+            dev.overgrown.apoli.entity.ProjectileTickManager.track(projectile, owner, a));
         cfg.hooks().shooterAction().ifPresent(a -> a.run(new EntityCtx(owner, level)));
     }
 }

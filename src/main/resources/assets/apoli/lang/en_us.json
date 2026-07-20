@@ -1,5 +1,6 @@
 {
     "key.apoli.skill_tree": "Open Skill Tree",
+    "screen.apoli.radial_menu": "Radial Menu",
     "screen.apoli.skill_tree": "Skill Tree",
     "screen.apoli.skill_tree.empty": "No skill trees available.",
     "screen.apoli.skill_tree.points": "Points: %s",
@@ -7,5 +8,6 @@
     "screen.apoli.skill_tree.purchased": "Purchased",
     "screen.apoli.skill_tree.locked": "Requires the previous skill",
     "screen.apoli.skill_tree.not_enough": "Not enough points",
-    "screen.apoli.skill_tree.click_buy": "Click to purchase"
+    "screen.apoli.skill_tree.click_buy": "Click to purchase",
+    "screen.apoli.skill_tree.refund": "Shift-click to refund (+%s point(s))"
 }

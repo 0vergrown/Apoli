@@ -5,9 +5,8 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
-import net.blay09.mods.hardcorerevival.HardcoreRevival;
+import net.blay09.mods.hardcorerevival.api.HardcoreRevivalAPI;
 import net.minecraft.world.entity.player.Player;
-
 
 public final class ReviveAction implements ActionType<EntityCtx, ReviveAction.Cfg> {
     public record Cfg(boolean applyEffects) {}
@@ -22,7 +21,7 @@ public final class ReviveAction implements ActionType<EntityCtx, ReviveAction.Cf
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
         if (ctx.raw() instanceof Player player && !player.level().isClientSide()) {
-            HardcoreRevival.getManager().wakeup(player, cfg.applyEffects());
+            HardcoreRevivalAPI.wakeup(player, cfg.applyEffects());
         }
     }
 }

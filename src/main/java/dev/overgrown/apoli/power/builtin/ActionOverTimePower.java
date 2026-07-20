@@ -50,18 +50,18 @@ public final class ActionOverTimePower extends PowerType<ActionOverTimePower.Con
 
         if (!(owner.level() instanceof ServerLevel level)) return;
 
+        EntityCtx ctx = EntityCtx.of(owner, level);
         boolean wasActive = holder.getAuxInt(powerId).orElse(0) != 0;
-        boolean active = conditionHolds(owner, level, powerId);
+        boolean active = conditionHolds(ctx, powerId);
 
         if (active) {
-            EntityCtx ctx = EntityCtx.of(owner, level);
             if (!wasActive) {
                 cfg.risingAction.ifPresent(a -> a.run(ctx));
                 setActiveFlag(holder, powerId, true);
             }
             cfg.entityAction.ifPresent(a -> a.run(ctx));
         } else if (wasActive) {
-            cfg.fallingAction.ifPresent(a -> a.run(EntityCtx.of(owner, level)));
+            cfg.fallingAction.ifPresent(a -> a.run(ctx));
             setActiveFlag(holder, powerId, false);
         }
     }
@@ -76,10 +76,10 @@ public final class ActionOverTimePower extends PowerType<ActionOverTimePower.Con
         setActiveFlag(holder, powerId, false);
     }
 
-    private static boolean conditionHolds(Entity entity, ServerLevel level, ResourceLocation powerId) {
+    private static boolean conditionHolds(EntityCtx ctx, ResourceLocation powerId) {
         Power loaded = ApoliPowers.get(powerId);
         if (loaded == null || loaded.condition().isEmpty()) return true;
-        return loaded.condition().get().test(EntityCtx.of(entity, level));
+        return loaded.condition().get().test(ctx);
     }
 
     private static void setActiveFlag(PowerContainer holder, ResourceLocation powerId, boolean activeNow) {

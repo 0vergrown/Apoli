@@ -34,7 +34,7 @@ public final class ApoliResourceCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("apoli:resource")
-            .requires(s -> s.hasPermission(2));
+            .requires(ApoliPermissions.require("apoli.command.resource", 2));
 
         root.then(Commands.literal("get")
             .then(Commands.argument("targets", EntityArgument.entities())
@@ -65,7 +65,7 @@ public final class ApoliResourceCommand {
         LiteralCommandNode<CommandSourceStack> node = dispatcher.register(root);
 
         dispatcher.register(Commands.literal("resource")
-            .requires(s -> s.hasPermission(2))
+            .requires(ApoliPermissions.require("apoli.command.resource", 2))
             .redirect(node));
     }
 

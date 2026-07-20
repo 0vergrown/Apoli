@@ -7,7 +7,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
-
 public final class PreventAccessoryUnequipPower extends BasePreventAccessoryPower {
     public static final ResourceLocation CANONICAL = Apoli.id("prevent_accessory_unequip");
 

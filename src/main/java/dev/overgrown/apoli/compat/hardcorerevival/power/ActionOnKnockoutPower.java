@@ -12,7 +12,6 @@ import net.minecraft.world.entity.player.Player;
 
 import java.util.Optional;
 
-
 public final class ActionOnKnockoutPower extends PowerType<ActionOnKnockoutPower.Config> {
     public static final ResourceLocation CANONICAL = Apoli.id("action_on_knockout");
 
@@ -25,7 +24,6 @@ public final class ActionOnKnockoutPower extends PowerType<ActionOnKnockoutPower
         ).apply(i, Config::new));
     }
 
-    
     public static void handle(Player player) {
         if (player.level().isClientSide()) return;
         EntityCtx ctx = EntityCtx.of(player, player.level());

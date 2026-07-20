@@ -33,8 +33,6 @@ public final class ItemConditions {
         ConditionTypes.ITEM.register(Apoli.id("relative_durability"), new RelativeDurabilityItemCondition());
         ConditionTypes.ITEM.register(Apoli.id("smeltable"), new SmeltableItemCondition());
 
-        
-        
         if (ModCompat.anyAccessory()) {
             ConditionTypes.ITEM.register(Apoli.id("accessory"), new AccessoryCondition(),
                 AliasingOptions.builder().addTypeAlias(Apoli.id("trinket")).build());

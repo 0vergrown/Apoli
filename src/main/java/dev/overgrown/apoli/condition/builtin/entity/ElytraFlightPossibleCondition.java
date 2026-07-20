@@ -7,6 +7,7 @@ import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.power.PowerLookup;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ElytraItem;
@@ -33,7 +34,7 @@ public final class ElytraFlightPossibleCondition implements ConditionType<Entity
         if (cfg.checkAbilities) {
             ItemStack chest = e.getItemBySlot(EquipmentSlot.CHEST);
             boolean elytraItem = chest.getItem() instanceof ElytraItem && ElytraItem.isFlyEnabled(chest);
-            boolean elytraPower = PowerLookup.hasActive(e, Apoli.id("elytra_flight"));
+            boolean elytraPower = PowerLookup.hasActive(e, ApoliIds.ELYTRA_FLIGHT);
             if (!elytraItem && !elytraPower) return false;
         }
         return true;

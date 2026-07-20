@@ -10,7 +10,6 @@ import net.minecraft.world.entity.Entity;
 
 import java.util.Optional;
 
-
 public final class DetachRopeAction implements ActionType<EntityCtx, DetachRopeAction.Cfg> {
 
     public record Cfg(Optional<String> slot) {}
@@ -27,5 +26,10 @@ public final class DetachRopeAction implements ActionType<EntityCtx, DetachRopeA
         Entity actor = ctx.raw();
         if (actor == null) return;
         RopeManager.removeMatching(actor.getUUID(), cfg.slot.orElse(null), null);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

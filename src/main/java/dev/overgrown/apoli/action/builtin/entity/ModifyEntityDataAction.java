@@ -73,4 +73,9 @@ public final class ModifyEntityDataAction implements ActionType<EntityCtx, Modif
             case FIRE_TICKS -> number.ifPresent(d -> entity.setRemainingFireTicks(d.intValue()));
         }
     }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
+    }
 }

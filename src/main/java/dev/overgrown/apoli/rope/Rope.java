@@ -7,7 +7,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 
-
 public final class Rope {
 
     public final int id;
@@ -41,7 +40,6 @@ public final class Rope {
         this.length = length;
     }
 
-    
     public boolean touches(UUID entity) {
         return entity.equals(fromEntity) || entity.equals(toEntity);
     }

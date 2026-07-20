@@ -6,7 +6,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Comparison;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 
 public final class BrightnessCondition implements ConditionType<EntityCtx, BrightnessCondition.Cfg> {
     public record Cfg(Comparison comparison, float compareTo) {}
@@ -21,8 +21,13 @@ public final class BrightnessCondition implements ConditionType<EntityCtx, Brigh
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        LivingEntity e = ctx.entity();
+        Entity e = ctx.raw();
         float brightness = e.level().getLightLevelDependentMagicValue(e.blockPosition());
         return cfg.comparison.compare(brightness, cfg.compareTo);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

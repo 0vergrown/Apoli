@@ -9,6 +9,7 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashSet;
+import java.util.OptionalInt;
 import java.util.Set;
 
 public final class ItemPowers {
@@ -19,6 +20,7 @@ public final class ItemPowers {
     public static final String SLOT = "Slot";
     public static final String HIDDEN = "Hidden";
     public static final String NEGATIVE = "Negative";
+    public static final String VALUE = "Value";
 
     public static @Nullable ListTag read(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return null;
@@ -61,6 +63,34 @@ public final class ItemPowers {
         if (negative) e.putBoolean(NEGATIVE, true);
         list.add(e);
         tag.put(POWERS, list);
+    }
+
+    public static OptionalInt readValue(ItemStack stack, ResourceLocation power, EquipmentSlot slot) {
+        ListTag list = read(stack);
+        if (list == null) return OptionalInt.empty();
+        String id = power.toString();
+        String slotName = slot.getSerializedName();
+        for (Tag entry : list) {
+            if (entry instanceof CompoundTag c && id.equals(c.getString(ID)) && slotName.equals(c.getString(SLOT))) {
+                return c.contains(VALUE, Tag.TAG_INT) ? OptionalInt.of(c.getInt(VALUE)) : OptionalInt.empty();
+            }
+        }
+        return OptionalInt.empty();
+    }
+
+    public static void saveValue(ItemStack stack, ResourceLocation power, EquipmentSlot slot, int value) {
+        if (stack == null || stack.isEmpty()) return;
+        CompoundTag tag = stack.getTag();
+        if (tag == null || !tag.contains(POWERS, Tag.TAG_LIST)) return;
+        String id = power.toString();
+        String slotName = slot.getSerializedName();
+        ListTag list = tag.getList(POWERS, Tag.TAG_COMPOUND);
+        for (Tag entry : list) {
+            if (entry instanceof CompoundTag c && id.equals(c.getString(ID)) && slotName.equals(c.getString(SLOT))) {
+                c.putInt(VALUE, value);
+                return;
+            }
+        }
     }
 
     public static void remove(ItemStack stack, ResourceLocation power, @Nullable EquipmentSlot slot) {

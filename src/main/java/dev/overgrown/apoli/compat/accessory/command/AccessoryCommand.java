@@ -5,6 +5,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.tree.LiteralCommandNode;
+import dev.overgrown.apoli.command.ApoliPermissions;
 import dev.overgrown.apoli.compat.accessory.Accessories;
 import dev.overgrown.apoli.compat.accessory.AccessorySlotRef;
 import net.minecraft.commands.CommandSourceStack;
@@ -17,13 +18,12 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
 
-
 public final class AccessoryCommand {
     private AccessoryCommand() {}
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("apoli:accessory")
-            .requires(s -> s.hasPermission(2));
+            .requires(ApoliPermissions.require("apoli.command.accessory", 2));
 
         root.then(Commands.literal("list")
             .then(Commands.argument("targets", EntityArgument.entities())
@@ -34,7 +34,7 @@ public final class AccessoryCommand {
 
         LiteralCommandNode<CommandSourceStack> node = dispatcher.register(root);
         dispatcher.register(Commands.literal("accessory")
-            .requires(s -> s.hasPermission(2))
+            .requires(ApoliPermissions.require("apoli.command.accessory", 2))
             .redirect(node));
     }
 

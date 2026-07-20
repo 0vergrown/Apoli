@@ -19,7 +19,6 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 import java.util.Optional;
 
-
 public final class ActionOnAccessoryChangePower extends PowerType<ActionOnAccessoryChangePower.Config> {
     public static final ResourceLocation CANONICAL = Apoli.id("action_on_accessory_change");
 
@@ -44,7 +43,6 @@ public final class ActionOnAccessoryChangePower extends PowerType<ActionOnAccess
         ).apply(i, Config::new));
     }
 
-    
     public static void handle(LivingEntity entity, AccessorySlotRef ref, ItemStack stack, boolean equipping) {
         if (entity.level().isClientSide()) return;
         ItemCtx itemCtx = new ItemCtx(stack, entity.level(), entity);

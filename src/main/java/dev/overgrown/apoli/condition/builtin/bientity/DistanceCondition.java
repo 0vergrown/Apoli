@@ -6,6 +6,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.data.Comparison;
+import net.minecraft.world.entity.Entity;
 
 public final class DistanceCondition implements ConditionType<BiEntityCtx, DistanceCondition.Cfg> {
     public record Cfg(Comparison comparison, double value) {}
@@ -20,7 +21,14 @@ public final class DistanceCondition implements ConditionType<BiEntityCtx, Dista
 
     @Override
     public boolean test(Cfg cfg, BiEntityCtx ctx) {
-        double d = ctx.actor().distanceTo(ctx.target());
-        return cfg.comparison.compare(d, cfg.value);
+        Entity actor = ctx.rawActor();
+        Entity target = ctx.rawTarget();
+        if (actor == null || target == null) return false;
+        return cfg.comparison.compare(actor.distanceTo(target), cfg.value);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

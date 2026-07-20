@@ -5,6 +5,7 @@ import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.builtin.EntityGlowPower;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
@@ -53,7 +54,7 @@ public abstract class EntityGlowMixin {
     private static EntityGlowPower.Config apoli$find(LivingEntity glowing, LocalPlayer viewer, boolean selfGlow) {
         LivingEntity holder = selfGlow ? glowing : viewer;
         EntityGlowPower.Config[] match = {null};
-        PowerLookup.forEach(holder, Apoli.id("entity_glow"), EntityGlowPower.Config.class, cfg -> {
+        PowerLookup.forEach(holder, ApoliIds.ENTITY_GLOW, EntityGlowPower.Config.class, cfg -> {
             if (match[0] != null || cfg.selfGlowTarget() != selfGlow) return;
             if (cfg.entityCondition().isPresent()
                 && !cfg.entityCondition().get().test(new EntityCtx(glowing, glowing.level()))) return;

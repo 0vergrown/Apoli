@@ -29,6 +29,6 @@ public final class ModifyStatAction implements ActionType<EntityCtx, ModifyStatA
         if (stat == null) return;
         int current = player.getStats().getValue(stat);
         float modified = AttributeModifierHelper.apply(current, List.of(cfg.modifier), player);
-        player.getStats().setValue(player, stat, (int) modified);
+        Stat.setValue(player, stat, Math.max(0, (int) modified));
     }
 }

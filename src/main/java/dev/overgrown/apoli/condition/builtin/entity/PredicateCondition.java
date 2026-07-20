@@ -33,8 +33,8 @@ public final class PredicateCondition implements ConditionType<EntityCtx, Predic
             .getElement(LootDataType.PREDICATE, cfg.predicate);
         if (condition == null) return false;
         LootParams params = new LootParams.Builder(serverLevel)
-            .withParameter(LootContextParams.THIS_ENTITY, ctx.entity())
-            .withParameter(LootContextParams.ORIGIN, ctx.entity().position())
+            .withParameter(LootContextParams.THIS_ENTITY, ctx.raw())
+            .withParameter(LootContextParams.ORIGIN, ctx.raw().position())
             .create(LootContextParamSets.SELECTOR);
         LootContext lootCtx = new LootContext.Builder(params).create(null);
         return condition.test(lootCtx);
@@ -42,4 +42,9 @@ public final class PredicateCondition implements ConditionType<EntityCtx, Predic
 
     @SuppressWarnings("unused")
     private static void keepImports(EntityPredicate p, ServerPlayer sp) {}
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
+    }
 }

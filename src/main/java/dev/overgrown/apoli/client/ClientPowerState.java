@@ -3,7 +3,9 @@ package dev.overgrown.apoli.client;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
+import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.network.payload.SyncEntityPowersS2C;
+import dev.overgrown.apoli.network.payload.SyncPowersChunkS2C;
 import dev.overgrown.apoli.network.payload.SyncPowersS2C;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
@@ -37,6 +39,43 @@ public final class ClientPowerState {
         });
         ApoliPowers.replaceAll(decoded);
         KeyPressWatcher.rebuild(payload.rawPowers());
+    }
+
+    private static final java.util.List<byte[]> PENDING_SLICES = new java.util.ArrayList<>();
+    private static int expectedSlice;
+
+    public static void applyPowersChunk(SyncPowersChunkS2C payload) {
+        if (payload.index() == 0) {
+            PENDING_SLICES.clear();
+            expectedSlice = 0;
+        }
+        if (payload.index() != expectedSlice) {
+            PENDING_SLICES.clear();
+            expectedSlice = 0;
+            return;
+        }
+        PENDING_SLICES.add(payload.slice());
+        expectedSlice++;
+        if (expectedSlice < payload.total()) {
+            return;
+        }
+        int size = 0;
+        for (byte[] s : PENDING_SLICES) {
+            size += s.length;
+        }
+        byte[] gz = new byte[size];
+        int at = 0;
+        for (byte[] s : PENDING_SLICES) {
+            System.arraycopy(s, 0, gz, at, s.length);
+            at += s.length;
+        }
+        PENDING_SLICES.clear();
+        expectedSlice = 0;
+        try {
+            applyPowersSync(new SyncPowersS2C(SyncPowersChunkS2C.decodeBlob(gz)));
+        } catch (java.io.IOException e) {
+            Apoli.LOGGER.error("[Apoli] Failed to decode chunked power sync", e);
+        }
     }
 
     public static void applyEntityPowersSync(SyncEntityPowersS2C payload) {

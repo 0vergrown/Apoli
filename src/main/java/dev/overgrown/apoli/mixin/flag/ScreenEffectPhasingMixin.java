@@ -2,6 +2,7 @@ package dev.overgrown.apoli.mixin.flag;
 
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.power.PowerLookup;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
@@ -32,7 +33,7 @@ public abstract class ScreenEffectPhasingMixin {
             target = "Lnet/minecraft/client/renderer/ScreenEffectRenderer;getViewBlockingState(Lnet/minecraft/world/entity/player/Player;)Lnet/minecraft/world/level/block/state/BlockState;"))
     private static BlockState apoli$suppressInWallOverlayWhilePhasing(Player player) {
         Entity camera = Minecraft.getInstance().getCameraEntity();
-        if (camera instanceof LivingEntity living && PowerLookup.hasActive(living, Apoli.id("phasing"))) {
+        if (camera instanceof LivingEntity living && PowerLookup.hasActive(living, ApoliIds.PHASING)) {
             return null;
         }
         return getViewBlockingState(player);

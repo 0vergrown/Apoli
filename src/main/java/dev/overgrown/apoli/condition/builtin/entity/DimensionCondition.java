@@ -20,4 +20,9 @@ public final class DimensionCondition implements ConditionType<EntityCtx, Dimens
     public boolean test(Cfg cfg, EntityCtx ctx) {
         return ctx.level().dimension().location().equals(cfg.dimension);
     }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
+    }
 }

@@ -16,15 +16,23 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.Optional;
 
-
 public final class RopePullAction implements ActionType<EntityCtx, RopePullAction.Cfg> {
 
     public enum Which implements StringRepresentable {
-        SELF("self"), OTHER("other"), BOTH("both");
+        SELF("self"),
+        OTHER("other"),
+        BOTH("both");
+
         public static final Codec<Which> CODEC = StringRepresentable.fromEnum(Which::values);
         private final String name;
-        Which(String name) { this.name = name; }
-        @Override public String getSerializedName() { return name; }
+        Which(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String getSerializedName() {
+            return name;
+        }
     }
 
     public record Cfg(Optional<String> slot, Which which, double speed, boolean set, double reel) {}
@@ -55,7 +63,7 @@ public final class RopePullAction implements ActionType<EntityCtx, RopePullActio
 
             boolean actorIsFrom = actor.getUUID().equals(rope.fromEntity);
             boolean actorIsTo = actor.getUUID().equals(rope.toEntity);
-            if (!actorIsFrom && !actorIsTo) continue; 
+            if (!actorIsFrom && !actorIsTo) continue;
 
             Vec3 actorPos = actorIsFrom ? fromPos : toPos;
             Vec3 otherPos = actorIsFrom ? toPos : fromPos;
@@ -72,7 +80,12 @@ public final class RopePullAction implements ActionType<EntityCtx, RopePullActio
     }
 
     private static void push(Entity entity, Vec3 toward, double speed, boolean set) {
-        if (toward.lengthSqr() < 1e-8) return;
+        if (speed == 0 || toward.lengthSqr() < 1e-8) return;
         VelocityUpdater.apply(entity, toward.normalize().scale(speed), set);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

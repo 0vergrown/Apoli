@@ -48,9 +48,6 @@ public final class RopeClientManager {
     }
 
     private static void verletStep(VerletRopeState rope) {
-        
-        
-        
         int last = rope.points.size() - 1;
         RopePoint first = rope.points.get(0);
         first.prevPos = first.pos;
@@ -85,7 +82,6 @@ public final class RopeClientManager {
         rope.points.get(last).pos = toPos;
     }
 
-    
     private static void resegment(VerletRopeState rope) {
         if (rope.targetLength == rope.length) return;
         rope.length = Mth.lerp(0.33, rope.length, rope.targetLength);
@@ -97,8 +93,6 @@ public final class RopeClientManager {
             rope.points.remove(1);
         }
         if (rope.points.size() - 1 < desiredSegments) {
-            
-            
             RopePoint anchor = rope.points.get(0);
             RopePoint next = rope.points.get(1);
             RopePoint p = new RopePoint(anchor.pos.lerp(next.pos, 0.5));
@@ -115,11 +109,7 @@ public final class RopeClientManager {
         if (opts.keyJump.isDown()) delta -= ROPE_LENGTH_CHANGE_STEP;
         if (opts.keyShift.isDown()) delta += ROPE_LENGTH_CHANGE_STEP;
         if (delta != 0) sendC2S(RopeChangeLengthC2S.CHANNEL, new RopeChangeLengthC2S(rope.id, delta)::write);
-
-        Vec3 anchor = rope.anchorAwayFrom(client.player.getId(), level);
-        Vec3 playerPos = client.player.getBoundingBox().getCenter();
-        if (anchor == null || anchor.y <= playerPos.y || playerPos.distanceTo(anchor) < rope.length * 0.98) return;
-
+        if (client.player.onGround()) return;
         double x = 0, z = 0;
         if (opts.keyUp.isDown()) z += 1;
         if (opts.keyDown.isDown()) z -= 1;

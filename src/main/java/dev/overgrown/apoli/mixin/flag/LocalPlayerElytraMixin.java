@@ -2,6 +2,7 @@ package dev.overgrown.apoli.mixin.flag;
 
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.power.PowerLookup;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.player.LocalPlayer;
@@ -22,7 +23,7 @@ public abstract class LocalPlayerElytraMixin {
                  target = "Lnet/minecraft/world/item/ItemStack;is(Lnet/minecraft/world/item/Item;)Z"))
     private boolean apoli$treatElytraFlightAsElytra(ItemStack stack, Item item) {
         if (item == Items.ELYTRA
-            && PowerLookup.hasActive((Player) (Object) this, Apoli.id("elytra_flight"))) {
+            && PowerLookup.hasActive((Player) (Object) this, ApoliIds.ELYTRA_FLIGHT)) {
             return true;
         }
         return stack.is(item);
@@ -32,7 +33,7 @@ public abstract class LocalPlayerElytraMixin {
         at = @At(value = "INVOKE",
                  target = "Lnet/minecraft/world/item/ElytraItem;isFlyEnabled(Lnet/minecraft/world/item/ItemStack;)Z"))
     private boolean apoli$elytraAlwaysFlyEnabled(ItemStack stack) {
-        if (PowerLookup.hasActive((Player) (Object) this, Apoli.id("elytra_flight"))) {
+        if (PowerLookup.hasActive((Player) (Object) this, ApoliIds.ELYTRA_FLIGHT)) {
             return true;
         }
         return net.minecraft.world.item.ElytraItem.isFlyEnabled(stack);

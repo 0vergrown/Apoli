@@ -29,9 +29,13 @@ public record SkillDefsSyncS2C(List<Entry> entries, boolean legacyFormat) {
 
     public static SkillDefsSyncS2C fromCurrent(boolean legacyFormat) {
         List<Entry> entries = new ArrayList<>();
+        for (dev.overgrown.apoli.skill.SkillTree tree : SkillRegistry.trees()) {
+            entries.add(new Entry(tree.id(), Optional.empty(), tree.name(), tree.description(),
+                tree.icon(), List.of(), 0, tree.background(), tree.order()));
+        }
         for (Skill skill : SkillRegistry.all()) {
-            entries.add(new Entry(skill.id(), skill.parent(), skill.name(), skill.description(),
-                skill.icon(), skill.powers(), skill.cost(), skill.background(), skill.order()));
+            entries.add(new Entry(skill.id(), Optional.of(skill.parent()), skill.name(), skill.description(),
+                skill.icon(), skill.powers(), skill.cost(), Optional.empty(), skill.order()));
         }
         return new SkillDefsSyncS2C(entries, legacyFormat);
     }
@@ -48,14 +52,13 @@ public record SkillDefsSyncS2C(List<Entry> entries, boolean legacyFormat) {
             buf.writeVarInt(e.cost());
             buf.writeOptional(e.background(), FriendlyByteBuf::writeResourceLocation);
             if (!legacyFormat) {
-                buf.writeVarInt(e.order()); 
+                buf.writeVarInt(e.order());
             }
         }
     }
 
     public static SkillDefsSyncS2C read(FriendlyByteBuf buf) {
-        
-        
+
         int start = buf.readerIndex();
         try {
             SkillDefsSyncS2C parsed = readEntries(buf, true);

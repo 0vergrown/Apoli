@@ -22,6 +22,11 @@ public final class EmitGameEventAction implements ActionType<EntityCtx, EmitGame
     public void run(Cfg cfg, EntityCtx ctx) {
         GameEvent event = BuiltInRegistries.GAME_EVENT.get(cfg.event);
         if (event == null) return;
-        ctx.entity().gameEvent(event);
+        ctx.raw().gameEvent(event);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

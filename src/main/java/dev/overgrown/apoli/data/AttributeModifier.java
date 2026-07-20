@@ -5,7 +5,11 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.alias.AliasingMapCodec;
 import dev.overgrown.apoli.codec.LazyCodec;
+import dev.overgrown.apoli.data.expr.ExprVars;
+import dev.overgrown.apoli.power.PowerContainer;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.LivingEntity;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 import java.util.Optional;
@@ -39,35 +43,31 @@ public record AttributeModifier(
     public static final Codec<java.util.List<AttributeModifier>> LIST_OR_SINGLE = Codec.either(
         CODEC, Codec.list(CODEC)
     ).xmap(
-        either -> either.map(java.util.List::of, java.util.function.Function.identity()),
+        either -> either.map(java.util.List::of, AttributeModifierHelper::ensureSorted),
         list -> list.size() == 1
             ? com.mojang.datafixers.util.Either.left(list.get(0))
             : com.mojang.datafixers.util.Either.right(list)
     );
 
-    public double resolveInput(
-        Map<String, Double> variables,
-        Map<String, Double> resources
-    ) {
-        double base;
-        if (resource.isPresent()) {
-            base = resources.getOrDefault(resource.get().toString(), 0.0);
-        } else {
-            base = value.eval(variables, resources);
-        }
+    public boolean needsContainer() {
+        return resource.isPresent()
+            || value.needsContainer()
+            || (nested.isPresent() && nested.get().needsContainer());
+    }
+
+    public double resolveInput(@Nullable LivingEntity entity, @Nullable PowerContainer container, double contextValue) {
+        double base = resource.isPresent()
+            ? ExprVars.readResource(container, resource.get())
+            : value.evalWith(entity, container, contextValue);
         if (nested.isPresent()) {
-            double nestedInput = nested.get().resolveInput(variables, resources);
+            double nestedInput = nested.get().resolveInput(entity, container, contextValue);
             return nested.get().operation.applySingle(base, nestedInput);
         }
         return base;
     }
 
-    public double applyToValue(
-        double currentValue,
-        Map<String, Double> variables,
-        Map<String, Double> resources
-    ) {
-        double input = resolveInput(variables, resources);
+    public double applyToValue(double currentValue, @Nullable LivingEntity entity, @Nullable PowerContainer container) {
+        double input = resolveInput(entity, container, currentValue);
         return operation.applySingle(currentValue, input);
     }
 }

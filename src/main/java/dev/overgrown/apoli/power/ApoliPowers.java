@@ -13,7 +13,13 @@ public final class ApoliPowers {
     private static volatile Map<ResourceLocation, Power> POWERS = Map.of();
     private static volatile Set<ResourceLocation> SUB_POWERS = Set.of();
 
+    private static volatile int GENERATION = 0;
+
     private ApoliPowers() {}
+
+    public static int generation() {
+        return GENERATION;
+    }
 
     public static @Nullable Power get(ResourceLocation id) {
         return POWERS.get(id);
@@ -40,5 +46,6 @@ public final class ApoliPowers {
             if (p.config() instanceof MultiplePower.Cfg cfg) subs.addAll(cfg.subPowerIds());
         }
         SUB_POWERS = Set.copyOf(subs);
+        GENERATION++;
     }
 }

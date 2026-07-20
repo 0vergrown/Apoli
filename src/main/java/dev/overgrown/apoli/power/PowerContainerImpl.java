@@ -1,15 +1,22 @@
 package dev.overgrown.apoli.power;
 
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.EndTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -25,11 +32,24 @@ public final class PowerContainerImpl implements PowerContainer {
     private boolean dirty;
     private boolean structureDirty;
 
+    private @Nullable CompoundTag cachedSaveTag;
+    private @Nullable Map<ResourceLocation, List<ResourceLocation>> typeIndex;
+    private @Nullable List<TickEntry> tickList;
+    private int cacheGeneration = -1;
+
+    private record TickEntry(ResourceLocation powerId, Power power, PowerType<?> type) {}
+
     public PowerContainerImpl() {}
 
     public java.util.OptionalInt getAuxInt(ResourceLocation powerId) {
         Integer v = auxInt.get(powerId);
         return v == null ? java.util.OptionalInt.empty() : java.util.OptionalInt.of(v);
+    }
+
+    @Override
+    public int getAuxIntOr(ResourceLocation powerId, int fallback) {
+        Integer v = auxInt.get(powerId);
+        return v == null ? fallback : v;
     }
 
     public void setAuxInt(ResourceLocation powerId, int value) {
@@ -53,11 +73,19 @@ public final class PowerContainerImpl implements PowerContainer {
 
     public void setAuxNbt(ResourceLocation powerId, CompoundTag tag) {
         auxNbt.put(powerId, tag);
+
+        this.cachedSaveTag = null;
     }
 
     public void attachOwner(Entity entity) {
+        if (this.owner == entity) return;
         this.owner = entity;
         if (entity != null && !bySources.isEmpty()) PoweredEntities.register(entity);
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return bySources.isEmpty();
     }
 
     @Override
@@ -92,6 +120,8 @@ public final class PowerContainerImpl implements PowerContainer {
                 if (loaded != null) {
                     PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
                     if (type != null) invokeOnRemoved(type, power, loaded.config(), source);
+                } else {
+                    removeAllFromSource(power);
                 }
             }
             if (auxInt.remove(power) != null) markDirty();
@@ -212,11 +242,15 @@ public final class PowerContainerImpl implements PowerContainer {
     @Override
     public void markDirty() {
         this.dirty = true;
+        this.cachedSaveTag = null;
     }
 
     private void markStructureDirty() {
         this.structureDirty = true;
         this.dirty = true;
+        this.cachedSaveTag = null;
+        this.typeIndex = null;
+        this.tickList = null;
     }
 
     public boolean isDirty() {
@@ -244,21 +278,74 @@ public final class PowerContainerImpl implements PowerContainer {
     public void loadFromSnapshot(Map<ResourceLocation, Set<ResourceLocation>> snapshot) {
         bySources.clear();
         snapshot.forEach((k, v) -> bySources.put(k, new HashSet<>(v)));
+        this.cachedSaveTag = null;
+        this.typeIndex = null;
+        this.tickList = null;
+    }
+
+    private void ensureCacheGeneration() {
+        int gen = ApoliPowers.generation();
+        if (cacheGeneration != gen) {
+            cacheGeneration = gen;
+            typeIndex = null;
+            tickList = null;
+        }
+    }
+
+    @Override
+    public List<ResourceLocation> powersOfType(ResourceLocation canonicalTypeId) {
+        if (bySources.isEmpty()) return List.of();
+        ensureCacheGeneration();
+        Map<ResourceLocation, List<ResourceLocation>> index = this.typeIndex;
+        if (index == null) {
+            index = new HashMap<>();
+            for (ResourceLocation powerId : bySources.keySet()) {
+                Power power = ApoliPowers.get(powerId);
+                if (power == null) continue;
+                index.computeIfAbsent(PowerTypeRegistry.resolveId(power.typeId()), k -> new ArrayList<>(2))
+                    .add(powerId);
+            }
+            this.typeIndex = index;
+        }
+        List<ResourceLocation> list = index.get(canonicalTypeId);
+        return list == null ? List.of() : list;
+    }
+
+    private List<TickEntry> tickEntries() {
+        ensureCacheGeneration();
+        List<TickEntry> list = this.tickList;
+        if (list == null) {
+            if (bySources.isEmpty()) {
+                list = List.of();
+            } else {
+                List<TickEntry> building = new ArrayList<>(bySources.size());
+                for (ResourceLocation powerId : bySources.keySet()) {
+                    Power power = ApoliPowers.get(powerId);
+                    if (power == null) continue;
+                    PowerType<?> type = PowerTypeRegistry.get(power.typeId());
+                    if (type == null) continue;
+                    building.add(new TickEntry(powerId, power, type));
+                }
+                list = List.copyOf(building);
+            }
+            this.tickList = list;
+        }
+        return list;
     }
 
     public void tickActive() {
         if (owner == null || !(owner.level() instanceof ServerLevel level)) return;
+        List<TickEntry> entries = tickEntries();
+        if (entries.isEmpty()) return;
         EntityCtx ctx = EntityCtx.of(owner, level);
-        for (ResourceLocation powerId : List.copyOf(bySources.keySet())) {
-            if (!bySources.containsKey(powerId)) continue;
-            if (isSuppressed(powerId)) continue;
-            Power loaded = ApoliPowers.get(powerId);
-            if (loaded == null) continue;
-            PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
-            if (type == null) continue;
-            if (!(owner instanceof LivingEntity) && !type.ticksNonLivingEntities()) continue;
-            if (!isActive(type, powerId, loaded.config(), ctx)) continue;
-            invokeTick(type, powerId, loaded.config());
+        boolean living = owner instanceof LivingEntity;
+
+        for (TickEntry entry : entries) {
+            if (!bySources.containsKey(entry.powerId())) continue;
+            if (isSuppressed(entry.powerId())) continue;
+            if (!living && !entry.type().ticksNonLivingEntities()) continue;
+            if (!isActive(entry.type(), entry.powerId(), entry.power().config(), ctx)) continue;
+            invokeTick(entry.type(), entry.powerId(), entry.power().config());
         }
     }
 
@@ -282,7 +369,45 @@ public final class PowerContainerImpl implements PowerContainer {
         type.onRemoved(powerId, cfg, this, source);
     }
 
-    public static final Codec<PowerContainerImpl> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    private CompoundTag saveTag() {
+        CompoundTag tag = this.cachedSaveTag;
+        if (tag == null) {
+            tag = buildSaveTag();
+            this.cachedSaveTag = tag;
+        }
+        return tag;
+    }
+
+    private CompoundTag buildSaveTag() {
+        CompoundTag root = new CompoundTag();
+        root.put("powers", idListsToTag(bySources));
+        if (!auxInt.isEmpty()) {
+            CompoundTag aux = new CompoundTag();
+            auxInt.forEach((id, value) -> aux.putInt(id.toString(), value));
+            root.put("aux_int", aux);
+        }
+        if (!auxNbt.isEmpty()) {
+            CompoundTag aux = new CompoundTag();
+            auxNbt.forEach((id, stored) -> aux.put(id.toString(), stored.copy()));
+            root.put("aux_nbt", aux);
+        }
+        if (!suppressedBySources.isEmpty()) {
+            root.put("suppressed", idListsToTag(suppressedBySources));
+        }
+        return root;
+    }
+
+    private static CompoundTag idListsToTag(Map<ResourceLocation, Set<ResourceLocation>> map) {
+        CompoundTag out = new CompoundTag();
+        map.forEach((id, set) -> {
+            ListTag list = new ListTag();
+            for (ResourceLocation entry : set) list.add(StringTag.valueOf(entry.toString()));
+            out.put(id.toString(), list);
+        });
+        return out;
+    }
+
+    private static final Codec<PowerContainerImpl> FULL_CODEC = RecordCodecBuilder.create(instance -> instance.group(
         Codec.unboundedMap(ResourceLocation.CODEC, Codec.list(ResourceLocation.CODEC))
             .fieldOf("powers")
             .forGetter(c -> {
@@ -311,4 +436,21 @@ public final class PowerContainerImpl implements PowerContainer {
         suppressed.forEach((k, v) -> c.suppressedBySources.put(k, new HashSet<>(v)));
         return c;
     }));
+
+    public static final Codec<PowerContainerImpl> CODEC = new Codec<>() {
+        @Override
+        public <T> DataResult<Pair<PowerContainerImpl, T>> decode(DynamicOps<T> ops, T input) {
+            return FULL_CODEC.decode(ops, input);
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T> DataResult<T> encode(PowerContainerImpl container, DynamicOps<T> ops, T prefix) {
+
+            if (ops.empty() instanceof EndTag && ops.empty().equals(prefix)) {
+                return DataResult.success((T) container.saveTag().copy());
+            }
+            return FULL_CODEC.encode(container, ops, prefix);
+        }
+    };
 }

@@ -12,7 +12,6 @@ import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
 
-
 public final class ResetSkillsAction implements ActionType<EntityCtx, ResetSkillsAction.Cfg> {
 
     public record Cfg(Optional<ResourceLocation> tree, boolean refund) {}

@@ -12,7 +12,6 @@ import java.util.UUID;
 
 import static dev.overgrown.apoli.rope.RopeConstants.GOAL_ROPE_SEGMENT_LENGTH;
 
-
 public class VerletRopeState {
 
     public final int id;
@@ -54,7 +53,6 @@ public class VerletRopeState {
         }
     }
 
-    
     public @Nullable Vec3 anchorAwayFrom(int localEntityId, Level level) {
         if (from instanceof RopeAnchor.OfEntity e && e.networkId() == localEntityId) return to.position(level);
         return from.position(level);

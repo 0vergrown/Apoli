@@ -4,6 +4,8 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.condition.EntityCondition;
+import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.ModelParts;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
@@ -14,11 +16,13 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
     public static final ResourceLocation CANONICAL = Apoli.id("model_color");
 
-    public record PartColor(String part, float red, float green, float blue, float alpha) {}
+    public record PartColor(String part, float red, float green, float blue, float alpha,
+                            Optional<EntityCondition> condition) {}
 
     public record Config(float red, float green, float blue, float alpha, List<PartColor> parts) {
         public boolean hasParts() {
@@ -33,7 +37,8 @@ public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
         Codec.FLOAT.optionalFieldOf("red", 1f).forGetter(PartColor::red),
         Codec.FLOAT.optionalFieldOf("green", 1f).forGetter(PartColor::green),
         Codec.FLOAT.optionalFieldOf("blue", 1f).forGetter(PartColor::blue),
-        Codec.FLOAT.optionalFieldOf("alpha", 1f).forGetter(PartColor::alpha)
+        Codec.FLOAT.optionalFieldOf("alpha", 1f).forGetter(PartColor::alpha),
+        EntityCondition.CODEC.optionalFieldOf("condition").forGetter(PartColor::condition)
     ).apply(i, PartColor::new));
 
     @Override
@@ -72,8 +77,14 @@ public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
     @Nullable
     public static Map<String, float[]> partColorsFor(LivingEntity entity) {
         Map<String, float[]> map = new HashMap<>();
+
+        EntityCtx[] ctx = new EntityCtx[1];
         PowerLookup.forEach(entity, CANONICAL, Config.class, cfg -> {
             for (PartColor pc : cfg.parts()) {
+                if (pc.condition().isPresent()) {
+                    if (ctx[0] == null) ctx[0] = EntityCtx.of(entity, entity.level());
+                    if (!pc.condition().get().test(ctx[0])) continue;
+                }
                 float[] c = map.computeIfAbsent(ModelParts.normalize(pc.part()), k -> new float[]{1f, 1f, 1f, 1f});
                 c[0] *= pc.red();
                 c[1] *= pc.green();

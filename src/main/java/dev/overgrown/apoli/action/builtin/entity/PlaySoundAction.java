@@ -10,7 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.StringRepresentable;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 
 import java.util.Optional;
 
@@ -51,8 +51,13 @@ public final class PlaySoundAction implements ActionType<EntityCtx, PlaySoundAct
     public void run(Cfg cfg, EntityCtx ctx) {
         SoundEvent event = BuiltInRegistries.SOUND_EVENT.get(cfg.sound);
         if (event == null) return;
-        LivingEntity e = ctx.entity();
+        Entity e = ctx.raw();
         SoundSource source = cfg.category.map(Category::vanilla).orElse(e.getSoundSource());
         ctx.level().playSound(null, e.getX(), e.getY(), e.getZ(), event, source, cfg.volume, cfg.pitch);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

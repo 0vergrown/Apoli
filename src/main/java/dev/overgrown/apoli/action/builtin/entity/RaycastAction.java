@@ -98,6 +98,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
     private record EntityHit(LivingEntity target, Vec3 pos, double distSq) {}
 
     private static final int MAX_CHAIN_DEPTH = 32;
+    private static final int MAX_PIERCED_BLOCKS = 128;
 
     private static final MapCodec<Params> PARAMS = RecordCodecBuilder.mapCodec(i -> i.group(
         Codec.FLOAT.optionalFieldOf("distance").forGetter(Params::distance),
@@ -187,9 +188,30 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         BlockHitResult blockHit = null;
         if (cfg.params.block) {
             Vec3 to = origin.add(dir.scale(blockDist));
-            blockHit = level.clip(new ClipContext(origin, to, cfg.params.shapeType.vanilla(),
-                cfg.params.fluidHandling.vanilla(), source));
-            if (blockHit.getType() == HitResult.Type.MISS) blockHit = null;
+            if (cfg.params.pierce) {
+
+                Vec3 from = origin;
+                for (int guard = 0; guard < MAX_PIERCED_BLOCKS; guard++) {
+                    BlockHitResult hit = level.clip(new ClipContext(from, to, cfg.params.shapeType.vanilla(),
+                        cfg.params.fluidHandling.vanilla(), source));
+                    if (hit.getType() == HitResult.Type.MISS) break;
+                    if (blockHit == null) blockHit = hit;
+                    BlockPos pos = hit.getBlockPos();
+                    BlockState state = level.getBlockState(pos);
+                    if (cfg.hooks.blockCondition.isEmpty()
+                        || cfg.hooks.blockCondition.get().test(new BlockCtx(pos, state, level))) {
+                        cfg.hooks.blockAction.ifPresent(a -> a.run(new BlockCtx(pos, state, level)));
+                    }
+
+                    double exitT = cellExitT(origin, dir, pos, blockDist);
+                    if (exitT >= blockDist) break;
+                    from = origin.add(dir.scale(exitT + 1.0e-3));
+                }
+            } else {
+                blockHit = level.clip(new ClipContext(origin, to, cfg.params.shapeType.vanilla(),
+                    cfg.params.fluidHandling.vanilla(), source));
+                if (blockHit.getType() == HitResult.Type.MISS) blockHit = null;
+            }
         }
         double blockHitDistSq = blockHit != null ? origin.distanceToSqr(blockHit.getLocation()) : Double.POSITIVE_INFINITY;
 
@@ -248,11 +270,17 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         }
 
         boolean entityStops = anyEntityHit && !cfg.params.pierce && nearestEntityHitDistSq <= blockHitDistSq;
-        Vec3 rayEnd = entityStops ? nearestEntityHit
-            : (blockHit != null ? blockHit.getLocation() : origin.add(dir.scale(blockDist)));
+        Vec3 rayEnd;
+        if (entityStops) {
+            rayEnd = nearestEntityHit;
+        } else if (blockHit != null && !cfg.params.pierce) {
+            rayEnd = blockHit.getLocation();
+        } else {
+            rayEnd = origin.add(dir.scale(blockDist));
+        }
 
         boolean anyHit = anyEntityHit || blockHit != null;
-        if (blockHit != null && !entityStops) {
+        if (blockHit != null && !entityStops && !cfg.params.pierce) {
             BlockPos pos = blockHit.getBlockPos();
             BlockState state = level.getBlockState(pos);
             if (cfg.hooks.blockCondition.isEmpty()
@@ -300,12 +328,27 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         }
 
         if (cfg.chain.isPresent()) {
-            Vec3 hitNormal = (blockHit != null && !entityStops)
+
+            Vec3 hitNormal = (blockHit != null && !entityStops && !cfg.params.pierce)
                 ? Vec3.atLowerCornerOf(blockHit.getDirection().getNormal())
                 : null;
             Vec3 chainOrigin = hitNormal != null ? rayEnd.add(hitNormal.scale(0.01)) : rayEnd;
             cast(cfg.chain.get(), ctx, chainOrigin, dir, hitNormal, depth + 1);
         }
+    }
+
+    private static double cellExitT(Vec3 origin, Vec3 dir, BlockPos pos, double maxT) {
+        double t = maxT;
+        t = Math.min(t, axisExitT(origin.x, dir.x, pos.getX()));
+        t = Math.min(t, axisExitT(origin.y, dir.y, pos.getY()));
+        t = Math.min(t, axisExitT(origin.z, dir.z, pos.getZ()));
+        return t;
+    }
+
+    private static double axisExitT(double origin, double dir, int cell) {
+        if (dir > 1.0e-9) return ((cell + 1) - origin) / dir;
+        if (dir < -1.0e-9) return (cell - origin) / dir;
+        return Double.POSITIVE_INFINITY;
     }
 
     private static Vec3 resolveDirection(Cfg cfg, LivingEntity source, @Nullable Vec3 incomingDir, @Nullable Vec3 incomingNormal) {

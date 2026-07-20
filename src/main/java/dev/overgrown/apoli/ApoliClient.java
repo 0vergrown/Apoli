@@ -79,6 +79,13 @@ public final class ApoliClient implements ClientModInitializer {
             mc.execute(() -> ClientPowerState.applyPowersSync(payload));
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SyncPowersChunkS2C.CHANNEL,
+            (mc, handler, buf, sender) -> {
+                dev.overgrown.apoli.network.payload.SyncPowersChunkS2C payload =
+                    dev.overgrown.apoli.network.payload.SyncPowersChunkS2C.read(buf);
+                mc.execute(() -> ClientPowerState.applyPowersChunk(payload));
+            });
+
         ClientPlayNetworking.registerGlobalReceiver(SyncEntityPowersS2C.CHANNEL, (mc, handler, buf, sender) -> {
             SyncEntityPowersS2C payload = SyncEntityPowersS2C.read(buf);
             mc.execute(() -> ClientPowerState.applyEntityPowersSync(payload));
@@ -119,7 +126,16 @@ public final class ApoliClient implements ClientModInitializer {
             mc.execute(() -> dev.overgrown.apoli.client.ClientProtocolState.setServerVersion(payload.version()));
         });
 
-        
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.TextDisplayS2C.CHANNEL, (mc, handler, buf, sender) -> {
+            dev.overgrown.apoli.network.payload.TextDisplayS2C payload = dev.overgrown.apoli.network.payload.TextDisplayS2C.read(buf);
+            mc.execute(() -> dev.overgrown.apoli.client.TextOverlayRenderer.apply(payload));
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.LabelUpdateS2C.CHANNEL, (mc, handler, buf, sender) -> {
+            dev.overgrown.apoli.network.payload.LabelUpdateS2C payload = dev.overgrown.apoli.network.payload.LabelUpdateS2C.read(buf);
+            mc.execute(() -> dev.overgrown.apoli.client.ClientLabelState.apply(payload.entityId(), payload.texts()));
+        });
+
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
             new dev.overgrown.apoli.network.payload.ProtocolVersionPayload(
@@ -135,6 +151,11 @@ public final class ApoliClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SkillStateSyncS2C.CHANNEL, (mc, handler, buf, sender) -> {
             dev.overgrown.apoli.network.payload.SkillStateSyncS2C payload = dev.overgrown.apoli.network.payload.SkillStateSyncS2C.read(buf);
             mc.execute(() -> dev.overgrown.apoli.client.skill.ClientSkillState.applyState(payload));
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.CHANNEL, (mc, handler, buf, sender) -> {
+            dev.overgrown.apoli.network.payload.RadialMenuOpenS2C payload = dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.read(buf);
+            mc.execute(() -> mc.setScreen(new dev.overgrown.apoli.client.radial.RadialMenuScreen(payload)));
         });
 
         ClientPlayNetworking.registerGlobalReceiver(RopeCreateS2C.CHANNEL, (mc, handler, buf, sender) -> {
@@ -161,6 +182,8 @@ public final class ApoliClient implements ClientModInitializer {
             mc.execute(() -> {
                 DynamicKeyMappingManager.unregisterAll();
                 ClientPowerState.clear();
+                dev.overgrown.apoli.client.TextOverlayRenderer.clear();
+                dev.overgrown.apoli.client.ClientLabelState.clear();
                 RopeClientManager.clear();
                 KeyPressWatcher.reset();
                 dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
@@ -187,12 +210,16 @@ public final class ApoliClient implements ClientModInitializer {
                 ApoliKeyHandler.onClientTick();
                 while (SKILL_TREE_KEY.consumeClick()) {
                     if (mc.screen == null && dev.overgrown.apoli.client.skill.ClientSkillState.hasAnyTree()) {
+                        if (net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.canSend(dev.overgrown.apoli.network.payload.RequestSkillStateC2S.CHANNEL)) {
+                            net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(dev.overgrown.apoli.network.payload.RequestSkillStateC2S.CHANNEL, net.fabricmc.fabric.api.networking.v1.PacketByteBufs.create());
+                        }
                         mc.setScreen(new dev.overgrown.apoli.client.skill.SkillTreeScreen());
                     }
                 }
             }
             PhasingRenderState.clientTick(mc);
             RopeClientManager.tick();
+            dev.overgrown.apoli.client.TextOverlayRenderer.tick();
             if (dev.overgrown.apoli.compat.ModCompat.FIGURA) {
                 dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.tick(mc);
             }
@@ -202,6 +229,7 @@ public final class ApoliClient implements ClientModInitializer {
 
         HudRenderCallback.EVENT.register(OverlayRenderer::renderBelowHud);
         HudRenderCallback.EVENT.register(PowerHudRenderer::render);
+        HudRenderCallback.EVENT.register(dev.overgrown.apoli.client.TextOverlayRenderer::render);
         HudRenderCallback.EVENT.register(OverlayRenderer::renderAboveHud);
     }
 }
