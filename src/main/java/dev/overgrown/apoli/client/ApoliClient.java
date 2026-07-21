@@ -8,6 +8,7 @@ import dev.overgrown.apoli.client.rope.RopeClientManager;
 import dev.overgrown.apoli.client.rope.RopeRenderer;
 import dev.overgrown.apoli.entity.ApoliEntities;
 import dev.overgrown.apoli.power.PowerLookup;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -25,7 +26,7 @@ import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-@EventBusSubscriber(modid = Apoli.MOD_ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = Apoli.MOD_ID, value = Dist.CLIENT)
 public final class ApoliClient {
     private ApoliClient() {}
 
@@ -44,6 +45,8 @@ public final class ApoliClient {
             (graphics, deltaTracker) -> OverlayRenderer.renderBelowHud(graphics, deltaTracker.getGameTimeDeltaPartialTick(false)));
         event.registerAbove(VanillaGuiLayers.HOTBAR, Apoli.id("power_hud"),
             (graphics, deltaTracker) -> PowerHudRenderer.render(graphics, deltaTracker.getGameTimeDeltaPartialTick(false)));
+        event.registerAbove(VanillaGuiLayers.HOTBAR, Apoli.id("text_overlay"),
+            (graphics, deltaTracker) -> TextOverlayRenderer.render(graphics, deltaTracker.getGameTimeDeltaPartialTick(false)));
         event.registerAboveAll(Apoli.id("overlay_above_hud"),
             (graphics, deltaTracker) -> OverlayRenderer.renderAboveHud(graphics, deltaTracker.getGameTimeDeltaPartialTick(false)));
         NeoForge.EVENT_BUS.register(GameBus.class);
@@ -94,6 +97,7 @@ public final class ApoliClient {
             Minecraft mc = Minecraft.getInstance();
             PhasingRenderState.clientTick(mc);
             RopeClientManager.tick();
+            TextOverlayRenderer.tick();
             if (dev.overgrown.apoli.compat.ModCompat.FIGURA) {
                 dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.tick(mc);
             }
@@ -101,6 +105,9 @@ public final class ApoliClient {
             ApoliKeyHandler.onClientTick();
             while (SKILL_TREE_KEY.consumeClick()) {
                 if (mc.screen == null && dev.overgrown.apoli.client.skill.ClientSkillState.hasAnyTree()) {
+                    if (mc.getConnection() != null && mc.getConnection().hasChannel(dev.overgrown.apoli.network.payload.RequestSkillStateC2S.TYPE)) {
+                        net.neoforged.neoforge.network.PacketDistributor.sendToServer(dev.overgrown.apoli.network.payload.RequestSkillStateC2S.INSTANCE);
+                    }
                     mc.setScreen(new dev.overgrown.apoli.client.skill.SkillTreeScreen());
                 }
             }
@@ -110,6 +117,8 @@ public final class ApoliClient {
         public static void onDisconnect(ClientPlayerNetworkEvent.LoggingOut event) {
             DynamicKeyMappingManager.unregisterAll();
             ClientPowerState.clear();
+            TextOverlayRenderer.clear();
+            ClientLabelState.clear();
             RopeClientManager.clear();
             KeyPressWatcher.reset();
             dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
@@ -126,7 +135,7 @@ public final class ApoliClient {
         public static void onRenderBlockOverlay(RenderBlockScreenEffectEvent event) {
             if (event.getOverlayType() != RenderBlockScreenEffectEvent.OverlayType.BLOCK) return;
             Entity camera = Minecraft.getInstance().getCameraEntity();
-            if (camera instanceof LivingEntity living && PowerLookup.hasActive(living, Apoli.id("phasing"))) {
+            if (camera instanceof LivingEntity living && PowerLookup.hasActive(living, ApoliIds.PHASING)) {
                 event.setCanceled(true);
             }
         }

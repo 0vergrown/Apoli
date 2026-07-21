@@ -30,8 +30,11 @@ public enum Shape implements StringRepresentable {
         return contains(dx, dy, dz, radius, radius, radius);
     }
 
-    
     public boolean contains(int dx, int dy, int dz, int rx, int ry, int rz) {
+        return contains((double) dx, (double) dy, (double) dz, (double) rx, (double) ry, (double) rz);
+    }
+
+    public boolean contains(double dx, double dy, double dz, double rx, double ry, double rz) {
         return switch (this) {
             case CUBE -> Math.abs(dx) <= rx && Math.abs(dy) <= ry && Math.abs(dz) <= rz;
             case SPHERE -> {
@@ -43,20 +46,19 @@ public enum Shape implements StringRepresentable {
                 yield nx + ny + nz <= 1.0;
             }
             case CONE -> {
-                
                 if (dy < 0 || dy > ry) {
                     yield false;
                 }
-                double t = ry <= 0 ? 1.0 : (double) dy / ry;
+                double t = ry <= 0 ? 1.0 : dy / ry;
                 double nx = norm(dx, rx), nz = norm(dz, rz);
                 yield Math.sqrt(nx * nx + nz * nz) <= t;
             }
         };
     }
 
-    private static double norm(int delta, int radius) {
-        if (radius <= 0) return delta == 0 ? 0.0 : Double.POSITIVE_INFINITY;
-        return (double) Math.abs(delta) / radius;
+    private static double norm(double delta, double radius) {
+        if (radius <= 0) return delta == 0.0 ? 0.0 : Double.POSITIVE_INFINITY;
+        return Math.abs(delta) / radius;
     }
 
     public List<BlockPos> positions(BlockPos center, int radius) {

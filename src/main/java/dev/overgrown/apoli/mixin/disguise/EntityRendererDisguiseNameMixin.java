@@ -15,7 +15,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
-
 @Mixin(EntityRenderer.class)
 @OnlyIn(Dist.CLIENT)
 public abstract class EntityRendererDisguiseNameMixin<T extends Entity> {
@@ -25,7 +24,11 @@ public abstract class EntityRendererDisguiseNameMixin<T extends Entity> {
                                         MultiBufferSource buffers, int light, float partialTick) {
         DisguiseData data = ClientDisguiseManager.get(entity.getId());
         if (data == null) return original;
-        if (data.name().isPresent()) return Component.literal(data.name().get());
+        if (data.name().isPresent()) {
+
+            String disguiseName = data.name().get();
+            return disguiseName.isEmpty() ? original : Component.literal(disguiseName);
+        }
         if (data.isPlayerDisguise()) return original;
         EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(data.entityTypeId());
         return type != null ? Component.translatable(type.getDescriptionId()) : original;

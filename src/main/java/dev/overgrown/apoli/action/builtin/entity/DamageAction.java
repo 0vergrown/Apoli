@@ -6,6 +6,7 @@ import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.AttributeModifier;
 import dev.overgrown.apoli.data.AttributeModifierHelper;
+import dev.overgrown.apoli.data.Expression;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -19,7 +20,7 @@ import java.util.Optional;
 
 public final class DamageAction implements ActionType<EntityCtx, DamageAction.Cfg> {
     public record Cfg(
-        Optional<Float> amount,
+        Optional<Expression> amount,
         ResourceLocation damageType,
         Optional<AttributeModifier> modifier,
         Optional<List<AttributeModifier>> modifiers
@@ -28,7 +29,7 @@ public final class DamageAction implements ActionType<EntityCtx, DamageAction.Cf
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            com.mojang.serialization.Codec.FLOAT.optionalFieldOf("amount").forGetter(Cfg::amount),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("amount").forGetter(Cfg::amount),
             ResourceLocation.CODEC.fieldOf("damage_type").forGetter(Cfg::damageType),
             AttributeModifier.CODEC.optionalFieldOf("modifier").forGetter(Cfg::modifier),
             AttributeModifier.LIST_OR_SINGLE.optionalFieldOf("modifiers").forGetter(Cfg::modifiers)
@@ -44,15 +45,13 @@ public final class DamageAction implements ActionType<EntityCtx, DamageAction.Cf
             .orElse(null);
         if (typeHolder == null) return;
         DamageSource source = new DamageSource(typeHolder);
-        float base = cfg.amount.orElse(target.getMaxHealth());
+        float base = cfg.amount.isPresent() ? (float) cfg.amount.get().eval(target) : target.getMaxHealth();
         float amount = applyModifiers(base, cfg, target);
         target.hurt(source, amount);
     }
 
     private static float applyModifiers(float base, Cfg cfg, LivingEntity target) {
-        List<AttributeModifier> all = new java.util.ArrayList<>();
-        cfg.modifier.ifPresent(all::add);
-        cfg.modifiers.ifPresent(all::addAll);
+        List<AttributeModifier> all = AttributeModifierHelper.flatten(cfg.modifier, cfg.modifiers);
         if (all.isEmpty()) return base;
         return AttributeModifierHelper.apply(base, all, target);
     }

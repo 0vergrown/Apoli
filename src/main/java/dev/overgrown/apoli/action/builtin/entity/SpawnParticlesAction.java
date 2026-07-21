@@ -12,7 +12,7 @@ import dev.overgrown.apoli.data.Vector;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 
 import java.util.Optional;
 
@@ -49,7 +49,7 @@ public final class SpawnParticlesAction implements ActionType<EntityCtx, SpawnPa
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
         if (!(ctx.level() instanceof ServerLevel level)) return;
-        LivingEntity e = ctx.entity();
+        Entity e = ctx.raw();
         ParticleOptions opts = cfg.particle.resolve(level);
         if (opts == null) return;
 
@@ -58,9 +58,14 @@ public final class SpawnParticlesAction implements ActionType<EntityCtx, SpawnPa
         double z = e.getZ() + cfg.offsetZ;
         for (ServerPlayer player : level.players()) {
             if (cfg.bientityCondition.isPresent()
-                && !cfg.bientityCondition.get().test(new BiEntityCtx(e, player, level))) continue;
+                && !cfg.bientityCondition.get().test(BiEntityCtx.of(e, player, level))) continue;
             level.sendParticles(player, opts, cfg.force,
                 x, y, z, cfg.count, cfg.spread.x(), cfg.spread.y(), cfg.spread.z(), cfg.speed);
         }
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

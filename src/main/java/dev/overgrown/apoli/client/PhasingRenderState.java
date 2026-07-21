@@ -3,6 +3,7 @@ package dev.overgrown.apoli.client;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.builtin.PhasingPower;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
@@ -64,7 +65,7 @@ public final class PhasingRenderState {
 
     private static boolean hasRemoveBlocksPhasing(LivingEntity living) {
         boolean[] found = {false};
-        PowerLookup.forEach(living, Apoli.id("phasing"), PhasingPower.Config.class, cfg -> {
+        PowerLookup.forEach(living, ApoliIds.PHASING, PhasingPower.Config.class, cfg -> {
             if (cfg.renderType() == PhasingPower.RenderType.REMOVE_BLOCKS) found[0] = true;
         });
         return found[0];

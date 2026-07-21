@@ -22,9 +22,14 @@ public final class ExecuteCommandAction implements ActionType<EntityCtx, Execute
     public void run(Cfg cfg, EntityCtx ctx) {
         MinecraftServer server = ctx.level().getServer();
         if (server == null) return;
-        CommandSourceStack source = ctx.entity().createCommandSourceStack()
+        CommandSourceStack source = ctx.raw().createCommandSourceStack()
             .withPermission(4)
             .withSuppressedOutput();
         server.getCommands().performPrefixedCommand(source, cfg.command);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

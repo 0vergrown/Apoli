@@ -195,12 +195,37 @@ public final class GameEventListenerPower extends PowerType<GameEventListenerPow
             return true;
         }
 
-        void add(ServerLevel level) { eventHandler.add(level); }
-        void remove(ServerLevel level) { eventHandler.remove(level); }
+        private boolean registered;
+
+        void add(ServerLevel level) {
+
+            if (registered || !chunkReady(level)) return;
+            eventHandler.add(level);
+            registered = true;
+        }
+
+        void remove(ServerLevel level) {
+            if (registered) {
+                eventHandler.remove(level);
+                registered = false;
+            }
+        }
+
         void tick(Level level) {
             if (level instanceof ServerLevel serverLevel) {
-                eventHandler.move(serverLevel);
+                if (!registered) {
+                    add(serverLevel);
+                } else {
+                    eventHandler.move(serverLevel);
+                }
             }
+        }
+
+        private boolean chunkReady(ServerLevel level) {
+            return level.getChunk(
+                net.minecraft.core.SectionPos.blockToSectionCoord(entity.getBlockX()),
+                net.minecraft.core.SectionPos.blockToSectionCoord(entity.getBlockZ()),
+                net.minecraft.world.level.chunk.status.ChunkStatus.FULL, false) != null;
         }
 
         public DynamicGameEventListener<GameEventListener> getEventHandler() { return eventHandler; }

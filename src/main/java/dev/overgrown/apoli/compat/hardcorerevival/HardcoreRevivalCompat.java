@@ -7,7 +7,6 @@ import net.blay09.mods.hardcorerevival.api.PlayerKnockedOutEvent;
 import net.blay09.mods.hardcorerevival.api.PlayerRescuedEvent;
 import net.blay09.mods.hardcorerevival.api.PlayerRevivedEvent;
 
-
 public final class HardcoreRevivalCompat {
     private HardcoreRevivalCompat() {}
 

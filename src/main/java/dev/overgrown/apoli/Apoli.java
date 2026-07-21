@@ -15,7 +15,6 @@ import dev.overgrown.apoli.network.payload.PowerActivationC2S;
 import dev.overgrown.apoli.network.payload.PowerToggleC2S;
 import dev.overgrown.apoli.network.payload.SyncEntityPowersS2C;
 import dev.overgrown.apoli.network.payload.SyncKeybindsS2C;
-import dev.overgrown.apoli.network.payload.SyncPowersS2C;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
@@ -48,6 +47,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.server.permission.events.PermissionGatherEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
 import dev.overgrown.apoli.power.builtin.EffectImmunityPower;
@@ -96,6 +96,8 @@ public final class Apoli {
 
         dev.overgrown.apoli.entity.disguise.DisguiseManager.setBroadcaster((entity, data) ->
             ApoliNetwork.broadcastDisguise(entity, new dev.overgrown.apoli.network.payload.DisguiseUpdateS2C(entity.getId(), data)));
+        dev.overgrown.apoli.entity.LabelManager.setBroadcaster((entity, texts) ->
+            ApoliNetwork.broadcastLabel(entity, new dev.overgrown.apoli.network.payload.LabelUpdateS2C(entity.getId(), texts)));
 
         LOGGER.info("[Apoli] Ready. {} power type(s).", PowerTypeRegistry.view().size());
     }
@@ -111,19 +113,25 @@ public final class Apoli {
     public void onRegisterCommands(RegisterCommandsEvent event) {
         ApoliPowerCommand.register(event.getDispatcher());
         ApoliResourceCommand.register(event.getDispatcher());
+        dev.overgrown.apoli.command.ApoliSkillTreeCommand.register(event.getDispatcher());
         if (dev.overgrown.apoli.compat.ModCompat.anyAccessory()) {
             dev.overgrown.apoli.compat.accessory.command.AccessoryCommand.register(event.getDispatcher());
         }
     }
 
     @SubscribeEvent
+    public void onPermissionGather(PermissionGatherEvent.Nodes event) {
+        dev.overgrown.apoli.command.ApoliPermissions.gatherNodes(event);
+    }
+
+    @SubscribeEvent
     public void onDatapackSync(OnDatapackSyncEvent event) {
         if (event.getPlayer() != null) {
             ApoliNetwork.sendKeybinds(event.getPlayer(), SyncKeybindsS2C.fromCurrent());
-            ApoliNetwork.sendPowers(event.getPlayer(), SyncPowersS2C.fromCurrent());
+            ApoliNetwork.sendPowers(event.getPlayer());
             sendEntitySync(event.getPlayer());
         } else {
-            ApoliNetwork.broadcastPowers(event.getPlayerList().getServer(), SyncPowersS2C.fromCurrent());
+            ApoliNetwork.broadcastPowers(event.getPlayerList().getServer());
             ApoliNetwork.broadcastKeybinds(event.getPlayerList().getServer(), SyncKeybindsS2C.fromCurrent());
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(event.getPlayerList().getServer());
             for (ServerPlayer player : event.getPlayerList().getPlayers()) {
@@ -137,13 +145,14 @@ public final class Apoli {
     @SubscribeEvent
     public void onServerStarted(net.neoforged.neoforge.event.server.ServerStartedEvent event) {
         dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(event.getServer());
+        dev.overgrown.apoli.entity.GrabManager.clearAll();
     }
 
     @SubscribeEvent
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer sp) {
             ApoliNetwork.sendKeybinds(sp, SyncKeybindsS2C.fromCurrent());
-            ApoliNetwork.sendPowers(sp, SyncPowersS2C.fromCurrent());
+            ApoliNetwork.sendPowers(sp);
             sendEntitySync(sp);
             dev.overgrown.apoli.skill.SkillTrees.grantOnJoin(sp);
             ApoliNetwork.sendSkillDefs(sp);
@@ -178,6 +187,10 @@ public final class Apoli {
 
     @SubscribeEvent
     public void onLivingDeath(net.neoforged.neoforge.event.entity.living.LivingDeathEvent event) {
+        if (dev.overgrown.apoli.power.builtin.PreventDeathHandler.tryPrevent(event.getEntity(), event.getSource(), 0.0F)) {
+            event.setCanceled(true);
+            return;
+        }
         dev.overgrown.apoli.power.builtin.DeathHandler.onDeath(event.getEntity(), event.getSource());
     }
 
@@ -207,9 +220,11 @@ public final class Apoli {
         ActionOnCallbackPower.fireLifecycle(e, ActionOnCallbackPower.Config::entityActionRemoved);
         PoweredEntities.unregister(e);
         dev.overgrown.apoli.rope.RopeManager.onEntityGone(e.getUUID());
+        dev.overgrown.apoli.entity.LabelManager.onEntityGone(e.getUUID());
         Entity.RemovalReason reason = e.getRemovalReason();
         if (reason != null && reason.shouldDestroy()) {
             EntitySetPower.onEntityGone(e.getUUID());
+            dev.overgrown.apoli.power.builtin.AttributePower.onEntityGone(e.getUUID());
         }
     }
 
@@ -223,7 +238,7 @@ public final class Apoli {
     public void onEntityJoinLevel(EntityJoinLevelEvent event) {
         if (event.getLevel().isClientSide()) return;
         PowerContainer c = PowerContainer.of(event.getEntity());
-        if (c == null || c.allPowers().isEmpty()) return;
+        if (c == null || c.isEmpty()) return;
         for (net.minecraft.resources.ResourceLocation powerId : c.allPowers()) {
             dev.overgrown.apoli.power.builtin.ResourcePower.onEntityLoad(c, powerId);
         }
@@ -235,8 +250,11 @@ public final class Apoli {
         if (event.getEntity() instanceof ServerPlayer sp) {
             dev.overgrown.apoli.keybind.HeldKeys.clearServer(sp.getUUID());
         }
-        dev.overgrown.apoli.skill.SkillTrees.forget(event.getEntity().getUUID());
+        dev.overgrown.apoli.entity.GrabManager.release(event.getEntity().getUUID());
+        dev.overgrown.apoli.radial.RadialMenuManager.forget(event.getEntity().getUUID());
         dev.overgrown.apoli.entity.disguise.DisguiseManager.onPlayerLeave(event.getEntity().getUUID());
+        dev.overgrown.apoli.entity.LabelManager.onEntityGone(event.getEntity().getUUID());
+        dev.overgrown.apoli.action.builtin.entity.TextAction.onPlayerLeave(event.getEntity().getUUID());
     }
 
     @SubscribeEvent
@@ -255,6 +273,7 @@ public final class Apoli {
         PoweredEntities.clear();
         DelayedActionQueue.clear();
         dev.overgrown.apoli.rope.RopeManager.clear();
+        dev.overgrown.apoli.entity.ProjectileTickManager.clearAll();
         dev.overgrown.apoli.compat.icarus.WingsAccess.clear();
     }
 
@@ -263,7 +282,7 @@ public final class Apoli {
         if (!(event.getEntity() instanceof ServerPlayer viewer)) return;
         Entity target = event.getTarget();
         PowerContainer c = PowerContainer.of(target);
-        if (c instanceof PowerContainerImpl impl && !impl.allPowers().isEmpty()) {
+        if (c instanceof PowerContainerImpl impl && !impl.isEmpty()) {
             ApoliNetwork.sendEntityPowers(viewer, new SyncEntityPowersS2C(
                 target.getId(), impl.snapshot(), impl.auxIntSnapshot(), impl.suppressedPowers()));
         }
@@ -273,13 +292,20 @@ public final class Apoli {
             ApoliNetwork.sendDisguise(viewer, new dev.overgrown.apoli.network.payload.DisguiseUpdateS2C(
                 target.getId(), java.util.Optional.of(disguise)));
         }
+        java.util.Map<net.minecraft.resources.ResourceLocation, net.minecraft.network.chat.Component> labels =
+            dev.overgrown.apoli.entity.LabelManager.textsFor(target.getUUID());
+        if (!labels.isEmpty()) {
+            ApoliNetwork.sendLabel(viewer, new dev.overgrown.apoli.network.payload.LabelUpdateS2C(
+                target.getId(), labels));
+        }
     }
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
         DelayedActionQueue.tick();
         dev.overgrown.apoli.rope.RopeManager.tick(event.getServer());
-        dev.overgrown.apoli.skill.SkillTrees.tickRefresh(event.getServer());
+        dev.overgrown.apoli.entity.GrabManager.tick(event.getServer());
+        dev.overgrown.apoli.entity.ProjectileTickManager.tick(event.getServer());
         PoweredEntities.forEach(entity -> {
             PowerContainer c = PowerContainer.of(entity);
             if (!(c instanceof PowerContainerImpl impl)) return;
@@ -296,7 +322,7 @@ public final class Apoli {
                 }
                 impl.clearDirty();
             }
-            if (impl.allPowers().isEmpty()) PoweredEntities.unregister(entity);
+            if (impl.isEmpty()) PoweredEntities.unregister(entity);
         });
         EntitySetPower.flushPendingRemovals();
     }
@@ -311,6 +337,7 @@ public final class Apoli {
     }
 
     public static void handleActivation(ServerPlayer player, PowerActivationC2S payload) {
+        if (dev.overgrown.apoli.entity.GrabManager.keybindsDisabled(player.getUUID())) return;
         PowerContainer c = PowerContainer.of(player);
         if (c == null || !c.hasPower(payload.power()) || c.isSuppressed(payload.power())) return;
         Power loaded = ApoliPowers.get(payload.power());
@@ -338,6 +365,7 @@ public final class Apoli {
     }
 
     public static void handleToggle(ServerPlayer player, PowerToggleC2S payload) {
+        if (dev.overgrown.apoli.entity.GrabManager.keybindsDisabled(player.getUUID())) return;
         PowerContainer c = PowerContainer.of(player);
         if (c == null || !c.hasPower(payload.power()) || c.isSuppressed(payload.power())) return;
         Power loaded = ApoliPowers.get(payload.power());

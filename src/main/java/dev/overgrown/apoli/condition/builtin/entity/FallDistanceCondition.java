@@ -7,6 +7,7 @@ import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Comparison;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.LivingEntity;
 
 public final class FallDistanceCondition implements ConditionType<EntityCtx, FallDistanceCondition.Cfg> {
     public record Cfg(Comparison comparison, float compareTo) {}
@@ -23,5 +24,10 @@ public final class FallDistanceCondition implements ConditionType<EntityCtx, Fal
     public boolean test(Cfg cfg, EntityCtx ctx) {
         float fall = ctx.entity().hasEffect(MobEffects.SLOW_FALLING) ? 0f : ctx.entity().fallDistance;
         return cfg.comparison.compare(fall, cfg.compareTo);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

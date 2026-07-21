@@ -2,13 +2,14 @@ package dev.overgrown.apoli.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.overgrown.apoli.condition.context.EntityCtx;
-import dev.overgrown.apoli.data.ExpressionContext;
 import dev.overgrown.apoli.data.HudRender;
+import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.power.PowerTypeRegistry;
 import dev.overgrown.apoli.power.builtin.ActionOnKeyPressPower;
+import dev.overgrown.apoli.power.builtin.ActionOnKeySequencePower;
 import dev.overgrown.apoli.power.builtin.CooldownPower;
 import dev.overgrown.apoli.power.builtin.ResourcePower;
 import net.minecraft.client.Minecraft;
@@ -18,12 +19,11 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 
@@ -56,28 +56,38 @@ public final class PowerHudRenderer {
         int y = graphics.guiHeight() - yOffset;
 
         EntityCtx ctx = new EntityCtx(player, player.level());
-        Map<String, Double> resourceVars = buildClientResourceVars();
+        PowerContainer container = PowerContainer.of(player);
 
         List<Renderable> renderables = new ArrayList<>();
         for (ResourceLocation powerId : ClientPowerState.localPowers()) {
             Power power = ApoliPowers.get(powerId);
             if (power == null) continue;
-            if (power.condition().isPresent() && !power.condition().get().test(ctx)) continue;
             PowerType<?> type = PowerTypeRegistry.get(power.typeId());
 
             HudRender hud;
             float fill;
 
             if (type instanceof ActionOnKeyPressPower && power.config() instanceof ActionOnKeyPressPower.Config cfg) {
+
                 if (ClientPowerState.getCooldown(powerId) <= 0) continue;
                 hud = cfg.hudRender();
                 fill = cooldownFill(powerId, cfg);
             } else if (type instanceof CooldownPower && power.config() instanceof ResourcePower.Cfg cfg) {
+                if (!conditionHolds(power, ctx)) continue;
+
+                OptionalInt remaining = ClientPowerState.getAuxInt(powerId);
+                if (remaining.isEmpty() || remaining.getAsInt() <= 0) continue;
                 hud = cfg.hudRender();
-                fill = 1.0F - resourceFill(player, powerId, cfg, resourceVars);
+                fill = 1.0F - resourceFill(player, container, powerId, cfg);
             } else if (type instanceof ResourcePower && power.config() instanceof ResourcePower.Cfg cfg) {
+                if (!conditionHolds(power, ctx)) continue;
                 hud = cfg.hudRender();
-                fill = resourceFill(player, powerId, cfg, resourceVars);
+                fill = resourceFill(player, container, powerId, cfg);
+            } else if (type instanceof ActionOnKeySequencePower && power.config() instanceof ActionOnKeySequencePower.Config cfg) {
+                if (ClientPowerState.getCooldown(powerId) <= 0) continue;
+                hud = cfg.hudRender();
+                int max = cfg.cooldown();
+                fill = max <= 0 ? 1.0F : 1.0F - (ClientPowerState.getCooldown(powerId) / (float) max);
             } else {
                 continue;
             }
@@ -95,27 +105,24 @@ public final class PowerHudRenderer {
         }
     }
 
+    private static boolean conditionHolds(Power power, EntityCtx ctx) {
+        return power.condition().isEmpty() || power.condition().get().test(ctx);
+    }
+
     private static float cooldownFill(ResourceLocation powerId, ActionOnKeyPressPower.Config cfg) {
         int remaining = ClientPowerState.getCooldown(powerId);
         if (cfg.cooldown() <= 0) return 1.0F;
         return 1.0F - (remaining / (float) cfg.cooldown());
     }
 
-    private static float resourceFill(LocalPlayer player, ResourceLocation powerId, ResourcePower.Cfg cfg, Map<String, Double> resourceVars) {
+    private static float resourceFill(LocalPlayer player, @Nullable PowerContainer container, ResourceLocation powerId, ResourcePower.Cfg cfg) {
         OptionalInt cur = ClientPowerState.getAuxInt(powerId);
         if (cur.isEmpty()) return 0.0F;
         int value = cur.getAsInt();
-        Map<String, Double> vars = ExpressionContext.forResource(player, value);
-        int min = cfg.min().evalInt(vars, resourceVars);
-        int max = cfg.max().evalInt(vars, resourceVars);
+        int min = cfg.min().evalIntWith(player, container, value);
+        int max = cfg.max().evalIntWith(player, container, value);
         if (max == min) return value >= max ? 1.0F : 0.0F;
         return Mth.clamp((value - min) / (float) (max - min), 0.0F, 1.0F);
-    }
-
-    private static Map<String, Double> buildClientResourceVars() {
-        Map<String, Double> out = new HashMap<>();
-        ClientPowerState.localAuxInt().forEach((id, v) -> out.put(id.toString(), v.doubleValue()));
-        return out;
     }
 
     private static void drawEntry(GuiGraphics graphics, int x, int y, HudRender.Entry entry, float fill) {

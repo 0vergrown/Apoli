@@ -1,27 +1,70 @@
 package dev.overgrown.apoli.data;
 
+import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.StatType;
 import org.jetbrains.annotations.Nullable;
 
-public record Stat(ResourceLocation type, ResourceLocation id) {
-    public static final Codec<Stat> CODEC = RecordCodecBuilder.create(i -> i.group(
+import java.util.function.Function;
+
+public final class Stat {
+    private static final ResourceLocation CUSTOM = ResourceLocation.withDefaultNamespace("custom");
+
+    private final ResourceLocation type;
+    private final ResourceLocation id;
+
+    private @Nullable net.minecraft.stats.Stat<?> resolved;
+    private boolean resolveAttempted;
+
+    public Stat(ResourceLocation type, ResourceLocation id) {
+        this.type = type;
+        this.id = id;
+    }
+
+    public ResourceLocation type() {
+        return type;
+    }
+
+    public ResourceLocation id() {
+        return id;
+    }
+
+    private static final Codec<Stat> OBJECT_CODEC = RecordCodecBuilder.create(i -> i.group(
         ResourceLocation.CODEC.fieldOf("type").forGetter(Stat::type),
         ResourceLocation.CODEC.fieldOf("id").forGetter(Stat::id)
     ).apply(i, Stat::new));
 
+    public static final Codec<Stat> CODEC = Codec.either(
+        ResourceLocation.CODEC.xmap(id -> new Stat(CUSTOM, id), Stat::id),
+        OBJECT_CODEC
+    ).xmap(
+        either -> either.map(Function.identity(), Function.identity()),
+        stat -> CUSTOM.equals(stat.type()) ? Either.left(stat) : Either.right(stat)
+    );
+
     @SuppressWarnings({"rawtypes", "unchecked"})
     public @Nullable net.minecraft.stats.Stat<?> resolve() {
-        StatType statType = BuiltInRegistries.STAT_TYPE.get(type);
-        if (statType == null) return null;
-        Registry<?> reg = statType.getRegistry();
-        Object value = reg.get(id);
-        if (value == null) return null;
-        return statType.get(value);
+        if (!resolveAttempted) {
+            resolveAttempted = true;
+            StatType statType = BuiltInRegistries.STAT_TYPE.get(type);
+            if (statType != null) {
+                Registry<?> reg = statType.getRegistry();
+                Object value = reg.get(id);
+                if (value != null) {
+                    resolved = statType.get(value);
+                }
+            }
+        }
+        return resolved;
+    }
+
+    public static void setValue(ServerPlayer player, net.minecraft.stats.Stat<?> stat, int value) {
+        player.getStats().setValue(player, stat, value);
+        player.level().getScoreboard().forAllObjectives(stat, player, score -> score.set(value));
     }
 }

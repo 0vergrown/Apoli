@@ -44,4 +44,9 @@ public final class ChoiceMetaAction<CTX, W> implements ActionType<CTX, ChoiceMet
             }
         }
     }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
+    }
 }

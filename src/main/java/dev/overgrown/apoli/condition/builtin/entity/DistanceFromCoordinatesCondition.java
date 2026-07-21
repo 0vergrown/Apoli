@@ -11,7 +11,7 @@ import dev.overgrown.apoli.data.Vector;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.StringRepresentable;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 
 import java.util.Optional;
@@ -60,7 +60,7 @@ public final class DistanceFromCoordinatesCondition implements ConditionType<Ent
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        LivingEntity e = ctx.entity();
+        Entity e = ctx.raw();
         Level level = ctx.level();
         double refX, refY, refZ;
         if (cfg.reference == Reference.WORLD_SPAWN) {
@@ -96,5 +96,10 @@ public final class DistanceFromCoordinatesCondition implements ConditionType<Ent
             dist = Math.round(dist * scale) / scale;
         }
         return cfg.comparison.compare((float) dist, cfg.compareTo);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

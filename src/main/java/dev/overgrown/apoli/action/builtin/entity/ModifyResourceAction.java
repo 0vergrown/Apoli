@@ -11,13 +11,11 @@ import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.AttributeModifier;
 import dev.overgrown.apoli.data.AttributeModifierOperation;
 import dev.overgrown.apoli.data.Expression;
-import dev.overgrown.apoli.data.ExpressionContext;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.builtin.ResourcePower;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.stream.Stream;
@@ -114,9 +112,7 @@ public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyR
         if (container == null) return;
         OptionalInt cur = ResourcePower.readValue(container, cfg.resource);
         if (cur.isEmpty()) return;
-        Map<String, Double> vars = ExpressionContext.forResource(entity, cur.getAsInt());
-        Map<String, Double> resources = ExpressionContext.resourceValues(container);
-        double next = cfg.modifier.applyToValue(cur.getAsInt(), vars, resources);
+        double next = cfg.modifier.applyToValue(cur.getAsInt(), entity, container);
         ResourcePower.writeValue(container, cfg.resource, (int) Math.round(next));
     }
 }

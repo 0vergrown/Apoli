@@ -5,8 +5,11 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.BiEntityCondition;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
+import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.ParticleEffect;
 import dev.overgrown.apoli.data.Vector;
+import dev.overgrown.apoli.power.ApoliPowers;
+import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.core.particles.ParticleOptions;
@@ -65,6 +68,12 @@ public final class ParticlePower extends PowerType<ParticlePower.Config> {
         Entity owner = holder.rawOwner();
         if (!(owner.level() instanceof ServerLevel level)) return;
         if (owner.tickCount % cfg.frequency() != 0) return;
+
+        Power loaded = ApoliPowers.get(powerId);
+        if (loaded != null && loaded.condition().isPresent()
+            && !loaded.condition().get().test(EntityCtx.of(owner, level))) {
+            return;
+        }
 
         ParticleOptions opts = cfg.particle().resolve(level);
         if (opts == null) return;

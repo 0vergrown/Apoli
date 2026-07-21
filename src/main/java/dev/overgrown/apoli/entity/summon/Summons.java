@@ -7,7 +7,6 @@ import net.minecraft.world.entity.Entity;
 
 import java.util.List;
 
-
 public final class Summons {
     private Summons() {}
 

@@ -18,7 +18,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.Optional;
 
-
 public record RopeEndpointSource(Type type, float distance, boolean entities, boolean blocks,
                                  Optional<Vector> position) {
 
@@ -39,17 +38,14 @@ public record RopeEndpointSource(Type type, float distance, boolean entities, bo
         Vector.CODEC.optionalFieldOf("position").forGetter(RopeEndpointSource::position)
     ).apply(i, RopeEndpointSource::new));
 
-    
     public static RopeEndpointSource self() {
         return new RopeEndpointSource(Type.SELF, 30f, false, true, Optional.empty());
     }
 
-    
     public static RopeEndpointSource raycastBlock(float distance) {
         return new RopeEndpointSource(Type.RAYCAST, distance, false, true, Optional.empty());
     }
 
-    
     public @Nullable RopeAnchor resolve(@Nullable Entity actor, @Nullable Entity target, Level level) {
         return switch (type) {
             case SELF -> actor == null ? null : new RopeAnchor.OfEntity(actor.getId(), Vec3.ZERO);

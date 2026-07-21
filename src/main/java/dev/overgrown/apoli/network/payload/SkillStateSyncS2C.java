@@ -14,6 +14,7 @@ import java.util.Set;
 
 public record SkillStateSyncS2C(Map<ResourceLocation, Integer> points, Set<ResourceLocation> purchased,
                                 Set<ResourceLocation> hidden, Set<ResourceLocation> locked,
+                                Set<ResourceLocation> nonRefundable,
                                 boolean legacyFormat) implements CustomPacketPayload {
     public static final Type<SkillStateSyncS2C> TYPE = new Type<>(Apoli.id("skill_state_sync"));
     public static final StreamCodec<RegistryFriendlyByteBuf, SkillStateSyncS2C> STREAM_CODEC = StreamCodec.of(
@@ -21,8 +22,9 @@ public record SkillStateSyncS2C(Map<ResourceLocation, Integer> points, Set<Resou
         SkillStateSyncS2C::read);
 
     public SkillStateSyncS2C(Map<ResourceLocation, Integer> points, Set<ResourceLocation> purchased,
-                             Set<ResourceLocation> hidden, Set<ResourceLocation> locked) {
-        this(points, purchased, hidden, locked, false);
+                             Set<ResourceLocation> hidden, Set<ResourceLocation> locked,
+                             Set<ResourceLocation> nonRefundable) {
+        this(points, purchased, hidden, locked, nonRefundable, false);
     }
 
     public void write(FriendlyByteBuf buf) {
@@ -33,10 +35,11 @@ public record SkillStateSyncS2C(Map<ResourceLocation, Integer> points, Set<Resou
         }
         buf.writeCollection(purchased, FriendlyByteBuf::writeResourceLocation);
         if (legacyFormat) {
-            return; 
+            return;
         }
         buf.writeCollection(hidden, FriendlyByteBuf::writeResourceLocation);
         buf.writeCollection(locked, FriendlyByteBuf::writeResourceLocation);
+        buf.writeCollection(nonRefundable, FriendlyByteBuf::writeResourceLocation);
     }
 
     public static SkillStateSyncS2C read(FriendlyByteBuf buf) {
@@ -47,12 +50,14 @@ public record SkillStateSyncS2C(Map<ResourceLocation, Integer> points, Set<Resou
             points.put(key, buf.readVarInt());
         }
         Set<ResourceLocation> purchased = new HashSet<>(buf.readList(FriendlyByteBuf::readResourceLocation));
-        
+
         Set<ResourceLocation> hidden = buf.isReadable()
             ? new HashSet<>(buf.readList(FriendlyByteBuf::readResourceLocation)) : new HashSet<>();
         Set<ResourceLocation> locked = buf.isReadable()
             ? new HashSet<>(buf.readList(FriendlyByteBuf::readResourceLocation)) : new HashSet<>();
-        return new SkillStateSyncS2C(points, purchased, hidden, locked);
+        Set<ResourceLocation> nonRefundable = buf.isReadable()
+            ? new HashSet<>(buf.readList(FriendlyByteBuf::readResourceLocation)) : new HashSet<>();
+        return new SkillStateSyncS2C(points, purchased, hidden, locked, nonRefundable);
     }
 
     @Override

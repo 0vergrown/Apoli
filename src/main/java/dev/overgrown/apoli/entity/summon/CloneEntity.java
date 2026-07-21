@@ -38,7 +38,6 @@ import java.util.EnumSet;
 import java.util.Optional;
 import java.util.UUID;
 
-
 public class CloneEntity extends Monster implements OwnableEntity, CrossbowAttackMob, Temporary {
     private static final double COMBAT_SPEED = 1.35;
     private static final float SHOOTING_RANGE = 32f;
@@ -253,13 +252,18 @@ public class CloneEntity extends Monster implements OwnableEntity, CrossbowAttac
         this.entityData.set(SLIM_TEXTURE, texture == null ? "" : texture.toString());
     }
 
-    
     @Nullable
     public ResourceLocation getCustomTexture(boolean slim) {
-        ResourceLocation wide = ResourceLocation.tryParse(this.entityData.get(WIDE_TEXTURE));
-        ResourceLocation slimTex = ResourceLocation.tryParse(this.entityData.get(SLIM_TEXTURE));
+
+        ResourceLocation wide = parseTexture(this.entityData.get(WIDE_TEXTURE));
+        ResourceLocation slimTex = parseTexture(this.entityData.get(SLIM_TEXTURE));
         if (slim) return slimTex != null ? slimTex : wide;
         return wide != null ? wide : slimTex;
+    }
+
+    @Nullable
+    private static ResourceLocation parseTexture(String raw) {
+        return raw.isEmpty() ? null : ResourceLocation.tryParse(raw);
     }
 
     public void setCanAttack(boolean canAttack) {
@@ -337,8 +341,6 @@ public class CloneEntity extends Monster implements OwnableEntity, CrossbowAttac
         if (tag.contains("SummonId")) this.summonId = ResourceLocation.tryParse(tag.getString("SummonId"));
         this.updateWeaponGoals();
     }
-
-    
 
     static class FollowOwnerGoal extends Goal {
         private static final double MAX_DISTANCE = 32;

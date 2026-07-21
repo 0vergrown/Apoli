@@ -60,7 +60,7 @@ public final class RopePullAction implements ActionType<EntityCtx, RopePullActio
 
             boolean actorIsFrom = actor.getUUID().equals(rope.fromEntity);
             boolean actorIsTo = actor.getUUID().equals(rope.toEntity);
-            if (!actorIsFrom && !actorIsTo) continue; 
+            if (!actorIsFrom && !actorIsTo) continue;
 
             Vec3 actorPos = actorIsFrom ? fromPos : toPos;
             Vec3 otherPos = actorIsFrom ? toPos : fromPos;
@@ -77,7 +77,12 @@ public final class RopePullAction implements ActionType<EntityCtx, RopePullActio
     }
 
     private static void push(Entity entity, Vec3 toward, double speed, boolean set) {
-        if (toward.lengthSqr() < 1e-8) return;
+        if (speed == 0 || toward.lengthSqr() < 1e-8) return;
         VelocityUpdater.apply(entity, toward.normalize().scale(speed), set);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

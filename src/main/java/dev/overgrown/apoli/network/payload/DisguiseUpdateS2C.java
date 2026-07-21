@@ -9,7 +9,6 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 import java.util.Optional;
 
-
 public record DisguiseUpdateS2C(int entityId, Optional<DisguiseData> data) implements CustomPacketPayload {
     public static final Type<DisguiseUpdateS2C> TYPE = new Type<>(Apoli.id("disguise_update"));
     public static final StreamCodec<RegistryFriendlyByteBuf, DisguiseUpdateS2C> STREAM_CODEC = StreamCodec.of(

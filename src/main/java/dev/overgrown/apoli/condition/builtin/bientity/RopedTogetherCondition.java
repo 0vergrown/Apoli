@@ -6,7 +6,6 @@ import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.rope.RopeManager;
 import dev.overgrown.apoli.shared.EmptyCfg;
 
-
 public final class RopedTogetherCondition implements ConditionType<BiEntityCtx, EmptyCfg> {
 
     @Override

@@ -2,6 +2,7 @@ package dev.overgrown.apoli.mixin.flag;
 
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.power.PowerLookup;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -27,7 +28,7 @@ public abstract class LivingEntityFallFlyingMixin {
         if (self.level().isClientSide()) return;
         if (!apoli$wasFallFlying || self.isFallFlying()) return;
         if (self.onGround() || self.isPassenger() || self.hasEffect(MobEffects.LEVITATION)) return;
-        if (self instanceof Player player && PowerLookup.hasActive(self, Apoli.id("elytra_flight"))) {
+        if (self instanceof Player player && PowerLookup.hasActive(self, ApoliIds.ELYTRA_FLIGHT)) {
             player.startFallFlying();
         }
     }

@@ -26,6 +26,11 @@ public final class EmitGameEventAction implements ActionType<EntityCtx, EmitGame
         ResourceKey<GameEvent> key = ResourceKey.create(Registries.GAME_EVENT, cfg.event);
         Holder<GameEvent> holder = BuiltInRegistries.GAME_EVENT.getHolder(key).orElse(null);
         if (holder == null) return;
-        ctx.entity().gameEvent(holder);
+        ctx.raw().gameEvent(holder);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

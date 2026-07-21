@@ -27,4 +27,9 @@ public final class DetachRopeAction implements ActionType<EntityCtx, DetachRopeA
         if (actor == null) return;
         RopeManager.removeMatching(actor.getUUID(), cfg.slot.orElse(null), null);
     }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
+    }
 }

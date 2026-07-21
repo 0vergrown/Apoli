@@ -30,7 +30,13 @@
     "power.EntityModifyVelocityMixin",
     "performance.ServerRecipeBookSnapshotMixin",
     "recipe.CraftingMenuGateMixin",
-    "rope.PlayerRopeElytraMixin"
+    "rope.PlayerRopeElytraMixin",
+    "label.ChatTypeNameMixin",
+    "label.ServerPlayerTabNameMixin",
+    "power.LivingEntityModifyFallingMixin",
+    "item.ItemEntityConjuredMixin",
+    "item.SlotConjuredMixin",
+    "label.PlayerDisplayNameMixin"
   ],
   "client": [
     "flag.EntityGlowMixin",
@@ -50,7 +56,9 @@
     "disguise.EntityRendererDisguiseNameMixin",
     "disguise.PlayerRendererDisguiseSkinMixin",
     "keybinding.OptionsAccessor",
-    "keybinding.KeyMappingCategoryAccessor"
+    "keybinding.KeyMappingCategoryAccessor",
+    "mount.LevelRendererMountRenderMixin",
+    "label.EntityRendererLabelMixin"
   ],
   "injectors": {
     "defaultRequire": 1

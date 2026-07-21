@@ -22,6 +22,10 @@ public final class ClientPayloadHandlers {
         ClientPowerState.applyPowersSync(msg);
     }
 
+    public static void onSyncPowersChunk(dev.overgrown.apoli.network.payload.SyncPowersChunkS2C msg) {
+        ClientPowerState.applyPowersChunk(msg);
+    }
+
     public static void onSyncEntityPowers(SyncEntityPowersS2C msg) {
         ClientPowerState.applyEntityPowersSync(msg);
     }
@@ -49,12 +53,24 @@ public final class ClientPayloadHandlers {
             () -> dev.overgrown.apoli.client.disguise.ClientDisguiseManager.remove(msg.entityId()));
     }
 
+    public static void onTextDisplay(dev.overgrown.apoli.network.payload.TextDisplayS2C msg) {
+        TextOverlayRenderer.apply(msg);
+    }
+
+    public static void onLabelUpdate(dev.overgrown.apoli.network.payload.LabelUpdateS2C msg) {
+        ClientLabelState.apply(msg.entityId(), msg.texts());
+    }
+
     public static void onSkillDefs(dev.overgrown.apoli.network.payload.SkillDefsSyncS2C msg) {
         dev.overgrown.apoli.client.skill.ClientSkillState.applyDefs(msg);
     }
 
     public static void onSkillState(dev.overgrown.apoli.network.payload.SkillStateSyncS2C msg) {
         dev.overgrown.apoli.client.skill.ClientSkillState.applyState(msg);
+    }
+
+    public static void onRadialMenuOpen(dev.overgrown.apoli.network.payload.RadialMenuOpenS2C msg) {
+        Minecraft.getInstance().setScreen(new dev.overgrown.apoli.client.radial.RadialMenuScreen(msg));
     }
 
     public static void onRopeCreate(RopeCreateS2C msg) {

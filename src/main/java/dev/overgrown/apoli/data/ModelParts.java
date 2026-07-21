@@ -18,7 +18,6 @@ public final class ModelParts {
     public static final String RIGHT_LEG = "rightleg";
     public static final String LEFT_LEG = "leftleg";
 
-    
     public static final Codec<List<String>> PART_LIST_CODEC = Codec.either(
         Codec.STRING,
         Codec.STRING.listOf()

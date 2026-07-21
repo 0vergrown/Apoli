@@ -36,10 +36,15 @@ public final class PredicateCondition implements ConditionType<EntityCtx, Predic
         if (holder == null) return false;
         LootItemCondition condition = holder.value();
         LootParams params = new LootParams.Builder(serverLevel)
-            .withParameter(LootContextParams.THIS_ENTITY, ctx.entity())
-            .withParameter(LootContextParams.ORIGIN, ctx.entity().position())
+            .withParameter(LootContextParams.THIS_ENTITY, ctx.raw())
+            .withParameter(LootContextParams.ORIGIN, ctx.raw().position())
             .create(LootContextParamSets.SELECTOR);
         LootContext lootCtx = new LootContext.Builder(params).create(null);
         return condition.test(lootCtx);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

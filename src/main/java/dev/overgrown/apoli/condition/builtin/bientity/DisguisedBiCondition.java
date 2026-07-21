@@ -6,7 +6,6 @@ import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.entity.disguise.DisguiseManager;
 import dev.overgrown.apoli.shared.EmptyCfg;
 
-
 public final class DisguisedBiCondition implements ConditionType<BiEntityCtx, EmptyCfg> {
     @Override
     public MapCodec<EmptyCfg> codec() {

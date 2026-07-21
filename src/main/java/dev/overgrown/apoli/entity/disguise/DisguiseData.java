@@ -7,7 +7,6 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.Optional;
 import java.util.UUID;
 
-
 public record DisguiseData(ResourceLocation entityTypeId, Optional<UUID> playerUuid, Optional<CompoundTag> nbt, Optional<String> name) {
 
     public boolean isPlayerDisguise() {

@@ -5,8 +5,8 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Nbt;
+import dev.overgrown.apoli.data.NbtComparison;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
 
 public final class NbtCondition implements ConditionType<EntityCtx, NbtCondition.Cfg> {
     public record Cfg(Nbt nbt) {}
@@ -21,6 +21,11 @@ public final class NbtCondition implements ConditionType<EntityCtx, NbtCondition
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
         CompoundTag actual = EntityNbtSnapshot.of(ctx.raw(), cfg.nbt.tag());
-        return NbtUtils.compareNbt(cfg.nbt.tag(), actual, true);
+        return NbtComparison.matches(cfg.nbt.tag(), actual);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

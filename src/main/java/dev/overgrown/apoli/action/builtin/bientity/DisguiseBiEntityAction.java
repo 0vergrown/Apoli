@@ -8,18 +8,19 @@ import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.entity.disguise.DisguiseManager;
 
 public final class DisguiseBiEntityAction implements ActionType<BiEntityCtx, DisguiseBiEntityAction.Cfg> {
-    public record Cfg(boolean overwrite) {}
+    public record Cfg(boolean overwrite, boolean changeName) {}
 
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.BOOL.optionalFieldOf("overwrite", true).forGetter(Cfg::overwrite)
+            Codec.BOOL.optionalFieldOf("overwrite", true).forGetter(Cfg::overwrite),
+            Codec.BOOL.optionalFieldOf("change_name", true).forGetter(Cfg::changeName)
         ).apply(i, Cfg::new));
     }
 
     @Override
     public void run(Cfg cfg, BiEntityCtx ctx) {
         if (ctx.actor() == null || ctx.target() == null) return;
-        DisguiseManager.applyAs(ctx.actor(), ctx.target(), cfg.overwrite);
+        DisguiseManager.applyAs(ctx.actor(), ctx.target(), cfg.overwrite, cfg.changeName);
     }
 }

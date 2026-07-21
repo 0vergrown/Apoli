@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-
 public record ModelPartTransformation(String part, ModelPartTransformation.Type type, float value, boolean overrideAnimation) {
 
     public enum Type {

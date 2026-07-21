@@ -20,7 +20,12 @@ public final class BlockActionAtAction implements ActionType<EntityCtx, BlockAct
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        BlockPos pos = ctx.entity().blockPosition();
+        BlockPos pos = ctx.raw().blockPosition();
         cfg.blockAction.run(new BlockCtx(pos, ctx.level().getBlockState(pos), ctx.level()));
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

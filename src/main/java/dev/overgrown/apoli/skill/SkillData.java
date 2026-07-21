@@ -11,24 +11,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-
 public final class SkillData {
     private final Map<ResourceLocation, Integer> points;
     private final Set<ResourceLocation> purchased;
+    private final Set<ResourceLocation> grantedTrees;
 
     public SkillData() {
-        this(new HashMap<>(), new HashSet<>());
+        this(new HashMap<>(), new HashSet<>(), new HashSet<>());
     }
 
-    private SkillData(Map<ResourceLocation, Integer> points, Set<ResourceLocation> purchased) {
+    private SkillData(Map<ResourceLocation, Integer> points, Set<ResourceLocation> purchased,
+                      Set<ResourceLocation> grantedTrees) {
         this.points = new HashMap<>(points);
         this.purchased = new HashSet<>(purchased);
+        this.grantedTrees = new HashSet<>(grantedTrees);
     }
 
     public static final Codec<SkillData> CODEC = RecordCodecBuilder.create(i -> i.group(
         Codec.unboundedMap(ResourceLocation.CODEC, Codec.INT).optionalFieldOf("points", Map.of()).forGetter(d -> d.points),
-        ResourceLocation.CODEC.listOf().optionalFieldOf("purchased", List.of()).forGetter(d -> new ArrayList<>(d.purchased))
-    ).apply(i, (points, purchased) -> new SkillData(points, new HashSet<>(purchased))));
+        ResourceLocation.CODEC.listOf().optionalFieldOf("purchased", List.of()).forGetter(d -> new ArrayList<>(d.purchased)),
+        ResourceLocation.CODEC.listOf().optionalFieldOf("granted_trees", List.of()).forGetter(d -> new ArrayList<>(d.grantedTrees))
+    ).apply(i, (points, purchased, grantedTrees) ->
+        new SkillData(points, new HashSet<>(purchased), new HashSet<>(grantedTrees))));
 
     public int getPoints(ResourceLocation root) {
         return points.getOrDefault(root, 0);
@@ -50,6 +54,18 @@ public final class SkillData {
         purchased.add(skill);
     }
 
+    public boolean hasTree(ResourceLocation tree) {
+        return grantedTrees.contains(tree);
+    }
+
+    public boolean grantTree(ResourceLocation tree) {
+        return grantedTrees.add(tree);
+    }
+
+    public boolean revokeTree(ResourceLocation tree) {
+        return grantedTrees.remove(tree);
+    }
+
     public Map<ResourceLocation, Integer> pointsView() {
         return points;
     }
@@ -58,10 +74,16 @@ public final class SkillData {
         return purchased;
     }
 
+    public Set<ResourceLocation> grantedTreesView() {
+        return grantedTrees;
+    }
+
     public void copyFrom(SkillData other) {
         this.points.clear();
         this.points.putAll(other.points);
         this.purchased.clear();
         this.purchased.addAll(other.purchased);
+        this.grantedTrees.clear();
+        this.grantedTrees.addAll(other.grantedTrees);
     }
 }

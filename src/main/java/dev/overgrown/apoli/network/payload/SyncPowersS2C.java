@@ -4,7 +4,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import dev.overgrown.apoli.Apoli;
-import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -20,15 +19,6 @@ public record SyncPowersS2C(Map<ResourceLocation, String> rawPowers) implements 
     public static final StreamCodec<RegistryFriendlyByteBuf, SyncPowersS2C> STREAM_CODEC = StreamCodec.of(
         (buf, payload) -> payload.write(buf),
         SyncPowersS2C::read);
-
-    public static SyncPowersS2C fromCurrent() {
-        Map<ResourceLocation, String> out = new HashMap<>();
-        for (Map.Entry<ResourceLocation, Power> e : ApoliPowers.view().entrySet()) {
-            Power.CODEC.encodeStart(JsonOps.INSTANCE, e.getValue()).result()
-                .ifPresent(json -> out.put(e.getKey(), json.toString()));
-        }
-        return new SyncPowersS2C(out);
-    }
 
     public void write(FriendlyByteBuf buf) {
         buf.writeVarInt(rawPowers.size());

@@ -13,7 +13,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public final class ModifyModelPartsPower extends PowerType<ModifyModelPartsPower.Config> {
     public static final ResourceLocation CANONICAL = Apoli.id("modify_model_parts");
 
@@ -30,7 +29,6 @@ public final class ModifyModelPartsPower extends PowerType<ModifyModelPartsPower
         return PowerLookup.hasActive(entity, CANONICAL);
     }
 
-    
     public static List<ModelPartTransformation> gather(@Nullable LivingEntity entity) {
         List<ModelPartTransformation> all = new ArrayList<>();
         PowerLookup.forEach(entity, CANONICAL, Config.class, cfg -> all.addAll(cfg.transformations()));

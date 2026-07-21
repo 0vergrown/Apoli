@@ -5,8 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
-import dev.overgrown.apoli.data.StatusEffectInstanceCodec;
-import net.minecraft.world.effect.MobEffectInstance;
+import dev.overgrown.apoli.data.EffectSpec;
 import net.minecraft.world.entity.AreaEffectCloud;
 import net.minecraft.world.entity.LivingEntity;
 
@@ -18,8 +17,8 @@ public final class SpawnEffectCloudAction implements ActionType<EntityCtx, Spawn
         float radius,
         float radiusOnUse,
         int waitTime,
-        Optional<MobEffectInstance> effect,
-        Optional<List<MobEffectInstance>> effects
+        Optional<EffectSpec> effect,
+        Optional<List<EffectSpec>> effects
     ) {}
 
     @Override
@@ -28,8 +27,8 @@ public final class SpawnEffectCloudAction implements ActionType<EntityCtx, Spawn
             Codec.FLOAT.optionalFieldOf("radius", 3.0f).forGetter(Cfg::radius),
             Codec.FLOAT.optionalFieldOf("radius_on_use", -0.5f).forGetter(Cfg::radiusOnUse),
             Codec.INT.optionalFieldOf("wait_time", 10).forGetter(Cfg::waitTime),
-            StatusEffectInstanceCodec.CODEC.optionalFieldOf("effect").forGetter(Cfg::effect),
-            Codec.list(StatusEffectInstanceCodec.CODEC).optionalFieldOf("effects").forGetter(Cfg::effects)
+            EffectSpec.CODEC.optionalFieldOf("effect").forGetter(Cfg::effect),
+            Codec.list(EffectSpec.CODEC).optionalFieldOf("effects").forGetter(Cfg::effects)
         ).apply(i, Cfg::new));
     }
 
@@ -42,8 +41,8 @@ public final class SpawnEffectCloudAction implements ActionType<EntityCtx, Spawn
         cloud.setRadiusOnUse(cfg.radiusOnUse);
         cloud.setWaitTime(cfg.waitTime);
         cloud.setRadiusPerTick(-cloud.getRadius() / (float) cloud.getDuration());
-        cfg.effect.ifPresent(eff -> cloud.addEffect(new MobEffectInstance(eff)));
-        cfg.effects.ifPresent(list -> list.forEach(eff -> cloud.addEffect(new MobEffectInstance(eff))));
+        cfg.effect.ifPresent(spec -> cloud.addEffect(spec.resolve(e)));
+        cfg.effects.ifPresent(list -> list.forEach(spec -> cloud.addEffect(spec.resolve(e))));
         e.level().addFreshEntity(cloud);
     }
 }

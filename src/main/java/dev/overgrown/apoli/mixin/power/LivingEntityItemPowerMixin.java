@@ -2,6 +2,7 @@ package dev.overgrown.apoli.mixin.power;
 
 import dev.overgrown.apoli.item.ItemPowerHandler;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -13,6 +14,7 @@ public abstract class LivingEntityItemPowerMixin {
 
     @Unique private boolean apoli$itemPowersInit = false;
     @Unique private boolean apoli$hadItemPowers = false;
+    @Unique private ItemStack[] apoli$itemPowerStacks;
 
     @Inject(method = "tick", at = @At("TAIL"))
     private void apoli$reconcileItemPowers(CallbackInfo ci) {
@@ -21,11 +23,12 @@ public abstract class LivingEntityItemPowerMixin {
 
         if (!apoli$itemPowersInit) {
             apoli$itemPowersInit = true;
-            apoli$hadItemPowers = ItemPowerHandler.reconcile(self);
+            apoli$itemPowerStacks = ItemPowerHandler.newSlotArray();
+            apoli$hadItemPowers = ItemPowerHandler.reconcile(self, apoli$itemPowerStacks);
             return;
         }
 
         if (!apoli$hadItemPowers && !ItemPowerHandler.anyEquippedPowers(self)) return;
-        apoli$hadItemPowers = ItemPowerHandler.reconcile(self);
+        apoli$hadItemPowers = ItemPowerHandler.reconcile(self, apoli$itemPowerStacks);
     }
 }

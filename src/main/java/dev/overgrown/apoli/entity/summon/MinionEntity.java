@@ -22,7 +22,6 @@ import org.joml.Vector3f;
 import java.util.Optional;
 import java.util.UUID;
 
-
 public class MinionEntity extends Mob implements OwnableEntity, Temporary {
     public static final ResourceLocation TEMPLATE_TEXTURE = Apoli.id("textures/entity/minion_template.png");
 
@@ -124,7 +123,9 @@ public class MinionEntity extends Mob implements OwnableEntity, Temporary {
     }
 
     public ResourceLocation getTexture() {
-        ResourceLocation parsed = ResourceLocation.tryParse(this.entityData.get(TEXTURE));
+
+        String raw = this.entityData.get(TEXTURE);
+        ResourceLocation parsed = raw.isEmpty() ? null : ResourceLocation.tryParse(raw);
         return parsed == null ? TEMPLATE_TEXTURE : parsed;
     }
 

@@ -3,6 +3,7 @@ package dev.overgrown.apoli.mixin.flag;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.builtin.ElytraFlightPower;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.minecraft.client.renderer.entity.layers.ElytraLayer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
@@ -35,7 +36,7 @@ public abstract class ElytraLayerRenderMixin {
     private ResourceLocation apoli$elytraTexture(ResourceLocation original) {
         ResourceLocation[] texture = new ResourceLocation[]{null};
         if (apoli$entity != null) {
-            PowerLookup.forEach(apoli$entity, Apoli.id("elytra_flight"), ElytraFlightPower.Config.class, cfg -> {
+            PowerLookup.forEach(apoli$entity, ApoliIds.ELYTRA_FLIGHT, ElytraFlightPower.Config.class, cfg -> {
                 if (texture[0] == null) cfg.textureLocation().ifPresent(t -> texture[0] = t);
             });
         }
@@ -45,7 +46,7 @@ public abstract class ElytraLayerRenderMixin {
     @Unique
     private static boolean apoli$shouldRenderElytra(LivingEntity entity) {
         boolean[] render = new boolean[]{false};
-        PowerLookup.forEach(entity, Apoli.id("elytra_flight"), ElytraFlightPower.Config.class, cfg -> {
+        PowerLookup.forEach(entity, ApoliIds.ELYTRA_FLIGHT, ElytraFlightPower.Config.class, cfg -> {
             if (cfg.renderElytra()) render[0] = true;
         });
         return render[0];

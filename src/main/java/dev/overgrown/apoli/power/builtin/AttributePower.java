@@ -5,7 +5,6 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.AttributeModifier;
-import dev.overgrown.apoli.data.ExpressionContext;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
@@ -38,6 +37,10 @@ public final class AttributePower extends PowerType<AttributePower.Cfg> {
     private static final java.util.Map<TrackKey, Double> APPLIED = new java.util.concurrent.ConcurrentHashMap<>();
 
     private record TrackKey(java.util.UUID entityUUID, ResourceLocation powerId, int idx) {}
+
+    public static void onEntityGone(java.util.UUID entityId) {
+        APPLIED.keySet().removeIf(key -> key.entityUUID().equals(entityId));
+    }
 
     private static final MapCodec<Cfg> CFG_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
         AttributeModifier.CODEC.optionalFieldOf("modifier").forGetter(c -> Optional.empty()),
@@ -102,12 +105,10 @@ public final class AttributePower extends PowerType<AttributePower.Cfg> {
                 changed = true;
             }
         } else {
-            Map<String, Double> vars = ExpressionContext.entityStats(entity);
-            Map<String, Double> resources = ExpressionContext.resourceValues(holder);
-            double newValue = modifier.resolveInput(vars, resources);
+            double newValue = modifier.resolveInput(entity, holder, instance.getBaseValue());
 
             Double last = APPLIED.get(key);
-            if (last == null || Math.abs(last - newValue) >= 1.0e-6) {
+            if (last == null || Math.abs(last - newValue) >= 1.0e-6 || instance.getModifier(modId) == null) {
                 instance.removeModifier(modId);
                 net.minecraft.world.entity.ai.attributes.AttributeModifier vanillaMod =
                     new net.minecraft.world.entity.ai.attributes.AttributeModifier(
@@ -136,7 +137,6 @@ public final class AttributePower extends PowerType<AttributePower.Cfg> {
         syncMaxHealthAndHealth(entity);
     }
 
-    
     private static void syncMaxHealthAndHealth(LivingEntity entity) {
         if (!(entity instanceof ServerPlayer player) || player.connection == null) return;
         AttributeInstance maxHealth = player.getAttribute(Attributes.MAX_HEALTH);

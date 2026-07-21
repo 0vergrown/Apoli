@@ -22,6 +22,11 @@ public final class SubmergedInCondition implements ConditionType<EntityCtx, Subm
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
         TagKey<Fluid> tag = TagKey.create(Registries.FLUID, cfg.fluid);
-        return ctx.entity().isEyeInFluid(tag);
+        return ctx.raw().isEyeInFluid(tag);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

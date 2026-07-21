@@ -6,16 +6,12 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
-
 public sealed interface RopeAnchor permits RopeAnchor.Position, RopeAnchor.OfEntity {
 
-    
     @Nullable Vec3 position(Level level);
 
-    
     @Nullable Entity entity(Level level);
 
-    
     boolean movable();
 
     void write(FriendlyByteBuf buf);
@@ -35,7 +31,6 @@ public sealed interface RopeAnchor permits RopeAnchor.Position, RopeAnchor.OfEnt
         buf.writeDouble(v.z);
     }
 
-    
     record Position(Vec3 pos) implements RopeAnchor {
         @Override public Vec3 position(Level level) { return pos; }
         @Override public Entity entity(Level level) { return null; }
@@ -46,7 +41,6 @@ public sealed interface RopeAnchor permits RopeAnchor.Position, RopeAnchor.OfEnt
         }
     }
 
-    
     record OfEntity(int networkId, Vec3 offset) implements RopeAnchor {
         @Override public Vec3 position(Level level) {
             Entity e = entity(level);

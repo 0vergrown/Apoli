@@ -27,11 +27,11 @@ public final class BlockCollisionCondition implements ConditionType<EntityCtx, B
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        AABB box = ctx.entity().getBoundingBox();
+        AABB box = ctx.raw().getBoundingBox();
         double w = box.getXsize(), h = box.getYsize(), d = box.getZsize();
         AABB shifted = box.move(cfg.offsetX * w, cfg.offsetY * h, cfg.offsetZ * d);
         if (cfg.blockCondition.isEmpty()) {
-            return !ctx.level().noCollision(ctx.entity(), shifted);
+            return !ctx.level().noCollision(ctx.raw(), shifted);
         }
         int minX = (int) Math.floor(shifted.minX), maxX = (int) Math.floor(shifted.maxX);
         int minY = (int) Math.floor(shifted.minY), maxY = (int) Math.floor(shifted.maxY);
@@ -43,5 +43,10 @@ public final class BlockCollisionCondition implements ConditionType<EntityCtx, B
             if (!ctx.level().getBlockState(pos).getCollisionShape(ctx.level(), pos).isEmpty()) return true;
         }
         return false;
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

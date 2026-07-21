@@ -5,20 +5,24 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.data.Space;
 import dev.overgrown.apoli.network.VelocityUpdater;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
 public final class AddVelocityAction implements ActionType<EntityCtx, AddVelocityAction.Cfg> {
-    public record Cfg(double x, double y, double z, Space space, boolean set) {}
+    public record Cfg(Expression x, Expression y, Expression z, Space space, boolean set) {}
+
+    private static final Expression ZERO = Expression.constant(0.0);
 
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.DOUBLE.optionalFieldOf("x", 0.0).forGetter(Cfg::x),
-            Codec.DOUBLE.optionalFieldOf("y", 0.0).forGetter(Cfg::y),
-            Codec.DOUBLE.optionalFieldOf("z", 0.0).forGetter(Cfg::z),
+            Expression.DOUBLE_OR_EXPR.optionalFieldOf("x", ZERO).forGetter(Cfg::x),
+            Expression.DOUBLE_OR_EXPR.optionalFieldOf("y", ZERO).forGetter(Cfg::y),
+            Expression.DOUBLE_OR_EXPR.optionalFieldOf("z", ZERO).forGetter(Cfg::z),
             Space.CODEC.optionalFieldOf("space", Space.WORLD).forGetter(Cfg::space),
             Codec.BOOL.optionalFieldOf("set", false).forGetter(Cfg::set)
         ).apply(i, Cfg::new));
@@ -26,8 +30,18 @@ public final class AddVelocityAction implements ActionType<EntityCtx, AddVelocit
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        LivingEntity recipient = ctx.entity();
-        Vec3 delta = cfg.space.toGlobal(recipient, new Vec3(cfg.x, cfg.y, cfg.z));
+        Entity recipient = ctx.raw();
+        LivingEntity living = ctx.entity();
+        Vec3 delta = cfg.space.toGlobal(recipient, new Vec3(
+            cfg.x.eval(living),
+            cfg.y.eval(living),
+            cfg.z.eval(living)
+        ));
         VelocityUpdater.apply(recipient, delta, cfg.set);
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

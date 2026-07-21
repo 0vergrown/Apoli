@@ -46,7 +46,6 @@ public final class EntityTextureOverlayPower extends PowerType<EntityTextureOver
         }
     }
 
-    
     public record ResolvedLayer(
         ResourceLocation wide,
         ResourceLocation slim,
@@ -91,7 +90,6 @@ public final class EntityTextureOverlayPower extends PowerType<EntityTextureOver
         ).apply(instance, Config::new));
     }
 
-    
     @Nullable
     public static Config firstReplace(@Nullable LivingEntity entity) {
         Config[] found = new Config[1];
@@ -111,7 +109,6 @@ public final class EntityTextureOverlayPower extends PowerType<EntityTextureOver
         return hide[0];
     }
 
-    
     public static List<ResolvedLayer> collectLayers(@Nullable LivingEntity entity) {
         List<ResolvedLayer> out = new ArrayList<>();
         PowerLookup.forEach(entity, CANONICAL, Config.class, cfg -> {

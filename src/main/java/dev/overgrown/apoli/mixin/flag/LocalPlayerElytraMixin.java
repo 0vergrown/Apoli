@@ -2,6 +2,7 @@ package dev.overgrown.apoli.mixin.flag;
 
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.power.PowerLookup;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -17,7 +18,7 @@ public abstract class LocalPlayerElytraMixin {
     @Redirect(method = "aiStep", at = @At(value = "INVOKE",
         target = "Lnet/minecraft/world/item/ItemStack;canElytraFly(Lnet/minecraft/world/entity/LivingEntity;)Z"))
     private boolean apoli$canElytraFly(ItemStack stack, LivingEntity entity) {
-        if (PowerLookup.hasActive(entity, Apoli.id("elytra_flight"))) {
+        if (PowerLookup.hasActive(entity, ApoliIds.ELYTRA_FLIGHT)) {
             return true;
         }
         return stack.canElytraFly(entity);

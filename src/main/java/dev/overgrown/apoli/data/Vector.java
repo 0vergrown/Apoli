@@ -28,7 +28,6 @@ public record Vector(float x, float y, float z) {
         v -> Either.left(v)
     );
 
-    
     public static final Codec<Vector> SCALAR_OR_VECTOR = Codec.either(Codec.FLOAT, CODEC).xmap(
         either -> either.map(n -> new Vector(n, n, n), java.util.function.Function.identity()),
         v -> (v.x == v.y && v.y == v.z) ? Either.left(v.x) : Either.right(v)

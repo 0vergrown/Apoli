@@ -6,7 +6,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.EntityAction;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Expression;
-import dev.overgrown.apoli.data.ExpressionContext;
 import dev.overgrown.apoli.data.HudRender;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
@@ -17,9 +16,7 @@ import dev.overgrown.apoli.power.PowerTypeRegistry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
-import org.jetbrains.annotations.Nullable;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 
@@ -58,7 +55,7 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
     public void onAdded(ResourceLocation powerId, Cfg cfg, PowerContainer holder, ResourceLocation source) {
         if (!(holder instanceof PowerContainerImpl impl)) return;
         if (impl.getAuxInt(powerId).isPresent()) return;
-        int initial = evalStartValue(cfg, holder.owner());
+        int initial = evalStartValue(cfg, holder);
         impl.setAuxInt(powerId, clamp(initial, currentMin(cfg, holder, powerId), currentMax(cfg, holder, powerId), cfg));
     }
 
@@ -85,26 +82,20 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         }
     }
 
-    public int evalStartValue(Cfg cfg, LivingEntity entity) {
-        Map<String, Double> vars = ExpressionContext.forResource(entity, 0);
-        Map<String, Double> resources = ExpressionContext.resourceValues(getContainer(entity));
-        return cfg.startValue.orElse(cfg.min).evalInt(vars, resources);
+    public int evalStartValue(Cfg cfg, PowerContainer holder) {
+        return cfg.startValue.orElse(cfg.min).evalIntWith(holder.owner(), holder, 0);
     }
 
     public int currentMin(Cfg cfg, PowerContainer holder, ResourceLocation powerId) {
         if (cfg.min.constantValue().isPresent()) return (int) Math.round(cfg.min.constantValue().getAsDouble());
-        int cur = readValue(holder, powerId).orElse(0);
-        Map<String, Double> vars = ExpressionContext.forResource(holder.owner(), cur);
-        Map<String, Double> resources = ExpressionContext.resourceValues(holder);
-        return cfg.min.evalInt(vars, resources);
+        int cur = holder.getAuxIntOr(powerId, 0);
+        return cfg.min.evalIntWith(holder.owner(), holder, cur);
     }
 
     public int currentMax(Cfg cfg, PowerContainer holder, ResourceLocation powerId) {
         if (cfg.max.constantValue().isPresent()) return (int) Math.round(cfg.max.constantValue().getAsDouble());
-        int cur = readValue(holder, powerId).orElse(0);
-        Map<String, Double> vars = ExpressionContext.forResource(holder.owner(), cur);
-        Map<String, Double> resources = ExpressionContext.resourceValues(holder);
-        return cfg.max.evalInt(vars, resources);
+        int cur = holder.getAuxIntOr(powerId, 0);
+        return cfg.max.evalIntWith(holder.owner(), holder, cur);
     }
 
     public static int clamp(int value, int min, int max, Cfg cfg) {
@@ -127,7 +118,7 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         if (!(holder instanceof PowerContainerImpl impl)) return;
         boolean present = impl.getAuxInt(powerId).isPresent();
         if (present && cfg.persistent) return;
-        int initial = rp.evalStartValue(cfg, holder.owner());
+        int initial = rp.evalStartValue(cfg, holder);
         int min = rp.currentMin(cfg, holder, powerId);
         int max = rp.currentMax(cfg, holder, powerId);
         impl.setAuxInt(powerId, clamp(initial, min, max, cfg));
@@ -141,7 +132,7 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
         if (!(type instanceof ResourcePower rp)) return OptionalInt.empty();
         if (!(loaded.config() instanceof Cfg cfg)) return OptionalInt.empty();
-        int prev = impl.getAuxInt(powerId).orElse(rp.evalStartValue(cfg, holder.owner()));
+        int prev = impl.getAuxInt(powerId).orElse(rp.evalStartValue(cfg, holder));
         int min = rp.currentMin(cfg, holder, powerId);
         int max = rp.currentMax(cfg, holder, powerId);
         int target;
@@ -165,9 +156,5 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         if (newVal == max && prev != max) {
             cfg.maxAction.ifPresent(a -> a.run(new EntityCtx(owner, level)));
         }
-    }
-
-    private static @Nullable PowerContainer getContainer(LivingEntity entity) {
-        return PowerContainer.of(entity);
     }
 }

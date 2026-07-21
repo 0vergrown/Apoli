@@ -18,7 +18,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
-
 @Mixin(HumanoidModel.class)
 @OnlyIn(Dist.CLIENT)
 public abstract class HumanoidModelModifyPartsMixin {

@@ -30,11 +30,10 @@ public abstract class LivingEntityRendererModelColorMixin {
 
     private static final String RENDER = "render(Lnet/minecraft/world/entity/LivingEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V";
 
-    
     @Inject(method = RENDER, at = @At("HEAD"))
     private void apoli$setupPartColors(LivingEntity entity, float entityYaw, float partialTick,
                                        PoseStack pose, MultiBufferSource buffer, int packedLight, CallbackInfo ci) {
-        ModelColorState.clear(); 
+        ModelColorState.clear();
         if (!ModelColorPower.hasPartColors(entity)) return;
         EntityModel<?> model = ((LivingEntityRenderer<?, ?>) (Object) this).getModel();
         if (!(model instanceof HumanoidModel<?> humanoid)) return;
@@ -49,8 +48,6 @@ public abstract class LivingEntityRendererModelColorMixin {
         ModelColorState.clear();
     }
 
-    
-    
     @ModifyArgs(
         method = RENDER,
         at = @At(value = "INVOKE",

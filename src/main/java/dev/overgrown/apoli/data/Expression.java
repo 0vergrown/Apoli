@@ -2,88 +2,86 @@ package dev.overgrown.apoli.data;
 
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
-import org.mariuszgromada.math.mxparser.Argument;
-import org.mariuszgromada.math.mxparser.License;
+import com.mojang.serialization.DataResult;
+import dev.overgrown.apoli.data.expr.ExprNode;
+import dev.overgrown.apoli.data.expr.ExprNodes;
+import dev.overgrown.apoli.data.expr.ExprParseException;
+import dev.overgrown.apoli.data.expr.ExprParser;
+import dev.overgrown.apoli.data.expr.ExprVars;
+import dev.overgrown.apoli.power.PowerContainer;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.OptionalDouble;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public final class Expression {
-    private static final Pattern RESOURCE_ID = Pattern.compile("[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_./-]+");
 
-    static {
-        try {
-            License.iConfirmNonCommercialUse("Apoli — Minecraft mod (dev.overgrown.apoli)");
-        } catch (Throwable ignored) {
-        }
-    }
+    public static final Codec<Expression> CODEC = Codec.STRING.comapFlatMap(Expression::tryOf, Expression::source);
 
-    public static final Codec<Expression> CODEC = Codec.STRING.xmap(Expression::of, Expression::source);
-
-    public static final Codec<Expression> INT_OR_EXPR = Codec.either(Codec.INT, Codec.STRING).xmap(
-        either -> either.map(Expression::constant, Expression::of),
+    public static final Codec<Expression> INT_OR_EXPR = Codec.either(Codec.INT, CODEC).xmap(
+        either -> either.map(Expression::constant, expr -> expr),
         expr -> expr.constantValue().isPresent() && expr.constantValue().getAsDouble() == (int) expr.constantValue().getAsDouble()
             ? Either.left((int) expr.constantValue().getAsDouble())
-            : Either.right(expr.source())
+            : Either.right(expr)
     );
 
-    public static final Codec<Expression> FLOAT_OR_EXPR = Codec.either(Codec.FLOAT, Codec.STRING).xmap(
-        either -> either.map(f -> constant(f.doubleValue()), Expression::of),
+    public static final Codec<Expression> FLOAT_OR_EXPR = Codec.either(Codec.FLOAT, CODEC).xmap(
+        either -> either.map(f -> constant(f.doubleValue()), expr -> expr),
         expr -> expr.constantValue().isPresent()
             ? Either.left((float) expr.constantValue().getAsDouble())
-            : Either.right(expr.source())
+            : Either.right(expr)
+    );
+
+    public static final Codec<Expression> DOUBLE_OR_EXPR = Codec.either(Codec.DOUBLE, CODEC).xmap(
+        either -> either.map(Expression::constant, expr -> expr),
+        expr -> expr.constantValue().isPresent()
+            ? Either.left(expr.constantValue().getAsDouble())
+            : Either.right(expr)
     );
 
     private final String source;
-    private final String rewritten;
-    private final Map<String, String> sanitizedToOriginal;
-    private final OptionalDouble constant;
+    private final ExprNode root;
+    private final boolean isConst;
+    private final double constVal;
+    private final boolean needsContainer;
 
-    private Expression(String source, String rewritten, Map<String, String> sanitizedToOriginal, OptionalDouble constant) {
+    private Expression(String source, ExprNode root, boolean needsContainer) {
         this.source = source;
-        this.rewritten = rewritten;
-        this.sanitizedToOriginal = sanitizedToOriginal;
-        this.constant = constant;
+        this.root = root;
+        this.needsContainer = needsContainer;
+        if (root instanceof ExprNodes.Const c) {
+            this.isConst = true;
+            this.constVal = c.v();
+        } else {
+            this.isConst = false;
+            this.constVal = 0.0;
+        }
     }
 
     public static Expression of(String src) {
         if (src == null || src.isBlank()) {
             throw new IllegalArgumentException("Expression source must not be empty");
         }
-        String trimmed = src.trim();
         try {
-            double v = Double.parseDouble(trimmed);
-            return new Expression(src, trimmed, Map.of(), OptionalDouble.of(v));
-        } catch (NumberFormatException ignored) {
+            ExprParser.Result result = ExprParser.parse(src, ExprVars::resolve);
+            return new Expression(src, result.root(), result.needsContainer());
+        } catch (ExprParseException e) {
+            throw new IllegalArgumentException("Invalid expression \"" + src + "\": " + e.getMessage());
         }
-        Map<String, String> originalToSanitized = new LinkedHashMap<>();
-        Matcher m = RESOURCE_ID.matcher(src);
-        StringBuilder out = new StringBuilder();
-        int last = 0;
-        while (m.find()) {
-            String token = m.group();
-            String sanitized = originalToSanitized.computeIfAbsent(token, Expression::sanitize);
-            out.append(src, last, m.start()).append(sanitized);
-            last = m.end();
+    }
+
+    private static DataResult<Expression> tryOf(String src) {
+        try {
+            return DataResult.success(of(src));
+        } catch (IllegalArgumentException e) {
+            return DataResult.error(e::getMessage);
         }
-        out.append(src, last, src.length());
-        Map<String, String> sanitizedToOriginal = new LinkedHashMap<>();
-        originalToSanitized.forEach((orig, san) -> sanitizedToOriginal.put(san, orig));
-        return new Expression(src, out.toString(), Map.copyOf(sanitizedToOriginal), OptionalDouble.empty());
     }
 
     public static Expression constant(double value) {
         String repr = value == (long) value ? Long.toString((long) value) : Double.toString(value);
-        return new Expression(repr, repr, Map.of(), OptionalDouble.of(value));
-    }
-
-    private static String sanitize(String resourceId) {
-        return "_r_" + resourceId.replace(':', '_').replace('/', '_').replace('.', '_').replace('-', '_');
+        return new Expression(repr, new ExprNodes.Const(value), false);
     }
 
     public String source() {
@@ -91,32 +89,55 @@ public final class Expression {
     }
 
     public OptionalDouble constantValue() {
-        return constant;
+        return isConst ? OptionalDouble.of(constVal) : OptionalDouble.empty();
     }
 
-    public Set<String> referencedResources() {
-        return sanitizedToOriginal.values().stream().collect(Collectors.toUnmodifiableSet());
+    public boolean needsContainer() {
+        return needsContainer;
     }
 
-    public double eval(Map<String, Double> variables, Map<String, Double> resources) {
-        if (constant.isPresent()) return constant.getAsDouble();
-        Argument[] args = new Argument[variables.size() + sanitizedToOriginal.size()];
-        int i = 0;
-        for (Map.Entry<String, Double> e : variables.entrySet()) {
-            args[i++] = new Argument(e.getKey(), e.getValue());
-        }
-        for (Map.Entry<String, String> e : sanitizedToOriginal.entrySet()) {
-            double v = resources.getOrDefault(e.getValue(), 0.0);
-            args[i++] = new Argument(e.getKey(), v);
-        }
-        org.mariuszgromada.math.mxparser.Expression mx =
-            new org.mariuszgromada.math.mxparser.Expression(rewritten, args);
-        double result = mx.calculate();
+    public double eval(@Nullable LivingEntity entity) {
+        if (isConst) return sanitize(constVal);
+        return evalFull(entity, autoContainer(entity), null, 0.0);
+    }
+
+    public double eval(@Nullable LivingEntity entity, double value) {
+        if (isConst) return sanitize(constVal);
+        return evalFull(entity, autoContainer(entity), null, value);
+    }
+
+    public double evalWith(@Nullable LivingEntity entity, @Nullable PowerContainer container, double value) {
+        if (isConst) return sanitize(constVal);
+        return evalFull(entity, container, null, value);
+    }
+
+    public double eval(@Nullable Level level) {
+        if (isConst) return sanitize(constVal);
+        return evalFull(null, null, level, 0.0);
+    }
+
+    public int evalInt(@Nullable LivingEntity entity) {
+        return (int) Math.round(eval(entity));
+    }
+
+    public int evalInt(@Nullable LivingEntity entity, double value) {
+        return (int) Math.round(eval(entity, value));
+    }
+
+    public int evalIntWith(@Nullable LivingEntity entity, @Nullable PowerContainer container, double value) {
+        return (int) Math.round(evalWith(entity, container, value));
+    }
+
+    private double evalFull(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        return sanitize(root.eval(entity, container, level, value));
+    }
+
+    private static double sanitize(double result) {
         return Double.isNaN(result) || Double.isInfinite(result) ? 0.0 : result;
     }
 
-    public int evalInt(Map<String, Double> variables, Map<String, Double> resources) {
-        return (int) Math.round(eval(variables, resources));
+    private @Nullable PowerContainer autoContainer(@Nullable LivingEntity entity) {
+        return needsContainer && entity != null ? PowerContainer.of(entity) : null;
     }
 
     @Override

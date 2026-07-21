@@ -4,6 +4,7 @@ import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.builtin.InvisibilityPower;
+import dev.overgrown.apoli.power.ApoliIds;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -18,7 +19,7 @@ public abstract class InvisibilityMixin {
     private void apoli$invisibility(Player observer, CallbackInfoReturnable<Boolean> cir) {
         if (!((Object) this instanceof LivingEntity self)) return;
         boolean[] hide = new boolean[]{false};
-        PowerLookup.forEach(self, Apoli.id("invisibility"), InvisibilityPower.Config.class, cfg -> {
+        PowerLookup.forEach(self, ApoliIds.INVISIBILITY, InvisibilityPower.Config.class, cfg -> {
             if (hide[0]) return;
             if (cfg.bientityCondition().isPresent()) {
                 if (observer == null) return;

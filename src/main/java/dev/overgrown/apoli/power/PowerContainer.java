@@ -6,6 +6,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.OptionalInt;
 import java.util.Set;
 
@@ -21,6 +23,22 @@ public interface PowerContainer {
     void clear();
 
     boolean hasPower(ResourceLocation power);
+
+    default boolean isEmpty() {
+        return allPowers().isEmpty();
+    }
+
+    default List<ResourceLocation> powersOfType(ResourceLocation canonicalTypeId) {
+        List<ResourceLocation> out = null;
+        for (ResourceLocation powerId : allPowers()) {
+            Power power = ApoliPowers.get(powerId);
+            if (power == null) continue;
+            if (!canonicalTypeId.equals(PowerTypeRegistry.resolveId(power.typeId()))) continue;
+            if (out == null) out = new ArrayList<>(2);
+            out.add(powerId);
+        }
+        return out == null ? List.of() : out;
+    }
 
     Set<ResourceLocation> sourcesOf(ResourceLocation power);
 
@@ -43,6 +61,11 @@ public interface PowerContainer {
     void markDirty();
 
     OptionalInt getAuxInt(ResourceLocation powerId);
+
+    default int getAuxIntOr(ResourceLocation powerId, int fallback) {
+        OptionalInt v = getAuxInt(powerId);
+        return v.isPresent() ? v.getAsInt() : fallback;
+    }
 
     static @Nullable PowerContainer of(Entity entity) {
         return PowerContainerAttachment.get(entity);

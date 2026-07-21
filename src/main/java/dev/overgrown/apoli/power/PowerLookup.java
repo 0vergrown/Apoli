@@ -15,13 +15,15 @@ public final class PowerLookup {
     public static boolean hasActive(@Nullable Entity entity, ResourceLocation canonicalId) {
         if (entity == null) return false;
         PowerContainer container = PowerContainer.of(entity);
-        if (container == null) return false;
+        if (container == null || container.isEmpty()) return false;
+        List<ResourceLocation> powers = container.powersOfType(canonicalId);
+        if (powers.isEmpty()) return false;
         EntityCtx ctx = null;
-        for (ResourceLocation powerId : container.allPowers()) {
+        for (int i = 0; i < powers.size(); i++) {
+            ResourceLocation powerId = powers.get(i);
+            if (container.isSuppressed(powerId)) continue;
             Power power = ApoliPowers.get(powerId);
             if (power == null) continue;
-            if (container.isSuppressed(powerId)) continue;
-            if (!canonicalId.equals(PowerTypeRegistry.resolveId(power.typeId()))) continue;
             if (power.condition().isPresent()) {
                 if (ctx == null) ctx = EntityCtx.of(entity, entity.level());
                 if (!power.condition().get().test(ctx)) continue;
@@ -36,13 +38,15 @@ public final class PowerLookup {
                                    Class<C> configClass, Consumer<C> consumer) {
         if (entity == null) return;
         PowerContainer container = PowerContainer.of(entity);
-        if (container == null) return;
+        if (container == null || container.isEmpty()) return;
+        List<ResourceLocation> powers = container.powersOfType(canonicalId);
+        if (powers.isEmpty()) return;
         EntityCtx ctx = null;
-        for (ResourceLocation powerId : container.allPowers()) {
+        for (int i = 0; i < powers.size(); i++) {
+            ResourceLocation powerId = powers.get(i);
+            if (container.isSuppressed(powerId)) continue;
             Power power = ApoliPowers.get(powerId);
             if (power == null) continue;
-            if (container.isSuppressed(powerId)) continue;
-            if (!canonicalId.equals(PowerTypeRegistry.resolveId(power.typeId()))) continue;
             Object cfg = power.config();
             if (!configClass.isInstance(cfg)) continue;
             if (power.condition().isPresent()) {

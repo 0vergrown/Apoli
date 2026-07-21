@@ -13,6 +13,7 @@ public record BiEntityAction(ResourceLocation typeId, Object config) {
     public void run(BiEntityCtx ctx) {
         ActionType<BiEntityCtx, ?> type = ActionTypes.BI_ENTITY.get(typeId);
         if (type == null) return;
+        if ((ctx.actor() == null || ctx.target() == null) && !type.acceptsNonLiving()) return;
         @SuppressWarnings({"unchecked", "rawtypes"})
         ActionType raw = type;
         raw.run(config, ctx);

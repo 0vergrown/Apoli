@@ -5,8 +5,7 @@ import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.DamageCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.AttributeModifier;
-import dev.overgrown.apoli.data.AttributeModifierOperation;
-import dev.overgrown.apoli.data.ExpressionContext;
+import dev.overgrown.apoli.data.AttributeModifierHelper;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
@@ -18,9 +17,7 @@ import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 
 public final class ModifyDamageHandler {
     private ModifyDamageHandler() {}
@@ -82,7 +79,7 @@ public final class ModifyDamageHandler {
                                 LivingEntity target, DamageCtx damageCtx, boolean targetUsedSide) {
         PowerContainer container = PowerContainer.of(holder);
         if (container == null) return;
-        ResourceLocation canonical = Apoli.id("modify_damage");
+        ResourceLocation canonical = dev.overgrown.apoli.power.ApoliIds.MODIFY_DAMAGE;
         for (ResourceLocation powerId : container.allPowers()) {
             Power power = ApoliPowers.get(powerId);
             if (power == null) continue;
@@ -114,29 +111,7 @@ public final class ModifyDamageHandler {
         List<AttributeModifier> allMods = new ArrayList<>();
         for (Match m : matches) allMods.addAll(m.cfg.allModifiers());
         if (allMods.isEmpty()) return amount;
-
-        Map<String, Double> vars = matches.get(0).bientityTarget != null
-            ? ExpressionContext.entityStats(matches.get(0).bientityTarget)
-            : Map.of();
-        Map<String, Double> resources = matches.get(0).bientityTarget != null
-            ? ExpressionContext.resourceValues(PowerContainer.of(matches.get(0).bientityTarget))
-            : Map.of();
-
-        double base = amount;
-        double total = amount;
-        allMods.sort(Comparator
-            .comparingInt((AttributeModifier m) -> m.operation().phase().ordinal())
-            .thenComparingInt(m -> m.operation().order()));
-        for (AttributeModifier mod : allMods) {
-            double modValue = mod.resolveInput(vars, resources);
-            AttributeModifierOperation.Result r = mod.operation().apply(base, total, modValue);
-            base = r.base();
-            total = r.total();
-            if (mod.operation().phase() == AttributeModifierOperation.Phase.BASE) {
-                total = base;
-            }
-        }
-        return Math.max(0f, (float) total);
+        return Math.max(0f, AttributeModifierHelper.apply(amount, allMods, matches.get(0).bientityTarget));
     }
 
     private static void runActions(Match m, @Nullable LivingEntity attacker, LivingEntity target, Level level) {

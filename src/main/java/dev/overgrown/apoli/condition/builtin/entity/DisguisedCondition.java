@@ -6,7 +6,6 @@ import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.entity.disguise.DisguiseManager;
 import dev.overgrown.apoli.shared.EmptyCfg;
 
-
 public final class DisguisedCondition implements ConditionType<EntityCtx, EmptyCfg> {
     @Override
     public MapCodec<EmptyCfg> codec() {
@@ -16,5 +15,10 @@ public final class DisguisedCondition implements ConditionType<EntityCtx, EmptyC
     @Override
     public boolean test(EmptyCfg cfg, EntityCtx ctx) {
         return DisguiseManager.isDisguised(ctx.raw());
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

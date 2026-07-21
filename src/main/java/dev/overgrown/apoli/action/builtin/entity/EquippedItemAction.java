@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.action.ItemAction;
+import dev.overgrown.apoli.alias.AliasingMapCodec;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.condition.context.ItemCtx;
 import dev.overgrown.apoli.data.EquipmentSlot;
@@ -15,10 +16,13 @@ public final class EquippedItemAction implements ActionType<EntityCtx, EquippedI
 
     @Override
     public MapCodec<Cfg> codec() {
-        return RecordCodecBuilder.mapCodec(i -> i.group(
-            EquipmentSlot.CODEC.fieldOf("equipment_slot").forGetter(Cfg::equipmentSlot),
-            ItemAction.CODEC.fieldOf("action").forGetter(Cfg::action)
-        ).apply(i, Cfg::new));
+        return AliasingMapCodec.<Cfg>wrap(
+            RecordCodecBuilder.mapCodec(i -> i.group(
+                EquipmentSlot.CODEC.fieldOf("equipment_slot").forGetter(Cfg::equipmentSlot),
+                ItemAction.CODEC.fieldOf("action").forGetter(Cfg::action)
+            ).apply(i, Cfg::new)),
+            java.util.Map.of("item_action", "action")
+        );
     }
 
     @Override

@@ -13,6 +13,11 @@ public final class ExtinguishAction implements ActionType<EntityCtx, EmptyCfg> {
 
     @Override
     public void run(EmptyCfg cfg, EntityCtx ctx) {
-        ctx.entity().clearFire();
+        ctx.raw().clearFire();
+    }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
     }
 }

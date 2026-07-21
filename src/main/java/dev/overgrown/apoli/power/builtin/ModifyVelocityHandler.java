@@ -1,9 +1,10 @@
 package dev.overgrown.apoli.power.builtin;
 
-import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.condition.builtin.bientity.RelativeRotationCondition;
 import dev.overgrown.apoli.data.AttributeModifier;
 import dev.overgrown.apoli.data.AttributeModifierHelper;
+import dev.overgrown.apoli.power.ApoliIds;
+import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerLookup;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -15,15 +16,17 @@ import java.util.List;
 public final class ModifyVelocityHandler {
     private ModifyVelocityHandler() {}
 
-    
     public static Vec3 modify(Entity entity, Vec3 original) {
+        PowerContainer container = PowerContainer.of(entity);
+        if (container == null || container.isEmpty()
+            || container.powersOfType(ApoliIds.MODIFY_VELOCITY).isEmpty()) {
+            return original;
+        }
         List<AttributeModifier> xMods = new ArrayList<>();
         List<AttributeModifier> yMods = new ArrayList<>();
         List<AttributeModifier> zMods = new ArrayList<>();
-        PowerLookup.forEach(entity, Apoli.id("modify_velocity"), ModifyVelocityPower.Config.class, cfg -> {
-            List<AttributeModifier> mods = new ArrayList<>();
-            cfg.modifier().ifPresent(mods::add);
-            cfg.modifiers().ifPresent(mods::addAll);
+        PowerLookup.forEach(entity, ApoliIds.MODIFY_VELOCITY, ModifyVelocityPower.Config.class, cfg -> {
+            List<AttributeModifier> mods = AttributeModifierHelper.flatten(cfg.modifier(), cfg.modifiers());
             if (mods.isEmpty()) return;
             if (cfg.axes().contains(RelativeRotationCondition.Axis.X)) xMods.addAll(mods);
             if (cfg.axes().contains(RelativeRotationCondition.Axis.Y)) yMods.addAll(mods);

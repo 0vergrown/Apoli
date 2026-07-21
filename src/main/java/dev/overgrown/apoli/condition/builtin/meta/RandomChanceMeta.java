@@ -19,4 +19,9 @@ public final class RandomChanceMeta<CTX> implements ConditionType<CTX, RandomCha
     public boolean test(Cfg cfg, CTX ctx) {
         return Math.random() < cfg.chance;
     }
+
+    @Override
+    public boolean acceptsNonLiving() {
+        return true;
+    }
 }

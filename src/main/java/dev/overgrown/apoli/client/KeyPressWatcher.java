@@ -77,8 +77,13 @@ public final class KeyPressWatcher {
         if (element.isJsonObject()) {
             JsonObject object = element.getAsJsonObject();
             JsonElement typeElement = object.get("type");
-            if (typeElement != null && typeElement.isJsonPrimitive() && isKeyPressedType(typeElement.getAsString())) {
-                out.add(extractKey(object));
+            if (typeElement != null && typeElement.isJsonPrimitive()) {
+                String typeStr = typeElement.getAsString();
+                if (isKeyPressedType(typeStr)) {
+                    out.add(extractKey(object));
+                } else if (isKeySequenceType(typeStr)) {
+                    collectSequenceKeys(object, out);
+                }
             }
             for (Map.Entry<String, JsonElement> entry : object.entrySet()) {
                 collect(entry.getValue(), out);
@@ -94,6 +99,25 @@ public final class KeyPressWatcher {
         ResourceLocation id = ResourceLocation.tryParse(type);
         String path = id != null ? id.getPath() : type;
         return path.equals("key_pressed") || path.equals("key_held") || path.equals("held_key");
+    }
+
+    private static boolean isKeySequenceType(String type) {
+        ResourceLocation id = ResourceLocation.tryParse(type);
+        String path = id != null ? id.getPath() : type;
+        return path.equals("action_on_key_sequence");
+    }
+
+    private static void collectSequenceKeys(JsonObject powerObject, Set<String> out) {
+        JsonElement keys = powerObject.get("keys");
+        if (keys == null || !keys.isJsonArray()) return;
+        for (JsonElement entry : keys.getAsJsonArray()) {
+            if (entry.isJsonPrimitive()) {
+                out.add(entry.getAsString());
+            } else if (entry.isJsonObject()) {
+                JsonElement key = entry.getAsJsonObject().get("key");
+                if (key != null && key.isJsonPrimitive()) out.add(key.getAsString());
+            }
+        }
     }
 
     private static String extractKey(JsonObject conditionObject) {
