@@ -1,7 +1,7 @@
 package dev.overgrown.apoli.data.expr;
 
 import dev.overgrown.apoli.power.PowerContainer;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,7 +19,7 @@ public final class ExprNodes {
 
     public record Const(double v) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             return v;
         }
 
@@ -31,14 +31,14 @@ public final class ExprNodes {
 
     public record Var(ExprVar accessor) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             return accessor.get(entity, container, level, value);
         }
     }
 
     public record Neg(ExprNode n) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             return -n.eval(entity, container, level, value);
         }
 
@@ -52,7 +52,7 @@ public final class ExprNodes {
 
     public record Bin(Op op, ExprNode l, ExprNode r) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             double a = l.eval(entity, container, level, value);
             double b = r.eval(entity, container, level, value);
             return switch (op) {
@@ -80,7 +80,7 @@ public final class ExprNodes {
 
     public record Tetra(ExprNode l, ExprNode r) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             double a = l.eval(entity, container, level, value);
             long b = Math.round(r.eval(entity, container, level, value));
             if (b < 0) return Double.NaN;
@@ -101,7 +101,7 @@ public final class ExprNodes {
 
     public record Fact(ExprNode n) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             double v = n.eval(entity, container, level, value);
             long k = Math.round(v);
             if (k < 0 || Math.abs(v - k) > 1.0e-9) return Double.NaN;
@@ -120,7 +120,7 @@ public final class ExprNodes {
 
     public record Fn1(DoubleUnaryOperator fn, ExprNode a) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             return fn.applyAsDouble(a.eval(entity, container, level, value));
         }
 
@@ -132,7 +132,7 @@ public final class ExprNodes {
 
     public record Fn2(DoubleBinaryOperator fn, ExprNode a, ExprNode b) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             return fn.applyAsDouble(a.eval(entity, container, level, value), b.eval(entity, container, level, value));
         }
 
@@ -144,7 +144,7 @@ public final class ExprNodes {
 
     public record Fn3(DoubleTernaryOperator fn, ExprNode a, ExprNode b, ExprNode c) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             return fn.applyAsDouble(
                 a.eval(entity, container, level, value),
                 b.eval(entity, container, level, value),
@@ -160,7 +160,7 @@ public final class ExprNodes {
 
     public record If(ExprNode cond, ExprNode then, ExprNode otherwise) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             return cond.eval(entity, container, level, value) != 0.0
                 ? then.eval(entity, container, level, value)
                 : otherwise.eval(entity, container, level, value);
@@ -174,7 +174,7 @@ public final class ExprNodes {
 
     public record AndN(ExprNode[] args) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             for (ExprNode arg : args) {
                 if (arg.eval(entity, container, level, value) == 0.0) return 0.0;
             }
@@ -189,7 +189,7 @@ public final class ExprNodes {
 
     public record OrN(ExprNode[] args) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             for (ExprNode arg : args) {
                 if (arg.eval(entity, container, level, value) != 0.0) return 1.0;
             }
@@ -204,7 +204,7 @@ public final class ExprNodes {
 
     public record MinN(ExprNode[] args) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             double best = args[0].eval(entity, container, level, value);
             for (int i = 1; i < args.length; i++) {
                 best = Math.min(best, args[i].eval(entity, container, level, value));
@@ -220,7 +220,7 @@ public final class ExprNodes {
 
     public record MaxN(ExprNode[] args) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             double best = args[0].eval(entity, container, level, value);
             for (int i = 1; i < args.length; i++) {
                 best = Math.max(best, args[i].eval(entity, container, level, value));
@@ -236,7 +236,7 @@ public final class ExprNodes {
 
     public record AvgN(ExprNode[] args) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             double sum = 0.0;
             for (ExprNode arg : args) {
                 sum += arg.eval(entity, container, level, value);
@@ -252,7 +252,7 @@ public final class ExprNodes {
 
     public record RUni(ExprNode lo, ExprNode hi) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             double a = lo.eval(entity, container, level, value);
             double b = hi.eval(entity, container, level, value);
             if (a > b) { double t = a; a = b; b = t; }
@@ -262,7 +262,7 @@ public final class ExprNodes {
 
     public record RUnid(ExprNode lo, ExprNode hi) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             long a = Math.round(lo.eval(entity, container, level, value));
             long b = Math.round(hi.eval(entity, container, level, value));
             if (a > b) { long t = a; a = b; b = t; }
@@ -272,7 +272,7 @@ public final class ExprNodes {
 
     public record RNor(ExprNode mean, ExprNode stddev) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             double mu = mean.eval(entity, container, level, value);
             double sigma = stddev.eval(entity, container, level, value);
             return mu + ThreadLocalRandom.current().nextGaussian() * sigma;
@@ -281,7 +281,7 @@ public final class ExprNodes {
 
     public record RList(ExprNode[] args) implements ExprNode {
         @Override
-        public double eval(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
             return args[ThreadLocalRandom.current().nextInt(args.length)].eval(entity, container, level, value);
         }
     }

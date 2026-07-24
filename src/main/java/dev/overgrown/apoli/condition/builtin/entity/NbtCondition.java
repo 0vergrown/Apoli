@@ -23,9 +23,4 @@ public final class NbtCondition implements ConditionType<EntityCtx, NbtCondition
         CompoundTag actual = EntityNbtSnapshot.of(ctx.raw(), cfg.nbt.tag());
         return NbtComparison.matches(cfg.nbt.tag(), actual);
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

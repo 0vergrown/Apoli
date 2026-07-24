@@ -19,9 +19,4 @@ public final class ReleaseGrabAction implements ActionType<EntityCtx, EmptyCfg> 
         if (entity == null || entity.level().isClientSide()) return;
         GrabManager.release(entity.getUUID());
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

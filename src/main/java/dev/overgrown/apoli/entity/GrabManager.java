@@ -4,7 +4,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
@@ -26,7 +25,7 @@ public final class GrabManager {
 
     private GrabManager() {}
 
-    public static void start(LivingEntity grabber, LivingEntity grabbed, int duration, double distance,
+    public static void start(Entity grabber, Entity grabbed, int duration, double distance,
                              boolean disableGrabber, boolean disableGrabbed,
                              boolean horizontalOnly, boolean verticalOnly) {
         if (grabber.level().isClientSide() || grabber == grabbed) return;

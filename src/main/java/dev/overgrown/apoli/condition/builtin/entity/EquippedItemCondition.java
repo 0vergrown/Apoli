@@ -23,7 +23,8 @@ public final class EquippedItemCondition implements ConditionType<EntityCtx, Equ
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        LivingEntity entity = ctx.entity();
+        LivingEntity entity = ctx.living();
+        if (entity == null) return false;
         ItemStack stack = entity.getItemBySlot(cfg.equipmentSlot.vanilla());
         return cfg.itemCondition.test(new ItemCtx(stack, ctx.level(), entity));
     }

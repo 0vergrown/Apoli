@@ -21,8 +21,8 @@ public final class RelativeHealthCondition implements ConditionType<EntityCtx, R
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        LivingEntity e = ctx.entity();
-        if (e.getMaxHealth() <= 0) return false;
+        LivingEntity e = ctx.living();
+        if (e == null || e.getMaxHealth() <= 0) return false;
         float ratio = e.getHealth() / e.getMaxHealth();
         return cfg.comparison.compare(ratio, cfg.compareTo);
     }

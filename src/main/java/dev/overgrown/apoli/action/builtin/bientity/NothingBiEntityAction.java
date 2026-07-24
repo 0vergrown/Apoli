@@ -14,9 +14,4 @@ public final class NothingBiEntityAction implements ActionType<BiEntityCtx, Empt
     @Override
     public void run(EmptyCfg cfg, BiEntityCtx ctx) {
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

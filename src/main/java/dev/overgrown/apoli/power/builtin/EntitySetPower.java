@@ -77,8 +77,8 @@ public final class EntitySetPower extends PowerType<EntitySetPower.Cfg> {
         return loaded.config() instanceof Cfg c ? c : null;
     }
 
-    public static boolean add(LivingEntity owner, ResourceLocation powerId, Cfg cfg,
-                              LivingEntity target, OptionalInt timeLimit) {
+    public static boolean add(Entity owner, ResourceLocation powerId, Cfg cfg,
+                              Entity target, OptionalInt timeLimit) {
         if (target.isRemoved()) return false;
         if (!(owner.level() instanceof ServerLevel level)) return false;
         State state = STATES.computeIfAbsent(new StateKey(owner.getUUID(), powerId), k -> new State());
@@ -93,7 +93,7 @@ public final class EntitySetPower extends PowerType<EntitySetPower.Cfg> {
         return firstTime;
     }
 
-    public static boolean remove(LivingEntity owner, ResourceLocation powerId, Cfg cfg, LivingEntity target) {
+    public static boolean remove(Entity owner, ResourceLocation powerId, Cfg cfg, Entity target) {
         if (!(owner.level() instanceof ServerLevel level)) return false;
         StateKey key = new StateKey(owner.getUUID(), powerId);
         State state = STATES.get(key);
@@ -106,18 +106,18 @@ public final class EntitySetPower extends PowerType<EntitySetPower.Cfg> {
         return removed;
     }
 
-    public static boolean contains(LivingEntity owner, ResourceLocation powerId, LivingEntity target) {
+    public static boolean contains(Entity owner, ResourceLocation powerId, Entity target) {
         if (target.isRemoved() || !target.isAlive()) return false;
         State state = STATES.get(new StateKey(owner.getUUID(), powerId));
         return state != null && state.uuids.contains(target.getUUID());
     }
 
-    public static int size(LivingEntity owner, ResourceLocation powerId) {
+    public static int size(Entity owner, ResourceLocation powerId) {
         State state = STATES.get(new StateKey(owner.getUUID(), powerId));
         return state == null ? 0 : state.uuids.size();
     }
 
-    public static List<UUID> iterationOrder(LivingEntity owner, ResourceLocation powerId, boolean reverse) {
+    public static List<UUID> iterationOrder(Entity owner, ResourceLocation powerId, boolean reverse) {
         State state = STATES.get(new StateKey(owner.getUUID(), powerId));
         if (state == null || state.uuids.isEmpty()) return List.of();
         List<UUID> list = new ArrayList<>(state.uuids);
@@ -125,11 +125,11 @@ public final class EntitySetPower extends PowerType<EntitySetPower.Cfg> {
         return list;
     }
 
-    public static @Nullable LivingEntity resolveEntity(MinecraftServer server, UUID uuid) {
+    public static @Nullable Entity resolveEntity(MinecraftServer server, UUID uuid) {
         if (server == null) return null;
         for (ServerLevel level : server.getAllLevels()) {
             Entity e = level.getEntity(uuid);
-            if (e instanceof LivingEntity living && !living.isRemoved()) return living;
+            if (e != null && !e.isRemoved()) return e;
         }
         return null;
     }
@@ -170,7 +170,7 @@ public final class EntitySetPower extends PowerType<EntitySetPower.Cfg> {
 
     private static void runBi(Optional<BiEntityAction> action, LivingEntity owner, UUID targetUuid, ServerLevel level) {
         if (action.isEmpty()) return;
-        LivingEntity target = resolveEntity(level.getServer(), targetUuid);
+        Entity target = resolveEntity(level.getServer(), targetUuid);
         if (target == null) return;
         action.get().run(new BiEntityCtx(owner, target, level));
     }

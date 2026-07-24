@@ -6,7 +6,6 @@ import dev.overgrown.apoli.alias.AliasingMapCodec;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.power.builtin.FireProjectilePower;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Map;
 
@@ -20,8 +19,6 @@ public final class FireProjectileEntityAction implements ActionType<EntityCtx, F
     @Override
     public void run(FireProjectilePower.Config cfg, EntityCtx ctx) {
         if (!(ctx.level() instanceof ServerLevel level)) return;
-        LivingEntity shooter = ctx.entity();
-        if (shooter == null) return;
-        FireProjectilePower.fireBurst(shooter, level, cfg);
+        FireProjectilePower.fireBurst(ctx.entity(), level, cfg);
     }
 }

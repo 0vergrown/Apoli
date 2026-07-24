@@ -6,7 +6,7 @@ import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.shared.EmptyCfg;
 import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 
 public final class MountAction implements ActionType<BiEntityCtx, EmptyCfg> {
     @Override
@@ -16,8 +16,8 @@ public final class MountAction implements ActionType<BiEntityCtx, EmptyCfg> {
 
     @Override
     public void run(EmptyCfg cfg, BiEntityCtx ctx) {
-        LivingEntity actor = ctx.actor();
-        LivingEntity target = ctx.target();
+        Entity actor = ctx.actor();
+        Entity target = ctx.target();
         if (actor == null || target == null) return;
         if (!actor.startRiding(target, true) || target.level().isClientSide()) return;
         ClientboundSetPassengersPacket packet = new ClientboundSetPassengersPacket(target);

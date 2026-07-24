@@ -25,9 +25,4 @@ public final class BrightnessCondition implements ConditionType<EntityCtx, Brigh
         float brightness = e.level().getLightLevelDependentMagicValue(e.blockPosition());
         return cfg.comparison.compare(brightness, cfg.compareTo);
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

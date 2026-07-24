@@ -25,9 +25,4 @@ public final class MovingCondition implements ConditionType<EntityCtx, MovingCon
         boolean ve = Math.abs(v.y) > 1.0e-3;
         return (cfg.horizontally && h) || (cfg.vertically && ve);
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

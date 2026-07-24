@@ -7,7 +7,7 @@ import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.EffectSpec;
 import net.minecraft.world.entity.AreaEffectCloud;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 
 import java.util.List;
 import java.util.Optional;
@@ -34,9 +34,9 @@ public final class SpawnEffectCloudAction implements ActionType<EntityCtx, Spawn
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        LivingEntity e = ctx.entity();
+        Entity e = ctx.entity();
         AreaEffectCloud cloud = new AreaEffectCloud(e.level(), e.getX(), e.getY(), e.getZ());
-        cloud.setOwner(e);
+        cloud.setOwner(ctx.living());
         cloud.setRadius(cfg.radius);
         cloud.setRadiusOnUse(cfg.radiusOnUse);
         cloud.setWaitTime(cfg.waitTime);

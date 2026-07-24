@@ -3,7 +3,6 @@ package dev.overgrown.apoli.entity.disguise;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,7 +38,7 @@ public final class DisguiseManager {
         clientView = view;
     }
 
-    public static void apply(LivingEntity actor, DisguiseData data, boolean overwrite) {
+    public static void apply(Entity actor, DisguiseData data, boolean overwrite) {
         if (actor.level().isClientSide) return;
         if (!overwrite && DISGUISES.containsKey(actor.getUUID())) return;
         DISGUISES.put(actor.getUUID(), data);
@@ -47,11 +46,11 @@ public final class DisguiseManager {
         refreshTabName(actor);
     }
 
-    public static void applyAs(LivingEntity actor, Entity target, boolean overwrite) {
+    public static void applyAs(Entity actor, Entity target, boolean overwrite) {
         applyAs(actor, target, overwrite, true);
     }
 
-    public static void applyAs(LivingEntity actor, Entity target, boolean overwrite, boolean changeName) {
+    public static void applyAs(Entity actor, Entity target, boolean overwrite, boolean changeName) {
         if (actor.level().isClientSide) return;
         if (!overwrite && DISGUISES.containsKey(actor.getUUID())) return;
         Optional<UUID> playerUuid = target instanceof Player ? Optional.of(target.getUUID()) : Optional.empty();
@@ -70,7 +69,7 @@ public final class DisguiseManager {
         ), true);
     }
 
-    public static void remove(LivingEntity actor) {
+    public static void remove(Entity actor) {
         if (actor.level().isClientSide) return;
         if (DISGUISES.remove(actor.getUUID()) != null && broadcaster != null) {
             broadcaster.accept(actor, Optional.empty());
@@ -78,7 +77,7 @@ public final class DisguiseManager {
         }
     }
 
-    private static void refreshTabName(LivingEntity actor) {
+    private static void refreshTabName(Entity actor) {
         if (actor instanceof net.minecraft.server.level.ServerPlayer player) {
             dev.overgrown.apoli.power.builtin.ModifyLabelRenderPower.refreshTabName(player);
         }

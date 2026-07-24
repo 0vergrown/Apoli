@@ -10,6 +10,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Optional;
 
@@ -25,13 +26,15 @@ public final class ClearEffectAction implements ActionType<EntityCtx, ClearEffec
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
+        LivingEntity living = ctx.living();
+        if (living == null) return;
         if (cfg.effect.isEmpty()) {
-            ctx.entity().removeAllEffects();
+            living.removeAllEffects();
             return;
         }
         ResourceKey<MobEffect> key = ResourceKey.create(Registries.MOB_EFFECT, cfg.effect.get());
         Holder<MobEffect> holder = BuiltInRegistries.MOB_EFFECT.getHolder(key).orElse(null);
         if (holder == null) return;
-        ctx.entity().removeEffect(holder);
+        living.removeEffect(holder);
     }
 }

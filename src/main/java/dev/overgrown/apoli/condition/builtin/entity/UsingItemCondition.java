@@ -22,8 +22,8 @@ public final class UsingItemCondition implements ConditionType<EntityCtx, UsingI
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        LivingEntity e = ctx.entity();
-        if (!e.isUsingItem()) return false;
+        LivingEntity e = ctx.living();
+        if (e == null || !e.isUsingItem()) return false;
         if (cfg.itemCondition.isEmpty()) return true;
         return cfg.itemCondition.get().test(new ItemCtx(e.getUseItem(), ctx.level(), e));
     }

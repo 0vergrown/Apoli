@@ -29,9 +29,4 @@ public final class DismountAction implements ActionType<EntityCtx, EmptyCfg> {
             player.connection.send(packet);
         }
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

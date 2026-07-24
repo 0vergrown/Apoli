@@ -29,9 +29,4 @@ public final class FluidHeightCondition implements ConditionType<EntityCtx, Flui
         double h = ctx.raw().getFluidHeight(tag);
         return cfg.comparison.compare((float) h, cfg.compareTo);
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

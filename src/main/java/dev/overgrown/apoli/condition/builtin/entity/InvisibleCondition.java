@@ -15,9 +15,4 @@ public final class InvisibleCondition implements ConditionType<EntityCtx, EmptyC
     public boolean test(EmptyCfg cfg, EntityCtx ctx) {
         return ctx.raw().isInvisible();
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

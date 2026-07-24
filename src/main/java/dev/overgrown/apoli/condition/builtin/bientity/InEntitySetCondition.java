@@ -20,6 +20,7 @@ public final class InEntitySetCondition implements ConditionType<BiEntityCtx, In
 
     @Override
     public boolean test(Cfg cfg, BiEntityCtx ctx) {
+        if (ctx.actor() == null || ctx.target() == null) return false;
         PowerContainer container = PowerContainer.of(ctx.actor());
         if (container == null || !container.hasPower(cfg.set)) return false;
         return EntitySetPower.contains(ctx.actor(), cfg.set, ctx.target());

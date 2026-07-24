@@ -27,12 +27,11 @@ public final class PassengerCondition implements ConditionType<EntityCtx, Passen
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        LivingEntity target = ctx.entity();
+        Entity target = ctx.entity();
         int count = 0;
         for (Entity passenger : target.getPassengers()) {
-            if (!(passenger instanceof LivingEntity livingPassenger)) continue;
             if (cfg.bientityCondition.isPresent()) {
-                if (!cfg.bientityCondition.get().test(new BiEntityCtx(livingPassenger, target, ctx.level()))) continue;
+                if (!cfg.bientityCondition.get().test(new BiEntityCtx(passenger, target, ctx.level()))) continue;
             }
             count++;
         }

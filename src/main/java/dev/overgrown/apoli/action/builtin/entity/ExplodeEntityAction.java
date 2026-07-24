@@ -49,9 +49,4 @@ public final class ExplodeEntityAction implements ActionType<EntityCtx, ExplodeE
             if (!cfg.damageSelf) holder.setInvulnerable(wasInvulnerable);
         }
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

@@ -8,7 +8,7 @@ import dev.overgrown.apoli.condition.BlockCondition;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.data.DestructionType;
 import dev.overgrown.apoli.data.ExplosionHelper;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.Optional;
@@ -37,7 +37,8 @@ public final class ExplodeBiEntityAction implements ActionType<BiEntityCtx, Expl
 
     @Override
     public void run(Cfg cfg, BiEntityCtx ctx) {
-        LivingEntity origin = cfg.atTarget ? ctx.target() : ctx.actor();
+        Entity origin = cfg.atTarget ? ctx.target() : ctx.actor();
+        if (origin == null) return;
         Vec3 pos = origin.position();
         ExplosionHelper.detonate(
             ctx.level(), ctx.actor(), pos,

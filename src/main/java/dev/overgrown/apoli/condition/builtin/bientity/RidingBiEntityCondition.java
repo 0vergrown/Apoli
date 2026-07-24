@@ -13,6 +13,6 @@ public final class RidingBiEntityCondition implements ConditionType<BiEntityCtx,
 
     @Override
     public boolean test(EmptyCfg cfg, BiEntityCtx ctx) {
-        return ctx.actor().getVehicle() == ctx.target();
+        return ctx.actor() != null && ctx.target() != null && ctx.actor().getVehicle() == ctx.target();
     }
 }

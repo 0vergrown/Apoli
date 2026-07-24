@@ -23,11 +23,10 @@ public final class RidingRootCondition implements ConditionType<EntityCtx, Ridin
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        LivingEntity actor = ctx.entity();
+        Entity actor = ctx.entity();
         Entity root = actor.getRootVehicle();
         if (root == null || root == actor) return false;
         if (cfg.bientityCondition.isEmpty()) return true;
-        if (!(root instanceof LivingEntity living)) return false;
-        return cfg.bientityCondition.get().test(new BiEntityCtx(actor, living, ctx.level()));
+        return cfg.bientityCondition.get().test(new BiEntityCtx(actor, root, ctx.level()));
     }
 }

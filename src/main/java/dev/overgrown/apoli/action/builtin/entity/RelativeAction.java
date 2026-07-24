@@ -64,7 +64,7 @@ public final class RelativeAction implements ActionType<EntityCtx, RelativeActio
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        LivingEntity self = ctx.entity();
+        Entity self = ctx.entity();
         Level level = ctx.level();
         if (cfg.target == Target.PASSENGER) {
             if (cfg.recursive) {
@@ -82,11 +82,10 @@ public final class RelativeAction implements ActionType<EntityCtx, RelativeActio
         }
     }
 
-    private static void fire(Cfg cfg, LivingEntity actor, Entity related, Level level) {
-        if (!(related instanceof LivingEntity targetLiving)) return;
+    private static void fire(Cfg cfg, Entity actor, Entity related, Level level) {
         if (cfg.bientityCondition.isPresent()
-            && !cfg.bientityCondition.get().test(new BiEntityCtx(actor, targetLiving, level))) return;
-        cfg.action.ifPresent(a -> a.run(new EntityCtx(targetLiving, level)));
-        cfg.bientityAction.ifPresent(a -> a.run(new BiEntityCtx(actor, targetLiving, level)));
+            && !cfg.bientityCondition.get().test(new BiEntityCtx(actor, related, level))) return;
+        cfg.action.ifPresent(a -> a.run(new EntityCtx(related, level)));
+        cfg.bientityAction.ifPresent(a -> a.run(new BiEntityCtx(actor, related, level)));
     }
 }

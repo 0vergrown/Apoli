@@ -23,9 +23,4 @@ public final class TimeOfDayCondition implements ConditionType<EntityCtx, TimeOf
         long t = ctx.level().getDayTime() % 24000;
         return cfg.comparison.compare((int) t, cfg.compareTo);
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

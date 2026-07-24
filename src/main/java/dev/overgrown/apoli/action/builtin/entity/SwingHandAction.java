@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Hand;
+import net.minecraft.world.entity.LivingEntity;
 
 public final class SwingHandAction implements ActionType<EntityCtx, SwingHandAction.Cfg> {
     public record Cfg(Hand hand) {}
@@ -18,6 +19,7 @@ public final class SwingHandAction implements ActionType<EntityCtx, SwingHandAct
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        ctx.entity().swing(cfg.hand.vanilla(), true);
+        LivingEntity living = ctx.living();
+        if (living != null) living.swing(cfg.hand.vanilla(), true);
     }
 }

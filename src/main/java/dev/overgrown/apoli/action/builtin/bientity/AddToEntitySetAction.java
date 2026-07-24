@@ -25,6 +25,7 @@ public final class AddToEntitySetAction implements ActionType<BiEntityCtx, AddTo
 
     @Override
     public void run(Cfg cfg, BiEntityCtx ctx) {
+        if (ctx.actor() == null || ctx.target() == null) return;
         PowerContainer container = PowerContainer.of(ctx.actor());
         if (container == null || !container.hasPower(cfg.set)) return;
         EntitySetPower.Cfg setCfg = EntitySetPower.resolveCfg(cfg.set);

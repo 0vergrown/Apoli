@@ -13,7 +13,6 @@ import net.minecraft.world.entity.Mob;
 import java.util.Optional;
 
 public final class ModifyEntityDataAction implements ActionType<EntityCtx, ModifyEntityDataAction.Cfg> {
-
     public record Cfg(DataKey data, Optional<Either<Boolean, Double>> value) {}
 
     public enum DataKey implements StringRepresentable {
@@ -72,10 +71,5 @@ public final class ModifyEntityDataAction implements ActionType<EntityCtx, Modif
             case AIR -> number.ifPresent(d -> entity.setAirSupply(d.intValue()));
             case FIRE_TICKS -> number.ifPresent(d -> entity.setRemainingFireTicks(d.intValue()));
         }
-    }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
     }
 }

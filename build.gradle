@@ -55,6 +55,10 @@ repositories {
         name = "TwelveIterations"
         url = "https://maven.twelveiterations.com/repository/maven-public/"
     }
+    maven {
+        name = "Henkel"
+        url = "https://maven.maxhenkel.de/repository/public"
+    }
 }
 
 base {
@@ -165,6 +169,19 @@ dependencies {
     // Gated at runtime by ModCompat.HARDCORE_REVIVAL, so Apoli runs fine without them.
     compileOnly "net.blay09.mods:balm-neoforge:${project.balm_version}"
     compileOnly "net.blay09.mods:hardcorerevival-neoforge:${project.hardcore_revival_version}"
+
+    // Simple Voice Chat API — compiled against, optional at runtime. The voicechat compat plugin is
+    // only discovered by SVC (via @ForgeVoicechatPlugin) when SVC is installed, so Apoli runs fine
+    // without it and the voice_* conditions simply read false.
+    compileOnly "de.maxhenkel.voicechat:voicechat-api:${project.voicechat_api_version}"
+
+    // Vosk offline speech — the fallback transcriber for browsers without the Web Speech API (Firefox,
+    // and Chrome/Edge on Linux where the cloud service is unreachable). Bundled via jarJar so it ships
+    // with the mod; the user still supplies a model at <gamedir>/apoli/vosk-model.
+    implementation "com.alphacephei:vosk:${project.vosk_version}"
+    implementation "net.java.dev.jna:jna:5.7.0"
+    jarJar("com.alphacephei:vosk:${project.vosk_version}")
+    jarJar("net.java.dev.jna:jna:5.7.0")
 
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime

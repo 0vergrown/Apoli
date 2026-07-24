@@ -75,6 +75,7 @@ public final class ApoliClient {
     public static void onRegisterClientReloadListeners(net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent event) {
         event.registerReloadListener((net.minecraft.server.packs.resources.ResourceManagerReloadListener) manager ->
             dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.onResourcesReloaded());
+        event.registerReloadListener(dev.overgrown.apoli.client.render.CustomModelManager.INSTANCE);
     }
 
     @SubscribeEvent
@@ -124,6 +125,12 @@ public final class ApoliClient {
             dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
             dev.overgrown.apoli.client.skill.ClientSkillState.clear();
             dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.clear();
+            dev.overgrown.apoli.client.speech.SpeechClient.onLeave();
+        }
+
+        @SubscribeEvent
+        public static void onLogin(ClientPlayerNetworkEvent.LoggingIn event) {
+            dev.overgrown.apoli.client.speech.SpeechClient.onJoin();
         }
 
         @SubscribeEvent

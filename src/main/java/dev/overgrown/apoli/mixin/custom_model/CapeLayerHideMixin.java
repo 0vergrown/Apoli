@@ -1,7 +1,7 @@
-package dev.overgrown.apoli.mixin.texture_overlay;
+package dev.overgrown.apoli.mixin.custom_model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import dev.overgrown.apoli.power.builtin.EntityTextureOverlayPower;
+import dev.overgrown.apoli.power.builtin.CustomModelRenderPower;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.player.AbstractClientPlayer;
@@ -19,7 +19,7 @@ public abstract class CapeLayerHideMixin {
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void apoli$hideCape(PoseStack pose, MultiBufferSource buffers, int light, AbstractClientPlayer player,
                                 float f, float g, float h, float j, float k, float l, CallbackInfo ci) {
-        if (EntityTextureOverlayPower.shouldHideCape(player)) {
+        if (CustomModelRenderPower.shouldHideCape(player)) {
             ci.cancel();
         }
     }

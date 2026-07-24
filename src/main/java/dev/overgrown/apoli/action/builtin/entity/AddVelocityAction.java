@@ -9,7 +9,6 @@ import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.data.Space;
 import dev.overgrown.apoli.network.VelocityUpdater;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
 public final class AddVelocityAction implements ActionType<EntityCtx, AddVelocityAction.Cfg> {
@@ -30,18 +29,12 @@ public final class AddVelocityAction implements ActionType<EntityCtx, AddVelocit
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        Entity recipient = ctx.raw();
-        LivingEntity living = ctx.entity();
+        Entity recipient = ctx.entity();
         Vec3 delta = cfg.space.toGlobal(recipient, new Vec3(
-            cfg.x.eval(living),
-            cfg.y.eval(living),
-            cfg.z.eval(living)
+            cfg.x.eval(recipient),
+            cfg.y.eval(recipient),
+            cfg.z.eval(recipient)
         ));
         VelocityUpdater.apply(recipient, delta, cfg.set);
-    }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
     }
 }

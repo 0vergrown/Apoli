@@ -58,6 +58,8 @@ public final class ApoliNetwork {
         registrar.playToServer(PowerActivationC2S.TYPE, PowerActivationC2S.STREAM_CODEC, ApoliNetwork::onPowerActivation);
         registrar.playToServer(PowerToggleC2S.TYPE, PowerToggleC2S.STREAM_CODEC, ApoliNetwork::onPowerToggle);
         registrar.playToServer(KeyHeldC2S.TYPE, KeyHeldC2S.STREAM_CODEC, ApoliNetwork::onKeyHeld);
+        registrar.playToServer(dev.overgrown.apoli.network.payload.SpeechC2S.TYPE,
+            dev.overgrown.apoli.network.payload.SpeechC2S.STREAM_CODEC, ApoliNetwork::onSpeech);
 
         registrar.playToClient(dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.TYPE,
             dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.STREAM_CODEC, ApoliNetwork::onRadialMenuOpen);
@@ -115,6 +117,14 @@ public final class ApoliNetwork {
         ctx.enqueueWork(() -> {
             if (ctx.player() instanceof ServerPlayer sp) {
                 dev.overgrown.apoli.keybind.HeldKeys.setServerHeld(sp.getUUID(), payload.keys());
+            }
+        });
+    }
+
+    private static void onSpeech(dev.overgrown.apoli.network.payload.SpeechC2S payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> {
+            if (ctx.player() instanceof ServerPlayer sp) {
+                dev.overgrown.apoli.power.builtin.ActionOnSpeechPower.fire(sp, payload.text(), payload.language());
             }
         });
     }

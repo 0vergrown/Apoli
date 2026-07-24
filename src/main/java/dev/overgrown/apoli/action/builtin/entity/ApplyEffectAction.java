@@ -6,6 +6,7 @@ import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.alias.AliasingMapCodec;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.EffectSpec;
+import net.minecraft.world.entity.LivingEntity;
 
 import java.util.List;
 import java.util.Map;
@@ -25,8 +26,10 @@ public final class ApplyEffectAction implements ActionType<EntityCtx, ApplyEffec
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
+        LivingEntity living = ctx.living();
+        if (living == null) return;
         for (EffectSpec spec : cfg.effects) {
-            ctx.entity().addEffect(spec.resolve(ctx.entity()));
+            living.addEffect(spec.resolve(living));
         }
     }
 }

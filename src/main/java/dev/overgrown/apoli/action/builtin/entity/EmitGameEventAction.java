@@ -28,9 +28,4 @@ public final class EmitGameEventAction implements ActionType<EntityCtx, EmitGame
         if (holder == null) return;
         ctx.raw().gameEvent(holder);
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

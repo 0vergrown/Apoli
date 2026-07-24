@@ -17,7 +17,7 @@ public record BiEntityCondition(ResourceLocation typeId, Object config, boolean 
     public boolean test(BiEntityCtx ctx) {
         ConditionType<BiEntityCtx, ?> type = ConditionTypes.BI_ENTITY.get(typeId);
         if (type == null) return true;
-        if ((ctx.actor() == null || ctx.target() == null) && !type.acceptsNonLiving()) return inverted;
+        if (ctx.actor() == null && ctx.target() == null) return inverted;
         @SuppressWarnings({"unchecked", "rawtypes"})
         boolean result = ((ConditionType) type).test(config, ctx);
         return inverted != result;

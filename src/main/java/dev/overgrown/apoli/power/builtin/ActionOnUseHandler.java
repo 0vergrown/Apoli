@@ -8,7 +8,7 @@ import dev.overgrown.apoli.power.PowerTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.Map;
@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class ActionOnUseHandler {
     private ActionOnUseHandler() {}
 
-    public static InteractionResult fire(Player actor, LivingEntity target, InteractionHand hand) {
+    public static InteractionResult fire(Player actor, Entity target, InteractionHand hand) {
         InteractionResult outcome = fireSide(actor, actor, target, hand, false);
         if (outcome != InteractionResult.PASS) return outcome;
         return fireSide(target, actor, target, hand, true);
@@ -27,7 +27,7 @@ public final class ActionOnUseHandler {
     private record Recent(long gameTime, int entity, int hand, InteractionResult result) {}
     private static final Map<UUID, Recent> RECENT = new ConcurrentHashMap<>();
 
-    public static InteractionResult fireOncePerTick(Player actor, LivingEntity target, InteractionHand hand) {
+    public static InteractionResult fireOncePerTick(Player actor, Entity target, InteractionHand hand) {
         long now = actor.level().getGameTime();
         UUID uuid = actor.getUUID();
         Recent prev = RECENT.get(uuid);
@@ -39,7 +39,7 @@ public final class ActionOnUseHandler {
         return result;
     }
 
-    private static InteractionResult fireSide(LivingEntity holder, Player actor, LivingEntity target,
+    private static InteractionResult fireSide(Entity holder, Player actor, Entity target,
                                               InteractionHand hand, boolean targetUsedSide) {
         PowerContainer container = PowerContainer.of(holder);
         if (container == null) return InteractionResult.PASS;

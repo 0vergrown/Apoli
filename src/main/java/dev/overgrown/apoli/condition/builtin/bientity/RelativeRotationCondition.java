@@ -36,6 +36,7 @@ public final class RelativeRotationCondition implements ConditionType<BiEntityCt
 
     @Override
     public boolean test(Cfg cfg, BiEntityCtx ctx) {
+        if (ctx.actor() == null || ctx.target() == null) return false;
         Vec3 actor = reduce(cfg.actorRotation.vector(ctx.actor()), cfg.axes);
         Vec3 target = reduce(cfg.targetRotation.vector(ctx.target()), cfg.axes);
         double actorLen = actor.length();
@@ -62,10 +63,7 @@ public final class RelativeRotationCondition implements ConditionType<BiEntityCt
         private final String name;
         Axis(String name) { this.name = name; }
 
-        @Override
-        public String getSerializedName() {
-            return name;
-        }
+        @Override public String getSerializedName() { return name; }
     }
 
     public enum RotationType implements StringRepresentable {
@@ -75,14 +73,9 @@ public final class RelativeRotationCondition implements ConditionType<BiEntityCt
         public static final Codec<RotationType> CODEC = StringRepresentable.fromEnum(RotationType::values);
 
         private final String name;
-        RotationType(String name) {
-            this.name = name;
-        }
+        RotationType(String name) { this.name = name; }
 
-        @Override
-        public String getSerializedName() {
-            return name;
-        }
+        @Override public String getSerializedName() { return name; }
 
         public Vec3 vector(Entity entity) {
             if (this == HEAD || !(entity instanceof LivingEntity living)) {

@@ -33,14 +33,12 @@ public final class EntityInRadiusCondition implements ConditionType<EntityCtx, E
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        Entity self = ctx.raw() != null ? ctx.raw() : ctx.entity();
-        if (self == null) return cfg.comparison.compare(0, cfg.compareTo);
+        Entity self = ctx.entity();
 
         double r = cfg.radius;
         AABB box = new AABB(self.getX() - r, self.getY() - r, self.getZ() - r,
                             self.getX() + r, self.getY() + r, self.getZ() + r);
         List<Entity> nearby = ctx.level().getEntities(self, box);
-        LivingEntity actor = ctx.entity();
         boolean filtered = cfg.bientityCondition.isPresent();
 
         int count = 0;
@@ -48,17 +46,11 @@ public final class EntityInRadiusCondition implements ConditionType<EntityCtx, E
             if (!cfg.shape.contains(candidate.getX() - self.getX(), candidate.getY() - self.getY(),
                     candidate.getZ() - self.getZ(), r, r, r)) continue;
             if (filtered) {
-                if (!(candidate instanceof LivingEntity living)) continue;
-                if (!cfg.bientityCondition.get().test(new BiEntityCtx(actor, living, ctx.level()))) continue;
+                if (!cfg.bientityCondition.get().test(new BiEntityCtx(self, candidate, ctx.level()))) continue;
             }
             count++;
             if (count > cfg.compareTo) break;
         }
         return cfg.comparison.compare(count, cfg.compareTo);
-    }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
     }
 }

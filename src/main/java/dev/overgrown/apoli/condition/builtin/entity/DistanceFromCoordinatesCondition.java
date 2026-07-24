@@ -97,9 +97,4 @@ public final class DistanceFromCoordinatesCondition implements ConditionType<Ent
         }
         return cfg.comparison.compare((float) dist, cfg.compareTo);
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

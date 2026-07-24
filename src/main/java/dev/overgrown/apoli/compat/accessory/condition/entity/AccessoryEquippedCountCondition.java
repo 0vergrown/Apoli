@@ -26,7 +26,7 @@ public final class AccessoryEquippedCountCondition implements ConditionType<Enti
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        LivingEntity e = ctx.entity();
+        LivingEntity e = ctx.living();
         if (e == null) return false;
         int count = Accessories.equipped(e, cfg.slots()).size();
         return cfg.comparison().compare(count, cfg.compareTo());

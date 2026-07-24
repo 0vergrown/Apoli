@@ -27,15 +27,13 @@ public final class RidingRecursiveCondition implements ConditionType<EntityCtx, 
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        LivingEntity actor = ctx.entity();
+        Entity actor = ctx.entity();
         int count = 0;
         Entity vehicle = actor.getVehicle();
         while (vehicle != null) {
-            if (vehicle instanceof LivingEntity living) {
-                if (cfg.bientityCondition.isEmpty()
-                    || cfg.bientityCondition.get().test(new BiEntityCtx(actor, living, ctx.level()))) {
-                    count++;
-                }
+            if (cfg.bientityCondition.isEmpty()
+                || cfg.bientityCondition.get().test(new BiEntityCtx(actor, vehicle, ctx.level()))) {
+                count++;
             }
             vehicle = vehicle.getVehicle();
         }

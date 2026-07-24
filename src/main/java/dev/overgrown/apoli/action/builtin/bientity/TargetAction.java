@@ -20,9 +20,4 @@ public final class TargetAction implements ActionType<BiEntityCtx, TargetAction.
     public void run(Cfg cfg, BiEntityCtx ctx) {
         cfg.action.run(ctx.asTarget());
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

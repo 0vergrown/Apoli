@@ -55,7 +55,8 @@ public abstract class PlayerRendererModelColorMixin extends LivingEntityRenderer
 
         float[] combined = pc == null
             ? whole
-            : new float[]{whole[0] * pc[0], whole[1] * pc[1], whole[2] * pc[2], whole[3] * pc[3]};
+            : new float[]{whole[0] * pc[0], whole[1] * pc[1], whole[2] * pc[2], whole[3] * pc[3],
+                Math.max(whole[4], pc[4])};
 
         Map<ModelPart, float[]> map = new IdentityHashMap<>();
         for (ModelPart part : ModelPartLookup.resolve(this.getModel(), armName)) {
