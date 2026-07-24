@@ -12,7 +12,7 @@ import dev.overgrown.apoli.power.PowerContainerImpl;
 import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.power.PowerTypeRegistry;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 
 import java.util.OptionalInt;
 
@@ -49,7 +49,7 @@ public final class TogglePower extends PowerType<TogglePower.Config> {
         impl.setAuxInt(powerId, cur == 0 ? 1 : 0);
     }
 
-    public static boolean isActive(LivingEntity entity, ResourceLocation powerId) {
+    public static boolean isActive(Entity entity, ResourceLocation powerId) {
         PowerContainer holder = PowerContainer.of(entity);
         if (holder == null) return false;
         Power power = ApoliPowers.get(powerId);

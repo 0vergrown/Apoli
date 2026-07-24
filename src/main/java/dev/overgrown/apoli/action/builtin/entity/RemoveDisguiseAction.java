@@ -14,6 +14,6 @@ public final class RemoveDisguiseAction implements ActionType<EntityCtx, EmptyCf
 
     @Override
     public void run(EmptyCfg cfg, EntityCtx ctx) {
-        if (ctx.entity() != null) DisguiseManager.remove(ctx.entity());
+        DisguiseManager.remove(ctx.entity());
     }
 }

@@ -64,9 +64,4 @@ public final class PlaySoundAction implements ActionType<EntityCtx, PlaySoundAct
         SoundSource source = cfg.category.map(Category::vanilla).orElse(e.getSoundSource());
         ctx.level().playSound(null, e.getX(), e.getY(), e.getZ(), event, source, cfg.volume, cfg.pitch);
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

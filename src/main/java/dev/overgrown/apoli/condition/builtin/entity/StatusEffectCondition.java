@@ -11,6 +11,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Optional;
 
@@ -40,7 +41,9 @@ public final class StatusEffectCondition implements ConditionType<EntityCtx, Sta
             .getHolder(ResourceKey.create(net.minecraft.core.registries.Registries.MOB_EFFECT, cfg.effect))
             .orElse(null);
         if (holder == null) return false;
-        MobEffectInstance instance = ctx.entity().getEffect(holder);
+        LivingEntity living = ctx.living();
+        if (living == null) return false;
+        MobEffectInstance instance = living.getEffect(holder);
         if (instance == null) return false;
         if (cfg.minAmplifier.isPresent() && instance.getAmplifier() < cfg.minAmplifier.get()) return false;
         if (cfg.maxAmplifier.isPresent() && instance.getAmplifier() > cfg.maxAmplifier.get()) return false;

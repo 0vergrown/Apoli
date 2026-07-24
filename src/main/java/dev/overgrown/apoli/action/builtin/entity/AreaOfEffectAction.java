@@ -13,7 +13,6 @@ import dev.overgrown.apoli.data.Shape;
 import dev.overgrown.apoli.data.Vector;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 
 import java.util.List;
@@ -44,14 +43,14 @@ public final class AreaOfEffectAction implements ActionType<EntityCtx, AreaOfEff
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        Entity actor = ctx.raw();
+        Entity actor = ctx.entity();
         BlockPos center = actor.blockPosition();
         int rx = (int) Math.ceil(cfg.radius.x());
         int ry = (int) Math.ceil(cfg.radius.y());
         int rz = (int) Math.ceil(cfg.radius.z());
         int boxHalf = Math.max(rx, Math.max(ry, rz));
         AABB box = AABB.ofSize(actor.position(), boxHalf * 2.0, boxHalf * 2.0, boxHalf * 2.0);
-        List<LivingEntity> nearby = actor.level().getEntitiesOfClass(LivingEntity.class, box,
+        List<Entity> nearby = actor.level().getEntities((Entity) null, box,
             target -> {
                 if (target == actor) return cfg.includeActor;
                 boolean constrained = cfg.shape != Shape.CUBE || rx != ry || ry != rz;
@@ -64,13 +63,8 @@ public final class AreaOfEffectAction implements ActionType<EntityCtx, AreaOfEff
                 }
                 return true;
             });
-        for (LivingEntity target : nearby) {
+        for (Entity target : nearby) {
             cfg.bientityAction.run(BiEntityCtx.of(actor, target, actor.level()));
         }
-    }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
     }
 }

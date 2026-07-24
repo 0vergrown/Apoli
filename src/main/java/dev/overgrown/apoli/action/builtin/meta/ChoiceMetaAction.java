@@ -42,9 +42,4 @@ public final class ChoiceMetaAction<CTX, W> implements ActionType<CTX, ChoiceMet
             if (roll < 0) { runner.accept(w.element, ctx); return; }
         }
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

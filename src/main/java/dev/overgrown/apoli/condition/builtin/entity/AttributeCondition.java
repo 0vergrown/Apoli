@@ -11,6 +11,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 
@@ -31,7 +32,9 @@ public final class AttributeCondition implements ConditionType<EntityCtx, Attrib
         ResourceKey<Attribute> key = ResourceKey.create(Registries.ATTRIBUTE, cfg.attribute);
         Holder<Attribute> holder = BuiltInRegistries.ATTRIBUTE.getHolder(key).orElse(null);
         if (holder == null) return false;
-        AttributeInstance inst = ctx.entity().getAttribute(holder);
+        LivingEntity living = ctx.living();
+        if (living == null) return false;
+        AttributeInstance inst = living.getAttribute(holder);
         if (inst == null) return false;
         return cfg.comparison.compare((float) inst.getValue(), cfg.compareTo);
     }

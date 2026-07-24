@@ -42,7 +42,7 @@ public final class SpawnEntityAction implements ActionType<EntityCtx, SpawnEntit
         if (!(ctx.level() instanceof ServerLevel level)) return;
         EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(cfg.entityType);
         if (type == null) return;
-        LivingEntity actor = ctx.entity();
+        Entity actor = ctx.entity();
         CompoundTag spawnTag = new CompoundTag();
         cfg.tag.ifPresent(n -> spawnTag.merge(n.tag()));
         spawnTag.putString("id", cfg.entityType.toString());
@@ -56,9 +56,7 @@ public final class SpawnEntityAction implements ActionType<EntityCtx, SpawnEntit
                 MobSpawnType.MOB_SUMMONED, null);
         }
         level.addFreshEntity(spawned);
-        if (spawned instanceof LivingEntity living) {
-            cfg.entityAction.ifPresent(a -> a.run(new EntityCtx(living, level)));
-            cfg.bientityAction.ifPresent(a -> a.run(new BiEntityCtx(actor, living, level)));
-        }
+        cfg.entityAction.ifPresent(a -> a.run(new EntityCtx(spawned, level)));
+        cfg.bientityAction.ifPresent(a -> a.run(new BiEntityCtx(actor, spawned, level)));
     }
 }

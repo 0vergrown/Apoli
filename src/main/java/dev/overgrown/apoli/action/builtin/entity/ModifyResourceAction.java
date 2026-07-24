@@ -14,7 +14,7 @@ import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.builtin.ResourcePower;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -107,7 +107,7 @@ public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyR
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        LivingEntity entity = ctx.entity();
+        Entity entity = ctx.entity();
         PowerContainer container = PowerContainer.of(entity);
         if (container == null) return;
         OptionalInt cur = ResourcePower.readValue(container, cfg.resource);

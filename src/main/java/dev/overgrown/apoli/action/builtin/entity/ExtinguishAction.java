@@ -15,9 +15,4 @@ public final class ExtinguishAction implements ActionType<EntityCtx, EmptyCfg> {
     public void run(EmptyCfg cfg, EntityCtx ctx) {
         ctx.raw().clearFire();
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

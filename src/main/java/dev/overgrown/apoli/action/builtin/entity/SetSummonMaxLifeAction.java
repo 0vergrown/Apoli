@@ -11,7 +11,6 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.Optional;
 
 public final class SetSummonMaxLifeAction implements ActionType<EntityCtx, SetSummonMaxLifeAction.Cfg> {
-
     public record Cfg(int amount, Optional<ResourceLocation> summonId) {}
 
     @Override
@@ -27,10 +26,5 @@ public final class SetSummonMaxLifeAction implements ActionType<EntityCtx, SetSu
         if (!(ctx.raw() instanceof Temporary summon)) return;
         if (cfg.summonId.isPresent() && !cfg.summonId.get().equals(summon.getSummonId())) return;
         summon.setMaxLifeTime(cfg.amount);
-    }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
     }
 }

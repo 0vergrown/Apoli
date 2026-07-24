@@ -16,6 +16,7 @@ import dev.overgrown.apoli.data.ItemStackData;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
@@ -50,7 +51,7 @@ public final class ActionOnUsePower extends PowerType<ActionOnUsePower.Config> {
         ).apply(i, Config::new));
     }
 
-    public InteractionResult tryFire(Config cfg, LivingEntity actor, LivingEntity target, InteractionHand hand) {
+    public InteractionResult tryFire(Config cfg, LivingEntity actor, Entity target, InteractionHand hand) {
         if (!handAllowed(cfg, hand)) return InteractionResult.PASS;
 
         ItemStack stack = actor.getItemInHand(hand);

@@ -42,9 +42,4 @@ public final class PredicateCondition implements ConditionType<EntityCtx, Predic
         LootContext lootCtx = new LootContext.Builder(params).create(null);
         return condition.test(lootCtx);
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

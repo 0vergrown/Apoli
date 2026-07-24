@@ -97,9 +97,11 @@ public final class ApoliClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.LabelUpdateS2C.TYPE, (payload, context) ->
             context.client().execute(() -> ClientLabelState.apply(payload.entityId(), payload.texts())));
 
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) ->
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             ClientPlayNetworking.send(new dev.overgrown.apoli.network.payload.ProtocolVersionPayload(
-                dev.overgrown.apoli.network.ProtocolCompat.VERSION)));
+                dev.overgrown.apoli.network.ProtocolCompat.VERSION));
+            dev.overgrown.apoli.client.speech.SpeechClient.onJoin();
+        });
 
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SkillDefsSyncS2C.TYPE, (payload, context) ->
             context.client().execute(() -> dev.overgrown.apoli.client.skill.ClientSkillState.applyDefs(payload)));
@@ -134,6 +136,7 @@ public final class ApoliClient implements ClientModInitializer {
                 dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
                 dev.overgrown.apoli.client.skill.ClientSkillState.clear();
                 dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.clear();
+                dev.overgrown.apoli.client.speech.SpeechClient.onLeave();
                 ClientProtocolState.reset();
             }));
 
@@ -149,6 +152,9 @@ public final class ApoliClient implements ClientModInitializer {
                     dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.onResourcesReloaded();
                 }
             });
+
+        net.fabricmc.fabric.api.resource.ResourceManagerHelper.get(net.minecraft.server.packs.PackType.CLIENT_RESOURCES)
+            .registerReloadListener(dev.overgrown.apoli.client.render.CustomModelManager.INSTANCE);
 
         net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper.registerKeyBinding(SKILL_TREE_KEY);
 

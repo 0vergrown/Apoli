@@ -8,7 +8,7 @@ import dev.overgrown.apoli.codec.LazyCodec;
 import dev.overgrown.apoli.data.expr.ExprVars;
 import dev.overgrown.apoli.power.PowerContainer;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
@@ -55,7 +55,7 @@ public record AttributeModifier(
             || (nested.isPresent() && nested.get().needsContainer());
     }
 
-    public double resolveInput(@Nullable LivingEntity entity, @Nullable PowerContainer container, double contextValue) {
+    public double resolveInput(@Nullable Entity entity, @Nullable PowerContainer container, double contextValue) {
         double base = resource.isPresent()
             ? ExprVars.readResource(container, resource.get())
             : value.evalWith(entity, container, contextValue);
@@ -66,7 +66,7 @@ public record AttributeModifier(
         return base;
     }
 
-    public double applyToValue(double currentValue, @Nullable LivingEntity entity, @Nullable PowerContainer container) {
+    public double applyToValue(double currentValue, @Nullable Entity entity, @Nullable PowerContainer container) {
         double input = resolveInput(entity, container, currentValue);
         return operation.applySingle(currentValue, input);
     }

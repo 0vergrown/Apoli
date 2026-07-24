@@ -14,6 +14,7 @@ public final class RidingRecursiveCondition implements ConditionType<BiEntityCtx
 
     @Override
     public boolean test(EmptyCfg cfg, BiEntityCtx ctx) {
+        if (ctx.actor() == null || ctx.target() == null) return false;
         if (!ctx.actor().isPassenger()) return false;
         Entity vehicle = ctx.actor().getVehicle();
         while (vehicle != null && !vehicle.equals(ctx.target())) {

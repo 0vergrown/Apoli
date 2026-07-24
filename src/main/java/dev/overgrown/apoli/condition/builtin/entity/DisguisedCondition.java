@@ -16,9 +16,4 @@ public final class DisguisedCondition implements ConditionType<EntityCtx, EmptyC
     public boolean test(EmptyCfg cfg, EntityCtx ctx) {
         return DisguiseManager.isDisguised(ctx.raw());
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

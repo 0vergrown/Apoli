@@ -20,6 +20,9 @@
       ],
       "client":[
          "dev.overgrown.apoli.client.ApoliClient"
+      ],
+      "voicechat":[
+         "dev.overgrown.apoli.compat.voicechat.ApoliVoicechatPlugin"
       ]
    },
    "mixins":[
@@ -33,5 +36,8 @@
       "minecraft":"~1.21.1",
       "java":">=21",
       "fabric-api":"*"
+   },
+   "breaks":{
+      "origins":"<1.5.10"
    }
 }

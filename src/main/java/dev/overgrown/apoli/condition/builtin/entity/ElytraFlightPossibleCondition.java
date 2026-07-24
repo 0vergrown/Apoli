@@ -26,7 +26,8 @@ public final class ElytraFlightPossibleCondition implements ConditionType<Entity
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        LivingEntity e = ctx.entity();
+        LivingEntity e = ctx.living();
+        if (e == null) return false;
         if (!cfg.checkState && !cfg.checkAbilities) return true;
         if (cfg.checkState) {
             if (e.onGround() || e.isFallFlying() || e.isInWater() || e.isPassenger()) return false;

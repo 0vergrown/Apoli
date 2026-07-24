@@ -11,7 +11,7 @@ import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.PowerContainer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.StringRepresentable;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -64,9 +64,9 @@ public final class TransferAction implements ActionType<BiEntityCtx, TransferAct
 
     @Override
     public void run(Cfg cfg, BiEntityCtx ctx) {
-        LivingEntity donor = cfg.mode == Mode.STEAL ? ctx.target() : ctx.actor();
-        LivingEntity recipient = cfg.mode == Mode.STEAL ? ctx.actor() : ctx.target();
-        if (donor == recipient) return;
+        Entity donor = cfg.mode == Mode.STEAL ? ctx.target() : ctx.actor();
+        Entity recipient = cfg.mode == Mode.STEAL ? ctx.actor() : ctx.target();
+        if (donor == recipient || donor == null || recipient == null) return;
 
         PowerContainer donorContainer = PowerContainer.of(donor);
         PowerContainer recipientContainer = PowerContainer.of(recipient);

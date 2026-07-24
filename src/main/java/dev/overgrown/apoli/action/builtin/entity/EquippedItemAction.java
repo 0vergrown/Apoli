@@ -27,7 +27,8 @@ public final class EquippedItemAction implements ActionType<EntityCtx, EquippedI
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        LivingEntity e = ctx.entity();
+        LivingEntity e = ctx.living();
+        if (e == null) return;
         ItemStack stack = e.getItemBySlot(cfg.equipmentSlot.vanilla());
         cfg.action.run(new ItemCtx(stack, ctx.level(), e));
     }

@@ -27,9 +27,4 @@ public final class ExecuteCommandAction implements ActionType<EntityCtx, Execute
             .withSuppressedOutput();
         server.getCommands().performPrefixedCommand(source, cfg.command);
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

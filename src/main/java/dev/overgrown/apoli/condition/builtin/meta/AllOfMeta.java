@@ -31,9 +31,4 @@ public final class AllOfMeta<CTX, W> implements ConditionType<CTX, AllOfMeta.Cfg
         for (W w : cfg.conditions) if (!tester.test(w, ctx)) return false;
         return true;
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

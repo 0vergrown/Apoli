@@ -36,6 +36,7 @@ public final class RelativeRotationCondition implements ConditionType<BiEntityCt
 
     @Override
     public boolean test(Cfg cfg, BiEntityCtx ctx) {
+        if (ctx.actor() == null || ctx.target() == null) return false;
         Vec3 actor = reduce(cfg.actorRotation.vector(ctx.actor()), cfg.axes);
         Vec3 target = reduce(cfg.targetRotation.vector(ctx.target()), cfg.axes);
         double actorLen = actor.length();

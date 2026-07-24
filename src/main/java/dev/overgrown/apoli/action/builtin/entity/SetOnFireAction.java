@@ -18,11 +18,6 @@ public final class SetOnFireAction implements ActionType<EntityCtx, SetOnFireAct
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        ctx.raw().igniteForSeconds(cfg.duration.evalInt(ctx.entity()));
-    }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
+        ctx.entity().igniteForSeconds(cfg.duration.evalInt(ctx.entity()));
     }
 }

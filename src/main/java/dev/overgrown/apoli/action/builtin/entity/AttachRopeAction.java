@@ -20,7 +20,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Optional;
 
 public final class AttachRopeAction implements ActionType<EntityCtx, AttachRopeAction.Cfg> {
-
     public record Cfg(RopeEndpointSource from, RopeEndpointSource to, Optional<String> slot,
                       ResourceLocation texture, boolean toggle, RopeParams params) {}
 
@@ -56,7 +55,6 @@ public final class AttachRopeAction implements ActionType<EntityCtx, AttachRopeA
     }
 
     public static final class BiEntity implements ActionType<BiEntityCtx, Cfg> {
-
         @Override
         public MapCodec<Cfg> codec() {
             return CODEC;
@@ -66,10 +64,5 @@ public final class AttachRopeAction implements ActionType<EntityCtx, AttachRopeA
         public void run(Cfg cfg, BiEntityCtx ctx) {
             apply(cfg, ctx.actor(), ctx.target(), ctx.level());
         }
-    }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
     }
 }

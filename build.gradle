@@ -46,6 +46,10 @@ repositories {
 		name = "TwelveIterations"
 		url = "https://maven.twelveiterations.com/repository/maven-public/"
 	}
+	maven {
+		name = "Henkel"
+		url = "https://maven.maxhenkel.de/repository/public"
+	}
 }
 
 dependencies {
@@ -74,6 +78,12 @@ dependencies {
 	modCompileOnly "net.blay09.mods:hardcorerevival-fabric:${project.hardcore_revival_version}"
 
 	modCompileOnly "me.lucko:fabric-permissions-api:0.3.1"
+
+	compileOnly "de.maxhenkel.voicechat:voicechat-api:${project.voicechat_api_version}"
+
+	implementation "com.alphacephei:vosk:${project.vosk_version}"
+	include "com.alphacephei:vosk:${project.vosk_version}"
+	include "net.java.dev.jna:jna:5.7.0"
 
 	testImplementation platform("org.junit:junit-bom:5.10.2")
 	testImplementation "org.junit.jupiter:junit-jupiter"

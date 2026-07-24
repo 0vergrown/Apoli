@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Expression;
+import net.minecraft.world.entity.LivingEntity;
 
 public final class HealAction implements ActionType<EntityCtx, HealAction.Cfg> {
     public record Cfg(Expression amount) {}
@@ -18,6 +19,8 @@ public final class HealAction implements ActionType<EntityCtx, HealAction.Cfg> {
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        ctx.entity().heal((float) cfg.amount.eval(ctx.entity()));
+        LivingEntity living = ctx.living();
+        if (living == null) return;
+        living.heal((float) cfg.amount.eval(living));
     }
 }

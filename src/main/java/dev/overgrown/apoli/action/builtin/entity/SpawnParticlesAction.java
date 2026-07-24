@@ -63,9 +63,4 @@ public final class SpawnParticlesAction implements ActionType<EntityCtx, SpawnPa
                 x, y, z, cfg.count, cfg.spread.x(), cfg.spread.y(), cfg.spread.z(), cfg.speed);
         }
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

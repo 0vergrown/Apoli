@@ -50,7 +50,7 @@ public final class SummonMinionAction implements ActionType<EntityCtx, SummonMin
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        LivingEntity owner = ctx.entity();
+        LivingEntity owner = ctx.living();
         if (owner == null || !(ctx.level() instanceof ServerLevel level)) return;
 
         MinionEntity minion = ApoliEntities.minionType().create(level);

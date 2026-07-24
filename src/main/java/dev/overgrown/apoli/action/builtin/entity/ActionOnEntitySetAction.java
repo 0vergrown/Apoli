@@ -13,7 +13,7 @@ import dev.overgrown.apoli.power.builtin.EntitySetPower;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 
 import java.util.List;
 import java.util.Optional;
@@ -41,7 +41,7 @@ public final class ActionOnEntitySetAction implements ActionType<EntityCtx, Acti
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        LivingEntity actor = ctx.entity();
+        Entity actor = ctx.entity();
         if (!(ctx.level() instanceof ServerLevel serverLevel)) return;
         MinecraftServer server = serverLevel.getServer();
         PowerContainer container = PowerContainer.of(actor);
@@ -51,7 +51,7 @@ public final class ActionOnEntitySetAction implements ActionType<EntityCtx, Acti
         List<UUID> order = EntitySetPower.iterationOrder(actor, cfg.set, cfg.reverse);
         int processed = 0;
         for (UUID uuid : order) {
-            LivingEntity target = EntitySetPower.resolveEntity(server, uuid);
+            Entity target = EntitySetPower.resolveEntity(server, uuid);
             if (target == null) continue;
             BiEntityCtx biCtx = new BiEntityCtx(actor, target, serverLevel);
             if (cfg.biEntityCondition.isPresent() && !cfg.biEntityCondition.get().test(biCtx)) continue;

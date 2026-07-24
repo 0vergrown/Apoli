@@ -23,7 +23,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class TextAction implements ActionType<EntityCtx, TextAction.Cfg> {
-
     public record Segment(Component text, Optional<EntityCondition> condition) {}
 
     private static final Codec<Segment> SEGMENT_CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -130,10 +129,5 @@ public final class TextAction implements ActionType<EntityCtx, TextAction.Cfg> {
 
     public static void onPlayerLeave(UUID player) {
         STATES.remove(player);
-    }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
     }
 }

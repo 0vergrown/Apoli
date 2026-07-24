@@ -1,7 +1,7 @@
 package dev.overgrown.apoli.data;
 
 import dev.overgrown.apoli.power.PowerContainer;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -41,11 +41,11 @@ public final class AttributeModifierHelper {
         return mods;
     }
 
-    public static float apply(float baseValue, List<AttributeModifier> mods, @Nullable LivingEntity entity) {
+    public static float apply(float baseValue, List<AttributeModifier> mods, @Nullable Entity entity) {
         return (float) apply((double) baseValue, mods, entity);
     }
 
-    public static double apply(double baseValue, List<AttributeModifier> mods, @Nullable LivingEntity entity) {
+    public static double apply(double baseValue, List<AttributeModifier> mods, @Nullable Entity entity) {
         if (mods.isEmpty()) return baseValue;
         PowerContainer container = null;
         if (entity != null) {
@@ -60,7 +60,7 @@ public final class AttributeModifierHelper {
     }
 
     public static double apply(double baseValue, List<AttributeModifier> mods,
-                               @Nullable LivingEntity entity, @Nullable PowerContainer container) {
+                               @Nullable Entity entity, @Nullable PowerContainer container) {
         if (mods.isEmpty()) return baseValue;
         List<AttributeModifier> ordered = ensureSorted(mods);
         double base = baseValue;

@@ -48,7 +48,8 @@ public final class InventoryCondition implements ConditionType<EntityCtx, Invent
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        LivingEntity entity = ctx.entity();
+        LivingEntity entity = ctx.living();
+        if (entity == null) return false;
         List<InventoryType> types = cfg.inventoryTypes.orElse(List.of(InventoryType.INVENTORY));
         int[] count = {0};
 

@@ -61,7 +61,7 @@ public final class RaycastEntityCondition implements ConditionType<EntityCtx, Ra
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        LivingEntity source = ctx.entity();
+        Entity source = ctx.entity();
         Level level = ctx.level();
         Vec3 origin = source.getEyePosition();
         Vec3 dir = cfg.direction.isPresent()
@@ -87,13 +87,12 @@ public final class RaycastEntityCondition implements ConditionType<EntityCtx, Ra
             Vec3 endE = origin.add(dir.scale(entityDist));
             AABB box = new AABB(origin, endE).inflate(1.0);
             List<Entity> cands = level.getEntities(source, box, e ->
-                e != source && e instanceof LivingEntity && e.isPickable());
+                e != source && e.isPickable());
             for (Entity cand : cands) {
                 Optional<Vec3> inter = cand.getBoundingBox().clip(origin, endE);
                 if (inter.isEmpty()) continue;
                 if (blockHit != null && origin.distanceToSqr(inter.get()) > origin.distanceToSqr(blockHit.getLocation())) continue;
-                if (!(cand instanceof LivingEntity targetLiving)) continue;
-                BiEntityCtx bctx = new BiEntityCtx(source, targetLiving, level);
+                BiEntityCtx bctx = new BiEntityCtx(source, cand, level);
                 if (cfg.matchBientityCondition.isPresent() && !cfg.matchBientityCondition.get().test(bctx)) continue;
                 if (cfg.hitBientityCondition.isPresent() && !cfg.hitBientityCondition.get().test(bctx)) continue;
                 return true;

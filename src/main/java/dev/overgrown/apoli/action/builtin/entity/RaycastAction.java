@@ -27,7 +27,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -95,7 +94,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         boolean commandAlongRayOnlyOnHit
     ) {}
 
-    private record EntityHit(LivingEntity target, Vec3 pos, double distSq) {}
+    private record EntityHit(Entity target, Vec3 pos, double distSq) {}
 
     private static final int MAX_CHAIN_DEPTH = 32;
     private static final int MAX_PIERCED_BLOCKS = 128;
@@ -174,7 +173,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
 
     private void cast(Cfg cfg, EntityCtx ctx, Vec3 origin, @Nullable Vec3 incomingDir, @Nullable Vec3 incomingNormal, int depth) {
         if (depth > MAX_CHAIN_DEPTH) return;
-        LivingEntity source = ctx.entity();
+        Entity source = ctx.entity();
         Level level = ctx.level();
         cfg.hooks.beforeAction.ifPresent(a -> a.run(ctx));
 
@@ -231,10 +230,9 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
                 ? AABB.ofSize(origin, entityDist * 2.0, entityDist * 2.0, entityDist * 2.0)
                 : new AABB(origin, endE).inflate(1.0 + maxRadius);
             List<Entity> candidates = level.getEntities(source, box, e ->
-                e != source && e instanceof LivingEntity && e.isPickable());
+                e != source && e.isPickable());
             List<EntityHit> hits = new ArrayList<>();
             for (Entity cand : candidates) {
-                if (!(cand instanceof LivingEntity targetLiving)) continue;
                 Vec3 hitPos;
                 double dSq;
                 if (coneMode) {
@@ -253,7 +251,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
                     dSq = origin.distanceToSqr(hitPos);
                 }
                 if (!cfg.params.pierce && dSq > blockHitDistSq) continue;
-                hits.add(new EntityHit(targetLiving, hitPos, dSq));
+                hits.add(new EntityHit(cand, hitPos, dSq));
             }
             hits.sort(Comparator.comparingDouble(EntityHit::distSq));
             for (EntityHit hit : hits) {
@@ -351,7 +349,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         return Double.POSITIVE_INFINITY;
     }
 
-    private static Vec3 resolveDirection(Cfg cfg, LivingEntity source, @Nullable Vec3 incomingDir, @Nullable Vec3 incomingNormal) {
+    private static Vec3 resolveDirection(Cfg cfg, Entity source, @Nullable Vec3 incomingDir, @Nullable Vec3 incomingNormal) {
         if (incomingDir == null) {
             return customOrView(cfg, source, source.getViewVector(1f));
         }
@@ -362,7 +360,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         };
     }
 
-    private static Vec3 customOrView(Cfg cfg, LivingEntity source, Vec3 fallback) {
+    private static Vec3 customOrView(Cfg cfg, Entity source, Vec3 fallback) {
         if (cfg.params.direction.isEmpty()) return fallback;
         Vector v = cfg.params.direction.get();
         return cfg.params.space.toGlobal(source, new Vec3(v.x(), v.y(), v.z()));

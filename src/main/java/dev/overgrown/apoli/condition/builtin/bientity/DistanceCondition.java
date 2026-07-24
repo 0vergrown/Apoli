@@ -26,9 +26,4 @@ public final class DistanceCondition implements ConditionType<BiEntityCtx, Dista
         if (actor == null || target == null) return false;
         return cfg.comparison.compare(actor.distanceTo(target), cfg.value);
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

@@ -12,7 +12,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -44,15 +43,15 @@ public abstract class EntityGlowMixin {
         Entity self = (Entity) (Object) this;
         if (!self.level().isClientSide()) return null;
         LocalPlayer viewer = Minecraft.getInstance().player;
-        if (viewer == null || !(self instanceof LivingEntity glowing)) return null;
-        EntityGlowPower.Config cfg = apoli$find(glowing, viewer, true);
+        if (viewer == null) return null;
+        EntityGlowPower.Config cfg = apoli$find(self, viewer, true);
         if (cfg != null) return cfg;
-        return glowing == viewer ? null : apoli$find(glowing, viewer, false);
+        return self == viewer ? null : apoli$find(self, viewer, false);
     }
 
     @Unique
-    private static EntityGlowPower.Config apoli$find(LivingEntity glowing, LocalPlayer viewer, boolean selfGlow) {
-        LivingEntity holder = selfGlow ? glowing : viewer;
+    private static EntityGlowPower.Config apoli$find(Entity glowing, LocalPlayer viewer, boolean selfGlow) {
+        Entity holder = selfGlow ? glowing : viewer;
         EntityGlowPower.Config[] match = {null};
         PowerLookup.forEach(holder, ApoliIds.ENTITY_GLOW, EntityGlowPower.Config.class, cfg -> {
             if (match[0] != null || cfg.selfGlowTarget() != selfGlow) return;

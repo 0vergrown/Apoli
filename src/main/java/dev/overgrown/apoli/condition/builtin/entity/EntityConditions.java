@@ -30,6 +30,14 @@ public final class EntityConditions {
             AliasingOptions.builder().addTypeAlias(Apoli.id("set_size")).build()
         );
         ConditionTypes.ENTITY.register(Apoli.id("resource"), new ResourceCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("voice_speaking"), new VoiceSpeakingCondition());
+        ConditionTypes.ENTITY.register(
+            Apoli.id("voice_disabled"),
+            new VoiceDisabledCondition(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("voice_muted")).build()
+        );
+        ConditionTypes.ENTITY.register(Apoli.id("voice_loudness"), new VoiceLoudnessCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("voice_listeners"), new VoiceListenersCondition());
         ConditionTypes.ENTITY.register(Apoli.id("living"), new LivingCondition());
         ConditionTypes.ENTITY.register(Apoli.id("passenger"), new PassengerCondition());
         ConditionTypes.ENTITY.register(Apoli.id("riding"), new RidingCondition());

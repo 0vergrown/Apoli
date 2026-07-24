@@ -13,6 +13,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.List;
@@ -38,15 +39,17 @@ public final class DamageAction implements ActionType<EntityCtx, DamageAction.Cf
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        LivingEntity target = ctx.entity();
+        Entity target = ctx.entity();
+        LivingEntity livingTarget = ctx.living();
+        if (cfg.amount.isEmpty() && livingTarget == null) return;
         Holder.Reference<DamageType> typeHolder = ctx.level().registryAccess()
             .registryOrThrow(Registries.DAMAGE_TYPE)
             .getHolder(ResourceKey.create(Registries.DAMAGE_TYPE, cfg.damageType))
             .orElse(null);
         if (typeHolder == null) return;
         DamageSource source = new DamageSource(typeHolder);
-        float base = cfg.amount.isPresent() ? (float) cfg.amount.get().eval(target) : target.getMaxHealth();
-        float amount = applyModifiers(base, cfg, target);
+        float base = cfg.amount.isPresent() ? (float) cfg.amount.get().eval(target) : livingTarget.getMaxHealth();
+        float amount = applyModifiers(base, cfg, livingTarget);
         target.hurt(source, amount);
     }
 
