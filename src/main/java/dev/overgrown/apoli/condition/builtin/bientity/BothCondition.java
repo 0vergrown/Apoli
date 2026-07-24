@@ -20,9 +20,4 @@ public final class BothCondition implements ConditionType<BiEntityCtx, BothCondi
     public boolean test(Cfg cfg, BiEntityCtx ctx) {
         return cfg.condition.test(ctx.asActor()) && cfg.condition.test(ctx.asTarget());
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

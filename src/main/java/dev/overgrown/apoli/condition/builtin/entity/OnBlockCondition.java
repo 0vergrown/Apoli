@@ -27,9 +27,4 @@ public final class OnBlockCondition implements ConditionType<EntityCtx, OnBlockC
         BlockPos below = ctx.raw().blockPosition().below();
         return cfg.blockCondition.get().test(new BlockCtx(below, ctx.level().getBlockState(below), ctx.level()));
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

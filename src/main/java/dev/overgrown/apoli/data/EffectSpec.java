@@ -7,7 +7,7 @@ import dev.overgrown.apoli.alias.AliasingMapCodec;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -38,11 +38,11 @@ public record EffectSpec(
         list -> list.size() == 1 ? Either.left(list.get(0)) : Either.right(list)
     );
 
-    public MobEffectInstance resolve(@Nullable LivingEntity target) {
+    public MobEffectInstance resolve(@Nullable Entity target) {
         return new MobEffectInstance(effect, duration.evalInt(target), amplifier.evalInt(target), ambient, showParticles, showIcon);
     }
 
-    public MobEffectInstance resolveWithDuration(@Nullable LivingEntity target, int durationTicks) {
+    public MobEffectInstance resolveWithDuration(@Nullable Entity target, int durationTicks) {
         return new MobEffectInstance(effect, durationTicks, amplifier.evalInt(target), ambient, showParticles, showIcon);
     }
 }

@@ -110,7 +110,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         return CONFIG_CODEC;
     }
 
-    public static void fireBurst(LivingEntity owner, ServerLevel level, Config cfg) {
+    public static void fireBurst(Entity owner, ServerLevel level, Config cfg) {
         playSound(owner, level, cfg.params());
         int count = Math.max(1, cfg.params().count());
         for (int n = 0; n < count; n++) fireOne(owner, level, cfg);
@@ -195,13 +195,13 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         st.finishedStartDelay = false;
     }
 
-    private static void playSound(LivingEntity owner, ServerLevel level, Params p) {
+    private static void playSound(Entity owner, ServerLevel level, Params p) {
         p.sound().flatMap(BuiltInRegistries.SOUND_EVENT::getOptional).ifPresent(se ->
             level.playSound(null, owner.getX(), owner.getY(), owner.getZ(), se, SoundSource.NEUTRAL,
-                0.5F, 0.4F / (owner.getRandom().nextFloat() * 0.4F + 0.8F)));
+                0.5F, 0.4F / (level.random.nextFloat() * 0.4F + 0.8F)));
     }
 
-    private static void fireOne(LivingEntity owner, ServerLevel level, Config cfg) {
+    private static void fireOne(Entity owner, ServerLevel level, Config cfg) {
         Params p = cfg.params();
         cfg.hooks().entityActionBeforeFiring().ifPresent(a -> a.run(new EntityCtx(owner, level)));
 

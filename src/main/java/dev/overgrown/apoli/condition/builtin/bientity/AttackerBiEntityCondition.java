@@ -14,6 +14,7 @@ public final class AttackerBiEntityCondition implements ConditionType<BiEntityCt
 
     @Override
     public boolean test(EmptyCfg cfg, BiEntityCtx ctx) {
-        return ctx.actor().equals(ctx.target().getLastHurtByMob());
+        LivingEntity target = ctx.livingTarget();
+        return target != null && ctx.actor() != null && ctx.actor().equals(target.getLastHurtByMob());
     }
 }

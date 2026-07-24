@@ -10,6 +10,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 
@@ -39,9 +40,11 @@ public final class EnchantmentCondition implements ConditionType<EntityCtx, Ench
     public boolean test(Cfg cfg, EntityCtx ctx) {
         Enchantment enchantment = BuiltInRegistries.ENCHANTMENT.get(cfg.enchantment);
         if (enchantment == null) return false;
+        LivingEntity living = ctx.living();
+        if (living == null) return false;
         int sum = 0, max = 0;
         for (EquipmentSlot slot : EquipmentSlot.values()) {
-            int level = EnchantmentHelper.getItemEnchantmentLevel(enchantment, ctx.entity().getItemBySlot(slot));
+            int level = EnchantmentHelper.getItemEnchantmentLevel(enchantment, living.getItemBySlot(slot));
             sum += level;
             if (level > max) max = level;
         }

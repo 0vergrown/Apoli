@@ -35,7 +35,7 @@ public final class SelectorAction implements ActionType<EntityCtx, SelectorActio
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        LivingEntity actor = ctx.entity();
+        Entity actor = ctx.entity();
         List<? extends Entity> targets;
         try {
             EntitySelector parsed = new EntitySelectorParser(new StringReader(cfg.selector)).parse();
@@ -44,10 +44,9 @@ public final class SelectorAction implements ActionType<EntityCtx, SelectorActio
             return;
         }
         for (Entity target : targets) {
-            if (!(target instanceof LivingEntity targetLiving)) continue;
             if (cfg.bientityCondition.isPresent()
-                && !cfg.bientityCondition.get().test(new BiEntityCtx(actor, targetLiving, ctx.level()))) continue;
-            cfg.bientityAction.ifPresent(a -> a.run(new BiEntityCtx(actor, targetLiving, ctx.level())));
+                && !cfg.bientityCondition.get().test(new BiEntityCtx(actor, target, ctx.level()))) continue;
+            cfg.bientityAction.ifPresent(a -> a.run(new BiEntityCtx(actor, target, ctx.level())));
         }
     }
 }

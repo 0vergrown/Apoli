@@ -9,7 +9,7 @@ import dev.overgrown.apoli.data.expr.ExprParseException;
 import dev.overgrown.apoli.data.expr.ExprParser;
 import dev.overgrown.apoli.data.expr.ExprVars;
 import dev.overgrown.apoli.power.PowerContainer;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
@@ -96,17 +96,17 @@ public final class Expression {
         return needsContainer;
     }
 
-    public double eval(@Nullable LivingEntity entity) {
+    public double eval(@Nullable Entity entity) {
         if (isConst) return sanitize(constVal);
         return evalFull(entity, autoContainer(entity), null, 0.0);
     }
 
-    public double eval(@Nullable LivingEntity entity, double value) {
+    public double eval(@Nullable Entity entity, double value) {
         if (isConst) return sanitize(constVal);
         return evalFull(entity, autoContainer(entity), null, value);
     }
 
-    public double evalWith(@Nullable LivingEntity entity, @Nullable PowerContainer container, double value) {
+    public double evalWith(@Nullable Entity entity, @Nullable PowerContainer container, double value) {
         if (isConst) return sanitize(constVal);
         return evalFull(entity, container, null, value);
     }
@@ -116,19 +116,19 @@ public final class Expression {
         return evalFull(null, null, level, 0.0);
     }
 
-    public int evalInt(@Nullable LivingEntity entity) {
+    public int evalInt(@Nullable Entity entity) {
         return (int) Math.round(eval(entity));
     }
 
-    public int evalInt(@Nullable LivingEntity entity, double value) {
+    public int evalInt(@Nullable Entity entity, double value) {
         return (int) Math.round(eval(entity, value));
     }
 
-    public int evalIntWith(@Nullable LivingEntity entity, @Nullable PowerContainer container, double value) {
+    public int evalIntWith(@Nullable Entity entity, @Nullable PowerContainer container, double value) {
         return (int) Math.round(evalWith(entity, container, value));
     }
 
-    private double evalFull(@Nullable LivingEntity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+    private double evalFull(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
         return sanitize(root.eval(entity, container, level, value));
     }
 
@@ -136,7 +136,7 @@ public final class Expression {
         return Double.isNaN(result) || Double.isInfinite(result) ? 0.0 : result;
     }
 
-    private @Nullable PowerContainer autoContainer(@Nullable LivingEntity entity) {
+    private @Nullable PowerContainer autoContainer(@Nullable Entity entity) {
         return needsContainer && entity != null ? PowerContainer.of(entity) : null;
     }
 

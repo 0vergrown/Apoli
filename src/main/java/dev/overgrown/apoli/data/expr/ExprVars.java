@@ -2,6 +2,7 @@ package dev.overgrown.apoli.data.expr;
 
 import dev.overgrown.apoli.power.PowerContainer;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -36,7 +37,7 @@ public final class ExprVars {
         return container != null ? container.getAuxIntOr(id, 0) : 0;
     }
 
-    private static Level levelOf(@Nullable LivingEntity entity, @Nullable Level level) {
+    private static Level levelOf(@Nullable Entity entity, @Nullable Level level) {
         if (level != null) return level;
         return entity != null ? entity.level() : null;
     }
@@ -45,10 +46,10 @@ public final class ExprVars {
         register("value", (e, c, l, v) -> v);
         register("damage", (e, c, l, v) -> ExprDamageContext.current());
 
-        register("health", (e, c, l, v) -> e != null ? e.getHealth() : 0);
-        register("max_health", (e, c, l, v) -> e != null ? e.getMaxHealth() : 0);
-        register("absorption", (e, c, l, v) -> e != null ? e.getAbsorptionAmount() : 0);
-        register("armor", (e, c, l, v) -> e != null ? e.getArmorValue() : 0);
+        register("health", (e, c, l, v) -> e instanceof LivingEntity le ? le.getHealth() : 0);
+        register("max_health", (e, c, l, v) -> e instanceof LivingEntity le ? le.getMaxHealth() : 0);
+        register("absorption", (e, c, l, v) -> e instanceof LivingEntity le ? le.getAbsorptionAmount() : 0);
+        register("armor", (e, c, l, v) -> e instanceof LivingEntity le ? le.getArmorValue() : 0);
         register("air", (e, c, l, v) -> e != null ? e.getAirSupply() : 0);
         register("max_air", (e, c, l, v) -> e != null ? e.getMaxAirSupply() : 0);
         register("fall_distance", (e, c, l, v) -> e != null ? e.fallDistance : 0);

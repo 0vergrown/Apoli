@@ -23,6 +23,7 @@ public final class CanSeeCondition implements ConditionType<BiEntityCtx, CanSeeC
 
     @Override
     public boolean test(Cfg cfg, BiEntityCtx ctx) {
+        if (ctx.actor() == null || ctx.target() == null) return false;
         Vec3 from = ctx.actor().getEyePosition();
         Vec3 to = ctx.target().getEyePosition();
         ClipContext.Block block = switch (cfg.shapeType) {

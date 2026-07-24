@@ -10,7 +10,6 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 
 public final class LoopMetaAction<CTX, W> implements ActionType<CTX, LoopMetaAction.Cfg<W>> {
-
     private final Codec<W> wrapperCodec;
     private final BiConsumer<W, CTX> runner;
 
@@ -75,10 +74,5 @@ public final class LoopMetaAction<CTX, W> implements ActionType<CTX, LoopMetaAct
                 afterAction.ifPresent(a -> runner.accept(a, ctx));
             }
         });
-    }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
     }
 }

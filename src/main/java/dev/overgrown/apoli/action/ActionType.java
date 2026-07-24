@@ -5,8 +5,4 @@ import com.mojang.serialization.MapCodec;
 public interface ActionType<CTX, C> {
     MapCodec<C> codec();
     void run(C config, CTX ctx);
-
-    default boolean acceptsNonLiving() {
-        return false;
-    }
 }

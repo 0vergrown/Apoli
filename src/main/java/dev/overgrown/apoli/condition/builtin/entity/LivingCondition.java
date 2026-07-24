@@ -13,6 +13,6 @@ public final class LivingCondition implements ConditionType<EntityCtx, EmptyCfg>
 
     @Override
     public boolean test(EmptyCfg cfg, EntityCtx ctx) {
-        return ctx.entity() != null;
+        return ctx.living() != null;
     }
 }

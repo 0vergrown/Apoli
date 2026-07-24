@@ -39,16 +39,10 @@ public final class IfElseListMetaAction<CTX, COND, ACTION> implements ActionType
 
     @Override
     public void run(Cfg<COND, ACTION> cfg, CTX ctx) {
-
         for (Branch<COND, ACTION> branch : cfg.actions) {
             if (condTester.test(branch.condition, ctx)) {
                 actionRunner.accept(branch.action, ctx);
             }
         }
-    }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
     }
 }

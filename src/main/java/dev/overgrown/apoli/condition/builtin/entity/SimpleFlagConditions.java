@@ -7,6 +7,7 @@ import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.shared.EmptyCfg;
 import dev.overgrown.apoli.power.ApoliIds;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.player.Abilities;
@@ -17,7 +18,7 @@ import java.util.function.Predicate;
 public final class SimpleFlagConditions {
     private SimpleFlagConditions() {}
 
-    private record FlagCondition(Predicate<LivingEntity> check) implements ConditionType<EntityCtx, EmptyCfg> {
+    private record FlagCondition(Predicate<Entity> check) implements ConditionType<EntityCtx, EmptyCfg> {
         @Override
         public MapCodec<EmptyCfg> codec() {
             return MapCodec.unit(EmptyCfg.INSTANCE);
@@ -30,7 +31,7 @@ public final class SimpleFlagConditions {
     }
 
     public static ConditionType<EntityCtx, EmptyCfg> climbing() {
-        return new FlagCondition(e -> e.onClimbable());
+        return new FlagCondition(e -> e instanceof LivingEntity le && le.onClimbable());
     }
 
     public static ConditionType<EntityCtx, EmptyCfg> collidedHoriz(){
@@ -60,7 +61,7 @@ public final class SimpleFlagConditions {
         });
     }
     public static ConditionType<EntityCtx, EmptyCfg> fallFlying() {
-        return new FlagCondition(LivingEntity::isFallFlying);
+        return new FlagCondition(e -> e instanceof LivingEntity le && le.isFallFlying());
     }
 
     public static ConditionType<EntityCtx, EmptyCfg> glowing() {
@@ -82,15 +83,15 @@ public final class SimpleFlagConditions {
         return new FlagCondition(e -> e.level().isThundering() && e.level().isRainingAt(e.blockPosition()));
     }
     public static ConditionType<EntityCtx, EmptyCfg> onFire() {
-        return new FlagCondition(LivingEntity::isOnFire);
+        return new FlagCondition(Entity::isOnFire);
     }
 
     public static ConditionType<EntityCtx, EmptyCfg> sprinting() {
-        return new FlagCondition(LivingEntity::isSprinting);
+        return new FlagCondition(Entity::isSprinting);
     }
 
     public static ConditionType<EntityCtx, EmptyCfg> swimming() {
-        return new FlagCondition(LivingEntity::isSwimming);
+        return new FlagCondition(Entity::isSwimming);
     }
 
     public static ConditionType<EntityCtx, EmptyCfg> tamed() {

@@ -6,6 +6,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobType;
 
 public final class EntityGroupCondition implements ConditionType<EntityCtx, EntityGroupCondition.Cfg> {
@@ -35,6 +36,7 @@ public final class EntityGroupCondition implements ConditionType<EntityCtx, Enti
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        return ctx.entity().getMobType() == cfg.group.vanilla();
+        LivingEntity living = ctx.living();
+        return living != null && living.getMobType() == cfg.group.vanilla();
     }
 }

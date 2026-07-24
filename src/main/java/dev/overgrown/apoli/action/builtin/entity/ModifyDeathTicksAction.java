@@ -22,7 +22,8 @@ public final class ModifyDeathTicksAction implements ActionType<EntityCtx, Modif
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        LivingEntity entity = ctx.entity();
+        LivingEntity entity = ctx.living();
+        if (entity == null) return;
         float modified = AttributeModifierHelper.apply(entity.deathTime, List.of(cfg.modifier), entity);
         entity.deathTime = (int) modified;
     }

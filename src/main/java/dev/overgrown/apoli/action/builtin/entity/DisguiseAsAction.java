@@ -12,7 +12,7 @@ import dev.overgrown.apoli.entity.disguise.DisguiseData;
 import dev.overgrown.apoli.entity.disguise.DisguiseManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -47,8 +47,8 @@ public final class DisguiseAsAction implements ActionType<EntityCtx, DisguiseAsA
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        LivingEntity actor = ctx.entity();
-        if (actor == null || ctx.level().isClientSide) return;
+        Entity actor = ctx.entity();
+        if (ctx.level().isClientSide) return;
         if (!cfg.overwrite && DisguiseManager.isDisguised(actor)) return;
 
         cfg.beforeAction.ifPresent(a -> a.run(ctx));

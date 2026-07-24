@@ -15,9 +15,4 @@ public final class EqualCondition implements ConditionType<BiEntityCtx, EmptyCfg
     public boolean test(EmptyCfg cfg, BiEntityCtx ctx) {
         return ctx.rawActor() != null && ctx.rawActor() == ctx.rawTarget();
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

@@ -8,7 +8,7 @@ import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.data.Space;
 import dev.overgrown.apoli.network.VelocityUpdater;
 import net.minecraft.util.StringRepresentable;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
 public final class AddVelocityAction implements ActionType<BiEntityCtx, AddVelocityAction.Cfg> {
@@ -44,8 +44,9 @@ public final class AddVelocityAction implements ActionType<BiEntityCtx, AddVeloc
 
     @Override
     public void run(Cfg cfg, BiEntityCtx ctx) {
-        LivingEntity actor = ctx.actor();
-        LivingEntity target = ctx.target();
+        Entity actor = ctx.actor();
+        Entity target = ctx.target();
+        if (actor == null || target == null) return;
         Vec3 forward = switch (cfg.reference) {
             case POSITION -> target.position().subtract(actor.position());
             case ROTATION -> actor.getLookAngle();

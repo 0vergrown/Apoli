@@ -42,9 +42,4 @@ public final class PredicateCondition implements ConditionType<EntityCtx, Predic
 
     @SuppressWarnings("unused")
     private static void keepImports(EntityPredicate p, ServerPlayer sp) {}
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

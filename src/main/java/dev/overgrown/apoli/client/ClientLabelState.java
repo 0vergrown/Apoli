@@ -68,10 +68,7 @@ public final class ClientLabelState {
             return false;
         }
         if (cfg.bientityCondition().isPresent()) {
-            if (!(viewer instanceof LivingEntity livingViewer) || !(entity instanceof LivingEntity livingTarget)) {
-                return false;
-            }
-            return cfg.bientityCondition().get().test(new BiEntityCtx(livingViewer, livingTarget, entity.level()));
+            return cfg.bientityCondition().get().test(new BiEntityCtx(viewer, entity, entity.level()));
         }
         return true;
     }

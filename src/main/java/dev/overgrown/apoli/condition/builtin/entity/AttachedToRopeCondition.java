@@ -13,7 +13,6 @@ import net.minecraft.world.entity.Entity;
 import java.util.Optional;
 
 public final class AttachedToRopeCondition implements ConditionType<EntityCtx, AttachedToRopeCondition.Cfg> {
-
     public record Cfg(Optional<String> slot, Comparison comparison, int compareTo) {}
 
     @Override
@@ -35,10 +34,5 @@ public final class AttachedToRopeCondition implements ConditionType<EntityCtx, A
             count++;
         }
         return cfg.comparison.compare(count, cfg.compareTo);
-    }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
     }
 }

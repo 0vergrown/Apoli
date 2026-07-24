@@ -141,6 +141,7 @@ public final class ApoliClient implements ClientModInitializer {
             new dev.overgrown.apoli.network.payload.ProtocolVersionPayload(
                 dev.overgrown.apoli.network.ProtocolCompat.VERSION).write(buf);
             ClientPlayNetworking.send(dev.overgrown.apoli.network.payload.ProtocolVersionPayload.CHANNEL, buf);
+            dev.overgrown.apoli.client.speech.SpeechClient.onJoin();
         });
 
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SkillDefsSyncS2C.CHANNEL, (mc, handler, buf, sender) -> {
@@ -190,6 +191,7 @@ public final class ApoliClient implements ClientModInitializer {
                 dev.overgrown.apoli.client.skill.ClientSkillState.clear();
                 dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.clear();
                 dev.overgrown.apoli.client.ClientProtocolState.reset();
+                dev.overgrown.apoli.client.speech.SpeechClient.onLeave();
             }));
 
         net.fabricmc.fabric.api.resource.ResourceManagerHelper.get(net.minecraft.server.packs.PackType.CLIENT_RESOURCES)
@@ -204,6 +206,9 @@ public final class ApoliClient implements ClientModInitializer {
                     dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.onResourcesReloaded();
                 }
             });
+
+        net.fabricmc.fabric.api.resource.ResourceManagerHelper.get(net.minecraft.server.packs.PackType.CLIENT_RESOURCES)
+            .registerReloadListener(dev.overgrown.apoli.client.render.CustomModelManager.INSTANCE);
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             if (mc.player != null && !mc.isPaused()) {

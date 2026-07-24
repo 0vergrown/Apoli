@@ -31,7 +31,7 @@ public final class ConjureEquipmentAction implements ActionType<EntityCtx, Conju
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        LivingEntity entity = ctx.entity();
+        LivingEntity entity = ctx.living();
         if (entity == null || entity.level().isClientSide()) return;
         ItemStack stack = cfg.item.stack().copy();
         ConjuredItems.mark(stack, cfg.lock);

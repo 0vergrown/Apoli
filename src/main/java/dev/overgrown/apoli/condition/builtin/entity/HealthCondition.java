@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import net.minecraft.world.entity.LivingEntity;
 import dev.overgrown.apoli.data.Comparison;
 
 public final class HealthCondition implements ConditionType<EntityCtx, HealthCondition.Cfg> {
@@ -20,6 +21,7 @@ public final class HealthCondition implements ConditionType<EntityCtx, HealthCon
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        return cfg.comparison.compare(ctx.entity().getHealth(), cfg.compareTo);
+        LivingEntity living = ctx.living();
+        return living != null && cfg.comparison.compare(living.getHealth(), cfg.compareTo);
     }
 }

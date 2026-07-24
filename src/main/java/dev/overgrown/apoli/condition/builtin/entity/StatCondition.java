@@ -28,9 +28,4 @@ public final class StatCondition implements ConditionType<EntityCtx, StatConditi
         if (stat == null) return false;
         return cfg.comparison.compare(player.getStats().getValue(stat), cfg.compareTo);
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

@@ -30,9 +30,4 @@ public final class AndMetaAction<CTX, W> implements ActionType<CTX, AndMetaActio
     public void run(Cfg<W> cfg, CTX ctx) {
         for (W w : cfg.actions) runner.accept(w, ctx);
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

@@ -6,8 +6,8 @@ import dev.overgrown.apoli.client.render.ModelPartLookup;
 import dev.overgrown.apoli.client.render.OverlayRenderTypes;
 import dev.overgrown.apoli.data.ModelParts;
 import dev.overgrown.apoli.entity.summon.CloneEntity;
-import dev.overgrown.apoli.power.builtin.EntityTextureOverlayPower;
-import dev.overgrown.apoli.power.builtin.EntityTextureOverlayPower.ResolvedLayer;
+import dev.overgrown.apoli.power.builtin.CustomModelRenderPower;
+import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.ResolvedLayer;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
@@ -28,7 +28,7 @@ public class CloneTextureOverlayLayer extends RenderLayer<CloneEntity, CloneMode
                        float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
         LivingEntity owner = clone.getOwner();
         if (owner == null) return;
-        List<ResolvedLayer> layers = EntityTextureOverlayPower.collectLayers(owner);
+        List<ResolvedLayer> layers = CustomModelRenderPower.collectTextureOverlays(owner);
         if (layers.isEmpty()) return;
 
         boolean slim = CloneRenderer.resolveSlim(clone);

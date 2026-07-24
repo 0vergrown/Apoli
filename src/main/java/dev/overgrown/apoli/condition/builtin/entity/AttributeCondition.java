@@ -8,6 +8,7 @@ import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Comparison;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 
@@ -27,7 +28,9 @@ public final class AttributeCondition implements ConditionType<EntityCtx, Attrib
     public boolean test(Cfg cfg, EntityCtx ctx) {
         Attribute attr = BuiltInRegistries.ATTRIBUTE.get(cfg.attribute);
         if (attr == null) return false;
-        AttributeInstance inst = ctx.entity().getAttribute(attr);
+        LivingEntity living = ctx.living();
+        if (living == null) return false;
+        AttributeInstance inst = living.getAttribute(attr);
         if (inst == null) return false;
         return cfg.comparison.compare((float) inst.getValue(), cfg.compareTo);
     }

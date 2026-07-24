@@ -42,7 +42,7 @@ public final class ModifyAccessoryAction implements ActionType<EntityCtx, Modify
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        LivingEntity e = ctx.entity();
+        LivingEntity e = ctx.living();
         if (e == null) return;
         int processed = 0;
 

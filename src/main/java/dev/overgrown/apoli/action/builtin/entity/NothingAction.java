@@ -14,9 +14,4 @@ public final class NothingAction implements ActionType<EntityCtx, EmptyCfg> {
     @Override
     public void run(EmptyCfg cfg, EntityCtx ctx) {
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

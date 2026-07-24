@@ -6,7 +6,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.entity.GrabManager;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 
 public final class GrabAction implements ActionType<BiEntityCtx, GrabAction.Cfg> {
 
@@ -27,8 +27,8 @@ public final class GrabAction implements ActionType<BiEntityCtx, GrabAction.Cfg>
 
     @Override
     public void run(Cfg cfg, BiEntityCtx ctx) {
-        LivingEntity actor = ctx.actor();
-        LivingEntity target = ctx.target();
+        Entity actor = ctx.actor();
+        Entity target = ctx.target();
         if (actor == null || target == null || actor.level().isClientSide()) return;
         GrabManager.start(actor, target, cfg.duration(), cfg.distance(), cfg.disableGrabber(), cfg.disableGrabbed(),
             cfg.horizontalOnly(), cfg.verticalOnly());

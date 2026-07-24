@@ -4,8 +4,9 @@ import com.mojang.serialization.MapCodec;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.shared.EmptyCfg;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.OwnableEntity;
+import net.minecraft.world.entity.TraceableEntity;
 
 public final class OwnerCondition implements ConditionType<BiEntityCtx, EmptyCfg> {
     @Override
@@ -15,8 +16,15 @@ public final class OwnerCondition implements ConditionType<BiEntityCtx, EmptyCfg
 
     @Override
     public boolean test(EmptyCfg cfg, BiEntityCtx ctx) {
-        if (!(ctx.target() instanceof TamableAnimal tame)) return false;
-        LivingEntity ownerEntity = tame.getOwner();
-        return ownerEntity != null && ownerEntity.equals(ctx.actor());
+        Entity actor = ctx.actor();
+        Entity target = ctx.target();
+        if (actor == null || target == null) return false;
+        Entity owner = null;
+        if (target instanceof OwnableEntity ownable) {
+            owner = ownable.getOwner();
+        } else if (target instanceof TraceableEntity traceable) {
+            owner = traceable.getOwner();
+        }
+        return owner != null && owner.equals(actor);
     }
 }

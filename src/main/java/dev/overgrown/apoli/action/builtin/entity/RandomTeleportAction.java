@@ -14,7 +14,7 @@ import dev.overgrown.apoli.data.Vector;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -52,10 +52,10 @@ public final class RandomTeleportAction implements ActionType<EntityCtx, RandomT
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        LivingEntity entity = ctx.entity();
+        Entity entity = ctx.entity();
         Level level = ctx.level();
         if (!(level instanceof ServerLevel serverLevel)) return;
-        RandomSource random = entity.getRandom();
+        RandomSource random = serverLevel.random;
         int attempts = cfg.attempts.orElse((int) (cfg.areaWidth * 2 + cfg.areaHeight * 2));
         int w = (int) cfg.areaWidth;
         int h = (int) cfg.areaHeight;
@@ -81,7 +81,7 @@ public final class RandomTeleportAction implements ActionType<EntityCtx, RandomT
         cfg.failAction.ifPresent(a -> a.run(ctx));
     }
 
-    private static boolean isValidLanding(BlockPos pos, Cfg cfg, LivingEntity entity, ServerLevel level) {
+    private static boolean isValidLanding(BlockPos pos, Cfg cfg, Entity entity, ServerLevel level) {
         if (cfg.landingBlockCondition.isPresent()) {
             BlockState state = level.getBlockState(pos.below());
             if (!cfg.landingBlockCondition.get().test(new BlockCtx(pos.below(), state, level))) return false;

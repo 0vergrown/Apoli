@@ -12,6 +12,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.List;
@@ -41,17 +42,19 @@ public final class DamageBiEntityAction implements ActionType<BiEntityCtx, Damag
 
     @Override
     public void run(Cfg cfg, BiEntityCtx ctx) {
-        LivingEntity target = ctx.target();
-        LivingEntity actor = ctx.actor();
+        Entity target = ctx.target();
+        if (target == null) return;
+        LivingEntity livingTarget = ctx.livingTarget();
+        if (cfg.amount.isEmpty() && livingTarget == null) return;
         ResourceKey<DamageType> typeKey = ResourceKey.create(Registries.DAMAGE_TYPE, cfg.damageType);
         Optional<net.minecraft.core.Holder.Reference<DamageType>> holder = ctx.level().registryAccess()
             .registryOrThrow(Registries.DAMAGE_TYPE).getHolder(typeKey);
         if (holder.isEmpty()) return;
-        DamageSource source = new DamageSource(holder.get(), actor);
+        DamageSource source = new DamageSource(holder.get(), ctx.actor());
 
-        float base = cfg.amount.orElseGet(target::getMaxHealth);
+        float base = cfg.amount.isPresent() ? cfg.amount.get() : livingTarget.getMaxHealth();
         List<AttributeModifier> mods = cfg.allModifiers();
-        float finalAmount = mods.isEmpty() ? base : Math.max(0f, AttributeModifierHelper.apply(base, mods, target));
+        float finalAmount = mods.isEmpty() ? base : Math.max(0f, AttributeModifierHelper.apply(base, mods, livingTarget));
         if (finalAmount > 0f) target.hurt(source, finalAmount);
     }
 }

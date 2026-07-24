@@ -20,9 +20,4 @@ public final class UndirectedCondition implements ConditionType<BiEntityCtx, Und
     public boolean test(Cfg cfg, BiEntityCtx ctx) {
         return cfg.condition.test(ctx.asActor()) || cfg.condition.test(ctx.asTarget());
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

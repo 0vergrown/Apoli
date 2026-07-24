@@ -9,6 +9,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Optional;
 
@@ -36,7 +37,9 @@ public final class StatusEffectCondition implements ConditionType<EntityCtx, Sta
     public boolean test(Cfg cfg, EntityCtx ctx) {
         MobEffect effect = BuiltInRegistries.MOB_EFFECT.get(cfg.effect);
         if (effect == null) return false;
-        MobEffectInstance instance = ctx.entity().getEffect(effect);
+        LivingEntity living = ctx.living();
+        if (living == null) return false;
+        MobEffectInstance instance = living.getEffect(effect);
         if (instance == null) return false;
         if (cfg.minAmplifier.isPresent() && instance.getAmplifier() < cfg.minAmplifier.get()) return false;
         if (cfg.maxAmplifier.isPresent() && instance.getAmplifier() > cfg.maxAmplifier.get()) return false;

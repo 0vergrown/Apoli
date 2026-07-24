@@ -23,9 +23,4 @@ public final class InBlockCondition implements ConditionType<EntityCtx, InBlockC
         BlockPos pos = ctx.raw().blockPosition();
         return cfg.blockCondition.test(new BlockCtx(pos, ctx.level().getBlockState(pos), ctx.level()));
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

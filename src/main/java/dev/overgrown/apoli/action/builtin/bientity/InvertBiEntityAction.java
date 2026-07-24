@@ -20,9 +20,4 @@ public final class InvertBiEntityAction implements ActionType<BiEntityCtx, Inver
     public void run(Cfg cfg, BiEntityCtx ctx) {
         cfg.action.run(ctx.swap());
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

@@ -48,7 +48,6 @@ import dev.overgrown.apoli.power.builtin.IgnoreFluidPower;
 import dev.overgrown.apoli.power.builtin.InventoryPower;
 import dev.overgrown.apoli.power.builtin.InvisibilityPower;
 import dev.overgrown.apoli.power.builtin.InvulnerabilityPower;
-import dev.overgrown.apoli.power.builtin.EntityTextureOverlayPower;
 import dev.overgrown.apoli.power.builtin.ItemOnItemPower;
 import dev.overgrown.apoli.power.builtin.KeepInventoryPower;
 import dev.overgrown.apoli.power.builtin.ModelColorPower;
@@ -286,7 +285,11 @@ public final class PowerTypes {
 
         PowerTypeRegistry.register(Apoli.id("model_color"), new ModelColorPower());
         PowerTypeRegistry.register(Apoli.id("modify_model_parts"), new ModifyModelPartsPower());
-        PowerTypeRegistry.register(Apoli.id("entity_texture_overlay"), new EntityTextureOverlayPower());
+        PowerTypeRegistry.register(Apoli.id("custom_model_render"), new dev.overgrown.apoli.power.builtin.CustomModelRenderPower());
+        PowerTypeRegistry.register(Apoli.id("action_on_speak"), new dev.overgrown.apoli.power.builtin.ActionOnSpeakPower());
+        PowerTypeRegistry.register(Apoli.id("action_on_reply"), new dev.overgrown.apoli.power.builtin.ActionOnReplyPower());
+        PowerTypeRegistry.register(Apoli.id("action_on_sending_message"), new dev.overgrown.apoli.power.builtin.ActionOnSendingMessagePower());
+        PowerTypeRegistry.register(Apoli.id("action_on_speech"), new dev.overgrown.apoli.power.builtin.ActionOnSpeechPower());
         PowerTypeRegistry.register(Apoli.id("overlay"), new OverlayPower());
         PowerTypeRegistry.register(Apoli.id("shader"), new ShaderPower());
         PowerTypeRegistry.register(Apoli.id("tooltip"), new TooltipPower());

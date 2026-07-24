@@ -36,8 +36,7 @@ public final class ProjectileDamageCondition implements ConditionType<DamageCtx,
             if (expected == null || projectile.getType() != expected) return false;
         }
         if (cfg.projectileCondition.isPresent()) {
-            LivingEntity living = projectile instanceof LivingEntity le ? le : null;
-            EntityCtx projCtx = new EntityCtx(living, ctx.level(), projectile);
+            EntityCtx projCtx = new EntityCtx(projectile, ctx.level());
             try {
                 return cfg.projectileCondition.get().test(projCtx);
             } catch (RuntimeException e) {

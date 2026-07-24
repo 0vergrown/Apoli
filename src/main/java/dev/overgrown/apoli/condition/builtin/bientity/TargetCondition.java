@@ -20,9 +20,4 @@ public final class TargetCondition implements ConditionType<BiEntityCtx, TargetC
     public boolean test(Cfg cfg, BiEntityCtx ctx) {
         return cfg.condition.test(ctx.asTarget());
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

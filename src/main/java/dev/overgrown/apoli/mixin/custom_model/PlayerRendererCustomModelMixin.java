@@ -1,14 +1,14 @@
-package dev.overgrown.apoli.mixin.texture_overlay;
+package dev.overgrown.apoli.mixin.custom_model;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import dev.overgrown.apoli.client.render.CustomModelRenderLayer;
 import dev.overgrown.apoli.client.render.ModelPartLookup;
 import dev.overgrown.apoli.client.render.OverlayRenderTypes;
-import dev.overgrown.apoli.client.render.PlayerTextureOverlayLayer;
 import dev.overgrown.apoli.data.ModelParts;
-import dev.overgrown.apoli.power.builtin.EntityTextureOverlayPower;
-import dev.overgrown.apoli.power.builtin.EntityTextureOverlayPower.ResolvedLayer;
+import dev.overgrown.apoli.power.builtin.CustomModelRenderPower;
+import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.ResolvedLayer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.model.PlayerModel;
@@ -31,25 +31,27 @@ import java.util.List;
 
 @Mixin(PlayerRenderer.class)
 @Environment(EnvType.CLIENT)
-public abstract class PlayerRendererTextureOverlayMixin extends LivingEntityRenderer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
+public abstract class PlayerRendererCustomModelMixin extends LivingEntityRenderer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
 
     @Unique
     private boolean apoli$slim;
 
-    protected PlayerRendererTextureOverlayMixin(EntityRendererProvider.Context ctx, PlayerModel<AbstractClientPlayer> model, float shadow) {
+    protected PlayerRendererCustomModelMixin(EntityRendererProvider.Context ctx, PlayerModel<AbstractClientPlayer> model, float shadow) {
         super(ctx, model, shadow);
     }
 
     @Inject(method = "<init>", at = @At("TAIL"))
-    private void apoli$addOverlayLayer(EntityRendererProvider.Context ctx, boolean slim, CallbackInfo ci) {
+    private void apoli$addCustomModelLayer(EntityRendererProvider.Context ctx, boolean slim, CallbackInfo ci) {
         this.apoli$slim = slim;
-        this.addLayer(new PlayerTextureOverlayLayer(this, slim));
+        this.addLayer(new CustomModelRenderLayer(this, slim));
     }
 
     @Inject(method = "getTextureLocation", at = @At("HEAD"), cancellable = true)
     private void apoli$replaceSkin(AbstractClientPlayer player, CallbackInfoReturnable<ResourceLocation> cir) {
-        EntityTextureOverlayPower.Config cfg = EntityTextureOverlayPower.firstReplace(player);
-        if (cfg == null) return;
+        CustomModelRenderPower.Config cfg = CustomModelRenderPower.firstReplace(player);
+        if (cfg == null) {
+            return;
+        }
         cir.setReturnValue(apoli$slim ? cfg.slim() : cfg.wide());
     }
 
@@ -57,8 +59,10 @@ public abstract class PlayerRendererTextureOverlayMixin extends LivingEntityRend
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/AbstractClientPlayer;getSkinTextureLocation()Lnet/minecraft/resources/ResourceLocation;"))
     private ResourceLocation apoli$replaceHandSkin(ResourceLocation original, PoseStack pose, MultiBufferSource buffers,
                                                    int light, AbstractClientPlayer player, ModelPart arm, ModelPart sleeve) {
-        EntityTextureOverlayPower.Config cfg = EntityTextureOverlayPower.firstReplace(player);
-        if (cfg == null || !cfg.showFirstPerson()) return original;
+        CustomModelRenderPower.Config cfg = CustomModelRenderPower.firstReplace(player);
+        if (cfg == null || !cfg.showFirstPerson()) {
+            return original;
+        }
         return apoli$slim ? cfg.slim() : cfg.wide();
     }
 
@@ -75,11 +79,15 @@ public abstract class PlayerRendererTextureOverlayMixin extends LivingEntityRend
     @Unique
     private void apoli$renderArmOverlay(PoseStack pose, MultiBufferSource buffers, int light, AbstractClientPlayer player,
                                         ModelPart arm, ModelPart sleeve) {
-        List<ResolvedLayer> layers = EntityTextureOverlayPower.collectLayers(player);
-        if (layers.isEmpty()) return;
+        List<ResolvedLayer> layers = CustomModelRenderPower.collectTextureOverlays(player);
+        if (layers.isEmpty()) {
+            return;
+        }
         PlayerModel<AbstractClientPlayer> model = this.getModel();
         for (ResolvedLayer layer : layers) {
-            if (!layer.showFirstPerson() || !apoli$layerAffectsArm(model, layer, arm, sleeve)) continue;
+            if (!layer.showFirstPerson() || !apoli$layerAffectsArm(model, layer, arm, sleeve)) {
+                continue;
+            }
             ResourceLocation texture = layer.texture(apoli$slim);
             VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(layer.mode(), texture));
             boolean scaled = layer.scale() != 1.0F;
@@ -91,16 +99,22 @@ public abstract class PlayerRendererTextureOverlayMixin extends LivingEntityRend
                 layer.red(), layer.green(), layer.blue(), layer.alpha());
             sleeve.render(pose, consumer, light, OverlayTexture.NO_OVERLAY,
                 layer.red(), layer.green(), layer.blue(), layer.alpha());
-            if (scaled) pose.popPose();
+            if (scaled) {
+                pose.popPose();
+            }
         }
     }
 
     @Unique
     private boolean apoli$layerAffectsArm(PlayerModel<AbstractClientPlayer> model, ResolvedLayer layer, ModelPart arm, ModelPart sleeve) {
-        if (layer.wholeModel()) return true;
+        if (layer.wholeModel()) {
+            return true;
+        }
         for (String partName : layer.bodyParts()) {
             List<ModelPart> parts = ModelPartLookup.resolve(model, ModelParts.normalize(partName));
-            if (parts.contains(arm) || parts.contains(sleeve)) return true;
+            if (parts.contains(arm) || parts.contains(sleeve)) {
+                return true;
+            }
         }
         return false;
     }

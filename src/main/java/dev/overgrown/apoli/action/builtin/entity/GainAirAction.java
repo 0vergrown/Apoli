@@ -5,7 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Expression;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 
 public final class GainAirAction implements ActionType<EntityCtx, GainAirAction.Cfg> {
     public record Cfg(Expression value) {}
@@ -19,7 +19,7 @@ public final class GainAirAction implements ActionType<EntityCtx, GainAirAction.
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        LivingEntity e = ctx.entity();
+        Entity e = ctx.entity();
         e.setAirSupply(Math.min(e.getAirSupply() + cfg.value.evalInt(e), e.getMaxAirSupply()));
     }
 }

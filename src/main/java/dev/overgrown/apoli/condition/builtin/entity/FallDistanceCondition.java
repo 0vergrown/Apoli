@@ -22,12 +22,8 @@ public final class FallDistanceCondition implements ConditionType<EntityCtx, Fal
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        float fall = ctx.entity().hasEffect(MobEffects.SLOW_FALLING) ? 0f : ctx.entity().fallDistance;
+        LivingEntity living = ctx.living();
+        float fall = living != null && living.hasEffect(MobEffects.SLOW_FALLING) ? 0f : ctx.entity().fallDistance;
         return cfg.comparison.compare(fall, cfg.compareTo);
-    }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
     }
 }

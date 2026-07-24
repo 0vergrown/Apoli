@@ -78,7 +78,8 @@ public final class InventoryAction implements ActionType<EntityCtx, InventoryAct
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        LivingEntity entity = ctx.entity();
+        LivingEntity entity = ctx.living();
+        if (entity == null) return;
         cfg.entityAction.ifPresent(a -> a.run(ctx));
         if (cfg.inventoryType == InventoryType.POWER) {
             if (cfg.power.isEmpty()) return;

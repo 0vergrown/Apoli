@@ -44,9 +44,4 @@ public final class BlockCollisionCondition implements ConditionType<EntityCtx, B
         }
         return false;
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

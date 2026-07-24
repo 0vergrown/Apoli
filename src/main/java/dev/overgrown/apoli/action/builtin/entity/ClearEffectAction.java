@@ -7,6 +7,7 @@ import dev.overgrown.apoli.condition.context.EntityCtx;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Optional;
 
@@ -22,11 +23,13 @@ public final class ClearEffectAction implements ActionType<EntityCtx, ClearEffec
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
+        LivingEntity living = ctx.living();
+        if (living == null) return;
         if (cfg.effect.isEmpty()) {
-            ctx.entity().removeAllEffects();
+            living.removeAllEffects();
             return;
         }
         MobEffect target = BuiltInRegistries.MOB_EFFECT.get(cfg.effect.get());
-        if (target != null) ctx.entity().removeEffect(target);
+        if (target != null) living.removeEffect(target);
     }
 }

@@ -20,6 +20,10 @@ public final class ApoliIds {
     public static final ResourceLocation MODIFY_VELOCITY = Apoli.id("modify_velocity");
     public static final ResourceLocation MODIFY_EXHAUSTION = Apoli.id("modify_exhaustion");
     public static final ResourceLocation MODIFY_DAMAGE = Apoli.id("modify_damage");
+    public static final ResourceLocation ACTION_ON_SPEAK = Apoli.id("action_on_speak");
+    public static final ResourceLocation ACTION_ON_REPLY = Apoli.id("action_on_reply");
+    public static final ResourceLocation ACTION_ON_SENDING_MESSAGE = Apoli.id("action_on_sending_message");
+    public static final ResourceLocation ACTION_ON_SPEECH = Apoli.id("action_on_speech");
 
     private ApoliIds() {}
 }

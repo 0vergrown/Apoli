@@ -21,7 +21,7 @@ public final class KeyPressedCondition implements ConditionType<EntityCtx, KeyPr
 
     @Override
     public boolean test(Config cfg, EntityCtx ctx) {
-        LivingEntity entity = ctx.entity();
+        LivingEntity entity = ctx.living();
         if (entity == null) return false;
         Level level = ctx.level();
         String key = cfg.key().key();

@@ -33,9 +33,4 @@ public final class CommandCondition implements ConditionType<EntityCtx, CommandC
         server.getCommands().performPrefixedCommand(source, cfg.command);
         return cfg.comparison.compare(result[0], cfg.compareTo);
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }

@@ -9,27 +9,29 @@ public final class BiEntityCtx {
     private final Entity target;
     private final Level level;
 
-    public BiEntityCtx(LivingEntity actor, LivingEntity target, Level level) {
-        this.actor = actor;
-        this.target = target;
-        this.level = level;
-    }
-
-    private BiEntityCtx(Level level, Entity actor, Entity target) {
+    public BiEntityCtx(Entity actor, Entity target, Level level) {
         this.actor = actor;
         this.target = target;
         this.level = level;
     }
 
     public static BiEntityCtx of(Entity actor, Entity target, Level level) {
-        return new BiEntityCtx(level, actor, target);
+        return new BiEntityCtx(actor, target, level);
     }
 
-    public LivingEntity actor() {
+    public Entity actor() {
+        return actor;
+    }
+
+    public Entity target() {
+        return target;
+    }
+
+    public LivingEntity livingActor() {
         return actor instanceof LivingEntity le ? le : null;
     }
 
-    public LivingEntity target() {
+    public LivingEntity livingTarget() {
         return target instanceof LivingEntity le ? le : null;
     }
 
@@ -46,14 +48,14 @@ public final class BiEntityCtx {
     }
 
     public EntityCtx asActor() {
-        return EntityCtx.of(actor, level);
+        return new EntityCtx(actor, level);
     }
 
     public EntityCtx asTarget() {
-        return EntityCtx.of(target, level);
+        return new EntityCtx(target, level);
     }
 
     public BiEntityCtx swap() {
-        return new BiEntityCtx(level, target, actor);
+        return new BiEntityCtx(target, actor, level);
     }
 }

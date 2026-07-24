@@ -48,6 +48,10 @@ repositories {
 		name = "TwelveIterations"
 		url = "https://maven.twelveiterations.com/repository/maven-public/"
 	}
+	maven {
+		name = "Henkel"
+		url = "https://maven.maxhenkel.de/repository/public"
+	}
 }
 
 dependencies {
@@ -88,6 +92,17 @@ dependencies {
 	}
 
 	modCompileOnly "me.lucko:fabric-permissions-api:0.3.1"
+
+	// Simple Voice Chat API (compile-only, optional at runtime) — the voice_* conditions and
+	// action_on_speak/reply. The compat plugin is only discovered when SVC is installed (fabric.mod.json
+	// "voicechat" entrypoint), so Apoli runs fine without it.
+	compileOnly "de.maxhenkel.voicechat:voicechat-api:${project.voicechat_api_version}"
+
+	// Vosk offline speech — the fallback transcriber for browsers without the Web Speech API. JiJ-bundled
+	// via include so it ships with the mod; the user supplies a model at <gamedir>/apoli/vosk-model.
+	implementation "com.alphacephei:vosk:${project.vosk_version}"
+	include "com.alphacephei:vosk:${project.vosk_version}"
+	include "net.java.dev.jna:jna:5.7.0"
 
 	testImplementation platform("org.junit:junit-bom:5.10.2")
 	testImplementation "org.junit.jupiter:junit-jupiter"

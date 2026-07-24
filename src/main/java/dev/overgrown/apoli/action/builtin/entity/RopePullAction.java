@@ -17,7 +17,6 @@ import net.minecraft.world.phys.Vec3;
 import java.util.Optional;
 
 public final class RopePullAction implements ActionType<EntityCtx, RopePullAction.Cfg> {
-
     public enum Which implements StringRepresentable {
         SELF("self"),
         OTHER("other"),
@@ -82,10 +81,5 @@ public final class RopePullAction implements ActionType<EntityCtx, RopePullActio
     private static void push(Entity entity, Vec3 toward, double speed, boolean set) {
         if (speed == 0 || toward.lengthSqr() < 1e-8) return;
         VelocityUpdater.apply(entity, toward.normalize().scale(speed), set);
-    }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
     }
 }

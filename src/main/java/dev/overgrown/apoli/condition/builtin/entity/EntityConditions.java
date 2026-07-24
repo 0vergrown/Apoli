@@ -112,6 +112,15 @@ public final class EntityConditions {
         ConditionTypes.ENTITY.register(Apoli.id("inventory"), new InventoryCondition());
         ConditionTypes.ENTITY.register(Apoli.id("raycast"), new RaycastEntityCondition());
 
+        ConditionTypes.ENTITY.register(Apoli.id("voice_speaking"), new VoiceSpeakingCondition());
+        ConditionTypes.ENTITY.register(
+            Apoli.id("voice_disabled"),
+            new VoiceDisabledCondition(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("voice_muted")).build()
+        );
+        ConditionTypes.ENTITY.register(Apoli.id("voice_loudness"), new VoiceLoudnessCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("voice_listeners"), new VoiceListenersCondition());
+
         ConditionTypes.ENTITY.register(Apoli.id("attached_to_rope"), new AttachedToRopeCondition());
         ConditionTypes.ENTITY.register(Apoli.id("disguised"), new DisguisedCondition());
 

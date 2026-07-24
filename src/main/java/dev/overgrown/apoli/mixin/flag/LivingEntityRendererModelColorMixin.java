@@ -11,6 +11,7 @@ import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -56,6 +57,10 @@ public abstract class LivingEntityRendererModelColorMixin {
                                        PoseStack pose, MultiBufferSource buffer, int packedLight) {
         float[] color = ModelColorPower.colorFor(entity);
         if (color == ModelColorPower.IDENTITY) return;
+        if (color[4] >= 1f) {
+            int overlay = args.<Integer>get(3);
+            args.set(3, OverlayTexture.pack(15, overlay >> 16 & 0xFFFF));
+        }
         args.set(4, (float) args.get(4) * color[0]);
         args.set(5, (float) args.get(5) * color[1]);
         args.set(6, (float) args.get(6) * color[2]);

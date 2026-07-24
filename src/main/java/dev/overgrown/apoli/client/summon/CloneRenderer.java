@@ -2,7 +2,7 @@ package dev.overgrown.apoli.client.summon;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.overgrown.apoli.entity.summon.CloneEntity;
-import dev.overgrown.apoli.power.builtin.EntityTextureOverlayPower;
+import dev.overgrown.apoli.power.builtin.CustomModelRenderPower;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -44,7 +44,7 @@ public class CloneRenderer extends HumanoidMobRenderer<CloneEntity, CloneModel> 
         if (custom != null) return custom;
         LivingEntity owner = clone.getOwner();
         if (owner != null) {
-            EntityTextureOverlayPower.Config overlay = EntityTextureOverlayPower.firstReplace(owner);
+            CustomModelRenderPower.Config overlay = CustomModelRenderPower.firstReplace(owner);
             if (overlay != null) {
                 return slim ? overlay.slim() : overlay.wide();
             }

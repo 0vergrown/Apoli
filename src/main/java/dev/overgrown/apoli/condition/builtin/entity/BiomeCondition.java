@@ -45,9 +45,4 @@ public final class BiomeCondition implements ConditionType<EntityCtx, BiomeCondi
         }
         return false;
     }
-
-    @Override
-    public boolean acceptsNonLiving() {
-        return true;
-    }
 }
