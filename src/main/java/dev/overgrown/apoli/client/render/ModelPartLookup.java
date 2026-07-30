@@ -1,6 +1,5 @@
 package dev.overgrown.apoli.client.render;
 
-import dev.overgrown.apoli.data.ModelParts;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
@@ -15,6 +14,11 @@ public final class ModelPartLookup {
 
     public static List<ModelPart> resolve(HumanoidModel<?> model, String normalized) {
         List<ModelPart> parts = new ArrayList<>(2);
+        resolveInto(model, normalized, parts);
+        return parts;
+    }
+
+    public static void resolveInto(HumanoidModel<?> model, String normalized, List<ModelPart> parts) {
         PlayerModel<?> player = model instanceof PlayerModel<?> pm ? pm : null;
         switch (normalized) {
             case "head" -> { parts.add(model.head); parts.add(model.hat); }
@@ -31,7 +35,6 @@ public final class ModelPartLookup {
             case "leftpants" -> { if (player != null) parts.add(player.leftPants); }
             default -> {}
         }
-        return parts;
     }
 
     public static List<ModelPart> allParts(HumanoidModel<?> model) {

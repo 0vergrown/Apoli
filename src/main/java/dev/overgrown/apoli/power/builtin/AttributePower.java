@@ -60,6 +60,7 @@ public final class AttributePower extends PowerType<AttributePower.Cfg> {
     @Override
     public void onAdded(ResourceLocation powerId, Cfg cfg, PowerContainer holder, ResourceLocation source) {
         LivingEntity entity = holder.owner();
+        if (entity == null) return;
         for (int idx = 0; idx < cfg.modifiers.size(); idx++) {
             reapplyOne(entity, holder, powerId, idx, cfg.modifiers.get(idx), cfg.updateHealth);
         }
@@ -69,6 +70,7 @@ public final class AttributePower extends PowerType<AttributePower.Cfg> {
     public void onRemoved(ResourceLocation powerId, Cfg cfg, PowerContainer holder, ResourceLocation source) {
         if (holder.hasPower(powerId)) return;
         LivingEntity entity = holder.owner();
+        if (entity == null) return;
         for (int idx = 0; idx < cfg.modifiers.size(); idx++) {
             removeOne(entity, powerId, idx, cfg.modifiers.get(idx), cfg.updateHealth);
             APPLIED.remove(new TrackKey(entity.getUUID(), powerId, idx));
@@ -78,6 +80,7 @@ public final class AttributePower extends PowerType<AttributePower.Cfg> {
     @Override
     public void tick(ResourceLocation powerId, Cfg cfg, PowerContainer holder) {
         LivingEntity entity = holder.owner();
+        if (entity == null) return;
         for (int idx = 0; idx < cfg.modifiers.size(); idx++) {
             reapplyOne(entity, holder, powerId, idx, cfg.modifiers.get(idx), cfg.updateHealth);
         }
@@ -169,6 +172,27 @@ public final class AttributePower extends PowerType<AttributePower.Cfg> {
         if (affectsMaxHealth) {
             reconcileHealth(entity, prevMax, prevHealth, updateHealth);
         }
+    }
+
+    public static void purge(LivingEntity entity, ResourceLocation powerId) {
+        java.util.UUID owner = entity.getUUID();
+        boolean touchedMaxHealth = false;
+        float prevMax = entity.getMaxHealth();
+        float prevHealth = entity.getHealth();
+        for (java.util.Iterator<TrackKey> it = APPLIED.keySet().iterator(); it.hasNext(); ) {
+            TrackKey key = it.next();
+            if (!key.entityUUID().equals(owner) || !key.powerId().equals(powerId)) continue;
+            java.util.UUID modId = uuidFor(powerId, key.idx());
+            for (Attribute attr : BuiltInRegistries.ATTRIBUTE) {
+                AttributeInstance instance = entity.getAttribute(attr);
+                if (instance == null || instance.getModifier(modId) == null) continue;
+                instance.removeModifier(modId);
+                ResourceLocation attrKey = BuiltInRegistries.ATTRIBUTE.getKey(attr);
+                if (attrKey != null && MAX_HEALTH_ID.equals(attrKey.toString())) touchedMaxHealth = true;
+            }
+            it.remove();
+        }
+        if (touchedMaxHealth) reconcileHealth(entity, prevMax, prevHealth, false);
     }
 
     private static java.util.UUID uuidFor(ResourceLocation powerId, int idx) {

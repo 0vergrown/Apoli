@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.mixin.flag;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.overgrown.apoli.client.disguise.ClientDisguiseManager;
 import dev.overgrown.apoli.client.render.ModelColorState;
 import dev.overgrown.apoli.client.render.ModelPartLookup;
 import dev.overgrown.apoli.power.builtin.ModelColorPower;
@@ -13,6 +14,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -34,10 +36,11 @@ public abstract class LivingEntityRendererModelColorMixin {
     private void apoli$setupPartColors(LivingEntity entity, float entityYaw, float partialTick,
                                        PoseStack pose, MultiBufferSource buffer, int packedLight, CallbackInfo ci) {
         ModelColorState.clear();
-        if (!ModelColorPower.hasPartColors(entity)) return;
+        Entity source = ClientDisguiseManager.powerSource(entity);
+        if (!ModelColorPower.hasPartColors(source)) return;
         EntityModel<?> model = ((LivingEntityRenderer<?, ?>) (Object) this).getModel();
         if (!(model instanceof HumanoidModel<?> humanoid)) return;
-        Map<String, float[]> parts = ModelColorPower.partColorsFor(entity);
+        Map<String, float[]> parts = ModelColorPower.partColorsFor(source);
         if (parts == null) return;
         ModelColorState.set(ModelPartLookup.buildColorMap(humanoid, parts));
     }
@@ -55,7 +58,7 @@ public abstract class LivingEntityRendererModelColorMixin {
     private void apoli$applyModelColor(Args args,
                                        LivingEntity entity, float entityYaw, float partialTick,
                                        PoseStack pose, MultiBufferSource buffer, int packedLight) {
-        float[] color = ModelColorPower.colorFor(entity);
+        float[] color = ModelColorPower.colorFor(ClientDisguiseManager.powerSource(entity));
         if (color == ModelColorPower.IDENTITY) return;
         if (color[4] >= 1f) {
             int overlay = args.<Integer>get(3);
@@ -72,7 +75,7 @@ public abstract class LivingEntityRendererModelColorMixin {
                                         boolean useTranslucent, CallbackInfoReturnable<RenderType> cir) {
         if (!isVisible) return;
         if (isInvisibleToPlayer) return;
-        if (ModelColorPower.minAlpha(entity) >= 0.999f) return;
+        if (ModelColorPower.minAlpha(ClientDisguiseManager.powerSource(entity)) >= 0.999f) return;
         @SuppressWarnings("unchecked")
         LivingEntityRenderer<LivingEntity, ?> self = (LivingEntityRenderer<LivingEntity, ?>) (Object) this;
         ResourceLocation tex = self.getTextureLocation(entity);

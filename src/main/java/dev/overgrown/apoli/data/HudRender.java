@@ -6,6 +6,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.EntityCondition;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,13 +23,17 @@ public record HudRender(List<Entry> entries) {
             hr -> hr.entries.size() == 1 ? Either.left(hr.entries.get(0)) : Either.right(hr.entries)
         );
 
-    public Optional<Entry> select(EntityCtx ctx) {
+    public @Nullable Entry selectEntry(EntityCtx ctx) {
         for (Entry e : entries) {
             if (!e.shouldRender) continue;
             if (e.condition.isPresent() && !e.condition.get().test(ctx)) continue;
-            return Optional.of(e);
+            return e;
         }
-        return Optional.empty();
+        return null;
+    }
+
+    public Optional<Entry> select(EntityCtx ctx) {
+        return Optional.ofNullable(selectEntry(ctx));
     }
 
     public boolean shouldRender() {

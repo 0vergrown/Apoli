@@ -69,6 +69,12 @@ public final class ApoliNetwork {
         }
     }
 
+    public static void sendForceKey(ServerPlayer recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C payload) {
+        if (ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C.CHANNEL)) {
+            send(recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C.CHANNEL, payload::write);
+        }
+    }
+
     public static void broadcastLabel(Entity entity, dev.overgrown.apoli.network.payload.LabelUpdateS2C payload) {
         for (ServerPlayer viewer : PlayerLookup.tracking(entity)) {
             sendLabel(viewer, payload);

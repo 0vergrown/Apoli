@@ -1,4 +1,8 @@
 package dev.overgrown.apoli.condition.builtin.entity;
+import dev.overgrown.apoli.compat.voicechat.VoiceDisabledCondition;
+import dev.overgrown.apoli.compat.voicechat.VoiceListenersCondition;
+import dev.overgrown.apoli.compat.voicechat.VoiceLoudnessCondition;
+import dev.overgrown.apoli.compat.voicechat.VoiceSpeakingCondition;
 
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.alias.AliasingOptions;
@@ -30,6 +34,11 @@ public final class EntityConditions {
             AliasingOptions.builder().addTypeAlias(Apoli.id("set_size")).build()
         );
         ConditionTypes.ENTITY.register(Apoli.id("resource"), new ResourceCondition());
+        ConditionTypes.ENTITY.register(
+            Apoli.id("in_team"),
+            new InTeamCondition(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("team")).build()
+        );
         ConditionTypes.ENTITY.register(Apoli.id("living"), new LivingCondition());
         ConditionTypes.ENTITY.register(Apoli.id("passenger"), new PassengerCondition());
         ConditionTypes.ENTITY.register(Apoli.id("riding"), new RidingCondition());

@@ -114,4 +114,9 @@ public final class ClientPowerContainer implements PowerContainer {
     public Set<ResourceLocation> suppressedPowers() {
         return ClientPowerState.suppressedFor(entity.getId());
     }
+
+    @Override
+    public Set<ResourceLocation> suppressionSourcesOf(ResourceLocation power) {
+        return Set.of();
+    }
 }

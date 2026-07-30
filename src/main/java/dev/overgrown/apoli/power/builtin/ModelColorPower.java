@@ -10,7 +10,7 @@ import dev.overgrown.apoli.data.ModelParts;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -59,7 +59,7 @@ public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
             r.orElse(1f), g.orElse(1f), b.orElse(1f), alpha, explicitWhite(r, g, b), parts)));
     }
 
-    public static float[] colorFor(LivingEntity entity) {
+    public static float[] colorFor(Entity entity) {
         float[] rgba = new float[]{1f, 1f, 1f, 1f, 0f};
         boolean[] any = new boolean[]{false};
         PowerLookup.forEach(entity, CANONICAL, Config.class, cfg -> {
@@ -74,7 +74,7 @@ public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
         return any[0] ? rgba : IDENTITY;
     }
 
-    public static boolean hasPartColors(LivingEntity entity) {
+    public static boolean hasPartColors(Entity entity) {
         boolean[] any = new boolean[]{false};
         PowerLookup.forEach(entity, CANONICAL, Config.class, cfg -> {
             if (cfg.hasParts()) any[0] = true;
@@ -83,7 +83,7 @@ public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
     }
 
     @Nullable
-    public static Map<String, float[]> partColorsFor(LivingEntity entity) {
+    public static Map<String, float[]> partColorsFor(Entity entity) {
         Map<String, float[]> map = new HashMap<>();
 
         EntityCtx[] ctx = new EntityCtx[1];
@@ -104,7 +104,7 @@ public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
         return map.isEmpty() ? null : map;
     }
 
-    public static float minAlpha(LivingEntity entity) {
+    public static float minAlpha(Entity entity) {
         float min = colorFor(entity)[3];
         if (hasPartColors(entity)) {
             Map<String, float[]> parts = partColorsFor(entity);

@@ -19,6 +19,7 @@ public final class SkillRegistry {
 
     private static volatile Map<ResourceLocation, SkillTree> trees = Map.of();
     private static volatile Map<ResourceLocation, Skill> powerSkills = Map.of();
+    private static volatile Map<ResourceLocation, Skill> fileSkills = Map.of();
 
     private static volatile Map<ResourceLocation, Skill> byId = Map.of();
     private static volatile Map<ResourceLocation, List<ResourceLocation>> children = Map.of();
@@ -35,9 +36,15 @@ public final class SkillRegistry {
         rebuild();
     }
 
+    public static void setFileSkills(Map<ResourceLocation, Skill> skills) {
+        fileSkills = Map.copyOf(skills);
+        rebuild();
+    }
+
     private static synchronized void rebuild() {
         Map<ResourceLocation, SkillTree> treeMap = trees;
-        Map<ResourceLocation, Skill> candidates = new LinkedHashMap<>(powerSkills);
+        Map<ResourceLocation, Skill> candidates = new LinkedHashMap<>(fileSkills);
+        candidates.putAll(powerSkills);
 
         Map<ResourceLocation, ResourceLocation> rc = new HashMap<>();
         Map<ResourceLocation, Skill> valid = new LinkedHashMap<>();

@@ -53,6 +53,7 @@ import dev.overgrown.apoli.power.builtin.KeepInventoryPower;
 import dev.overgrown.apoli.power.builtin.ModelColorPower;
 import dev.overgrown.apoli.power.builtin.ModifyModelPartsPower;
 import dev.overgrown.apoli.power.builtin.ModifyBlockRenderPower;
+import dev.overgrown.apoli.power.builtin.ModifyCursorSpeedPower;
 import dev.overgrown.apoli.power.builtin.ModifyBreakSpeedPower;
 import dev.overgrown.apoli.power.builtin.ModifyCraftingPower;
 import dev.overgrown.apoli.power.builtin.ModifyDamagePower;
@@ -209,6 +210,16 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("walk_on_fluid"), new WalkOnFluidPower());
         PowerTypeRegistry.register(Apoli.id("phasing"), new PhasingPower());
 
+        PowerTypeRegistry.register(
+            Apoli.id("modify_cursor_speed"),
+            new ModifyCursorSpeedPower(),
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("modify_mouse_sensitivity"))
+                .addTypeAlias(Apoli.id("modify_mouse_speed"))
+                .addTypeAlias(Apoli.id("modify_look_sensitivity"))
+                .build()
+        );
+
         PowerTypeRegistry.register(Apoli.id("modify_block_render"), new ModifyBlockRenderPower());
         PowerTypeRegistry.register(Apoli.id("modify_break_speed"), new ModifyBreakSpeedPower());
         PowerTypeRegistry.register(Apoli.id("modify_enchantment_level"), new ModifyEnchantmentLevelPower());
@@ -286,10 +297,10 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("model_color"), new ModelColorPower());
         PowerTypeRegistry.register(Apoli.id("modify_model_parts"), new ModifyModelPartsPower());
         PowerTypeRegistry.register(Apoli.id("custom_model_render"), new dev.overgrown.apoli.power.builtin.CustomModelRenderPower());
-        PowerTypeRegistry.register(Apoli.id("action_on_speak"), new dev.overgrown.apoli.power.builtin.ActionOnSpeakPower());
-        PowerTypeRegistry.register(Apoli.id("action_on_reply"), new dev.overgrown.apoli.power.builtin.ActionOnReplyPower());
-        PowerTypeRegistry.register(Apoli.id("action_on_sending_message"), new dev.overgrown.apoli.power.builtin.ActionOnSendingMessagePower());
-        PowerTypeRegistry.register(Apoli.id("action_on_speech"), new dev.overgrown.apoli.power.builtin.ActionOnSpeechPower());
+        PowerTypeRegistry.register(Apoli.id("action_on_speak"), new dev.overgrown.apoli.compat.voicechat.ActionOnSpeakPower());
+        PowerTypeRegistry.register(Apoli.id("action_on_reply"), new dev.overgrown.apoli.compat.voicechat.ActionOnReplyPower());
+        PowerTypeRegistry.register(Apoli.id("action_on_sending_message"), new dev.overgrown.apoli.compat.voicechat.ActionOnSendingMessagePower());
+        PowerTypeRegistry.register(Apoli.id("action_on_speech"), new dev.overgrown.apoli.compat.voicechat.ActionOnSpeechPower());
         PowerTypeRegistry.register(Apoli.id("overlay"), new OverlayPower());
         PowerTypeRegistry.register(Apoli.id("shader"), new ShaderPower());
         PowerTypeRegistry.register(Apoli.id("tooltip"), new TooltipPower());

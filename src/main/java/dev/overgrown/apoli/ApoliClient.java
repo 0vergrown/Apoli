@@ -36,9 +36,16 @@ public final class ApoliClient implements ClientModInitializer {
         "key.apoli.skill_tree", com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
         org.lwjgl.glfw.GLFW.GLFW_KEY_K, "key.categories.apoli");
 
+    private static final net.minecraft.client.KeyMapping SPEECH_KEY = new net.minecraft.client.KeyMapping(
+        "key.apoli.speech_to_action", com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
+        com.mojang.blaze3d.platform.InputConstants.UNKNOWN.getValue(), "key.categories.apoli");
+
+
     @Override
     public void onInitializeClient() {
         net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper.registerKeyBinding(SKILL_TREE_KEY);
+        net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper.registerKeyBinding(SPEECH_KEY);
+        dev.overgrown.apoli.client.speech.SpeechClient.setPushToTalkKey(SPEECH_KEY);
         net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
             dev.overgrown.apoli.entity.ApoliEntities.CUSTOM_PROJECTILE,
             dev.overgrown.apoli.client.CustomProjectileRenderer::new);
@@ -136,12 +143,19 @@ public final class ApoliClient implements ClientModInitializer {
             mc.execute(() -> dev.overgrown.apoli.client.ClientLabelState.apply(payload.entityId(), payload.texts()));
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.ForceKeyS2C.CHANNEL, (mc, handler, buf, sender) -> {
+            dev.overgrown.apoli.network.payload.ForceKeyS2C payload = dev.overgrown.apoli.network.payload.ForceKeyS2C.read(buf);
+            mc.execute(() -> dev.overgrown.apoli.client.ForcedKeys.force(payload.key(), payload.duration(), payload.release()));
+        });
+
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
             new dev.overgrown.apoli.network.payload.ProtocolVersionPayload(
                 dev.overgrown.apoli.network.ProtocolCompat.VERSION).write(buf);
             ClientPlayNetworking.send(dev.overgrown.apoli.network.payload.ProtocolVersionPayload.CHANNEL, buf);
-            dev.overgrown.apoli.client.speech.SpeechClient.onJoin();
+            if (dev.overgrown.apoli.client.ApoliClientConfig.get().speechToAction()) {
+                dev.overgrown.apoli.client.speech.SpeechClient.onJoin();
+            }
         });
 
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SkillDefsSyncS2C.CHANNEL, (mc, handler, buf, sender) -> {
@@ -187,6 +201,8 @@ public final class ApoliClient implements ClientModInitializer {
                 dev.overgrown.apoli.client.ClientLabelState.clear();
                 RopeClientManager.clear();
                 KeyPressWatcher.reset();
+                dev.overgrown.apoli.client.ForcedKeys.clear();
+                dev.overgrown.apoli.client.CursorSpeedState.reset();
                 dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
                 dev.overgrown.apoli.client.skill.ClientSkillState.clear();
                 dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.clear();
@@ -211,6 +227,7 @@ public final class ApoliClient implements ClientModInitializer {
             .registerReloadListener(dev.overgrown.apoli.client.render.CustomModelManager.INSTANCE);
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
+            dev.overgrown.apoli.client.CursorSpeedState.tick(mc);
             if (mc.player != null && !mc.isPaused()) {
                 ApoliKeyHandler.onClientTick();
                 while (SKILL_TREE_KEY.consumeClick()) {
@@ -225,9 +242,12 @@ public final class ApoliClient implements ClientModInitializer {
             PhasingRenderState.clientTick(mc);
             RopeClientManager.tick();
             dev.overgrown.apoli.client.TextOverlayRenderer.tick();
+            dev.overgrown.apoli.client.disguise.ClientDisguiseManager.tick(mc);
+            dev.overgrown.apoli.client.speech.SpeechClient.clientTick(mc);
             if (dev.overgrown.apoli.compat.ModCompat.FIGURA) {
                 dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.tick(mc);
             }
+            dev.overgrown.apoli.client.ForcedKeys.tick();
         });
 
         WorldRenderEvents.AFTER_ENTITIES.register(RopeRenderer::render);

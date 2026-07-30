@@ -5,6 +5,8 @@ import net.fabricmc.loader.api.FabricLoader;
 public final class ModCompat {
     private ModCompat() {}
 
+    public static final boolean VOICECHAT = FabricLoader.getInstance().isModLoaded("voicechat");
+
     public static final boolean ICARUS = FabricLoader.getInstance().isModLoaded("icarus");
 
     public static final boolean FIGURA = FabricLoader.getInstance().isModLoaded("figura");

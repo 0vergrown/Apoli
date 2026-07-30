@@ -76,7 +76,13 @@ public final class ApoliSkillTreeCommand {
                     .then(Commands.argument("tree", ResourceLocationArgument.id())
                         .suggests(TREES)
                         .then(Commands.argument("value", IntegerArgumentType.integer())
-                            .executes(ApoliSkillTreeCommand::pointsAdd))))));
+                            .executes(ctx -> pointsAdd(ctx, 1))))))
+            .then(Commands.literal("remove")
+                .then(Commands.argument("targets", EntityArgument.players())
+                    .then(Commands.argument("tree", ResourceLocationArgument.id())
+                        .suggests(TREES)
+                        .then(Commands.argument("value", IntegerArgumentType.integer())
+                            .executes(ctx -> pointsAdd(ctx, -1)))))));
 
         root.then(Commands.literal("grant")
             .then(Commands.argument("targets", EntityArgument.players())
@@ -114,10 +120,7 @@ public final class ApoliSkillTreeCommand {
 
     private static int buy(CommandContext<CommandSourceStack> ctx, boolean force) throws CommandSyntaxException {
         ResourceLocation skill = ResourceLocationArgument.getId(ctx, "skill");
-        if (SkillRegistry.get(skill) == null) {
-            ctx.getSource().sendFailure(Component.literal("Unknown skill: " + skill));
-            return 0;
-        }
+        if (!knownSkill(ctx, skill)) return 0;
         int done = 0;
         for (ServerPlayer player : EntityArgument.getPlayers(ctx, "targets")) {
             boolean ok = force ? SkillTrees.forcePurchase(player, skill) : SkillTrees.tryPurchase(player, skill);
@@ -131,8 +134,19 @@ public final class ApoliSkillTreeCommand {
         return done;
     }
 
+    private static boolean knownSkill(CommandContext<CommandSourceStack> ctx, ResourceLocation skill) {
+        if (SkillRegistry.get(skill) != null) return true;
+        int loaded = SkillRegistry.all().size();
+        ctx.getSource().sendFailure(Component.literal("Unknown skill: " + skill
+            + (loaded == 0
+                ? ". No skills are loaded — define them with a 'skill' block in a power file, or as skill_trees files carrying a 'parent'."
+                : ". " + loaded + " skill(s) are loaded; check the id and that its parent chain ends at a skill tree.")));
+        return false;
+    }
+
     private static int unbuy(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ResourceLocation skill = ResourceLocationArgument.getId(ctx, "skill");
+        if (!knownSkill(ctx, skill)) return 0;
         int done = 0;
         for (ServerPlayer player : EntityArgument.getPlayers(ctx, "targets")) {
             if (SkillTrees.tryRefund(player, skill, true)) {
@@ -147,6 +161,7 @@ public final class ApoliSkillTreeCommand {
     private static int pointsGet(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = EntityArgument.getPlayer(ctx, "target");
         ResourceLocation tree = ResourceLocationArgument.getId(ctx, "tree");
+        if (!knownTree(ctx, tree)) return 0;
         int points = SkillDataAttachment.get(player).getPoints(tree);
         ctx.getSource().sendSuccess(() -> Component.literal(
             player.getGameProfile().getName() + " has " + points + " point(s) in " + tree + "."), false);
@@ -155,6 +170,7 @@ public final class ApoliSkillTreeCommand {
 
     private static int pointsSet(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ResourceLocation tree = ResourceLocationArgument.getId(ctx, "tree");
+        if (!knownTree(ctx, tree)) return 0;
         int value = IntegerArgumentType.getInteger(ctx, "value");
         int done = 0;
         for (ServerPlayer player : EntityArgument.getPlayers(ctx, "targets")) {
@@ -166,17 +182,37 @@ public final class ApoliSkillTreeCommand {
         return done;
     }
 
-    private static int pointsAdd(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+    private static int pointsAdd(CommandContext<CommandSourceStack> ctx, int sign) throws CommandSyntaxException {
         ResourceLocation tree = ResourceLocationArgument.getId(ctx, "tree");
-        int value = IntegerArgumentType.getInteger(ctx, "value");
+        if (!knownTree(ctx, tree)) return 0;
+        int value = IntegerArgumentType.getInteger(ctx, "value") * sign;
         int done = 0;
+        int last = 0;
         for (ServerPlayer player : EntityArgument.getPlayers(ctx, "targets")) {
-            SkillDataAttachment.get(player).addPoints(tree, value);
+            SkillData data = SkillDataAttachment.get(player);
+            data.addPoints(tree, value);
+            last = data.getPoints(tree);
             ApoliNetwork.sendSkillState(player);
             done++;
         }
-        feedbackCount(ctx, done, "Added " + value + " " + tree + " point(s) for %d player(s).", "No players matched.");
+        final int now = last;
+        feedbackCount(ctx, done, (value < 0 ? "Removed " + (-value) : "Added " + value) + " " + tree
+            + " point(s) for %d player(s); now " + now + ".", "No players matched.");
         return done;
+    }
+
+    private static boolean knownTree(CommandContext<CommandSourceStack> ctx, ResourceLocation tree) {
+        if (SkillRegistry.tree(tree) != null) return true;
+        StringBuilder known = new StringBuilder();
+        for (ResourceLocation id : SkillRegistry.roots()) {
+            if (known.length() > 0) known.append(", ");
+            known.append(id);
+        }
+        ctx.getSource().sendFailure(Component.literal("Unknown skill tree: " + tree
+            + (known.length() == 0
+                ? ". No skill trees are loaded — check data/<namespace>/skill_trees/."
+                : ". Loaded trees: " + known)));
+        return false;
     }
 
     private static int grant(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {

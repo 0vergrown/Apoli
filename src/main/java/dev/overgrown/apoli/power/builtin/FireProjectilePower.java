@@ -11,6 +11,7 @@ import dev.overgrown.apoli.condition.BlockCondition;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.entity.ApoliEntities;
 import dev.overgrown.apoli.entity.CustomProjectileEntity;
+import dev.overgrown.apoli.entity.ProjectileHitActions;
 import dev.overgrown.apoli.data.HudRender;
 import dev.overgrown.apoli.data.Key;
 import dev.overgrown.apoli.data.Nbt;
@@ -130,6 +131,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
 
     public boolean tryActivate(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         LivingEntity owner = holder.owner();
+        if (owner == null) return false;
         if (!(owner.level() instanceof ServerLevel level)) return false;
         StateKey k = new StateKey(owner.getUUID(), powerId);
         FireState st = states.computeIfAbsent(k, x -> new FireState());
@@ -150,15 +152,20 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
 
     @Override
     public void tick(ResourceLocation powerId, Config cfg, PowerContainer holder) {
-        StateKey k = new StateKey(holder.owner().getUUID(), powerId);
+        StateKey k = new StateKey(holder.rawOwner().getUUID(), powerId);
         FireState st = states.get(k);
         if (st == null) return;
         if (st.cooldown > 0) st.cooldown--;
         if (!st.firing) return;
-        if (!(holder.owner().level() instanceof ServerLevel level)) return;
 
         LivingEntity owner = holder.owner();
+        if (owner == null) return;
+        if (!(owner.level() instanceof ServerLevel level)) return;
         Params p = cfg.params();
+        if (p.allowConditionalCancelling() && !conditionMet(powerId, owner, level)) {
+            reset(st);
+            return;
+        }
         st.ticksSinceUse++;
 
         if (!st.finishedStartDelay) {
@@ -184,8 +191,14 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
     @Override
     public void onRemoved(ResourceLocation powerId, Config cfg, PowerContainer holder, ResourceLocation source) {
         if (!holder.allPowers().contains(powerId)) {
-            states.remove(new StateKey(holder.owner().getUUID(), powerId));
+            states.remove(new StateKey(holder.rawOwner().getUUID(), powerId));
         }
+    }
+
+    private static boolean conditionMet(ResourceLocation powerId, LivingEntity owner, ServerLevel level) {
+        dev.overgrown.apoli.power.Power power = dev.overgrown.apoli.power.ApoliPowers.get(powerId);
+        if (power == null || power.condition().isEmpty()) return true;
+        return power.condition().get().test(new EntityCtx(owner, level));
     }
 
     private static void reset(FireState st) {
@@ -209,8 +222,6 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         if (p.textureLocation().isPresent()) {
             CustomProjectileEntity custom = new CustomProjectileEntity(ApoliEntities.customProjectile(), owner, level);
             custom.setTexture(p.textureLocation().get());
-            cfg.hooks().bientityActionOnHit().ifPresent(custom::addOnHitAction);
-            cfg.hooks().ownerTargetBientityActionOnHit().ifPresent(custom::addOnHitAction);
             projectile = custom;
         } else if (p.entityType().isPresent()) {
             EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.getOptional(p.entityType().get()).orElse(null);
@@ -219,6 +230,10 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
             if (projectile == null) return;
         } else {
             return;
+        }
+
+        if (projectile instanceof ProjectileHitActions hooks) {
+            hooks.apoli$setFireConfig(cfg);
         }
 
         float yaw = owner.getYRot();
@@ -250,6 +265,9 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
 
         level.addFreshEntity(projectile);
 
+        cfg.hooks().projectileAction().ifPresent(a -> a.run(new EntityCtx(projectile, level)));
+        cfg.hooks().bientityActionAfterFiring().ifPresent(a ->
+            a.run(dev.overgrown.apoli.condition.context.BiEntityCtx.of(owner, projectile, level)));
         cfg.hooks().tickBientityAction().ifPresent(a ->
             dev.overgrown.apoli.entity.ProjectileTickManager.track(projectile, owner, a));
         cfg.hooks().shooterAction().ifPresent(a -> a.run(new EntityCtx(owner, level)));

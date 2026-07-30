@@ -1,9 +1,6 @@
 package dev.overgrown.apoli.action.builtin.entity;
 
-import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
-import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
@@ -42,7 +39,7 @@ import java.util.List;
 import java.util.Optional;
 
 public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.Cfg> {
-    public record Cfg(Params params, Hooks hooks, Optional<Cfg> chain) {}
+    public record Cfg(Params params, Aim aim, Hooks hooks, Optional<Cfg> chain) {}
 
     public enum ChainDirection implements StringRepresentable {
         FORWARD("forward"),
@@ -69,7 +66,6 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         FluidHandling fluidHandling,
         Space space,
         Optional<Vector> direction,
-        boolean pierce,
         Optional<ParticleEffect> particle,
         float spacing,
         Optional<Float> entityDistance,
@@ -78,6 +74,22 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         Optional<Float> coneAngle,
         ChainDirection chainDirection
     ) {}
+
+    public record Aim(
+        boolean pierce,
+        Optional<Boolean> pierceBlocks,
+        Optional<Boolean> pierceEntities,
+        boolean aimAtTarget,
+        boolean stopAtTarget
+    ) {
+        public boolean piercesBlocks() {
+            return pierceBlocks.orElse(pierce);
+        }
+
+        public boolean piercesEntities() {
+            return pierceEntities.orElse(pierce);
+        }
+    }
 
     public record Hooks(
         Optional<BiEntityCondition> bientityCondition,
@@ -107,7 +119,6 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         FluidHandling.CODEC.optionalFieldOf("fluid_handling", FluidHandling.ANY).forGetter(Params::fluidHandling),
         Space.CODEC.optionalFieldOf("space", Space.WORLD).forGetter(Params::space),
         Vector.CODEC.optionalFieldOf("direction").forGetter(Params::direction),
-        Codec.BOOL.optionalFieldOf("pierce", false).forGetter(Params::pierce),
         ParticleEffect.CODEC.optionalFieldOf("particle").forGetter(Params::particle),
         Codec.FLOAT.optionalFieldOf("spacing", 0.5f).forGetter(Params::spacing),
         Codec.FLOAT.optionalFieldOf("entity_distance").forGetter(Params::entityDistance),
@@ -116,6 +127,14 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         Codec.FLOAT.optionalFieldOf("cone_angle").forGetter(Params::coneAngle),
         ChainDirection.CODEC.optionalFieldOf("chain_direction", ChainDirection.FORWARD).forGetter(Params::chainDirection)
     ).apply(i, Params::new));
+
+    private static final MapCodec<Aim> AIM = RecordCodecBuilder.mapCodec(i -> i.group(
+        Codec.BOOL.optionalFieldOf("pierce", false).forGetter(Aim::pierce),
+        Codec.BOOL.optionalFieldOf("pierce_blocks").forGetter(Aim::pierceBlocks),
+        Codec.BOOL.optionalFieldOf("pierce_entities").forGetter(Aim::pierceEntities),
+        Codec.BOOL.optionalFieldOf("aim_at_target", true).forGetter(Aim::aimAtTarget),
+        Codec.BOOL.optionalFieldOf("stop_at_target", true).forGetter(Aim::stopAtTarget)
+    ).apply(i, Aim::new));
 
     private static final MapCodec<Hooks> HOOKS = RecordCodecBuilder.mapCodec(i -> i.group(
         BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Hooks::bientityCondition),
@@ -135,59 +154,63 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
     private static MapCodec<Cfg> buildCodec(Codec<Cfg> chainCodec) {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             PARAMS.forGetter(Cfg::params),
+            AIM.forGetter(Cfg::aim),
             HOOKS.forGetter(Cfg::hooks),
             chainCodec.optionalFieldOf("chain").forGetter(Cfg::chain)
         ).apply(i, Cfg::new));
     }
 
-    private static final Codec<Cfg> CHAIN_CODEC;
-    static {
-        LazyCodec<Cfg> lazy = new LazyCodec<>();
-        lazy.delegate = buildCodec(lazy).codec();
-        CHAIN_CODEC = lazy;
+    private static final Codec<Cfg> CHAIN_CODEC =
+        new dev.overgrown.apoli.codec.LazyCodec<>(() -> buildCodec(RaycastAction.chainCodec()).codec());
+
+    private static Codec<Cfg> chainCodec() {
+        return CHAIN_CODEC;
     }
 
-    private static final class LazyCodec<A> implements Codec<A> {
-        private Codec<A> delegate;
-
-        @Override
-        public <T> DataResult<Pair<A, T>> decode(DynamicOps<T> ops, T input) {
-            return delegate.decode(ops, input);
-        }
-
-        @Override
-        public <T> DataResult<T> encode(A input, DynamicOps<T> ops, T prefix) {
-            return delegate.encode(input, ops, prefix);
-        }
-    }
+    public static final MapCodec<Cfg> CONFIG_CODEC = buildCodec(CHAIN_CODEC);
 
     @Override
     public MapCodec<Cfg> codec() {
-        return buildCodec(CHAIN_CODEC);
+        return CONFIG_CODEC;
     }
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        cast(cfg, ctx, ctx.entity().getEyePosition(), null, null, 0);
+        cast(cfg, ctx, null, ctx.entity().getEyePosition(), null, null, 0);
     }
 
-    private void cast(Cfg cfg, EntityCtx ctx, Vec3 origin, @Nullable Vec3 incomingDir, @Nullable Vec3 incomingNormal, int depth) {
+    public static void runTowards(Cfg cfg, EntityCtx ctx, Entity target) {
+        cast(cfg, ctx, target, ctx.entity().getEyePosition(), null, null, 0);
+    }
+
+    private static void cast(Cfg cfg, EntityCtx ctx, @Nullable Entity aimTarget, Vec3 origin,
+                             @Nullable Vec3 incomingDir, @Nullable Vec3 incomingNormal, int depth) {
         if (depth > MAX_CHAIN_DEPTH) return;
         Entity source = ctx.entity();
         Level level = ctx.level();
         cfg.hooks.beforeAction.ifPresent(a -> a.run(ctx));
 
-        Vec3 dir = resolveDirection(cfg, source, incomingDir, incomingNormal);
+        boolean aiming = aimTarget != null && cfg.aim.aimAtTarget && incomingDir == null
+            && cfg.params.direction.isEmpty();
+        Vec3 dir = aiming
+            ? aimTarget.getBoundingBox().getCenter().subtract(origin)
+            : resolveDirection(cfg, source, incomingDir, incomingNormal);
         if (dir.lengthSqr() < 1.0e-6) dir = source.getViewVector(1f);
+        double gap = aiming ? dir.length() : 0.0;
         dir = dir.normalize();
 
-        float blockDist = cfg.params.blockDistance.orElseGet(() -> cfg.params.distance.orElse(20f));
-        float entityDist = cfg.params.entityDistance.orElseGet(() -> cfg.params.distance.orElse(blockDist));
+        float baseBlockDist = cfg.params.blockDistance.orElseGet(() -> cfg.params.distance.orElse(20f));
+        float baseEntityDist = cfg.params.entityDistance.orElseGet(() -> cfg.params.distance.orElse(baseBlockDist));
+        boolean clampToTarget = aiming && cfg.aim.stopAtTarget;
+        float blockDist = clampToTarget ? (float) gap : baseBlockDist;
+        float entityDist = clampToTarget ? (float) gap : baseEntityDist;
+        boolean pierceBlocks = cfg.aim.piercesBlocks();
+        boolean pierceEntities = cfg.aim.piercesEntities();
 
         BlockHitResult blockHit = null;
         if (cfg.params.block) {
             Vec3 to = origin.add(dir.scale(blockDist));
-            if (cfg.params.pierce) {
+            if (pierceBlocks) {
 
                 Vec3 from = origin;
                 for (int guard = 0; guard < MAX_PIERCED_BLOCKS; guard++) {
@@ -250,7 +273,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
                     hitPos = inter.get();
                     dSq = origin.distanceToSqr(hitPos);
                 }
-                if (!cfg.params.pierce && dSq > blockHitDistSq) continue;
+                if (!pierceBlocks && dSq > blockHitDistSq) continue;
                 hits.add(new EntityHit(cand, hitPos, dSq));
             }
             hits.sort(Comparator.comparingDouble(EntityHit::distSq));
@@ -263,22 +286,22 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
                     nearestEntityHit = hit.pos();
                     nearestEntityHitDistSq = hit.distSq();
                 }
-                if (!cfg.params.pierce) break;
+                if (!pierceEntities) break;
             }
         }
 
-        boolean entityStops = anyEntityHit && !cfg.params.pierce && nearestEntityHitDistSq <= blockHitDistSq;
+        boolean entityStops = anyEntityHit && !pierceEntities && nearestEntityHitDistSq <= blockHitDistSq;
         Vec3 rayEnd;
         if (entityStops) {
             rayEnd = nearestEntityHit;
-        } else if (blockHit != null && !cfg.params.pierce) {
+        } else if (blockHit != null && !pierceBlocks) {
             rayEnd = blockHit.getLocation();
         } else {
             rayEnd = origin.add(dir.scale(blockDist));
         }
 
         boolean anyHit = anyEntityHit || blockHit != null;
-        if (blockHit != null && !entityStops && !cfg.params.pierce) {
+        if (blockHit != null && !entityStops && !pierceBlocks) {
             BlockPos pos = blockHit.getBlockPos();
             BlockState state = level.getBlockState(pos);
             if (cfg.hooks.blockCondition.isEmpty()
@@ -327,11 +350,11 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
 
         if (cfg.chain.isPresent()) {
 
-            Vec3 hitNormal = (blockHit != null && !entityStops && !cfg.params.pierce)
+            Vec3 hitNormal = (blockHit != null && !entityStops && !pierceBlocks)
                 ? Vec3.atLowerCornerOf(blockHit.getDirection().getNormal())
                 : null;
             Vec3 chainOrigin = hitNormal != null ? rayEnd.add(hitNormal.scale(0.01)) : rayEnd;
-            cast(cfg.chain.get(), ctx, chainOrigin, dir, hitNormal, depth + 1);
+            cast(cfg.chain.get(), ctx, null, chainOrigin, dir, hitNormal, depth + 1);
         }
     }
 
