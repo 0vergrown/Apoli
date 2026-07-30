@@ -68,4 +68,4 @@ Use `./gradlew runClient` / `./gradlew runServer` for a dev environment. See the
 
 ## License
 
-All rights reserved.
+See [`LICENSE`](https://0vergrown.github.io/Handbook/license).
