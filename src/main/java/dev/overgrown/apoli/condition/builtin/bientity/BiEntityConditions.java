@@ -10,6 +10,11 @@ public final class BiEntityConditions {
     public static void register() {
         ConditionTypes.BI_ENTITY.register(Apoli.id("distance"), new DistanceCondition());
         ConditionTypes.BI_ENTITY.register(Apoli.id("owner"), new OwnerCondition());
+        ConditionTypes.BI_ENTITY.register(
+            Apoli.id("same_team"),
+            new SameTeamCondition(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("allied")).build()
+        );
         ConditionTypes.BI_ENTITY.register(Apoli.id("can_see"), new CanSeeCondition());
         ConditionTypes.BI_ENTITY.register(Apoli.id("actor_condition"), new ActorCondition());
         ConditionTypes.BI_ENTITY.register(Apoli.id("target_condition"), new TargetCondition());

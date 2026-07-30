@@ -7,6 +7,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public final class PowerLookup {
@@ -31,6 +32,30 @@ public final class PowerLookup {
             return true;
         }
         return false;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <C> void forEachEntry(@Nullable Entity entity, ResourceLocation canonicalId,
+                                        Class<C> configClass, BiConsumer<ResourceLocation, C> consumer) {
+        if (entity == null) return;
+        PowerContainer container = PowerContainer.of(entity);
+        if (container == null || container.isEmpty()) return;
+        List<ResourceLocation> powers = container.powersOfType(canonicalId);
+        if (powers.isEmpty()) return;
+        EntityCtx ctx = null;
+        for (int i = 0; i < powers.size(); i++) {
+            ResourceLocation powerId = powers.get(i);
+            if (container.isSuppressed(powerId)) continue;
+            Power power = ApoliPowers.get(powerId);
+            if (power == null) continue;
+            Object cfg = power.config();
+            if (!configClass.isInstance(cfg)) continue;
+            if (power.condition().isPresent()) {
+                if (ctx == null) ctx = EntityCtx.of(entity, entity.level());
+                if (!power.condition().get().test(ctx)) continue;
+            }
+            consumer.accept(powerId, (C) cfg);
+        }
     }
 
     @SuppressWarnings("unchecked")

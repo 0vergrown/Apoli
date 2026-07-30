@@ -8,11 +8,14 @@ public final class SpeechLanguage {
     private SpeechLanguage() {}
 
     public static String of(ServerPlayer player) {
-        String language = player.clientInformation().language();
-        if (language == null || language.isBlank()) {
+        return toBcp47(player.clientInformation().language());
+    }
+
+    public static String toBcp47(String minecraftLanguage) {
+        if (minecraftLanguage == null || minecraftLanguage.isBlank()) {
             return "en-US";
         }
-        String[] parts = language.split("_");
+        String[] parts = minecraftLanguage.split("_");
         if (parts.length >= 2) {
             return parts[0] + "-" + parts[1].toUpperCase(Locale.ROOT);
         }

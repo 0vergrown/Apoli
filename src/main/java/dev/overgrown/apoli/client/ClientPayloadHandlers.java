@@ -61,6 +61,10 @@ public final class ClientPayloadHandlers {
         ClientLabelState.apply(msg.entityId(), msg.texts());
     }
 
+    public static void onForceKey(dev.overgrown.apoli.network.payload.ForceKeyS2C msg) {
+        ForcedKeys.force(msg.key(), msg.duration(), msg.release());
+    }
+
     public static void onSkillDefs(dev.overgrown.apoli.network.payload.SkillDefsSyncS2C msg) {
         dev.overgrown.apoli.client.skill.ClientSkillState.applyDefs(msg);
     }

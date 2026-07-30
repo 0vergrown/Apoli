@@ -121,6 +121,9 @@ public final class PowerContainerImpl implements PowerContainer {
                     PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
                     if (type != null) invokeOnRemoved(type, power, loaded.config(), source);
                 } else {
+                    if (owner instanceof LivingEntity living) {
+                        dev.overgrown.apoli.power.builtin.AttributePower.purge(living, power);
+                    }
                     removeAllFromSource(power);
                 }
             }
@@ -147,6 +150,16 @@ public final class PowerContainerImpl implements PowerContainer {
         releaseSuppressionSource(power);
         if (auxInt.remove(power) != null) markDirty();
         markStructureDirty();
+        if (owner != null && owner.level() instanceof ServerLevel) {
+            Power loaded = ApoliPowers.get(power);
+            if (loaded != null) {
+                PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
+                if (type != null) {
+                    for (ResourceLocation source : sources) invokeOnRemoved(type, power, loaded.config(), source);
+                }
+            }
+        }
+        removeAllFromSource(power);
         return true;
     }
 
@@ -213,6 +226,12 @@ public final class PowerContainerImpl implements PowerContainer {
     @Override
     public Set<ResourceLocation> suppressedPowers() {
         return Set.copyOf(suppressedBySources.keySet());
+    }
+
+    @Override
+    public Set<ResourceLocation> suppressionSourcesOf(ResourceLocation power) {
+        Set<ResourceLocation> sources = suppressedBySources.get(power);
+        return sources == null ? Set.of() : Set.copyOf(sources);
     }
 
     private void releaseSuppressionSource(ResourceLocation source) {

@@ -14,6 +14,11 @@ public final class ModelPartLookup {
 
     public static List<ModelPart> resolve(HumanoidModel<?> model, String normalized) {
         List<ModelPart> parts = new ArrayList<>(2);
+        resolveInto(model, normalized, parts);
+        return parts;
+    }
+
+    public static void resolveInto(HumanoidModel<?> model, String normalized, List<ModelPart> parts) {
         PlayerModel<?> player = model instanceof PlayerModel<?> pm ? pm : null;
         switch (normalized) {
             case "head" -> {
@@ -52,7 +57,6 @@ public final class ModelPartLookup {
             }
             default -> {}
         }
-        return parts;
     }
 
     public static List<ModelPart> allParts(HumanoidModel<?> model) {

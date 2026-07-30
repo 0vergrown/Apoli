@@ -14,6 +14,15 @@ public final class EntityActions {
     public static void register() {
         ActionTypes.ENTITY.register(Apoli.id("add_velocity"), new AddVelocityAction());
         ActionTypes.ENTITY.register(Apoli.id("nothing"), new NothingAction());
+        ActionTypes.ENTITY.register(
+            Apoli.id("team"),
+            new TeamAction(),
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("modify_team"), java.util.Map.of("operation", "modify"))
+                .addTypeAlias(Apoli.id("join_team"), java.util.Map.of("operation", "join"))
+                .addTypeAlias(Apoli.id("leave_team"), java.util.Map.of("operation", "leave"))
+                .build()
+        );
         ActionTypes.ENTITY.register(Apoli.id("apply_effect"), new ApplyEffectAction());
         ActionTypes.ENTITY.register(Apoli.id("conjure_equipment"), new ConjureEquipmentAction());
         ActionTypes.ENTITY.register(Apoli.id("release_grab"), new ReleaseGrabAction());
@@ -48,6 +57,11 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("emit_game_event"), new EmitGameEventAction());
         ActionTypes.ENTITY.register(Apoli.id("play_sound"), new PlaySoundAction());
         ActionTypes.ENTITY.register(Apoli.id("swing_hand"), new SwingHandAction());
+        ActionTypes.ENTITY.register(Apoli.id("force_key_pressed"), new ForceKeyPressedAction(),
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("press_key"))
+                .addTypeAlias(Apoli.id("force_key"))
+                .build());
         ActionTypes.ENTITY.register(Apoli.id("grant_power"), new GrantPowerAction());
         ActionTypes.ENTITY.register(Apoli.id("grant_all_powers"), new GrantAllPowersAction());
         ActionTypes.ENTITY.register(Apoli.id("revoke_power"), new RevokePowerAction());

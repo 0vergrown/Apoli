@@ -69,11 +69,11 @@
         select.appendChild(opt);
     }
 
-    function post(text) {
+    function post(text, isFinal) {
         fetch("/transcript", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: text, language: currentLang })
+            body: JSON.stringify({ text: text, language: currentLang, final: !!isFinal })
         }).catch(function () {});
     }
 
@@ -108,7 +108,10 @@
             transcriptEl.innerText = text;
             if (text.length > 0 && text !== lastPosted) {
                 lastPosted = text;
-                post(text);
+                post(text, result.isFinal);
+            }
+            if (result.isFinal) {
+                lastPosted = "";
             }
         }
     };

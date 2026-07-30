@@ -54,6 +54,8 @@ public interface PowerContainer {
 
     Set<ResourceLocation> suppressedPowers();
 
+    Set<ResourceLocation> suppressionSourcesOf(ResourceLocation power);
+
     LivingEntity owner();
 
     Entity rawOwner();

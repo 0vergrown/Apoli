@@ -34,9 +34,15 @@ public final class ApoliClient {
         "key.apoli.skill_tree", com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
         org.lwjgl.glfw.GLFW.GLFW_KEY_K, "key.categories.apoli");
 
+    public static final net.minecraft.client.KeyMapping SPEECH_KEY = new net.minecraft.client.KeyMapping(
+        "key.apoli.speech_to_action", com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
+        com.mojang.blaze3d.platform.InputConstants.UNKNOWN.getValue(), "key.categories.apoli");
+
     @SubscribeEvent
     public static void onRegisterKeyMappings(net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent event) {
         event.register(SKILL_TREE_KEY);
+        event.register(SPEECH_KEY);
+        dev.overgrown.apoli.client.speech.SpeechClient.setPushToTalkKey(SPEECH_KEY);
     }
 
     @SubscribeEvent
@@ -96,13 +102,19 @@ public final class ApoliClient {
         @SubscribeEvent
         public static void onClientTick(ClientTickEvent.Post event) {
             Minecraft mc = Minecraft.getInstance();
+            CursorSpeedState.tick(mc);
             PhasingRenderState.clientTick(mc);
             RopeClientManager.tick();
             TextOverlayRenderer.tick();
+            dev.overgrown.apoli.client.disguise.ClientDisguiseManager.tick(mc);
+            dev.overgrown.apoli.client.speech.SpeechClient.clientTick(mc);
             if (dev.overgrown.apoli.compat.ModCompat.FIGURA) {
                 dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.tick(mc);
             }
-            if (mc.player == null || mc.isPaused()) return;
+            if (mc.player == null || mc.isPaused()) {
+                ForcedKeys.tick();
+                return;
+            }
             ApoliKeyHandler.onClientTick();
             while (SKILL_TREE_KEY.consumeClick()) {
                 if (mc.screen == null && dev.overgrown.apoli.client.skill.ClientSkillState.hasAnyTree()) {
@@ -112,6 +124,7 @@ public final class ApoliClient {
                     mc.setScreen(new dev.overgrown.apoli.client.skill.SkillTreeScreen());
                 }
             }
+            ForcedKeys.tick();
         }
 
         @SubscribeEvent
@@ -122,6 +135,8 @@ public final class ApoliClient {
             ClientLabelState.clear();
             RopeClientManager.clear();
             KeyPressWatcher.reset();
+            ForcedKeys.clear();
+            CursorSpeedState.reset();
             dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
             dev.overgrown.apoli.client.skill.ClientSkillState.clear();
             dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.clear();
@@ -130,7 +145,9 @@ public final class ApoliClient {
 
         @SubscribeEvent
         public static void onLogin(ClientPlayerNetworkEvent.LoggingIn event) {
-            dev.overgrown.apoli.client.speech.SpeechClient.onJoin();
+            if (ApoliClientConfig.get().speechToAction()) {
+                dev.overgrown.apoli.client.speech.SpeechClient.onJoin();
+            }
         }
 
         @SubscribeEvent

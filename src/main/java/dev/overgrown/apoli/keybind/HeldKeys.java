@@ -31,6 +31,11 @@ public final class HeldKeys {
         return held != null && held.contains(key);
     }
 
+    public static Set<String> serverHeldSet(UUID player) {
+        Set<String> held = SERVER.get(player);
+        return held == null ? Set.of() : held;
+    }
+
     public static void clearServer(UUID player) {
         SERVER.remove(player);
     }

@@ -1,9 +1,8 @@
 package dev.overgrown.apoli.mixin.modelparts;
 
+import dev.overgrown.apoli.client.render.ModelPartAnimator;
 import dev.overgrown.apoli.client.render.ModelPartLookup;
 import dev.overgrown.apoli.data.ModelPartTransformation;
-import dev.overgrown.apoli.data.ModelParts;
-import dev.overgrown.apoli.power.builtin.ModifyModelPartsPower;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.model.HumanoidModel;
@@ -15,7 +14,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.ArrayList;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Mixin(HumanoidModel.class)
@@ -27,11 +28,13 @@ public abstract class HumanoidModelModifyPartsMixin {
     @Unique
     private final Map<ModelPart, float[]> apoli$originals = new IdentityHashMap<>();
     @Unique
+    private final List<ModelPart> apoli$scratch = new ArrayList<>(2);
+    @Unique
     private boolean apoli$hadPower;
 
     @Inject(method = SETUP_ANIM, at = @At("HEAD"))
     private void apoli$modifyPartsHead(LivingEntity entity, float f, float g, float h, float i, float j, CallbackInfo ci) {
-        boolean has = ModifyModelPartsPower.has(entity);
+        boolean has = !ModelPartAnimator.update(entity).isEmpty();
         if (has) {
             if (apoli$originals.isEmpty()) apoli$snapshot();
             apoli$restore();
@@ -44,13 +47,19 @@ public abstract class HumanoidModelModifyPartsMixin {
 
     @Inject(method = SETUP_ANIM, at = @At("TAIL"))
     private void apoli$modifyPartsTail(LivingEntity entity, float f, float g, float h, float i, float j, CallbackInfo ci) {
-        if (!ModifyModelPartsPower.has(entity)) return;
+        List<ModelPartAnimator.Slot> slots = ModelPartAnimator.update(entity);
+        if (slots.isEmpty()) return;
         HumanoidModel<?> model = (HumanoidModel<?>) (Object) this;
-        for (ModelPartTransformation t : ModifyModelPartsPower.gather(entity)) {
-            for (ModelPart part : ModelPartLookup.resolve(model, ModelParts.normalize(t.part()))) {
-                apoli$apply(part, t);
+        for (int s = 0; s < slots.size(); s++) {
+            ModelPartAnimator.Slot slot = slots.get(s);
+            if (slot.weight() <= 0.0F) continue;
+            apoli$scratch.clear();
+            ModelPartLookup.resolveInto(model, slot.transformation().normalizedPart(), apoli$scratch);
+            for (int p = 0; p < apoli$scratch.size(); p++) {
+                apoli$apply(apoli$scratch.get(p), slot);
             }
         }
+        apoli$scratch.clear();
     }
 
     @Unique
@@ -79,22 +88,24 @@ public abstract class HumanoidModelModifyPartsMixin {
     }
 
     @Unique
-    private void apoli$apply(ModelPart part, ModelPartTransformation t) {
+    private void apoli$apply(ModelPart part, ModelPartAnimator.Slot slot) {
+        ModelPartTransformation t = slot.transformation();
         float[] o = apoli$originals.get(part);
-        float value = t.value();
+        float value = slot.value();
+        float weight = slot.weight();
         boolean override = t.overrideAnimation();
         switch (t.type()) {
-            case PITCH -> part.xRot = override ? value : part.xRot + value;
-            case YAW -> part.yRot = override ? value : part.yRot + value;
-            case ROLL -> part.zRot = override ? value : part.zRot + value;
-            case VISIBLE -> part.visible = value != 0f;
-            case HIDDEN -> part.skipDraw = value != 0f;
-            case X_SCALE -> part.xScale = (o != null ? o[6] : 1f) + value;
-            case Y_SCALE -> part.yScale = (o != null ? o[7] : 1f) + value;
-            case Z_SCALE -> part.zScale = (o != null ? o[8] : 1f) + value;
-            case PIVOT_X -> part.x += value;
-            case PIVOT_Y -> part.y += value;
-            case PIVOT_Z -> part.z += value;
+            case PITCH -> part.xRot = override ? part.xRot + (value - part.xRot) * weight : part.xRot + value * weight;
+            case YAW -> part.yRot = override ? part.yRot + (value - part.yRot) * weight : part.yRot + value * weight;
+            case ROLL -> part.zRot = override ? part.zRot + (value - part.zRot) * weight : part.zRot + value * weight;
+            case VISIBLE -> { if (weight >= 0.5f) part.visible = value != 0f; }
+            case HIDDEN -> { if (weight >= 0.5f) part.skipDraw = value != 0f; }
+            case X_SCALE -> part.xScale = (o != null ? o[6] : 1f) + value * weight;
+            case Y_SCALE -> part.yScale = (o != null ? o[7] : 1f) + value * weight;
+            case Z_SCALE -> part.zScale = (o != null ? o[8] : 1f) + value * weight;
+            case PIVOT_X -> part.x += value * weight;
+            case PIVOT_Y -> part.y += value * weight;
+            case PIVOT_Z -> part.z += value * weight;
         }
     }
 }

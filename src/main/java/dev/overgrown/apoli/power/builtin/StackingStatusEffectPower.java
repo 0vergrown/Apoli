@@ -56,6 +56,7 @@ public final class StackingStatusEffectPower extends PowerType<StackingStatusEff
     public void tick(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         if (cfg.tickRate <= 0) return;
         LivingEntity owner = holder.owner();
+        if (owner == null) return;
         if (!(owner.level() instanceof ServerLevel level)) return;
         if (!(holder instanceof PowerContainerImpl impl)) return;
         if (owner.tickCount % cfg.tickRate != 0) return;

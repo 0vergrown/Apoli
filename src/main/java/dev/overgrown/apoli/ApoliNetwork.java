@@ -46,6 +46,8 @@ public final class ApoliNetwork {
         registrar.playToClient(DisguiseUpdateS2C.TYPE, DisguiseUpdateS2C.STREAM_CODEC, ApoliNetwork::onDisguiseUpdate);
         registrar.playToClient(dev.overgrown.apoli.network.payload.TextDisplayS2C.TYPE,
             dev.overgrown.apoli.network.payload.TextDisplayS2C.STREAM_CODEC, ApoliNetwork::onTextDisplay);
+        registrar.playToClient(dev.overgrown.apoli.network.payload.ForceKeyS2C.TYPE,
+            dev.overgrown.apoli.network.payload.ForceKeyS2C.STREAM_CODEC, ApoliNetwork::onForceKey);
         registrar.playToClient(dev.overgrown.apoli.network.payload.LabelUpdateS2C.TYPE,
             dev.overgrown.apoli.network.payload.LabelUpdateS2C.STREAM_CODEC, ApoliNetwork::onLabelUpdate);
         registrar.playToClient(SkillDefsSyncS2C.TYPE, SkillDefsSyncS2C.STREAM_CODEC, ApoliNetwork::onSkillDefs);
@@ -60,6 +62,8 @@ public final class ApoliNetwork {
         registrar.playToServer(KeyHeldC2S.TYPE, KeyHeldC2S.STREAM_CODEC, ApoliNetwork::onKeyHeld);
         registrar.playToServer(dev.overgrown.apoli.network.payload.SpeechC2S.TYPE,
             dev.overgrown.apoli.network.payload.SpeechC2S.STREAM_CODEC, ApoliNetwork::onSpeech);
+        registrar.playToServer(dev.overgrown.apoli.network.payload.SpeechTriggerC2S.TYPE,
+            dev.overgrown.apoli.network.payload.SpeechTriggerC2S.STREAM_CODEC, ApoliNetwork::onSpeechTrigger);
 
         registrar.playToClient(dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.TYPE,
             dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.STREAM_CODEC, ApoliNetwork::onRadialMenuOpen);
@@ -121,10 +125,18 @@ public final class ApoliNetwork {
         });
     }
 
+    private static void onSpeechTrigger(dev.overgrown.apoli.network.payload.SpeechTriggerC2S payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> {
+            if (ctx.player() instanceof net.minecraft.server.level.ServerPlayer sp) {
+                dev.overgrown.apoli.compat.voicechat.ActionOnSpeechPower.fireTrigger(sp, payload.power());
+            }
+        });
+    }
+
     private static void onSpeech(dev.overgrown.apoli.network.payload.SpeechC2S payload, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (ctx.player() instanceof ServerPlayer sp) {
-                dev.overgrown.apoli.power.builtin.ActionOnSpeechPower.fire(sp, payload.text(), payload.language());
+                dev.overgrown.apoli.compat.voicechat.ActionOnSpeechPower.fire(sp, payload.text(), payload.language());
             }
         });
     }
@@ -216,6 +228,15 @@ public final class ApoliNetwork {
     }
 
     public static void sendTextDisplay(ServerPlayer recipient, dev.overgrown.apoli.network.payload.TextDisplayS2C payload) {
+        PacketDistributor.sendToPlayer(recipient, payload);
+    }
+
+    private static void onForceKey(dev.overgrown.apoli.network.payload.ForceKeyS2C payload,
+                                   net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
+        ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPayloadHandlers.onForceKey(payload));
+    }
+
+    public static void sendForceKey(ServerPlayer recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C payload) {
         PacketDistributor.sendToPlayer(recipient, payload);
     }
 

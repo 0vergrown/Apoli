@@ -43,7 +43,7 @@ public final class EntitySetPower extends PowerType<EntitySetPower.Cfg> {
     @Override
     public void tick(ResourceLocation powerId, Cfg cfg, PowerContainer holder) {
         LivingEntity owner = holder.owner();
-        if (!(owner.level() instanceof ServerLevel level)) return;
+        if (owner == null || !(owner.level() instanceof ServerLevel level)) return;
         State state = STATES.get(new StateKey(owner.getUUID(), powerId));
         if (state == null || state.expireAt.isEmpty()) return;
         long now = level.getGameTime();
@@ -62,7 +62,7 @@ public final class EntitySetPower extends PowerType<EntitySetPower.Cfg> {
     @Override
     public void onRemoved(ResourceLocation powerId, Cfg cfg, PowerContainer holder, ResourceLocation source) {
         LivingEntity owner = holder.owner();
-        if (!(owner.level() instanceof ServerLevel level)) return;
+        if (owner == null || !(owner.level() instanceof ServerLevel level)) return;
         State state = STATES.remove(new StateKey(owner.getUUID(), powerId));
         if (state == null) return;
         if (cfg.actionOnRemove.isEmpty()) return;
