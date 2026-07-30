@@ -18,6 +18,8 @@ public final class ApoliKeyMappings {
 
     private record KeyState(boolean down, boolean tap) {}
 
+    private enum Probe { DOWN, UP, UNKNOWN }
+
     public static void beginTick() {
         TICK_CACHE.clear();
     }
@@ -32,26 +34,32 @@ public final class ApoliKeyMappings {
     }
 
     public static boolean consumePress(KeyMapping km, boolean continuous) {
-        KeyState st = TICK_CACHE.get(km);
-        if (st == null) {
-            st = computeState(km);
-            TICK_CACHE.put(km, st);
-        }
+        KeyState st = state(km);
+        if (screenOpen()) return false;
         return continuous ? st.down() : st.tap();
     }
 
     public static boolean isDown(KeyMapping km) {
+        KeyState st = state(km);
+        return !screenOpen() && st.down();
+    }
+
+    private static KeyState state(KeyMapping km) {
         KeyState st = TICK_CACHE.get(km);
         if (st == null) {
             st = computeState(km);
             TICK_CACHE.put(km, st);
         }
-        return st.down();
+        return st;
     }
 
     private static KeyState computeState(KeyMapping km) {
-        boolean down = isHeld(km);
         boolean wasDown = WAS_DOWN.getOrDefault(km, false);
+        boolean down = switch (probe(km)) {
+            case DOWN -> true;
+            case UP -> false;
+            case UNKNOWN -> wasDown;
+        };
         WAS_DOWN.put(km, down);
         boolean clicked = false;
         while (km.consumeClick()) clicked = true;
@@ -59,23 +67,31 @@ public final class ApoliKeyMappings {
         return new KeyState(down, tap);
     }
 
-    private static boolean isHeld(KeyMapping km) {
-        if (km.isDown()) return true;
+    private static boolean screenOpen() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.getWindow() == null || mc.screen != null) return false;
+        return mc == null || mc.screen != null;
+    }
+
+    private static Probe probe(KeyMapping km) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.getWindow() == null) return Probe.UNKNOWN;
         InputConstants.Key key;
         try {
             key = InputConstants.getKey(km.saveString());
         } catch (Exception e) {
-            return false;
+            return vanillaProbe(km);
         }
         int value = key.getValue();
-        if (value < 0) return false;
+        if (value < 0) return Probe.UP;
         long window = mc.getWindow().getWindow();
         return switch (key.getType()) {
-            case KEYSYM -> InputConstants.isKeyDown(window, value);
-            case MOUSE -> GLFW.glfwGetMouseButton(window, value) == GLFW.GLFW_PRESS;
-            default -> false;
+            case KEYSYM -> InputConstants.isKeyDown(window, value) ? Probe.DOWN : Probe.UP;
+            case MOUSE -> GLFW.glfwGetMouseButton(window, value) == GLFW.GLFW_PRESS ? Probe.DOWN : Probe.UP;
+            default -> vanillaProbe(km);
         };
+    }
+
+    private static Probe vanillaProbe(KeyMapping km) {
+        return km.isDown() ? Probe.DOWN : Probe.UP;
     }
 }

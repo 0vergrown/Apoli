@@ -1,4 +1,4 @@
-package dev.overgrown.apoli.condition.builtin.entity;
+package dev.overgrown.apoli.compat.voicechat;
 
 import com.mojang.serialization.MapCodec;
 import dev.overgrown.apoli.compat.voicechat.VoiceState;

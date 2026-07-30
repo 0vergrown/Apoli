@@ -4,6 +4,7 @@ import de.maxhenkel.voicechat.api.ServerPlayer;
 import de.maxhenkel.voicechat.api.VoicechatConnection;
 import de.maxhenkel.voicechat.api.VoicechatPlugin;
 import de.maxhenkel.voicechat.api.VoicechatServerApi;
+import de.maxhenkel.voicechat.api.events.ClientSoundEvent;
 import de.maxhenkel.voicechat.api.events.EventRegistration;
 import de.maxhenkel.voicechat.api.events.MicrophonePacketEvent;
 import de.maxhenkel.voicechat.api.events.PlayerStateChangedEvent;
@@ -20,6 +21,7 @@ public final class ApoliVoicechatPlugin implements VoicechatPlugin {
 
     @Override
     public void registerEvents(EventRegistration registration) {
+        registration.registerEvent(ClientSoundEvent.class, this::onClientSound);
         registration.registerEvent(MicrophonePacketEvent.class, this::onMicrophone);
         registration.registerEvent(PlayerStateChangedEvent.class, this::onStateChanged);
         registration.registerEvent(VoicechatServerStartedEvent.class, this::onServerStarted);
@@ -31,6 +33,13 @@ public final class ApoliVoicechatPlugin implements VoicechatPlugin {
             VoicechatConnection connection = api.getConnectionOf(uuid);
             return connection != null && (connection.isDisabled() || !connection.isConnected());
         });
+    }
+
+    private void onClientSound(ClientSoundEvent event) {
+        if (!SpeechAudioBus.hasSink()) return;
+        short[] raw = event.getRawAudio();
+        if (raw == null || raw.length == 0) return;
+        SpeechAudioBus.push(raw.clone());
     }
 
     private void onMicrophone(MicrophonePacketEvent event) {

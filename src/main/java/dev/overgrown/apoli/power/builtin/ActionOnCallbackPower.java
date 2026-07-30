@@ -46,16 +46,16 @@ public final class ActionOnCallbackPower extends PowerType<ActionOnCallbackPower
 
     @Override
     public void onAdded(ResourceLocation powerId, Config cfg, PowerContainer holder, ResourceLocation source) {
-        if (!(holder.owner().level() instanceof ServerLevel level)) return;
-        EntityCtx ctx = new EntityCtx(holder.owner(), level);
+        if (!(holder.rawOwner().level() instanceof ServerLevel level)) return;
+        EntityCtx ctx = new EntityCtx(holder.rawOwner(), level);
         cfg.entityActionGained().ifPresent(a -> a.run(ctx));
         cfg.entityActionAdded().ifPresent(a -> a.run(ctx));
     }
 
     @Override
     public void onRemoved(ResourceLocation powerId, Config cfg, PowerContainer holder, ResourceLocation source) {
-        if (!(holder.owner().level() instanceof ServerLevel level)) return;
-        EntityCtx ctx = new EntityCtx(holder.owner(), level);
+        if (!(holder.rawOwner().level() instanceof ServerLevel level)) return;
+        EntityCtx ctx = new EntityCtx(holder.rawOwner(), level);
         cfg.entityActionLost().ifPresent(a -> a.run(ctx));
         cfg.entityActionRemoved().ifPresent(a -> a.run(ctx));
     }

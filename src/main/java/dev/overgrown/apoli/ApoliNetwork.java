@@ -48,6 +48,8 @@ public final class ApoliNetwork {
             dev.overgrown.apoli.network.payload.TextDisplayS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.LabelUpdateS2C.TYPE,
             dev.overgrown.apoli.network.payload.LabelUpdateS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.ForceKeyS2C.TYPE,
+            dev.overgrown.apoli.network.payload.ForceKeyS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SkillDefsSyncS2C.TYPE, SkillDefsSyncS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SkillStateSyncS2C.TYPE, SkillStateSyncS2C.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(BuySkillC2S.TYPE, BuySkillC2S.STREAM_CODEC);
@@ -57,6 +59,7 @@ public final class ApoliNetwork {
         PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.RefundSkillC2S.TYPE, dev.overgrown.apoli.network.payload.RefundSkillC2S.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(KeyHeldC2S.TYPE, KeyHeldC2S.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.SpeechC2S.TYPE, dev.overgrown.apoli.network.payload.SpeechC2S.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.SpeechTriggerC2S.TYPE, dev.overgrown.apoli.network.payload.SpeechTriggerC2S.STREAM_CODEC);
 
         PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.TYPE,
             dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.STREAM_CODEC);
@@ -122,6 +125,12 @@ public final class ApoliNetwork {
 
     public static void sendTextDisplay(ServerPlayer recipient, dev.overgrown.apoli.network.payload.TextDisplayS2C payload) {
         if (ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.TextDisplayS2C.TYPE)) {
+            ServerPlayNetworking.send(recipient, payload);
+        }
+    }
+
+    public static void sendForceKey(ServerPlayer recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C payload) {
+        if (ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C.TYPE)) {
             ServerPlayNetworking.send(recipient, payload);
         }
     }

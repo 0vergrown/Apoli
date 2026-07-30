@@ -32,13 +32,17 @@ public final class ClientPowerState {
     private ClientPowerState() {}
 
     public static void applyPowersSync(SyncPowersS2C payload) {
+        KeyPressWatcher.rebuild(payload.rawPowers());
+        if (Minecraft.getInstance().hasSingleplayerServer()) return;
+
         Map<ResourceLocation, Power> decoded = new HashMap<>();
         payload.rawPowers().forEach((id, json) -> {
             JsonElement element = JsonParser.parseString(json);
-            Power.CODEC.parse(JsonOps.INSTANCE, element).result().ifPresent(p -> decoded.put(id, p));
+            Power.CODEC.parse(JsonOps.INSTANCE, element)
+                .resultOrPartial(error -> Apoli.LOGGER.error("[Apoli] Client failed to parse power {}: {}", id, error))
+                .ifPresent(p -> decoded.put(id, p));
         });
         ApoliPowers.replaceAll(decoded);
-        KeyPressWatcher.rebuild(payload.rawPowers());
     }
 
     private static final java.util.List<byte[]> PENDING_SLICES = new java.util.ArrayList<>();

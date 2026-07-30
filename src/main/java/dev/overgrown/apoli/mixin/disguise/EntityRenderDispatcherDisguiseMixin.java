@@ -30,7 +30,12 @@ public abstract class EntityRenderDispatcherDisguiseMixin {
         Entity dummy = ClientDisguiseManager.syncedDummy(entity.getId(), entity);
         if (dummy == null) return;
 
-        ((EntityRenderDispatcher) (Object) this).render(dummy, x, y, z, yaw, partialTick, pose, buffers, light);
+        Entity previous = ClientDisguiseManager.beginDisguiseRender(entity);
+        try {
+            ((EntityRenderDispatcher) (Object) this).render(dummy, x, y, z, yaw, partialTick, pose, buffers, light);
+        } finally {
+            ClientDisguiseManager.endDisguiseRender(previous);
+        }
         ci.cancel();
     }
 }

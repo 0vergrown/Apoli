@@ -5,6 +5,10 @@ import dev.overgrown.apoli.alias.AliasingOptions;
 import dev.overgrown.apoli.compat.ModCompat;
 import dev.overgrown.apoli.compat.accessory.condition.entity.AccessoryEquippedCountCondition;
 import dev.overgrown.apoli.compat.accessory.condition.entity.AccessorySlotCountCondition;
+import dev.overgrown.apoli.compat.voicechat.VoiceDisabledCondition;
+import dev.overgrown.apoli.compat.voicechat.VoiceListenersCondition;
+import dev.overgrown.apoli.compat.voicechat.VoiceLoudnessCondition;
+import dev.overgrown.apoli.compat.voicechat.VoiceSpeakingCondition;
 import dev.overgrown.apoli.compat.hardcorerevival.condition.KnockedOutCondition;
 import dev.overgrown.apoli.condition.ConditionTypes;
 
@@ -30,6 +34,11 @@ public final class EntityConditions {
             AliasingOptions.builder().addTypeAlias(Apoli.id("set_size")).build()
         );
         ConditionTypes.ENTITY.register(Apoli.id("resource"), new ResourceCondition());
+        ConditionTypes.ENTITY.register(
+            Apoli.id("in_team"),
+            new InTeamCondition(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("team")).build()
+        );
         ConditionTypes.ENTITY.register(Apoli.id("voice_speaking"), new VoiceSpeakingCondition());
         ConditionTypes.ENTITY.register(
             Apoli.id("voice_disabled"),

@@ -15,7 +15,7 @@ import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.power.PowerTypeRegistry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -78,24 +78,24 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         int clamped = cfg.enforceLimits ? clamp(curVal, min, max, cfg) : curVal;
         if (clamped != curVal) {
             impl.setAuxInt(powerId, clamped);
-            fireBoundaryActions(cfg, holder.owner(), curVal, clamped, min, max);
+            fireBoundaryActions(cfg, holder.rawOwner(), curVal, clamped, min, max);
         }
     }
 
     public int evalStartValue(Cfg cfg, PowerContainer holder) {
-        return cfg.startValue.orElse(cfg.min).evalIntWith(holder.owner(), holder, 0);
+        return cfg.startValue.orElse(cfg.min).evalIntWith(holder.rawOwner(), holder, 0);
     }
 
     public int currentMin(Cfg cfg, PowerContainer holder, ResourceLocation powerId) {
         if (cfg.min.constantValue().isPresent()) return (int) Math.round(cfg.min.constantValue().getAsDouble());
         int cur = holder.getAuxIntOr(powerId, 0);
-        return cfg.min.evalIntWith(holder.owner(), holder, cur);
+        return cfg.min.evalIntWith(holder.rawOwner(), holder, cur);
     }
 
     public int currentMax(Cfg cfg, PowerContainer holder, ResourceLocation powerId) {
         if (cfg.max.constantValue().isPresent()) return (int) Math.round(cfg.max.constantValue().getAsDouble());
         int cur = holder.getAuxIntOr(powerId, 0);
-        return cfg.max.evalIntWith(holder.owner(), holder, cur);
+        return cfg.max.evalIntWith(holder.rawOwner(), holder, cur);
     }
 
     public static int clamp(int value, int min, int max, Cfg cfg) {
@@ -106,6 +106,7 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
     }
 
     public static OptionalInt readValue(PowerContainer holder, ResourceLocation powerId) {
+        if (!holder.hasPower(powerId)) return OptionalInt.empty();
         return holder.getAuxInt(powerId);
     }
 
@@ -143,12 +144,14 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         }
         if (target != prev) {
             impl.setAuxInt(powerId, target);
-            rp.fireBoundaryActions(cfg, holder.owner(), prev, target, min, max);
+            rp.fireBoundaryActions(cfg, holder.rawOwner(), prev, target, min, max);
         }
         return OptionalInt.of(target);
     }
 
-    private void fireBoundaryActions(Cfg cfg, LivingEntity owner, int prev, int newVal, int min, int max) {
+    private void fireBoundaryActions(Cfg cfg, Entity owner, int prev, int newVal, int min, int max) {
+        if (owner == null) return;
+        if (cfg.minAction.isEmpty() && cfg.maxAction.isEmpty()) return;
         if (!(owner.level() instanceof ServerLevel level)) return;
         if (newVal == min && prev != min) {
             cfg.minAction.ifPresent(a -> a.run(new EntityCtx(owner, level)));

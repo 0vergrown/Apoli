@@ -1,6 +1,7 @@
 {
     "key.categories.apoli": "Apoli",
     "key.apoli.skill_tree": "Open Skill Tree",
+    "key.apoli.speech_to_action": "Speech to Action (push to talk)",
     "screen.apoli.radial_menu": "Radial Menu",
     "screen.apoli.skill_tree": "Skill Tree",
     "screen.apoli.skill_tree.empty": "No skill trees available.",

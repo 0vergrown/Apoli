@@ -24,6 +24,7 @@ public final class ApoliIds {
     public static final ResourceLocation ACTION_ON_REPLY = Apoli.id("action_on_reply");
     public static final ResourceLocation ACTION_ON_SENDING_MESSAGE = Apoli.id("action_on_sending_message");
     public static final ResourceLocation ACTION_ON_SPEECH = Apoli.id("action_on_speech");
+    public static final ResourceLocation ACTION_ON_KEY_SEQUENCE = Apoli.id("action_on_key_sequence");
 
     private ApoliIds() {}
 }

@@ -23,12 +23,6 @@ public class CustomProjectileEntity extends ThrowableProjectile {
     private static final EntityDataAccessor<String> TEXTURE =
         SynchedEntityData.defineId(CustomProjectileEntity.class, EntityDataSerializers.STRING);
 
-    private final List<BiEntityAction> onHitActions = new ArrayList<>();
-
-    public void addOnHitAction(BiEntityAction action) {
-        this.onHitActions.add(action);
-    }
-
     public CustomProjectileEntity(EntityType<? extends CustomProjectileEntity> type, Level level) {
         super(type, level);
     }
@@ -51,23 +45,6 @@ public class CustomProjectileEntity extends ThrowableProjectile {
     public ResourceLocation getTexture() {
         String s = this.entityData.get(TEXTURE);
         return s.isEmpty() ? null : ResourceLocation.tryParse(s);
-    }
-
-    @Override
-    protected void onHitEntity(EntityHitResult result) {
-        super.onHitEntity(result);
-        if (this.level().isClientSide || onHitActions.isEmpty()) return;
-        if (result.getEntity() instanceof LivingEntity target && this.getOwner() instanceof LivingEntity owner) {
-            BiEntityCtx ctx = new BiEntityCtx(owner, target, this.level());
-            ModifyProjectileDamageHandler.beginProjectileContext(this);
-            try {
-                for (BiEntityAction action : onHitActions) {
-                    action.run(ctx);
-                }
-            } finally {
-                ModifyProjectileDamageHandler.endProjectileContext();
-            }
-        }
     }
 
     @Override

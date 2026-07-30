@@ -51,7 +51,9 @@ public final class ActionOnLandPower extends PowerType<ActionOnLandPower.Config>
         impl.setAuxInt(powerId, 0);
 
         float saved = owner.fallDistance;
+        boolean wasInvulnerable = owner.isInvulnerable();
         owner.fallDistance = Math.max(saved, airborneFall / 100.0F);
+        owner.setInvulnerable(true);
         try {
             Power loaded = ApoliPowers.get(powerId);
             if (loaded != null && loaded.condition().isPresent()
@@ -61,6 +63,7 @@ public final class ActionOnLandPower extends PowerType<ActionOnLandPower.Config>
             cfg.entityAction().run(new EntityCtx(owner, level));
         } finally {
             owner.fallDistance = saved;
+            owner.setInvulnerable(wasInvulnerable);
         }
     }
 }

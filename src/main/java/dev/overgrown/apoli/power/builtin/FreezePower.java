@@ -24,6 +24,7 @@ public final class FreezePower extends PowerType<EmptyCfg> {
     @Override
     public void tick(ResourceLocation powerId, EmptyCfg cfg, PowerContainer holder) {
         LivingEntity owner = holder.owner();
+        if (owner == null) return;
         if (!conditionHolds(owner, powerId)) return;
         int threshold = owner.getTicksRequiredToFreeze();
         if (owner.getTicksFrozen() < threshold + 1) {

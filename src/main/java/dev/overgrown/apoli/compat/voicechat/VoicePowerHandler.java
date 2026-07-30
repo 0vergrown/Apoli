@@ -4,8 +4,6 @@ import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.power.ApoliIds;
 import dev.overgrown.apoli.power.PowerLookup;
-import dev.overgrown.apoli.power.builtin.ActionOnReplyPower;
-import dev.overgrown.apoli.power.builtin.ActionOnSpeakPower;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;

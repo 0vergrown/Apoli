@@ -11,6 +11,7 @@ import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.HashMap;
@@ -34,7 +35,7 @@ public final class ActionOnKeyPressPower extends PowerType<ActionOnKeyPressPower
 
     @Override
     public void tick(ResourceLocation powerId, Config cfg, PowerContainer holder) {
-        CooldownKey key = new CooldownKey(holder.owner().getUUID(), powerId);
+        CooldownKey key = new CooldownKey(holder.rawOwner().getUUID(), powerId);
         Integer remaining = cooldowns.get(key);
         if (remaining == null) return;
         if (remaining <= 1) cooldowns.remove(key);
@@ -44,12 +45,12 @@ public final class ActionOnKeyPressPower extends PowerType<ActionOnKeyPressPower
     @Override
     public void onRemoved(ResourceLocation powerId, Config cfg, PowerContainer holder, ResourceLocation source) {
         if (!holder.allPowers().contains(powerId)) {
-            cooldowns.remove(new CooldownKey(holder.owner().getUUID(), powerId));
+            cooldowns.remove(new CooldownKey(holder.rawOwner().getUUID(), powerId));
         }
     }
 
     public boolean tryActivate(ResourceLocation powerId, Config cfg, PowerContainer holder) {
-        LivingEntity owner = holder.owner();
+        Entity owner = holder.rawOwner();
         if (!(owner.level() instanceof ServerLevel level)) return false;
         CooldownKey key = new CooldownKey(owner.getUUID(), powerId);
         if (cooldowns.getOrDefault(key, 0) > 0) return false;

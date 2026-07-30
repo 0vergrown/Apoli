@@ -29,8 +29,10 @@ public final class ApoliResourceCommand {
 
     private ApoliResourceCommand() {}
 
-    private static final SuggestionProvider<CommandSourceStack> RESOURCE_POWERS =
-        (ctx, builder) -> SharedSuggestionProvider.suggestResource(loadedResourcePowers(), builder);
+    private static final SuggestionProvider<CommandSourceStack> RESOURCE_POWERS = (ctx, builder) -> {
+        List<ResourceLocation> held = heldResourcePowers(ctx);
+        return SharedSuggestionProvider.suggestResource(held.isEmpty() ? loadedResourcePowers() : held, builder);
+    };
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("apoli:resource")
@@ -145,7 +147,26 @@ public final class ApoliResourceCommand {
                 count++;
             }
         }
+        if (count == 0) {
+            ctx.getSource().sendSuccess(() -> Component.literal("No target holds the resource power " + power), false);
+        }
         return count;
+    }
+
+    private static List<ResourceLocation> heldResourcePowers(CommandContext<CommandSourceStack> ctx) {
+        List<ResourceLocation> out = new ArrayList<>();
+        try {
+            for (Entity e : EntityArgument.getEntities(ctx, "targets")) {
+                PowerContainer c = PowerContainer.of(e);
+                if (c == null) continue;
+                for (ResourceLocation id : c.allPowers()) {
+                    Power power = ApoliPowers.get(id);
+                    if (power != null && power.type() instanceof ResourcePower && !out.contains(id)) out.add(id);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return out;
     }
 
     private static List<ResourceLocation> loadedResourcePowers() {

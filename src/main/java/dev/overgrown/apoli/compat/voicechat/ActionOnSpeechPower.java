@@ -1,4 +1,4 @@
-package dev.overgrown.apoli.power.builtin;
+package dev.overgrown.apoli.compat.voicechat;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -15,7 +15,7 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 public final class ActionOnSpeechPower extends PowerType<ActionOnSpeechPower.Config> {
-    private static final long COOLDOWN_MS = 1500L;
+    private static final long COOLDOWN_MS = 250L;
     private static final Map<UUID, Map<String, Long>> RECENT = new HashMap<>();
 
     public record Config(
@@ -61,6 +61,34 @@ public final class ActionOnSpeechPower extends PowerType<ActionOnSpeechPower.Con
         }
     }
 
+    public static void fireTrigger(net.minecraft.server.level.ServerPlayer player, net.minecraft.resources.ResourceLocation powerId) {
+        dev.overgrown.apoli.power.PowerContainer container = dev.overgrown.apoli.power.PowerContainer.of(player);
+        if (container == null || !container.hasPower(powerId) || container.isSuppressed(powerId)) return;
+        dev.overgrown.apoli.power.Power power = dev.overgrown.apoli.power.ApoliPowers.get(powerId);
+        if (power == null || !(power.config() instanceof Config cfg)) return;
+        if (!dev.overgrown.apoli.power.ApoliIds.ACTION_ON_SPEECH.equals(
+            dev.overgrown.apoli.power.PowerTypeRegistry.resolveId(power.typeId()))) return;
+
+        dev.overgrown.apoli.condition.context.EntityCtx ctx =
+            new dev.overgrown.apoli.condition.context.EntityCtx(player, player.serverLevel());
+        if (power.condition().isPresent() && !power.condition().get().test(ctx)) return;
+
+        long now = System.currentTimeMillis();
+        Map<String, Long> recent = RECENT.computeIfAbsent(player.getUUID(), u -> new HashMap<>());
+        String key = powerId.toString();
+        Long last = recent.get(key);
+        if (last != null && now - last < COOLDOWN_MS) return;
+        recent.put(key, now);
+        prune(recent, now, player.getUUID());
+
+        cfg.entityAction().ifPresent(action -> action.run(ctx));
+    }
+
+    private static void prune(Map<String, Long> recent, long now, UUID uuid) {
+        recent.entrySet().removeIf(entry -> now - entry.getValue() > COOLDOWN_MS * 4L);
+        if (recent.isEmpty()) RECENT.remove(uuid);
+    }
+
     public static void forget(UUID uuid) {
         RECENT.remove(uuid);
     }
@@ -69,8 +97,17 @@ public final class ActionOnSpeechPower extends PowerType<ActionOnSpeechPower.Con
         return matchedTrigger(config, text, language) != null;
     }
 
+    private static boolean languageMatches(String want, String got) {
+        if (got == null || got.isEmpty()) {
+            return false;
+        }
+        String w = want.toLowerCase(Locale.ROOT);
+        String g = got.toLowerCase(Locale.ROOT);
+        return g.equals(w) || g.startsWith(w + "-") || w.startsWith(g + "-");
+    }
+
     public static String matchedTrigger(Config config, String text, String language) {
-        if (config.language().isPresent() && !config.language().get().equalsIgnoreCase(language)) {
+        if (config.language().isPresent() && !languageMatches(config.language().get(), language)) {
             return null;
         }
         String lower = text.toLowerCase(Locale.ROOT);

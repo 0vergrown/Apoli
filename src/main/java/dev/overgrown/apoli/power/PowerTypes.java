@@ -48,16 +48,17 @@ import dev.overgrown.apoli.power.builtin.IgnoreFluidPower;
 import dev.overgrown.apoli.power.builtin.InventoryPower;
 import dev.overgrown.apoli.power.builtin.InvisibilityPower;
 import dev.overgrown.apoli.power.builtin.InvulnerabilityPower;
-import dev.overgrown.apoli.power.builtin.ActionOnReplyPower;
-import dev.overgrown.apoli.power.builtin.ActionOnSendingMessagePower;
-import dev.overgrown.apoli.power.builtin.ActionOnSpeakPower;
-import dev.overgrown.apoli.power.builtin.ActionOnSpeechPower;
+import dev.overgrown.apoli.compat.voicechat.ActionOnReplyPower;
+import dev.overgrown.apoli.compat.voicechat.ActionOnSendingMessagePower;
+import dev.overgrown.apoli.compat.voicechat.ActionOnSpeakPower;
+import dev.overgrown.apoli.compat.voicechat.ActionOnSpeechPower;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower;
 import dev.overgrown.apoli.power.builtin.ItemOnItemPower;
 import dev.overgrown.apoli.power.builtin.KeepInventoryPower;
 import dev.overgrown.apoli.power.builtin.ModelColorPower;
 import dev.overgrown.apoli.power.builtin.ModifyModelPartsPower;
 import dev.overgrown.apoli.power.builtin.ModifyBlockRenderPower;
+import dev.overgrown.apoli.power.builtin.ModifyCursorSpeedPower;
 import dev.overgrown.apoli.power.builtin.ModifyBreakSpeedPower;
 import dev.overgrown.apoli.power.builtin.ModifyCraftingPower;
 import dev.overgrown.apoli.power.builtin.ModifyDamagePower;
@@ -213,6 +214,16 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("swimming"), new SwimmingPower());
         PowerTypeRegistry.register(Apoli.id("walk_on_fluid"), new WalkOnFluidPower());
         PowerTypeRegistry.register(Apoli.id("phasing"), new PhasingPower());
+
+        PowerTypeRegistry.register(
+            Apoli.id("modify_cursor_speed"),
+            new ModifyCursorSpeedPower(),
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("modify_mouse_sensitivity"))
+                .addTypeAlias(Apoli.id("modify_mouse_speed"))
+                .addTypeAlias(Apoli.id("modify_look_sensitivity"))
+                .build()
+        );
 
         PowerTypeRegistry.register(Apoli.id("modify_block_render"), new ModifyBlockRenderPower());
         PowerTypeRegistry.register(Apoli.id("modify_break_speed"), new ModifyBreakSpeedPower());

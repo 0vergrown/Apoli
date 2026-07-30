@@ -33,5 +33,10 @@ public final class BiEntityActions {
         ActionTypes.BI_ENTITY.register(Apoli.id("disguise"), new DisguiseBiEntityAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("transfer"), new TransferAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("attach_rope"), new AttachRopeAction.BiEntity());
+        ActionTypes.BI_ENTITY.register(
+            Apoli.id("raycast"),
+            new RaycastBiEntityAction(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("raycast_between")).build()
+        );
     }
 }
