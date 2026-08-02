@@ -18,6 +18,7 @@ public final class EntityConditions {
     public static void register() {
         ConditionTypes.ENTITY.register(Apoli.id("entity_type"), new EntityTypeCondition());
         ConditionTypes.ENTITY.register(Apoli.id("invisible"), new InvisibleCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("player_model_type"), new PlayerModelTypeCondition());
         ConditionTypes.ENTITY.register(Apoli.id("sneaking"), new SneakingCondition());
         ConditionTypes.ENTITY.register(
             Apoli.id("key_pressed"),

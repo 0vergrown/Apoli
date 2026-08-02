@@ -6,6 +6,7 @@ import dev.emi.trinkets.api.SlotReference;
 import dev.emi.trinkets.api.TrinketInventory;
 import dev.overgrown.apoli.compat.accessory.backend.TrinketsBackend;
 import dev.overgrown.apoli.compat.accessory.power.PreventAccessoryUnequipPower;
+import dev.overgrown.apoli.item.ConjuredItems;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
@@ -27,6 +28,7 @@ public abstract class SurvivalTrinketSlotMixin extends Slot {
     @ModifyReturnValue(method = "mayPickup", at = @At("RETURN"))
     private boolean apoli$preventUnequip(boolean original, Player player) {
         ItemStack stack = this.getItem();
+        if (ConjuredItems.isLocked(stack)) return false;
         SlotReference slotRef = new SlotReference(trinketInventory, slotOffset);
         return original && !PreventAccessoryUnequipPower.isPrevented(player, TrinketsBackend.slotRef(slotRef), stack);
     }

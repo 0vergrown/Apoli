@@ -11,7 +11,7 @@
       "homepage":"https://modrinth.com/project/opoli",
       "sources":"https://github.com/0vergrown/Apoli/tree/Fabric-1.21.1"
    },
-   "license":"CC0-1.0",
+   "license":"The A/O License",
    "icon":"assets/apoli/icon.png",
    "environment":"*",
    "entrypoints":{
@@ -38,6 +38,6 @@
       "fabric-api":"*"
    },
    "breaks":{
-      "origins":"<1.5.10"
+      "origins":"<1.9.3"
    }
 }

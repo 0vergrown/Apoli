@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.data.expr;
 
 import dev.overgrown.apoli.power.PowerContainer;
+import dev.overgrown.apoli.power.builtin.ResourcePower;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -25,12 +26,38 @@ public final class ExprVars {
     public static @Nullable ResolvedVar resolve(String name) {
         ResolvedVar known = VARS.get(name);
         if (known != null) return known;
-        if (name.indexOf(':') >= 0) {
-            ResourceLocation id = ResourceLocation.tryParse(name);
-            if (id == null) return null;
-            return new ResolvedVar((e, c, l, v) -> readResource(c, id), true);
+        if (name.indexOf(':') < 0) return null;
+        ResourceLocation literal = ResourceLocation.tryParse(name);
+        ResolvedVar bound = resolveBound(name, "_max", true, literal);
+        if (bound != null) return bound;
+        bound = resolveBound(name, "_min", false, literal);
+        if (bound != null) return bound;
+        if (literal == null) return null;
+        return new ResolvedVar((e, c, l, v) -> readResource(c, literal), true);
+    }
+
+    private static @Nullable ResolvedVar resolveBound(String name, String suffix, boolean max,
+                                                      @Nullable ResourceLocation literal) {
+        if (!name.endsWith(suffix)) return null;
+        ResourceLocation base = ResourceLocation.tryParse(name.substring(0, name.length() - suffix.length()));
+        if (base == null) return null;
+        return new ResolvedVar((e, c, l, v) -> readBound(c, base, literal, max), true);
+    }
+
+    private static final ThreadLocal<int[]> BOUND_DEPTH = ThreadLocal.withInitial(() -> new int[1]);
+
+    private static double readBound(@Nullable PowerContainer container, ResourceLocation base,
+                                    @Nullable ResourceLocation literal, boolean max) {
+        int[] depth = BOUND_DEPTH.get();
+        if (depth[0] >= 8) return 0;
+        depth[0]++;
+        try {
+            java.util.OptionalInt bound = ResourcePower.boundOf(container, base, max);
+            if (bound.isPresent()) return bound.getAsInt();
+        } finally {
+            depth[0]--;
         }
-        return null;
+        return literal == null ? 0 : readResource(container, literal);
     }
 
     public static double readResource(@Nullable PowerContainer container, ResourceLocation id) {

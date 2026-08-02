@@ -26,13 +26,27 @@ public final class InventoryHelper {
         int limit,
         BiConsumer<Integer, ItemStack> visitor
     ) {
+        return walk(container, entity, itemCondition, slot, slots, mode, limit, false, visitor);
+    }
+
+    public static int walk(
+        Container container,
+        LivingEntity entity,
+        Optional<ItemCondition> itemCondition,
+        Optional<ItemSlot> slot,
+        Optional<List<ItemSlot>> slots,
+        ProcessMode mode,
+        int limit,
+        boolean includeEmpty,
+        BiConsumer<Integer, ItemStack> visitor
+    ) {
         int visited = 0;
         int max = container.getContainerSize();
         for (int idx = 0; idx < max; idx++) {
             if (limit > 0 && visited >= limit) break;
             if (!slotMatches(idx, entity, slot, slots)) continue;
             ItemStack stack = container.getItem(idx);
-            if (stack.isEmpty()) continue;
+            if (stack.isEmpty() && !includeEmpty) continue;
             if (itemCondition.isPresent()
                 && !itemCondition.get().test(new ItemCtx(stack, entity.level(), entity))) continue;
             if (mode == ProcessMode.ITEMS) {

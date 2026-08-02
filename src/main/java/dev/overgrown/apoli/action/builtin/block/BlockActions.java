@@ -11,6 +11,7 @@ public final class BlockActions {
         ActionTypes.BLOCK.register(Apoli.id("bonemeal"), new BonemealBlockAction());
         ActionTypes.BLOCK.register(Apoli.id("execute_command"), new ExecuteCommandBlockAction());
         ActionTypes.BLOCK.register(Apoli.id("explode"), new ExplodeBlockAction());
+        ActionTypes.BLOCK.register(Apoli.id("ghost_block"), new GhostBlockAction());
         ActionTypes.BLOCK.register(Apoli.id("modify_block_state"), new ModifyBlockStateAction());
         ActionTypes.BLOCK.register(Apoli.id("set_block"), new SetBlockAction());
         ActionTypes.BLOCK.register(Apoli.id("spawn_entity"), new SpawnEntityBlockAction());

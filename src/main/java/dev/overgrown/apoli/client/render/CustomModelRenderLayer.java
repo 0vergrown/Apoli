@@ -17,9 +17,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FastColor;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class CustomModelRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
     private static final String[] SKELETON = {"head", "hat", "body", "right_arm", "left_arm", "right_leg", "left_leg"};
@@ -72,70 +70,18 @@ public class CustomModelRenderLayer extends RenderLayer<AbstractClientPlayer, Pl
                 continue;
             }
             syncPose(root, model);
-            applyVisibility(root, render.bodyParts());
-            int color = FastColor.ARGB32.colorFromFloat(render.alpha(), render.red(), render.green(), render.blue());
-            VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(render.mode(), render.texture()));
-            boolean scaled = render.scale() != 1.0F;
-            if (scaled) {
-                pose.pushPose();
-                pose.scale(render.scale(), render.scale(), render.scale());
-            }
-            root.render(pose, consumer, light, OverlayTexture.NO_OVERLAY, color);
-            if (scaled) {
-                pose.popPose();
-            }
+            GeometryRenderer.applyVisibility(root, render.bodyParts(), SKELETON);
+            GeometryRenderer.draw(render, root, pose, buffers, light);
         }
     }
 
     private void syncPose(ModelPart root, PlayerModel<AbstractClientPlayer> model) {
-        copyBone(root, "head", model.head);
-        copyBone(root, "hat", model.hat);
-        copyBone(root, "body", model.body);
-        copyBone(root, "right_arm", model.rightArm);
-        copyBone(root, "left_arm", model.leftArm);
-        copyBone(root, "right_leg", model.rightLeg);
-        copyBone(root, "left_leg", model.leftLeg);
-    }
-
-    private void copyBone(ModelPart root, String name, ModelPart source) {
-        ModelPart bone = findChild(root, name);
-        if (bone != null) {
-            bone.copyFrom(source);
-        }
-    }
-
-    private static ModelPart findChild(ModelPart root, String name) {
-        if (root.hasChild(name)) {
-            return root.getChild(name);
-        }
-        String flat = ModelParts.normalize(name);
-        for (String candidate : new String[]{flat, name.replace("_", "")}) {
-            if (root.hasChild(candidate)) {
-                return root.getChild(candidate);
-            }
-        }
-        return null;
-    }
-
-    private void applyVisibility(ModelPart root, List<String> bodyParts) {
-        if (bodyParts.isEmpty()) {
-            for (String bone : SKELETON) {
-                ModelPart part = findChild(root, bone);
-                if (part != null) {
-                    part.visible = true;
-                }
-            }
-            return;
-        }
-        Set<String> allowed = new HashSet<>();
-        for (String part : bodyParts) {
-            allowed.add(ModelParts.normalize(part));
-        }
-        for (String bone : SKELETON) {
-            ModelPart part = findChild(root, bone);
-            if (part != null) {
-                part.visible = allowed.contains(ModelParts.normalize(bone));
-            }
-        }
+        GeometryRenderer.syncBone(root, "head", model.head);
+        GeometryRenderer.syncBone(root, "hat", model.hat);
+        GeometryRenderer.syncBone(root, "body", model.body);
+        GeometryRenderer.syncBone(root, "right_arm", model.rightArm);
+        GeometryRenderer.syncBone(root, "left_arm", model.leftArm);
+        GeometryRenderer.syncBone(root, "right_leg", model.rightLeg);
+        GeometryRenderer.syncBone(root, "left_leg", model.leftLeg);
     }
 }

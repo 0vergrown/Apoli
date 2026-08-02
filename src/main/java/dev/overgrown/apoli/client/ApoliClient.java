@@ -170,6 +170,10 @@ public final class ApoliClient implements ClientModInitializer {
         net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper.registerKeyBinding(SPEECH_KEY);
         dev.overgrown.apoli.client.speech.SpeechClient.setPushToTalkKey(SPEECH_KEY);
 
+        if (dev.overgrown.apoli.compat.ModCompat.LAMBDYNLIGHTS) {
+            dev.overgrown.apoli.compat.lambdynlights.LambDynamicLightsCompat.init();
+        }
+
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             CursorSpeedState.tick(mc);
             if (mc.player != null && !mc.isPaused()) ApoliKeyHandler.onClientTick();
@@ -189,6 +193,7 @@ public final class ApoliClient implements ClientModInitializer {
                     mc.setScreen(new dev.overgrown.apoli.client.skill.SkillTreeScreen());
                 }
             }
+            PlayerModelTypeReporter.tick(mc);
             ForcedKeys.tick();
         });
 

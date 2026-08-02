@@ -62,9 +62,14 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
             ResourceLocation id = e.getKey();
             JsonElement json = applyAliasFieldRenames(e.getValue());
             json = applyAliasDefaults(json);
-            Power.CODEC.parse(JsonOps.INSTANCE, json)
-                .resultOrPartial(err -> LOG.error("Failed to parse power {}: {}", id, err))
-                .ifPresent(power -> loaded.put(id, power));
+            dev.overgrown.apoli.codec.LoggedOptionalField.setContext(id);
+            try {
+                Power.CODEC.parse(JsonOps.INSTANCE, json)
+                    .resultOrPartial(err -> LOG.error("Failed to parse power {}: {}", id, err))
+                    .ifPresent(power -> loaded.put(id, power));
+            } finally {
+                dev.overgrown.apoli.codec.LoggedOptionalField.clearContext();
+            }
         }
         ApoliPowers.replaceAll(loaded);
         LOG.info("[Apoli] Loaded {} power(s).", loaded.size());

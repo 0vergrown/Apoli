@@ -102,6 +102,7 @@ public final class InventoryAction implements ActionType<EntityCtx, InventoryAct
     private void apply(Cfg cfg, Container container, LivingEntity entity, EntityCtx ctx) {
         ProcessMode mode = cfg.operation == Operation.MODIFY ? cfg.processMode : ProcessMode.STACKS;
         InventoryHelper.walk(container, entity, cfg.itemCondition, cfg.slot, cfg.slots, mode, cfg.limit,
+            cfg.operation == Operation.REPLACE,
             (idx, stack) -> {
                 switch (cfg.operation) {
                     case MODIFY -> cfg.itemAction.ifPresent(a -> a.run(new ItemCtx(stack, ctx.level(), entity)));

@@ -16,6 +16,7 @@ import dev.overgrown.apoli.power.PowerTypeRegistry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -103,6 +104,18 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         int hi = Math.max(min, max);
         int lo = Math.min(min, max);
         return Math.min(hi, Math.max(lo, value));
+    }
+
+    public static OptionalInt boundOf(@Nullable PowerContainer holder, ResourceLocation powerId, boolean max) {
+        Power loaded = ApoliPowers.get(powerId);
+        if (loaded == null) return OptionalInt.empty();
+        if (!(PowerTypeRegistry.get(loaded.typeId()) instanceof ResourcePower rp)) return OptionalInt.empty();
+        if (!(loaded.config() instanceof Cfg cfg)) return OptionalInt.empty();
+        Expression bound = max ? cfg.max() : cfg.min();
+        java.util.OptionalDouble constant = bound.constantValue();
+        if (constant.isPresent()) return OptionalInt.of((int) Math.round(constant.getAsDouble()));
+        if (holder == null) return OptionalInt.empty();
+        return OptionalInt.of(max ? rp.currentMax(cfg, holder, powerId) : rp.currentMin(cfg, holder, powerId));
     }
 
     public static OptionalInt readValue(PowerContainer holder, ResourceLocation powerId) {

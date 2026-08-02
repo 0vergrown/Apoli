@@ -5,6 +5,7 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.EntityCondition;
+import dev.overgrown.apoli.codec.LoggedOptionalField;
 import dev.overgrown.apoli.data.TextComponent;
 import dev.overgrown.apoli.skill.Skill;
 import dev.overgrown.apoli.skill.SkillInfo;
@@ -63,11 +64,11 @@ public record Power(
 
     private static <C> MapCodec<Power> buildMapCodec(ResourceLocation typeId, PowerType<C> type) {
         return RecordCodecBuilder.mapCodec(instance -> instance.group(
-            TextComponent.CODEC.optionalFieldOf("name").forGetter(Power::name),
-            TextComponent.CODEC.optionalFieldOf("description").forGetter(Power::description),
-            EntityCondition.CODEC.optionalFieldOf("condition").forGetter(Power::condition),
+            LoggedOptionalField.of("name", TextComponent.CODEC).forGetter(Power::name),
+            LoggedOptionalField.of("description", TextComponent.CODEC).forGetter(Power::description),
+            LoggedOptionalField.of("condition", EntityCondition.CODEC).forGetter(Power::condition),
             Codec.BOOL.optionalFieldOf("hidden", false).forGetter(Power::hidden),
-            SkillInfo.CODEC.optionalFieldOf("skill").forGetter(Power::skill),
+            LoggedOptionalField.of("skill", SkillInfo.CODEC).forGetter(Power::skill),
             type.configCodec().forGetter((Power p) -> {
                 @SuppressWarnings("unchecked")
                 C cfg = (C) p.config();

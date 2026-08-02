@@ -26,6 +26,13 @@ public abstract class SlotConjuredMixin {
         }
     }
 
+    @Inject(method = "mayPlace", at = @At("HEAD"), cancellable = true)
+    private void apoli$refuseConjuredOutsideInventory(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
+        if (!(this.container instanceof Inventory) && ConjuredItems.isConjured(stack)) {
+            cir.setReturnValue(false);
+        }
+    }
+
     @ModifyVariable(method = "set", at = @At("HEAD"), argsOnly = true)
     private ItemStack apoli$deleteConjuredOutsideInventory(ItemStack stack) {
         if (this.container instanceof Inventory || !ConjuredItems.isConjured(stack)) {

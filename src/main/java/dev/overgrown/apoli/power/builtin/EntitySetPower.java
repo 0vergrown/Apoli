@@ -31,6 +31,7 @@ public final class EntitySetPower extends PowerType<EntitySetPower.Cfg> {
     public record Cfg(Optional<BiEntityAction> actionOnAdd, Optional<BiEntityAction> actionOnRemove) {}
 
     private static final Map<StateKey, State> STATES = new HashMap<>();
+    private static final Map<UUID, Set<StateKey>> MEMBERSHIPS = new HashMap<>();
 
     @Override
     public MapCodec<Cfg> configCodec() {
@@ -44,7 +45,8 @@ public final class EntitySetPower extends PowerType<EntitySetPower.Cfg> {
     public void tick(ResourceLocation powerId, Cfg cfg, PowerContainer holder) {
         LivingEntity owner = holder.owner();
         if (owner == null || !(owner.level() instanceof ServerLevel level)) return;
-        State state = STATES.get(new StateKey(owner.getUUID(), powerId));
+        StateKey key = new StateKey(owner.getUUID(), powerId);
+        State state = STATES.get(key);
         if (state == null || state.expireAt.isEmpty()) return;
         long now = level.getGameTime();
         Iterator<Map.Entry<UUID, Long>> it = state.expireAt.entrySet().iterator();
@@ -54,17 +56,21 @@ public final class EntitySetPower extends PowerType<EntitySetPower.Cfg> {
             UUID uuid = e.getKey();
             it.remove();
             if (state.uuids.remove(uuid)) {
-                cfg.actionOnRemove.ifPresent(a -> runBi(cfg.actionOnRemove, owner, uuid, level));
+                unlink(uuid, key);
+                runBi(cfg.actionOnRemove, owner, uuid, level);
             }
         }
+        if (state.uuids.isEmpty() && state.expireAt.isEmpty()) STATES.remove(key);
     }
 
     @Override
     public void onRemoved(ResourceLocation powerId, Cfg cfg, PowerContainer holder, ResourceLocation source) {
         LivingEntity owner = holder.owner();
         if (owner == null || !(owner.level() instanceof ServerLevel level)) return;
-        State state = STATES.remove(new StateKey(owner.getUUID(), powerId));
+        StateKey key = new StateKey(owner.getUUID(), powerId);
+        State state = STATES.remove(key);
         if (state == null) return;
+        for (UUID uuid : state.uuids) unlink(uuid, key);
         if (cfg.actionOnRemove.isEmpty()) return;
         for (UUID uuid : state.uuids) {
             runBi(cfg.actionOnRemove, owner, uuid, level);
@@ -81,13 +87,15 @@ public final class EntitySetPower extends PowerType<EntitySetPower.Cfg> {
                               Entity target, OptionalInt timeLimit) {
         if (target.isRemoved()) return false;
         if (!(owner.level() instanceof ServerLevel level)) return false;
-        State state = STATES.computeIfAbsent(new StateKey(owner.getUUID(), powerId), k -> new State());
+        StateKey key = new StateKey(owner.getUUID(), powerId);
+        State state = STATES.computeIfAbsent(key, k -> new State());
         UUID uuid = target.getUUID();
         boolean firstTime = state.uuids.add(uuid);
         if (timeLimit.isPresent()) {
             state.expireAt.put(uuid, level.getGameTime() + timeLimit.getAsInt());
         }
         if (firstTime) {
+            link(uuid, key);
             cfg.actionOnAdd.ifPresent(a -> a.run(new BiEntityCtx(owner, target, level)));
         }
         return firstTime;
@@ -101,6 +109,7 @@ public final class EntitySetPower extends PowerType<EntitySetPower.Cfg> {
         UUID uuid = target.getUUID();
         boolean removed = state.uuids.remove(uuid);
         state.expireAt.remove(uuid);
+        if (removed) unlink(uuid, key);
         if (state.uuids.isEmpty() && state.expireAt.isEmpty()) STATES.remove(key);
         if (removed) cfg.actionOnRemove.ifPresent(a -> a.run(new BiEntityCtx(owner, target, level)));
         return removed;
@@ -125,6 +134,20 @@ public final class EntitySetPower extends PowerType<EntitySetPower.Cfg> {
         return list;
     }
 
+    public static List<UUID> ownersContaining(Entity member, ResourceLocation powerId, boolean reverse) {
+        Set<StateKey> keys = MEMBERSHIPS.get(member.getUUID());
+        if (keys == null || keys.isEmpty()) return List.of();
+        List<UUID> owners = null;
+        for (StateKey key : keys) {
+            if (!key.powerId.equals(powerId)) continue;
+            if (owners == null) owners = new ArrayList<>(2);
+            owners.add(key.owner);
+        }
+        if (owners == null) return List.of();
+        if (reverse) Collections.reverse(owners);
+        return owners;
+    }
+
     public static @Nullable Entity resolveEntity(MinecraftServer server, UUID uuid) {
         if (server == null) return null;
         for (ServerLevel level : server.getAllLevels()) {
@@ -143,29 +166,43 @@ public final class EntitySetPower extends PowerType<EntitySetPower.Cfg> {
     public static void onEntityConverted(UUID oldUuid, UUID newUuid) {
         if (oldUuid.equals(newUuid)) return;
         PENDING_REMOVAL.remove(oldUuid);
-        for (State s : STATES.values()) {
-            if (s.uuids.remove(oldUuid)) {
-                s.uuids.add(newUuid);
-            }
+        Set<StateKey> keys = MEMBERSHIPS.remove(oldUuid);
+        if (keys == null) return;
+        for (StateKey key : keys) {
+            State s = STATES.get(key);
+            if (s == null) continue;
+            if (s.uuids.remove(oldUuid)) s.uuids.add(newUuid);
             Long expiry = s.expireAt.remove(oldUuid);
             if (expiry != null) s.expireAt.put(newUuid, expiry);
+            link(newUuid, key);
         }
     }
 
     public static void flushPendingRemovals() {
         if (PENDING_REMOVAL.isEmpty()) return;
         for (UUID uuid : PENDING_REMOVAL) {
-            for (State s : STATES.values()) {
+            Set<StateKey> keys = MEMBERSHIPS.remove(uuid);
+            if (keys == null) continue;
+            for (StateKey key : keys) {
+                State s = STATES.get(key);
+                if (s == null) continue;
                 s.uuids.remove(uuid);
                 s.expireAt.remove(uuid);
+                if (s.uuids.isEmpty() && s.expireAt.isEmpty()) STATES.remove(key);
             }
         }
         PENDING_REMOVAL.clear();
-        Iterator<Map.Entry<StateKey, State>> it = STATES.entrySet().iterator();
-        while (it.hasNext()) {
-            State s = it.next().getValue();
-            if (s.uuids.isEmpty() && s.expireAt.isEmpty()) it.remove();
-        }
+    }
+
+    private static void link(UUID member, StateKey key) {
+        MEMBERSHIPS.computeIfAbsent(member, k -> new LinkedHashSet<>(2)).add(key);
+    }
+
+    private static void unlink(UUID member, StateKey key) {
+        Set<StateKey> keys = MEMBERSHIPS.get(member);
+        if (keys == null) return;
+        keys.remove(key);
+        if (keys.isEmpty()) MEMBERSHIPS.remove(member);
     }
 
     private static void runBi(Optional<BiEntityAction> action, LivingEntity owner, UUID targetUuid, ServerLevel level) {
