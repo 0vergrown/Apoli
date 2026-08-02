@@ -5,6 +5,9 @@
   "mixins": [
     "command.EntitySelectorOptionsAccessor",
     "command.EntitySelectorOptionsMixin",
+    "ghost.ServerPlayerGameModeGhostMixin",
+    "ghost.ExplosionGhostMixin",
+    "ghost.PistonBaseBlockGhostMixin",
     "damage.EntityInvulnerableMixin",
     "damage.PlayerZeroDamageMixin",
     "flag.EntityFlagMixin",
@@ -38,7 +41,11 @@
     "power.PlayerExhaustionMixin",
     "power.PlayerHarvestMixin",
     "projectile.ProjectileHitActionsMixin",
+    "recipe.CraftingMenuAccessAccessor",
     "recipe.CraftingMenuGateMixin",
+    "recipe.CraftingMenuNerbMixin",
+    "recipe.CraftingMenuResultMixin",
+    "recipe.ResultSlotCraftMixin",
     "rope.PlayerRopeElytraMixin"
   ],
   "client": [
@@ -52,6 +59,8 @@
     "modelparts.HumanoidModelModifyPartsMixin",
     "pose.LivingEntityRendererPoseMixin",
     "player_model.PlayerRendererModelSwapMixin",
+    "firstperson.ItemInHandRendererBothArmsMixin",
+    "emissive.EntityRendererEmissiveMixin",
     "pose.PlayerRendererPoseMixin",
     "custom_model.CapeLayerHideMixin",
     "custom_model.PlayerRendererCustomModelMixin",

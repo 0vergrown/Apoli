@@ -61,6 +61,9 @@ public final class TypedActionRegistry<CTX> {
     @SuppressWarnings({"rawtypes", "unchecked"})
     public MapCodec<?> applyAliasDefaults(ResourceLocation originalId, MapCodec<?> codec) {
         Map<String, String> defaults = aliasDefaults.get(originalId);
+        if (defaults == null && NamespaceAlias.hasAlias(originalId.getNamespace())) {
+            defaults = aliasDefaults.get(NamespaceAlias.resolve(originalId));
+        }
         if (defaults == null || defaults.isEmpty()) return codec;
         return DefaultInjectingMapCodec.wrap((MapCodec) codec, defaults);
     }

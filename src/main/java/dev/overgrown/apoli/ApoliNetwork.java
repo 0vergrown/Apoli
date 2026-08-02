@@ -60,8 +60,10 @@ public final class ApoliNetwork {
         registrar.playToServer(PowerActivationC2S.TYPE, PowerActivationC2S.STREAM_CODEC, ApoliNetwork::onPowerActivation);
         registrar.playToServer(PowerToggleC2S.TYPE, PowerToggleC2S.STREAM_CODEC, ApoliNetwork::onPowerToggle);
         registrar.playToServer(KeyHeldC2S.TYPE, KeyHeldC2S.STREAM_CODEC, ApoliNetwork::onKeyHeld);
-        registrar.playToServer(dev.overgrown.apoli.network.payload.SpeechC2S.TYPE,
-            dev.overgrown.apoli.network.payload.SpeechC2S.STREAM_CODEC, ApoliNetwork::onSpeech);
+        registrar.playToServer(
+            dev.overgrown.apoli.network.payload.PlayerModelTypeC2S.TYPE,
+            dev.overgrown.apoli.network.payload.PlayerModelTypeC2S.STREAM_CODEC,
+            ApoliNetwork::onPlayerModelType);
         registrar.playToServer(dev.overgrown.apoli.network.payload.SpeechTriggerC2S.TYPE,
             dev.overgrown.apoli.network.payload.SpeechTriggerC2S.STREAM_CODEC, ApoliNetwork::onSpeechTrigger);
 
@@ -117,6 +119,12 @@ public final class ApoliNetwork {
         });
     }
 
+    private static void onPlayerModelType(
+        dev.overgrown.apoli.network.payload.PlayerModelTypeC2S payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> dev.overgrown.apoli.entity.PlayerModelTypes.set(
+            ctx.player().getUUID(), payload.modelType()));
+    }
+
     private static void onKeyHeld(KeyHeldC2S payload, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (ctx.player() instanceof ServerPlayer sp) {
@@ -129,14 +137,6 @@ public final class ApoliNetwork {
         ctx.enqueueWork(() -> {
             if (ctx.player() instanceof net.minecraft.server.level.ServerPlayer sp) {
                 dev.overgrown.apoli.compat.voicechat.ActionOnSpeechPower.fireTrigger(sp, payload.power());
-            }
-        });
-    }
-
-    private static void onSpeech(dev.overgrown.apoli.network.payload.SpeechC2S payload, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> {
-            if (ctx.player() instanceof ServerPlayer sp) {
-                dev.overgrown.apoli.compat.voicechat.ActionOnSpeechPower.fire(sp, payload.text(), payload.language());
             }
         });
     }

@@ -7,6 +7,7 @@ import dev.overgrown.apoli.compat.accessory.AccessorySlot;
 import dev.overgrown.apoli.compat.accessory.AccessorySlotRef;
 import dev.overgrown.apoli.compat.accessory.power.PreventAccessoryEquipPower;
 import dev.overgrown.apoli.compat.accessory.power.PreventAccessoryUnequipPower;
+import dev.overgrown.apoli.item.ConjuredItems;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.item.ItemStack;
@@ -105,6 +106,10 @@ public final class CuriosBackend implements AccessoryProvider {
     }
 
     public static void onCanUnequip(CurioCanUnequipEvent event) {
+        if (ConjuredItems.isLocked(event.getStack())) {
+            event.setUnequipResult(TriState.FALSE);
+            return;
+        }
         LivingEntity entity = event.getEntity();
         SlotContext ctx = event.getSlotContext();
         if (entity != null && PreventAccessoryUnequipPower.isPrevented(entity, refFor(entity, ctx.identifier(), ctx.index()), event.getStack())) {

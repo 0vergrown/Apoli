@@ -66,6 +66,8 @@ import dev.overgrown.apoli.power.builtin.ModifyHealingPower;
 import dev.overgrown.apoli.power.builtin.ModifyJumpPower;
 import dev.overgrown.apoli.power.builtin.ModifyLabelRenderPower;
 import dev.overgrown.apoli.power.builtin.ModifyPlayerModelPower;
+import dev.overgrown.apoli.power.builtin.EmissivePower;
+import dev.overgrown.apoli.power.builtin.ShowBothArmsPower;
 import dev.overgrown.apoli.power.builtin.ModifyPlayerSpawnPower;
 import dev.overgrown.apoli.power.builtin.ModifyProjectileDamagePower;
 import dev.overgrown.apoli.power.builtin.ModifySlipperinessPower;
@@ -106,7 +108,6 @@ import dev.overgrown.apoli.power.builtin.TogglePower;
 import dev.overgrown.apoli.power.builtin.TooltipPower;
 import dev.overgrown.apoli.power.builtin.WalkOnFluidPower;
 
-import java.util.Map;
 
 public final class PowerTypes {
     public static final ActionOnKeyPressPower ACTION_ON_KEY_PRESS = new ActionOnKeyPressPower();
@@ -170,10 +171,8 @@ public final class PowerTypes {
                 .addTypeAlias(Apoli.id("target_action_on_hit"))
                 .build()
         );
-        PowerTypeRegistry.registerAliasFieldRenames(
-            Apoli.id("self_action_on_hit"), Map.of("entity_action", "self_action"));
-        PowerTypeRegistry.registerAliasFieldRenames(
-            Apoli.id("target_action_on_hit"), Map.of("entity_action", "target_action"));
+        PowerTypeRegistry.registerAliasDefaults(Apoli.id("self_action_on_hit"), entityActionTarget("self"));
+        PowerTypeRegistry.registerAliasDefaults(Apoli.id("target_action_on_hit"), entityActionTarget("target"));
 
         PowerTypeRegistry.register(
             Apoli.id("action_when_hit"),
@@ -184,12 +183,9 @@ public final class PowerTypes {
                 .addTypeAlias(Apoli.id("action_when_damage_taken"))
                 .build()
         );
-        PowerTypeRegistry.registerAliasFieldRenames(
-            Apoli.id("self_action_when_hit"), Map.of("entity_action", "self_action"));
-        PowerTypeRegistry.registerAliasFieldRenames(
-            Apoli.id("action_when_damage_taken"), Map.of("entity_action", "self_action"));
-        PowerTypeRegistry.registerAliasFieldRenames(
-            Apoli.id("attacker_action_when_hit"), Map.of("entity_action", "attacker_action"));
+        PowerTypeRegistry.registerAliasDefaults(Apoli.id("self_action_when_hit"), entityActionTarget("self"));
+        PowerTypeRegistry.registerAliasDefaults(Apoli.id("action_when_damage_taken"), entityActionTarget("self"));
+        PowerTypeRegistry.registerAliasDefaults(Apoli.id("attacker_action_when_hit"), entityActionTarget("attacker"));
 
         PowerTypeRegistry.register(Apoli.id("simple"), new SimplePower());
         PowerTypeRegistry.register(Apoli.id("disable_regen"), new DisableRegenPower());
@@ -270,8 +266,7 @@ public final class PowerTypes {
             new ActionOnKillPower(),
             AliasingOptions.builder().addTypeAlias(Apoli.id("self_action_on_kill")).build()
         );
-        PowerTypeRegistry.registerAliasFieldRenames(
-            Apoli.id("self_action_on_kill"), Map.of("entity_action", "self_action"));
+        PowerTypeRegistry.registerAliasDefaults(Apoli.id("self_action_on_kill"), entityActionTarget("self"));
         PowerTypeRegistry.register(Apoli.id("action_on_item_pickup"), new ActionOnItemPickupPower());
         PowerTypeRegistry.register(Apoli.id("action_on_item_use"), new ActionOnItemUsePower());
         PowerTypeRegistry.register(Apoli.id("action_on_land"), new ActionOnLandPower());
@@ -307,6 +302,8 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("particle"), new ParticlePower());
         PowerTypeRegistry.register(Apoli.id("pose"), new PosePower());
         PowerTypeRegistry.register(Apoli.id("modify_player_model"), new ModifyPlayerModelPower());
+        PowerTypeRegistry.register(Apoli.id("show_both_arms"), new ShowBothArmsPower());
+        PowerTypeRegistry.register(Apoli.id("emissive"), new EmissivePower());
         PowerTypeRegistry.register(Apoli.id("modify_label_render"), new ModifyLabelRenderPower(),
             dev.overgrown.apoli.alias.AliasingOptions.builder()
                 .addTypeAlias("sync:modify_label_render")
@@ -355,6 +352,12 @@ public final class PowerTypes {
     private static JsonObject targetUsed(boolean value) {
         JsonObject obj = new JsonObject();
         obj.add("target_used", new JsonPrimitive(value));
+        return obj;
+    }
+
+    private static JsonObject entityActionTarget(String side) {
+        JsonObject obj = new JsonObject();
+        obj.add("entity_action_target", new JsonPrimitive(side));
         return obj;
     }
 }

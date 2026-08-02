@@ -93,6 +93,9 @@ public final class ApoliClient {
                 entity == Minecraft.getInstance().player && KeyPressWatcher.isLocalHeld(key));
             KeyPressWatcher.setSender(keys -> PacketDistributor.sendToServer(new KeyHeldC2S(keys)));
             dev.overgrown.apoli.client.disguise.ClientDisguiseManager.install();
+            if (dev.overgrown.apoli.compat.ModCompat.LAMBDYNLIGHTS) {
+                dev.overgrown.apoli.compat.lambdynlights.LambDynamicLightsCompat.init();
+            }
         });
     }
 
@@ -111,6 +114,7 @@ public final class ApoliClient {
             if (dev.overgrown.apoli.compat.ModCompat.FIGURA) {
                 dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.tick(mc);
             }
+            PlayerModelTypeReporter.tick(mc);
             if (mc.player == null || mc.isPaused()) {
                 ForcedKeys.tick();
                 return;

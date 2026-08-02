@@ -101,6 +101,11 @@ public final class SpeechClient {
     }
 
     private static void start(Minecraft mc) {
+        if (!voskPresent()) {
+            report(mc, "no-vosk", "Speech-to-action could not start its speech engine — " + VoskRuntime.failure(),
+                ChatFormatting.YELLOW);
+            return;
+        }
         Path modelDir = modelDir();
         if (!Files.isDirectory(modelDir)) {
             report(mc, "no-model", "Speech-to-action is on, but no Vosk model is installed. Unpack one from "
@@ -139,6 +144,10 @@ public final class SpeechClient {
         if (mode.equalsIgnoreCase("microphone")) return false;
         if (mode.equalsIgnoreCase("voicechat")) return true;
         return dev.overgrown.apoli.compat.ModCompat.VOICECHAT;
+    }
+
+    private static boolean voskPresent() {
+        return VoskRuntime.available();
     }
 
     private static Path modelDir() {

@@ -7,6 +7,10 @@ public final class ModCompat {
 
     public static final boolean VOICECHAT = ModList.get().isLoaded("voicechat");
 
+    public static final boolean NERB = ModList.get().isLoaded("nerb");
+
+    public static final boolean LAMBDYNLIGHTS = ModList.get().isLoaded("lambdynlights");
+
     public static final boolean ICARUS = ModList.get().isLoaded("icarus");
 
     public static final boolean FIGURA = ModList.get().isLoaded("figura");

@@ -3,6 +3,7 @@ package dev.overgrown.apoli.data;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.alias.AliasingMapCodec;
+import dev.overgrown.apoli.codec.LoggedOptionalField;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Item;
@@ -16,7 +17,7 @@ public record ItemStackData(ItemStack stack) {
         RecordCodecBuilder.<ItemStackData>mapCodec(i -> i.group(
             BuiltInRegistries.ITEM.byNameCodec().fieldOf("item").forGetter(s -> s.stack.getItem()),
             Codec.INT.optionalFieldOf("amount", 1).forGetter(s -> s.stack.getCount()),
-            DataComponentPatch.CODEC.optionalFieldOf("components", DataComponentPatch.EMPTY).forGetter(s -> s.stack.getComponentsPatch())
+            LoggedOptionalField.of("components", DataComponentPatch.CODEC, DataComponentPatch.EMPTY).forGetter(s -> s.stack.getComponentsPatch())
         ).apply(i, ItemStackData::build)),
         Map.of("id", "item", "count", "amount")
     ).codec();

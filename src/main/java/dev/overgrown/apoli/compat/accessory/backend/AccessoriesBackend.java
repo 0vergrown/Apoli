@@ -7,6 +7,7 @@ import dev.overgrown.apoli.compat.accessory.AccessorySlot;
 import dev.overgrown.apoli.compat.accessory.AccessorySlotRef;
 import dev.overgrown.apoli.compat.accessory.power.PreventAccessoryEquipPower;
 import dev.overgrown.apoli.compat.accessory.power.PreventAccessoryUnequipPower;
+import dev.overgrown.apoli.item.ConjuredItems;
 import io.wispforest.accessories.api.AccessoriesAPI;
 import io.wispforest.accessories.api.AccessoriesCapability;
 import io.wispforest.accessories.api.events.AccessoryChangeCallback;
@@ -106,6 +107,7 @@ public final class AccessoriesBackend implements AccessoryProvider {
                 ? TriState.FALSE : TriState.DEFAULT;
         });
         CanUnequipCallback.EVENT.register((stack, reference) -> {
+            if (ConjuredItems.isLocked(stack)) return TriState.FALSE;
             LivingEntity entity = reference.entity();
             return entity != null && PreventAccessoryUnequipPower.isPrevented(entity, new Ref(reference), stack)
                 ? TriState.FALSE : TriState.DEFAULT;

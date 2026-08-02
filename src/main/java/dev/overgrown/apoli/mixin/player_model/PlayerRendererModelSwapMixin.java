@@ -1,5 +1,7 @@
 package dev.overgrown.apoli.mixin.player_model;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.overgrown.apoli.client.render.ApoliPlayerModels;
 import net.minecraft.client.model.PlayerModel;
@@ -53,5 +55,28 @@ public abstract class PlayerRendererModelSwapMixin extends LivingEntityRenderer<
     private void apoli$swapModelPost(AbstractClientPlayer player, float yaw, float partialTick, PoseStack pose,
                                      MultiBufferSource buffers, int light, CallbackInfo ci) {
         this.model = this.apoli$cachedModel;
+    }
+
+    @WrapMethod(method = "renderRightHand")
+    private void apoli$swapModelRightHand(PoseStack pose, MultiBufferSource buffers, int light,
+                                          AbstractClientPlayer player, Operation<Void> original) {
+        apoli$withOverriddenModel(player, () -> original.call(pose, buffers, light, player));
+    }
+
+    @WrapMethod(method = "renderLeftHand")
+    private void apoli$swapModelLeftHand(PoseStack pose, MultiBufferSource buffers, int light,
+                                         AbstractClientPlayer player, Operation<Void> original) {
+        apoli$withOverriddenModel(player, () -> original.call(pose, buffers, light, player));
+    }
+
+    @Unique
+    private void apoli$withOverriddenModel(AbstractClientPlayer player, Runnable body) {
+        PlayerModel<AbstractClientPlayer> cached = this.model;
+        this.model = ApoliPlayerModels.override(player, this.model, this.apoli$slimVariant);
+        try {
+            body.run();
+        } finally {
+            this.model = cached;
+        }
     }
 }

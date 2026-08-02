@@ -180,6 +180,7 @@ public final class Apoli {
     public void onServerStarted(net.neoforged.neoforge.event.server.ServerStartedEvent event) {
         dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(event.getServer());
         dev.overgrown.apoli.entity.GrabManager.clearAll();
+        dev.overgrown.apoli.block.GhostBlocks.clear();
         dev.overgrown.apoli.compat.voicechat.VoiceState.setServer(event.getServer());
         dev.overgrown.apoli.compat.voicechat.VoiceState.setCallbacks(
             dev.overgrown.apoli.compat.voicechat.VoicePowerHandler::onSpeakStart,
@@ -189,6 +190,7 @@ public final class Apoli {
     @SubscribeEvent
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer sp) {
+            dev.overgrown.apoli.entity.PlayerModelTypes.resolveFrom(sp.getUUID(), sp.getGameProfile());
             ApoliNetwork.sendKeybinds(sp, SyncKeybindsS2C.fromCurrent());
             ApoliNetwork.sendPowers(sp);
             sendEntitySync(sp);
@@ -298,6 +300,7 @@ public final class Apoli {
         dev.overgrown.apoli.entity.disguise.DisguiseManager.onPlayerLeave(event.getEntity().getUUID());
         dev.overgrown.apoli.entity.LabelManager.onEntityGone(event.getEntity().getUUID());
         dev.overgrown.apoli.action.builtin.entity.TextAction.onPlayerLeave(event.getEntity().getUUID());
+        dev.overgrown.apoli.entity.PlayerModelTypes.remove(event.getEntity().getUUID());
     }
 
     @SubscribeEvent
@@ -312,8 +315,15 @@ public final class Apoli {
     }
 
     @SubscribeEvent
+    public void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
+        dev.overgrown.apoli.block.GhostBlocks.restoreAll(event.getServer());
+    }
+
+    @SubscribeEvent
     public void onServerStopped(net.neoforged.neoforge.event.server.ServerStoppedEvent event) {
         PoweredEntities.clear();
+        dev.overgrown.apoli.block.GhostBlocks.clear();
+        dev.overgrown.apoli.entity.PlayerModelTypes.clear();
         DelayedActionQueue.clear();
         dev.overgrown.apoli.rope.RopeManager.clear();
         dev.overgrown.apoli.entity.ProjectileTickManager.clearAll();
@@ -369,6 +379,7 @@ public final class Apoli {
             }
             if (impl.isEmpty()) PoweredEntities.unregister(entity);
         });
+        dev.overgrown.apoli.block.GhostBlocks.tick(event.getServer());
         EntitySetPower.flushPendingRemovals();
     }
 

@@ -3,8 +3,6 @@ package dev.overgrown.apoli.client.speech;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.overgrown.apoli.Apoli;
-import org.vosk.Model;
-import org.vosk.Recognizer;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
@@ -103,17 +101,15 @@ public final class VoskTranscriber {
 
     private void run() {
         AudioFormat format = new AudioFormat(SAMPLE_RATE, 16, 1, true, false);
-        Model model = null;
-        Recognizer recognizer = null;
+        VoskRuntime.Session session = null;
         TargetDataLine line = null;
         try {
             Path resolved = resolveModel(modelDir);
-            model = new Model(resolved.toString());
-            recognizer = new Recognizer(model, sampleRate);
+            session = VoskRuntime.open(resolved.toString(), sampleRate);
             if (source == Source.VOICE_CHAT) {
                 Apoli.LOGGER.info("[Apoli] Speech-to-action ready (Vosk model {}, Simple Voice Chat microphone).",
                     resolved.getFileName());
-                runVoiceChat(recognizer);
+                runVoiceChat(session);
                 return;
             }
             logDevices(format);
@@ -125,7 +121,7 @@ public final class VoskTranscriber {
             while (running) {
                 if (!listening) {
                     if (line != null) {
-                        captured += drain(line, recognizer, buffer);
+                        captured += drain(line, session, buffer);
                         line.stop();
                         line.close();
                         line = null;
@@ -136,7 +132,7 @@ public final class VoskTranscriber {
                                 + "may hold the microphone. Set \"speechInputDevice\" in apoli-client.json to pick "
                                 + "a different recording device.");
                         }
-                        finish(recognizer);
+                        finish(session);
                         captured = 0L;
                     }
                     Thread.sleep(20L);
@@ -144,7 +140,7 @@ public final class VoskTranscriber {
                 }
                 if (line == null) {
                     line = openLine(format);
-                    recognizer.reset();
+                    session.reset();
                     captured = 0L;
                     line.start();
                     resetPartial();
@@ -153,12 +149,12 @@ public final class VoskTranscriber {
                 int read = line.read(buffer, 0, buffer.length);
                 if (read <= 0) continue;
                 captured += read;
-                if (recognizer.acceptWaveForm(buffer, read)) {
-                    emit(recognizer.getResult(), true);
+                if (session.acceptWaveForm(buffer, read)) {
+                    emit(session.result(), true);
                     listener.utteranceEnded();
                     resetPartial();
                 } else {
-                    pollPartial(recognizer, System.currentTimeMillis());
+                    pollPartial(session, System.currentTimeMillis());
                 }
             }
         } catch (InterruptedException ignored) {
@@ -172,12 +168,11 @@ public final class VoskTranscriber {
                 line.stop();
                 line.close();
             }
-            if (recognizer != null) recognizer.close();
-            if (model != null) model.close();
+            if (session != null) session.close();
         }
     }
 
-    private void runVoiceChat(Recognizer recognizer) throws InterruptedException {
+    private void runVoiceChat(VoskRuntime.Session session) throws Exception {
         long lastAudio = 0L;
         long frames = 0L;
         boolean speaking = false;
@@ -189,25 +184,25 @@ public final class VoskTranscriber {
                     speaking = false;
                     Apoli.LOGGER.info("[Apoli] Speech capture ended ({} samples via voice chat).", frames);
                     frames = 0L;
-                    finish(recognizer);
+                    finish(session);
                 }
                 continue;
             }
             if (!speaking) {
                 speaking = true;
                 frames = 0L;
-                recognizer.reset();
+                session.reset();
                 resetPartial();
                 Apoli.LOGGER.info("[Apoli] Speech capture started (Simple Voice Chat).");
             }
             lastAudio = now;
             frames += chunk.length;
-            if (recognizer.acceptWaveForm(chunk, chunk.length)) {
-                emit(recognizer.getResult(), true);
+            if (session.acceptWaveForm(chunk, chunk.length)) {
+                emit(session.result(), true);
                 listener.utteranceEnded();
                 resetPartial();
             } else {
-                pollPartial(recognizer, now);
+                pollPartial(session, now);
             }
         }
     }
@@ -249,7 +244,7 @@ public final class VoskTranscriber {
             found.length() == 0 ? "(none)" : found);
     }
 
-    private long drain(TargetDataLine line, Recognizer recognizer, byte[] buffer) {
+    private long drain(TargetDataLine line, VoskRuntime.Session session, byte[] buffer) throws Exception {
         long total = 0L;
         for (int guard = 0; guard < 128; guard++) {
             int chunk = frames(Math.min(line.available(), buffer.length));
@@ -257,7 +252,7 @@ public final class VoskTranscriber {
             int read = line.read(buffer, 0, chunk);
             if (read <= 0) return total;
             total += read;
-            recognizer.acceptWaveForm(buffer, read);
+            session.acceptWaveForm(buffer, read);
         }
         return total;
     }
@@ -277,10 +272,10 @@ public final class VoskTranscriber {
         return dir;
     }
 
-    private void pollPartial(Recognizer recognizer, long now) {
+    private void pollPartial(VoskRuntime.Session session, long now) throws Exception {
         if (now < nextPartial) return;
         nextPartial = now + PARTIAL_INTERVAL_MS;
-        String text = extract(recognizer.getPartialResult(), "partial");
+        String text = extract(session.partialResult(), "partial");
         if (text == null || text.isBlank() || text.equals(lastPartial)) return;
         lastPartial = text;
         listener.text(text, false);
@@ -291,8 +286,8 @@ public final class VoskTranscriber {
         nextPartial = 0L;
     }
 
-    private void finish(Recognizer recognizer) {
-        emit(recognizer.getFinalResult(), true);
+    private void finish(VoskRuntime.Session session) throws Exception {
+        emit(session.finalResult(), true);
         listener.utteranceEnded();
         resetPartial();
     }

@@ -58,13 +58,13 @@ public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyR
             if (resourceR.error().isPresent()) {
                 return DataResult.error(() -> "Invalid 'resource': " + resourceR.error().get().message());
             }
-            int change = 0;
+            Expression change = Expression.constant(0);
             if (changeRaw != null) {
-                DataResult<Number> n = ops.getNumberValue(changeRaw);
-                if (n.error().isPresent()) {
-                    return DataResult.error(() -> "Invalid 'change': " + n.error().get().message());
+                DataResult<Expression> c = Expression.INT_OR_EXPR.parse(ops, changeRaw);
+                if (c.error().isPresent()) {
+                    return DataResult.error(() -> "Invalid 'change': " + c.error().get().message());
                 }
-                change = n.result().get().intValue();
+                change = c.result().get();
             }
             String operationStr = "add";
             if (operationRaw != null) {
@@ -85,7 +85,7 @@ public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyR
             }
             AttributeModifier synth = new AttributeModifier(
                 op,
-                Expression.constant(change),
+                change,
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),

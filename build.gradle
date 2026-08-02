@@ -1,7 +1,7 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
-    id 'net.neoforged.moddev' version '2.0.141'
+    id 'net.neoforged.moddev' version '2.0.143'
     id 'idea'
 }
 
@@ -148,6 +148,12 @@ configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 
+configurations {
+    // Shipped as plain resources under apoli/runtime/, NOT jarJar: anything under META-INF/jarjar
+    // becomes a JPMS module, and a second com.sun.jna module breaks module resolution for every mod.
+    voskRuntime { transitive = false }
+}
+
 dependencies {
     // Icarus — compiled against, never bundled and not a runtime dependency. The apoli:wings power
     // and its mixins are gated on Icarus being present (ModCompat.ICARUS / IcarusCompatMixinPlugin),
@@ -159,6 +165,7 @@ dependencies {
     // compat code and its mixin are gated on Figura being present (ModCompat.FIGURA /
     // FiguraCompatMixinPlugin), so Apoli runs fine without it.
     compileOnly "maven.modrinth:figura:${project.figura_version}"
+
 
     // Accessories + Curios (compile-only, optional at runtime) — the unified accessory compat types.
     // Gated at runtime by ModCompat / the Accessories facade, so Apoli runs fine with neither present.
@@ -175,13 +182,10 @@ dependencies {
     // without it and the voice_* conditions simply read false.
     compileOnly "de.maxhenkel.voicechat:voicechat-api:${project.voicechat_api_version}"
 
-    // Vosk offline speech — the fallback transcriber for browsers without the Web Speech API (Firefox,
-    // and Chrome/Edge on Linux where the cloud service is unreachable). Bundled via jarJar so it ships
-    // with the mod; the user still supplies a model at <gamedir>/apoli/vosk-model.
-    implementation "com.alphacephei:vosk:${project.vosk_version}"
-    implementation "net.java.dev.jna:jna:5.7.0"
-    jarJar("com.alphacephei:vosk:${project.vosk_version}")
-    jarJar("net.java.dev.jna:jna:5.7.0")
+    // Vosk offline speech. Bundled, but NOT via jarJar — see the voskRuntime configuration above.
+    // VoskRuntime unpacks these to <gamedir>/apoli/runtime/ and loads them in an isolated class loader.
+    voskRuntime "com.alphacephei:vosk:${project.vosk_version}"
+    voskRuntime "net.java.dev.jna:jna:5.7.0"
 
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
@@ -256,5 +260,30 @@ idea {
     module {
         downloadSources = true
         downloadJavadoc = true
+    }
+}
+
+// Ship the A/O License alongside the mod, matching the Fabric builds.
+jar {
+    def projectName = project.name
+    inputs.property "projectName", projectName
+
+    from("LICENSE") {
+        rename { "${it}_$projectName" }
+    }
+
+}
+
+
+tasks.register('collectVoskRuntime', Copy) {
+    from configurations.voskRuntime
+    into layout.buildDirectory.dir('voskRuntime')
+    rename { it.startsWith('vosk') ? 'vosk.jar' : 'jna.jar' }
+}
+
+tasks.named('processResources') {
+    dependsOn 'collectVoskRuntime'
+    from(layout.buildDirectory.dir('voskRuntime')) {
+        into 'apoli/runtime'
     }
 }
