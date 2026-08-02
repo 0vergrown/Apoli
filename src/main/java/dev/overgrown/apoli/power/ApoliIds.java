@@ -20,11 +20,16 @@ public final class ApoliIds {
     public static final ResourceLocation MODIFY_VELOCITY = Apoli.id("modify_velocity");
     public static final ResourceLocation MODIFY_EXHAUSTION = Apoli.id("modify_exhaustion");
     public static final ResourceLocation MODIFY_DAMAGE = Apoli.id("modify_damage");
+    public static final ResourceLocation ACTION_ON_HIT = Apoli.id("action_on_hit");
+    public static final ResourceLocation ACTION_WHEN_HIT = Apoli.id("action_when_hit");
+    public static final ResourceLocation MODIFY_CRAFTING = Apoli.id("modify_crafting");
     public static final ResourceLocation ACTION_ON_SPEAK = Apoli.id("action_on_speak");
     public static final ResourceLocation ACTION_ON_REPLY = Apoli.id("action_on_reply");
     public static final ResourceLocation ACTION_ON_SENDING_MESSAGE = Apoli.id("action_on_sending_message");
     public static final ResourceLocation ACTION_ON_SPEECH = Apoli.id("action_on_speech");
     public static final ResourceLocation ACTION_ON_KEY_SEQUENCE = Apoli.id("action_on_key_sequence");
+    public static final ResourceLocation SHOW_BOTH_ARMS = Apoli.id("show_both_arms");
+    public static final ResourceLocation EMISSIVE = Apoli.id("emissive");
 
     private ApoliIds() {}
 }

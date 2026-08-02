@@ -226,6 +226,10 @@ public final class ApoliClient implements ClientModInitializer {
         net.fabricmc.fabric.api.resource.ResourceManagerHelper.get(net.minecraft.server.packs.PackType.CLIENT_RESOURCES)
             .registerReloadListener(dev.overgrown.apoli.client.render.CustomModelManager.INSTANCE);
 
+        if (dev.overgrown.apoli.compat.ModCompat.LAMBDYNLIGHTS) {
+            dev.overgrown.apoli.compat.lambdynlights.LambDynamicLightsCompat.init();
+        }
+
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             dev.overgrown.apoli.client.CursorSpeedState.tick(mc);
             if (mc.player != null && !mc.isPaused()) {
@@ -247,6 +251,7 @@ public final class ApoliClient implements ClientModInitializer {
             if (dev.overgrown.apoli.compat.ModCompat.FIGURA) {
                 dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.tick(mc);
             }
+            dev.overgrown.apoli.client.PlayerModelTypeReporter.tick(mc);
             dev.overgrown.apoli.client.ForcedKeys.tick();
         });
 

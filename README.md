@@ -66,4 +66,4 @@ Use `./gradlew runClient` / `./gradlew runServer` for a dev environment. See the
 
 ## License
 
-See [`LICENSE`](https://0vergrown.github.io/Handbook/license).
+The A/O License — see [`LICENSE`](LICENSE). The canonical, always-current text lives on the Handbook: <https://0vergrown.github.io/Handbook/license>.

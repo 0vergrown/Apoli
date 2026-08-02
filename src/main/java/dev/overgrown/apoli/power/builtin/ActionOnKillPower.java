@@ -11,6 +11,7 @@ import dev.overgrown.apoli.condition.EntityCondition;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.DamageCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.HitSide;
 import dev.overgrown.apoli.data.HudRender;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerContainerImpl;
@@ -21,15 +22,18 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Optional;
-import java.util.OptionalInt;
 
 public final class ActionOnKillPower extends PowerType<ActionOnKillPower.Config> {
     public record Config(
         Optional<BiEntityAction> bientityAction,
         Optional<EntityAction> selfAction,
         Optional<EntityAction> targetAction,
+        Optional<EntityAction> attackerAction,
+        Optional<EntityAction> entityAction,
+        HitSide entityActionTarget,
         Optional<BiEntityCondition> bientityCondition,
         Optional<EntityCondition> targetCondition,
+        Optional<EntityCondition> attackerCondition,
         Optional<DamageCondition> damageCondition,
         int cooldown,
         HudRender hudRender
@@ -41,8 +45,12 @@ public final class ActionOnKillPower extends PowerType<ActionOnKillPower.Config>
             BiEntityAction.CODEC.optionalFieldOf("bientity_action").forGetter(Config::bientityAction),
             EntityAction.CODEC.optionalFieldOf("self_action").forGetter(Config::selfAction),
             EntityAction.CODEC.optionalFieldOf("target_action").forGetter(Config::targetAction),
+            EntityAction.CODEC.optionalFieldOf("attacker_action").forGetter(Config::attackerAction),
+            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction),
+            HitSide.CODEC.optionalFieldOf("entity_action_target", HitSide.SELF).forGetter(Config::entityActionTarget),
             BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Config::bientityCondition),
             EntityCondition.CODEC.optionalFieldOf("target_condition").forGetter(Config::targetCondition),
+            EntityCondition.CODEC.optionalFieldOf("attacker_condition").forGetter(Config::attackerCondition),
             DamageCondition.CODEC.optionalFieldOf("damage_condition").forGetter(Config::damageCondition),
             Codec.INT.optionalFieldOf("cooldown", 1).forGetter(Config::cooldown),
             HudRender.CODEC.optionalFieldOf("hud_render", HudRender.DONT_RENDER).forGetter(Config::hudRender)
@@ -63,34 +71,30 @@ public final class ActionOnKillPower extends PowerType<ActionOnKillPower.Config>
     }
 
     @Override
-    public void tick(ResourceLocation powerId, Config cfg, PowerContainer holder) {
-        if (!(holder instanceof PowerContainerImpl impl)) return;
-        OptionalInt cur = impl.getAuxInt(powerId);
-        if (cur.isPresent() && cur.getAsInt() > 0) {
-            impl.setAuxInt(powerId, cur.getAsInt() - 1);
-        }
-    }
-
-    @Override
     public boolean isActive(ResourceLocation powerId, Config cfg, EntityCtx ctx) {
         return true;
     }
 
     public void onKill(ResourceLocation powerId, Config cfg, LivingEntity killer, LivingEntity victim,
                        DamageSource source, ServerLevel level, PowerContainerImpl impl) {
-        OptionalInt cur = impl.getAuxInt(powerId);
-        if (cur.isPresent() && cur.getAsInt() > 0) return;
+        long now = level.getGameTime();
+        if (!HitActionHandler.ready(impl, powerId, now)) return;
 
         BiEntityCtx biCtx = new BiEntityCtx(killer, victim, level);
+        EntityCtx killerCtx = new EntityCtx(killer, level);
+        EntityCtx victimCtx = new EntityCtx(victim, level);
         if (cfg.bientityCondition().isPresent() && !cfg.bientityCondition().get().test(biCtx)) return;
-        if (cfg.targetCondition().isPresent()
-            && !cfg.targetCondition().get().test(new EntityCtx(victim, level))) return;
+        if (cfg.targetCondition().isPresent() && !cfg.targetCondition().get().test(victimCtx)) return;
+        if (cfg.attackerCondition().isPresent() && !cfg.attackerCondition().get().test(killerCtx)) return;
         if (cfg.damageCondition().isPresent()
             && !cfg.damageCondition().get().test(new DamageCtx(source, victim, level, 0f))) return;
 
         cfg.bientityAction().ifPresent(a -> a.run(biCtx));
-        cfg.selfAction().ifPresent(a -> a.run(new EntityCtx(killer, level)));
-        cfg.targetAction().ifPresent(a -> a.run(new EntityCtx(victim, level)));
-        impl.setAuxInt(powerId, cfg.cooldown());
+        cfg.selfAction().ifPresent(a -> a.run(killerCtx));
+        cfg.attackerAction().ifPresent(a -> a.run(killerCtx));
+        cfg.targetAction().ifPresent(a -> a.run(victimCtx));
+        EntityCtx entityCtx = cfg.entityActionTarget() == HitSide.TARGET ? victimCtx : killerCtx;
+        cfg.entityAction().ifPresent(a -> a.run(entityCtx));
+        impl.setAuxInt(powerId, HitActionHandler.expiry(now, cfg.cooldown()));
     }
 }

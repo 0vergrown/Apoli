@@ -194,7 +194,7 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
             if (other.equals(self)) continue;
             SeqState st = ps.seqs.get(other);
             if (st == null || !st.completedNow) continue;
-            if (isProperPrefix(cfg.keySequence, ps.configs.get(other).keySequence)) return true;
+            if (isProperInfix(cfg.keySequence, ps.configs.get(other).keySequence)) return true;
         }
         return false;
     }
@@ -206,17 +206,23 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
             if (other.equals(self)) continue;
             SeqState st = ps.seqs.get(other);
             if (st == null || st.cooldown > 0 || st.progress < len) continue;
-            if (isProperPrefix(cfg.keySequence, ps.configs.get(other).keySequence)) return true;
+            if (isProperInfix(cfg.keySequence, ps.configs.get(other).keySequence)) return true;
         }
         return false;
     }
 
-    private static boolean isProperPrefix(List<String> shorter, List<String> longer) {
-        if (shorter.size() >= longer.size()) return false;
-        for (int i = 0; i < shorter.size(); i++) {
-            if (!shorter.get(i).equals(longer.get(i))) return false;
+    private static boolean isProperInfix(List<String> shorter, List<String> longer) {
+        int n = shorter.size();
+        int m = longer.size();
+        if (n >= m) return false;
+        outer:
+        for (int start = 0; start <= m - n; start++) {
+            for (int i = 0; i < n; i++) {
+                if (!shorter.get(i).equals(longer.get(start + i))) continue outer;
+            }
+            return true;
         }
-        return true;
+        return false;
     }
 
     private void fire(ServerPlayer player, ResourceLocation powerId, Config cfg, SeqState st, EntityCtx ctx) {

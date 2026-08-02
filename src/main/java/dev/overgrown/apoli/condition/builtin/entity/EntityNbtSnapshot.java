@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.condition.builtin.entity;
 
+import dev.overgrown.apoli.compat.ModCompat;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -16,7 +17,7 @@ public final class EntityNbtSnapshot {
     private static final ThreadLocal<Boolean> SKIP_RECIPE_BOOK = ThreadLocal.withInitial(() -> Boolean.FALSE);
 
     public static boolean isSkippingRecipeBook() {
-        return SKIP_RECIPE_BOOK.get();
+        return !ModCompat.NERB && SKIP_RECIPE_BOOK.get();
     }
 
     private static final class TickCache {
@@ -59,7 +60,7 @@ public final class EntityNbtSnapshot {
     }
 
     private static CompoundTag cachedFullSnapshot(Entity entity, CompoundTag expected) {
-        if (expected.contains("recipeBook")) {
+        if (!ModCompat.NERB && expected.contains("recipeBook")) {
             return serialize(entity, false);
         }
         long now = entity.level().getGameTime();
@@ -78,13 +79,14 @@ public final class EntityNbtSnapshot {
 
     private static CompoundTag serialize(Entity entity, boolean skipRecipeBook) {
         CompoundTag actual = new CompoundTag();
-        if (skipRecipeBook) {
+        boolean mark = skipRecipeBook && !ModCompat.NERB;
+        if (mark) {
             SKIP_RECIPE_BOOK.set(Boolean.TRUE);
         }
         try {
             entity.saveWithoutId(actual);
         } finally {
-            if (skipRecipeBook) {
+            if (mark) {
                 SKIP_RECIPE_BOOK.set(Boolean.FALSE);
             }
         }

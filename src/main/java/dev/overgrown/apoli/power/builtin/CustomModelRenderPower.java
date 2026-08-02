@@ -98,7 +98,8 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         float blue,
         float alpha,
         boolean showFirstPerson,
-        float scale
+        float scale,
+        boolean renderAsOverlay
     ) {}
 
     @Override
@@ -184,7 +185,7 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
                 return;
             }
             out.add(new GeometryRender(cfg.model().get(), cfg.texture().get(), cfg.renderType(), cfg.bodyParts(),
-                cfg.red(), cfg.green(), cfg.blue(), cfg.alpha(), cfg.showFirstPerson(), cfg.scale()));
+                cfg.red(), cfg.green(), cfg.blue(), cfg.alpha(), cfg.showFirstPerson(), cfg.scale(), cfg.renderAsOverlay()));
         });
         return out;
     }

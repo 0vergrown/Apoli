@@ -119,17 +119,17 @@ public final class PowerHudRenderer {
             hud = cfg.hudRender();
             fill = resourceFill(player, container, powerId, cfg);
         } else if (type instanceof ActionOnHitPower && config instanceof ActionOnHitPower.Config cfg) {
-            int remaining = auxRemaining(powerId);
+            int remaining = auxRemaining(powerId) - (int) player.level().getGameTime();
             if (remaining <= 0) return;
             hud = cfg.hudRender();
             fill = cooldownProgress(remaining, cfg.cooldown());
         } else if (type instanceof ActionWhenHitPower && config instanceof ActionWhenHitPower.Config cfg) {
-            int remaining = auxRemaining(powerId);
+            int remaining = auxRemaining(powerId) - (int) player.level().getGameTime();
             if (remaining <= 0) return;
             hud = cfg.hudRender();
             fill = cooldownProgress(remaining, cfg.cooldown());
         } else if (type instanceof ActionOnKillPower && config instanceof ActionOnKillPower.Config cfg) {
-            int remaining = auxRemaining(powerId);
+            int remaining = auxRemaining(powerId) - (int) player.level().getGameTime();
             if (remaining <= 0) return;
             hud = cfg.hudRender();
             fill = cooldownProgress(remaining, cfg.cooldown());

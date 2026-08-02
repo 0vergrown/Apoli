@@ -72,6 +72,7 @@ dependencies {
 	// Gated at runtime by ModCompat.FIGURA / FiguraCompatMixinPlugin, so Apoli runs fine without it.
 	modCompileOnly "maven.modrinth:figura:${project.figura_version}"
 
+
 	// Trinkets + Accessories (compile-only, optional at runtime) — the unified accessory compat types.
 	// Gated at runtime by ModCompat / the Accessories facade, so Apoli runs fine with neither present.
 	modCompileOnly "dev.emi:trinkets:${project.trinkets_version}"
