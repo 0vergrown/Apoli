@@ -2,9 +2,12 @@ package dev.overgrown.apoli.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import dev.overgrown.apoli.client.model.CustomModel;
 import dev.overgrown.apoli.data.ModelParts;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.GeometryRender;
+import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import org.jetbrains.annotations.Nullable;
@@ -14,60 +17,98 @@ import java.util.List;
 public final class GeometryRenderer {
     private GeometryRenderer() {}
 
-    @Nullable
-    public static ModelPart findBone(ModelPart root, String name) {
-        if (root.hasChild(name)) {
-            return root.getChild(name);
-        }
-        String flat = ModelParts.normalize(name);
-        if (root.hasChild(flat)) {
-            return root.getChild(flat);
-        }
-        String stripped = name.replace("_", "");
-        return root.hasChild(stripped) ? root.getChild(stripped) : null;
+    public static void syncPlayer(CustomModel custom, PlayerModel<AbstractClientPlayer> live,
+                                  PlayerModel<AbstractClientPlayer> rest) {
+        syncBone(custom, ModelParts.HEAD, live.head, rest.head);
+        syncBone(custom, ModelParts.HAT, live.hat, rest.hat);
+        syncBone(custom, ModelParts.BODY, live.body, rest.body);
+        syncBone(custom, ModelParts.RIGHT_ARM, live.rightArm, rest.rightArm);
+        syncBone(custom, ModelParts.LEFT_ARM, live.leftArm, rest.leftArm);
+        syncBone(custom, ModelParts.RIGHT_LEG, live.rightLeg, rest.rightLeg);
+        syncBone(custom, ModelParts.LEFT_LEG, live.leftLeg, rest.leftLeg);
     }
 
-    public static void syncBone(ModelPart root, String name, @Nullable ModelPart source) {
-        if (source == null) {
+    public static void syncBone(CustomModel model, String normalizedName, @Nullable ModelPart live, @Nullable ModelPart rest) {
+        if (live == null) {
             return;
         }
-        ModelPart bone = findBone(root, name);
-        if (bone != null) {
-            bone.copyFrom(source);
+        CustomModel.Bone[] bound = model.bones(normalizedName);
+        for (int i = 0; i < bound.length; i++) {
+            pose(bound[i], live, rest);
         }
     }
 
-    public static void applyVisibility(ModelPart root, List<String> bodyParts, String[] skeleton) {
-        boolean wholeModel = bodyParts.isEmpty();
-        for (String name : skeleton) {
-            ModelPart bone = findBone(root, name);
-            if (bone != null) {
-                bone.visible = wholeModel || listed(bodyParts, name);
+    private static void pose(CustomModel.Bone bone, ModelPart live, @Nullable ModelPart rest) {
+        bone.reset();
+        ModelPart part = bone.part;
+        part.xScale = live.xScale;
+        part.yScale = live.yScale;
+        part.zScale = live.zScale;
+        if (rest == null) {
+            part.xRot += live.xRot;
+            part.yRot += live.yRot;
+            part.zRot += live.zRot;
+            return;
+        }
+        part.x += live.x - rest.x;
+        part.y += live.y - rest.y;
+        part.z += live.z - rest.z;
+        part.xRot += live.xRot - rest.xRot;
+        part.yRot += live.yRot - rest.yRot;
+        part.zRot += live.zRot - rest.zRot;
+    }
+
+    public static void applyVisibility(CustomModel model, List<String> bodyParts) {
+        CustomModel.Bone[] all = model.bones();
+        if (bodyParts.isEmpty()) {
+            for (int i = 0; i < all.length; i++) {
+                all[i].part.visible = true;
+            }
+            return;
+        }
+        for (int i = 0; i < all.length; i++) {
+            all[i].part.visible = false;
+        }
+        for (int i = 0; i < bodyParts.size(); i++) {
+            CustomModel.Bone[] bound = model.bones(ModelParts.normalize(bodyParts.get(i)));
+            for (int j = 0; j < bound.length; j++) {
+                bound[j].part.visible = true;
             }
         }
     }
 
-    public static void draw(GeometryRender render, ModelPart root, PoseStack pose, MultiBufferSource buffers, int light) {
+    public static void draw(GeometryRender render, CustomModel model, PoseStack pose, MultiBufferSource buffers, int light) {
         VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(render.mode(), render.texture()));
         boolean scaled = render.scale() != 1.0F;
         if (scaled) {
             pose.pushPose();
             pose.scale(render.scale(), render.scale(), render.scale());
         }
-        root.render(pose, consumer, light, OverlayTexture.NO_OVERLAY,
+        model.root().render(pose, consumer, light, OverlayTexture.NO_OVERLAY,
             render.red(), render.green(), render.blue(), render.alpha());
         if (scaled) {
             pose.popPose();
         }
     }
 
-    private static boolean listed(List<String> bodyParts, String bone) {
-        String normalized = ModelParts.normalize(bone);
-        for (int i = 0; i < bodyParts.size(); i++) {
-            if (ModelParts.normalize(bodyParts.get(i)).equals(normalized)) {
-                return true;
-            }
+    public static void drawSlot(GeometryRender render, CustomModel model, String normalizedName, float alphaScale,
+                                PoseStack pose, MultiBufferSource buffers, int light) {
+        CustomModel.Bone[] bound = model.bones(normalizedName);
+        if (bound.length == 0) {
+            return;
         }
-        return false;
+        VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(render.mode(), render.texture()));
+        boolean scaled = render.scale() != 1.0F;
+        if (scaled) {
+            pose.pushPose();
+            pose.scale(render.scale(), render.scale(), render.scale());
+        }
+        for (int i = 0; i < bound.length; i++) {
+            bound[i].part.render(pose, consumer, light, OverlayTexture.NO_OVERLAY,
+                render.red(), render.green(), render.blue(), render.alpha() * alphaScale);
+        }
+        if (scaled) {
+            pose.popPose();
+        }
     }
 }

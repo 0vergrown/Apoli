@@ -1,11 +1,12 @@
 package dev.overgrown.apoli.client.summon;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.overgrown.apoli.client.model.CustomModel;
 import dev.overgrown.apoli.client.render.CustomModelManager;
 import dev.overgrown.apoli.client.render.GeometryRenderer;
 import dev.overgrown.apoli.entity.summon.MinionEntity;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.GeometryRender;
-import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 
@@ -13,6 +14,7 @@ import java.util.List;
 
 public class MinionCustomModelLayer extends RenderLayer<MinionEntity, MinionModel> {
     private final MinionRenderer renderer;
+    private MinionModel restPose;
 
     public MinionCustomModelLayer(MinionRenderer renderer) {
         super(renderer);
@@ -27,17 +29,25 @@ public class MinionCustomModelLayer extends RenderLayer<MinionEntity, MinionMode
             return;
         }
         MinionModel model = this.getParentModel();
+        MinionModel rest = this.restPose();
         for (int i = 0; i < geometry.size(); i++) {
             GeometryRender render = geometry.get(i);
-            ModelPart root = CustomModelManager.getBaked(render.model());
-            if (root == null) {
+            CustomModel custom = CustomModelManager.get(render.model());
+            if (custom == null) {
                 continue;
             }
             for (String name : MinionModel.BONES) {
-                GeometryRenderer.syncBone(root, name, model.bone(name));
+                GeometryRenderer.syncBone(custom, name, model.bone(name), rest.bone(name));
             }
-            GeometryRenderer.applyVisibility(root, render.bodyParts(), MinionModel.BONES);
-            GeometryRenderer.draw(render, root, pose, buffers, light);
+            GeometryRenderer.applyVisibility(custom, render.bodyParts());
+            GeometryRenderer.draw(render, custom, pose, buffers, light);
         }
+    }
+
+    private MinionModel restPose() {
+        if (this.restPose == null) {
+            this.restPose = new MinionModel(Minecraft.getInstance().getEntityModels().bakeLayer(SummonModelLayers.MINION));
+        }
+        return this.restPose;
     }
 }

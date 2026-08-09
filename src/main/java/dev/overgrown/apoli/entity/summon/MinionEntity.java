@@ -41,6 +41,7 @@ public class MinionEntity extends Mob implements OwnableEntity, Temporary {
         SynchedEntityData.defineId(MinionEntity.class, EntityDataSerializers.FLOAT);
 
     private int maxLifeTime = 1200;
+    private int lifeTicks = 1200;
     @Nullable
     private ResourceLocation summonId;
 
@@ -74,7 +75,7 @@ public class MinionEntity extends Mob implements OwnableEntity, Temporary {
     public void tick() {
         super.tick();
         if (this.level().isClientSide) return;
-        if (this.maxLifeTime > 0 && this.tickCount > this.maxLifeTime) {
+        if (this.maxLifeTime > 0 && --this.lifeTicks <= 0) {
             this.discard();
             return;
         }
@@ -169,11 +170,17 @@ public class MinionEntity extends Mob implements OwnableEntity, Temporary {
     @Override
     public void setMaxLifeTime(int ticks) {
         this.maxLifeTime = ticks;
+        this.lifeTicks = ticks;
     }
 
     @Override
     public int getMaxLifeTime() {
         return this.maxLifeTime;
+    }
+
+    @Override
+    public int getRemainingLifeTime() {
+        return this.maxLifeTime > 0 ? this.lifeTicks : -1;
     }
 
     @Override
@@ -205,6 +212,7 @@ public class MinionEntity extends Mob implements OwnableEntity, Temporary {
         tag.putFloat("OffsetZ", offset.z);
         tag.putFloat("MinionScale", this.getMinionScale());
         tag.putInt("MaxLifeTime", this.maxLifeTime);
+        tag.putInt("LifeTicks", this.lifeTicks);
         if (this.summonId != null) tag.putString("SummonId", this.summonId.toString());
     }
 
@@ -222,7 +230,8 @@ public class MinionEntity extends Mob implements OwnableEntity, Temporary {
         this.setFollowOffset(tag.getFloat("OffsetX"), tag.getFloat("OffsetY"), tag.getFloat("OffsetZ"));
         this.setFollowingOwner(tag.getBoolean("Follow"));
         if (tag.contains("MinionScale")) this.setScale(tag.getFloat("MinionScale"));
-        if (tag.contains("MaxLifeTime")) this.maxLifeTime = tag.getInt("MaxLifeTime");
+        if (tag.contains("MaxLifeTime")) this.setMaxLifeTime(tag.getInt("MaxLifeTime"));
+        if (tag.contains("LifeTicks")) this.lifeTicks = tag.getInt("LifeTicks");
         if (tag.contains("SummonId")) this.summonId = ResourceLocation.tryParse(tag.getString("SummonId"));
     }
 }

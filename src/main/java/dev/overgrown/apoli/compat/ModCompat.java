@@ -11,6 +11,10 @@ public final class ModCompat {
 
     public static final boolean LAMBDYNLIGHTS = FabricLoader.getInstance().isModLoaded("lambdynlights");
 
+    public static final boolean EARS = FabricLoader.getInstance().isModLoaded("ears");
+
+    public static final boolean SKIN_LAYERS_3D = FabricLoader.getInstance().isModLoaded("skinlayers3d");
+
     public static final boolean ICARUS = FabricLoader.getInstance().isModLoaded("icarus");
 
     public static final boolean FIGURA = FabricLoader.getInstance().isModLoaded("figura");

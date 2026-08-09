@@ -18,19 +18,25 @@ public final class LoggedOptionalField<A> extends MapCodec<Optional<A>> {
 
     private final String name;
     private final Codec<A> elementCodec;
+    private final boolean strict;
 
-    private LoggedOptionalField(String name, Codec<A> elementCodec) {
+    private LoggedOptionalField(String name, Codec<A> elementCodec, boolean strict) {
         this.name = name;
         this.elementCodec = elementCodec;
+        this.strict = strict;
     }
 
     public static <A> MapCodec<Optional<A>> of(String name, Codec<A> elementCodec) {
-        return new LoggedOptionalField<>(name, elementCodec);
+        return new LoggedOptionalField<>(name, elementCodec, false);
     }
 
     public static <A> MapCodec<A> of(String name, Codec<A> elementCodec, A fallback) {
-        return new LoggedOptionalField<>(name, elementCodec)
+        return new LoggedOptionalField<>(name, elementCodec, false)
             .xmap(o -> o.orElse(fallback), Optional::ofNullable);
+    }
+
+    public static <A> MapCodec<Optional<A>> strict(String name, Codec<A> elementCodec) {
+        return new LoggedOptionalField<>(name, elementCodec, true);
     }
 
     public static void setContext(ResourceLocation id) {
@@ -54,6 +60,12 @@ public final class LoggedOptionalField<A> extends MapCodec<Optional<A>> {
         Optional<A> result = parsed.result();
         if (result.isPresent()) return DataResult.success(result);
         String where = CONTEXT.get();
+        if (strict) {
+            String reason = parsed.error().map(e -> e.message()).orElse("unknown error");
+            return DataResult.error(() -> "The '" + name + "' field"
+                + (where == null ? "" : " of " + where)
+                + " is present but failed to parse: " + reason);
+        }
         Apoli.LOGGER.warn("[Apoli] Ignoring the '{}' field{} — it is present but failed to parse, so it was dropped and everything else loaded. {}",
             name, where == null ? "" : " of " + where,
             parsed.error().map(e -> e.message()).orElse("unknown error"));

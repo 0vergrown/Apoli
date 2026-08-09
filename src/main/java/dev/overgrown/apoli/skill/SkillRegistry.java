@@ -25,6 +25,7 @@ public final class SkillRegistry {
     private static volatile Map<ResourceLocation, List<ResourceLocation>> children = Map.of();
     private static volatile List<ResourceLocation> roots = List.of();
     private static volatile Map<ResourceLocation, ResourceLocation> rootCache = Map.of();
+    private static volatile Map<ResourceLocation, ResourceLocation> orphanedSkills = Map.of();
 
     public static void setTrees(Map<ResourceLocation, SkillTree> loaded) {
         trees = Map.copyOf(loaded);
@@ -47,6 +48,7 @@ public final class SkillRegistry {
         candidates.putAll(powerSkills);
 
         Map<ResourceLocation, ResourceLocation> rc = new HashMap<>();
+        Map<ResourceLocation, ResourceLocation> orphans = new LinkedHashMap<>();
         Map<ResourceLocation, Skill> valid = new LinkedHashMap<>();
         for (Skill skill : candidates.values()) {
             ResourceLocation cur = skill.id();
@@ -64,8 +66,7 @@ public final class SkillRegistry {
                 cur = parent;
             }
             if (root == null) {
-                LOG.warn("[Apoli] Skill {} has no skill tree at the top of its parent chain (parent '{}'); it will not appear anywhere. Point its 'parent' at a skill_trees file id or another skill.",
-                    skill.id(), skill.parent());
+                orphans.put(skill.id(), skill.parent());
                 continue;
             }
             valid.put(skill.id(), skill);
@@ -82,10 +83,20 @@ public final class SkillRegistry {
         List<ResourceLocation> rootList = new ArrayList<>(treeMap.keySet());
         rootList.sort(java.util.Comparator.comparingInt(id -> treeMap.get(id).order()));
 
+        orphanedSkills = Map.copyOf(orphans);
         byId = Map.copyOf(valid);
         children = Map.copyOf(kids);
         roots = List.copyOf(rootList);
         rootCache = Map.copyOf(rc);
+    }
+
+    public static void reportOrphanedSkills() {
+        Map<ResourceLocation, ResourceLocation> orphans = orphanedSkills;
+        if (orphans.isEmpty()) return;
+        for (Map.Entry<ResourceLocation, ResourceLocation> e : orphans.entrySet()) {
+            LOG.warn("[Apoli] Skill {} has no skill tree at the top of its parent chain (parent '{}'); it will not appear anywhere. Point its 'parent' at a skill_trees file id or another skill.",
+                e.getKey(), e.getValue());
+        }
     }
 
     @Nullable

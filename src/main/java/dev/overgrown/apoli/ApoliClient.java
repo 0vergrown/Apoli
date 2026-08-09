@@ -229,6 +229,9 @@ public final class ApoliClient implements ClientModInitializer {
         if (dev.overgrown.apoli.compat.ModCompat.LAMBDYNLIGHTS) {
             dev.overgrown.apoli.compat.lambdynlights.LambDynamicLightsCompat.init();
         }
+        if (dev.overgrown.apoli.compat.ModCompat.EARS) {
+            dev.overgrown.apoli.compat.ears.EarsCompat.init();
+        }
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             dev.overgrown.apoli.client.CursorSpeedState.tick(mc);

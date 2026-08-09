@@ -92,6 +92,20 @@ dependencies {
 		exclude group: "net.blay09.mods", module: "shared-bridge"
 	}
 
+	// Mod Menu (compile-only, optional at runtime) — supplies Apoli's in-game settings screen.
+	// The "modmenu" entrypoint is only resolved when Mod Menu is installed, and Menulogue forwards
+	// it to Catalogue. Catalogue on its own goes through custom.catalogue.configFactory instead,
+	// which is reflective and needs no dependency at all.
+	modCompileOnly("com.terraformersmc:modmenu:${project.modmenu_version}") {
+		exclude group: "net.fabricmc.fabric-api"
+	}
+
+	// 3D Skin Layers + Ears (compile-only, optional at runtime) — the render powers that recolour or
+	// replace the player skin have to reach into these mods, because they draw their own geometry
+	// from the raw skin file instead of the vanilla model. Gated by their mixin config plugins.
+	modCompileOnly "maven.modrinth:3dskinlayers:${project.skinlayers_version}"
+	modCompileOnly "maven.modrinth:ears:${project.ears_version}"
+
 	modCompileOnly "me.lucko:fabric-permissions-api:0.3.1"
 
 	// Simple Voice Chat API (compile-only, optional at runtime) — the voice_* conditions and

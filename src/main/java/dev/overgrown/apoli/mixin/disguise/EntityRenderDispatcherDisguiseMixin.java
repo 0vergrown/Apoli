@@ -5,7 +5,6 @@ import dev.overgrown.apoli.client.disguise.ClientDisguiseManager;
 import dev.overgrown.apoli.entity.disguise.DisguiseData;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.world.entity.Entity;
@@ -21,9 +20,6 @@ public abstract class EntityRenderDispatcherDisguiseMixin {
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private <E extends Entity> void apoli$renderDisguise(E entity, double x, double y, double z, float yaw, float partialTick,
                                                          PoseStack pose, MultiBufferSource buffers, int light, CallbackInfo ci) {
-        Minecraft mc = Minecraft.getInstance();
-        if (entity == mc.player && mc.options.getCameraType().isFirstPerson()) return;
-
         DisguiseData data = ClientDisguiseManager.get(entity.getId());
         if (data == null || data.isPlayerDisguise()) return;
 

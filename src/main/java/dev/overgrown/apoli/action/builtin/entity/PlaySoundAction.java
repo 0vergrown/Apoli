@@ -11,6 +11,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 
 import java.util.Optional;
 
@@ -30,12 +31,26 @@ public final class PlaySoundAction implements ActionType<EntityCtx, PlaySoundAct
         public static final Codec<Category> CODEC = StringRepresentable.fromEnum(Category::values);
         private final String name;
         private final SoundSource vanilla;
-        Category(String n, SoundSource v) { this.name = n; this.vanilla = v; }
-        @Override public String getSerializedName() { return name; }
-        public SoundSource vanilla() { return vanilla; }
+        Category(String n, SoundSource v) {
+            this.name = n; this.vanilla = v;
+        }
+
+        @Override
+        public String getSerializedName() {
+            return name;
+        }
+
+        public SoundSource vanilla() {
+            return vanilla;
+        }
     }
 
-    public record Cfg(ResourceLocation sound, Optional<Category> category, float volume, float pitch) {}
+    public record Cfg(ResourceLocation sound, Optional<Category> category, float volume, float pitch,
+                      boolean followEntity, Optional<Boolean> global, boolean internal) {
+        public boolean isGlobal() {
+            return global.orElse(followEntity);
+        }
+    }
 
     @Override
     public MapCodec<Cfg> codec() {
@@ -43,16 +58,29 @@ public final class PlaySoundAction implements ActionType<EntityCtx, PlaySoundAct
             ResourceLocation.CODEC.fieldOf("sound").forGetter(Cfg::sound),
             Category.CODEC.optionalFieldOf("category").forGetter(Cfg::category),
             Codec.FLOAT.optionalFieldOf("volume", 1.0f).forGetter(Cfg::volume),
-            Codec.FLOAT.optionalFieldOf("pitch", 1.0f).forGetter(Cfg::pitch)
+            Codec.FLOAT.optionalFieldOf("pitch", 1.0f).forGetter(Cfg::pitch),
+            Codec.BOOL.optionalFieldOf("follow_entity", false).forGetter(Cfg::followEntity),
+            Codec.BOOL.optionalFieldOf("global").forGetter(Cfg::global),
+            Codec.BOOL.optionalFieldOf("internal", false).forGetter(Cfg::internal)
         ).apply(i, Cfg::new));
     }
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        SoundEvent event = BuiltInRegistries.SOUND_EVENT.get(cfg.sound);
-        if (event == null) return;
+        SoundEvent registered = BuiltInRegistries.SOUND_EVENT.get(cfg.sound);
+        if (registered == null) return;
+        SoundEvent event = cfg.isGlobal()
+            ? SoundEvent.createFixedRangeEvent(cfg.sound, Float.MAX_VALUE)
+            : registered;
+
         Entity e = ctx.raw();
         SoundSource source = cfg.category.map(Category::vanilla).orElse(e.getSoundSource());
-        ctx.level().playSound(null, e.getX(), e.getY(), e.getZ(), event, source, cfg.volume, cfg.pitch);
+        Player except = cfg.internal && e instanceof Player player ? player : null;
+
+        if (cfg.followEntity) {
+            ctx.level().playSound(except, e, event, source, cfg.volume, cfg.pitch);
+        } else {
+            ctx.level().playSound(except, e.getX(), e.getY(), e.getZ(), event, source, cfg.volume, cfg.pitch);
+        }
     }
 }

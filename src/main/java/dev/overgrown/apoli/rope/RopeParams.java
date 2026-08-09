@@ -3,7 +3,10 @@ package dev.overgrown.apoli.rope;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.util.Mth;
 import net.minecraft.util.StringRepresentable;
+
+import java.util.Optional;
 
 import static dev.overgrown.apoli.rope.RopeConstants.*;
 
@@ -22,8 +25,15 @@ public record RopeParams(
     boolean constrainTo,
     boolean controllable,
     Mode mode,
-    float breakBeyond
+    float breakBeyond,
+    Optional<Float> startLength
 ) {
+
+    public double initialLength(double endpointDistance) {
+        double wanted = startLength.map(Float::doubleValue)
+            .orElseGet(() -> controllable ? endpointDistance : maxLength);
+        return Mth.clamp(wanted, minLength, maxLength);
+    }
 
     public enum Mode implements StringRepresentable {
 
@@ -35,14 +45,20 @@ public record RopeParams(
 
         public static final Codec<Mode> CODEC = StringRepresentable.fromEnum(Mode::values);
         private final String name;
-        Mode(String name) { this.name = name; }
-        @Override public String getSerializedName() { return name; }
+        Mode(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String getSerializedName() {
+            return name;
+        }
     }
 
     public static final RopeParams DEFAULT = new RopeParams(
         MIN_ROPE_LENGTH, 30f, LEASH_STIFFNESS, RADIAL_DAMPING, SPRING_SCALING,
         SWING_BOOST, MAX_SWING_SPEED, SWING_CONTROL_ACCEL, ROPE_LENGTH_CHANGE_STEP, SLACK_PULL_RATE_MULT,
-        true, true, true, Mode.LEASH, 0f);
+        true, true, true, Mode.LEASH, 0f, Optional.empty());
 
     public static final MapCodec<RopeParams> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
         Codec.FLOAT.optionalFieldOf("min_length", DEFAULT.minLength).forGetter(RopeParams::minLength),
@@ -59,6 +75,7 @@ public record RopeParams(
         Codec.BOOL.optionalFieldOf("constrain_to", DEFAULT.constrainTo).forGetter(RopeParams::constrainTo),
         Codec.BOOL.optionalFieldOf("controllable", DEFAULT.controllable).forGetter(RopeParams::controllable),
         Mode.CODEC.optionalFieldOf("mode", DEFAULT.mode).forGetter(RopeParams::mode),
-        Codec.FLOAT.optionalFieldOf("break_beyond", DEFAULT.breakBeyond).forGetter(RopeParams::breakBeyond)
+        Codec.FLOAT.optionalFieldOf("break_beyond", DEFAULT.breakBeyond).forGetter(RopeParams::breakBeyond),
+        Codec.FLOAT.optionalFieldOf("start_length").forGetter(RopeParams::startLength)
     ).apply(i, RopeParams::new));
 }

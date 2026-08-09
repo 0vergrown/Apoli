@@ -25,8 +25,12 @@ import net.minecraft.world.entity.Entity;
 public final class ApoliNetwork {
     private ApoliNetwork() {}
 
+    public static boolean connected(ServerPlayer recipient) {
+        return recipient != null && recipient.connection != null;
+    }
+
     public static void sendPowers(ServerPlayer recipient) {
-        dev.overgrown.apoli.network.PowerSyncCache.sendTo(recipient);
+        if (connected(recipient)) dev.overgrown.apoli.network.PowerSyncCache.sendTo(recipient);
     }
 
     public static void sendEntityPowers(ServerPlayer recipient, SyncEntityPowersS2C payload) {
@@ -64,13 +68,13 @@ public final class ApoliNetwork {
     }
 
     public static void sendTextDisplay(ServerPlayer recipient, dev.overgrown.apoli.network.payload.TextDisplayS2C payload) {
-        if (ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.TextDisplayS2C.CHANNEL)) {
+        if (connected(recipient) && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.TextDisplayS2C.CHANNEL)) {
             send(recipient, dev.overgrown.apoli.network.payload.TextDisplayS2C.CHANNEL, payload::write);
         }
     }
 
     public static void sendForceKey(ServerPlayer recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C payload) {
-        if (ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C.CHANNEL)) {
+        if (connected(recipient) && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C.CHANNEL)) {
             send(recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C.CHANNEL, payload::write);
         }
     }
@@ -85,7 +89,7 @@ public final class ApoliNetwork {
     }
 
     public static void sendLabel(ServerPlayer recipient, dev.overgrown.apoli.network.payload.LabelUpdateS2C payload) {
-        if (ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.LabelUpdateS2C.CHANNEL)) {
+        if (connected(recipient) && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.LabelUpdateS2C.CHANNEL)) {
             send(recipient, dev.overgrown.apoli.network.payload.LabelUpdateS2C.CHANNEL, payload::write);
         }
     }
@@ -99,6 +103,7 @@ public final class ApoliNetwork {
     }
 
     public static void sendSkillState(ServerPlayer recipient) {
+        if (!connected(recipient)) return;
         SkillData data = SkillDataAttachment.get(recipient);
         dev.overgrown.apoli.skill.SkillTrees.Visibility vis =
             dev.overgrown.apoli.skill.SkillTrees.computeVisibility(recipient);
@@ -146,6 +151,7 @@ public final class ApoliNetwork {
                                       java.util.Optional<ResourceLocation> sprite,
                                       java.util.List<dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.Entry> display,
                                       java.util.List<dev.overgrown.apoli.action.EntityAction> actions) {
+        if (!connected(player)) return;
         if (!ServerPlayNetworking.canSend(player, dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.CHANNEL)) return;
         int nonce = dev.overgrown.apoli.radial.RadialMenuManager.open(player, actions);
         dev.overgrown.apoli.network.payload.RadialMenuOpenS2C payload =
@@ -154,6 +160,7 @@ public final class ApoliNetwork {
     }
 
     private static void send(ServerPlayer recipient, ResourceLocation channel, java.util.function.Consumer<FriendlyByteBuf> writer) {
+        if (!connected(recipient)) return;
         FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
         writer.accept(buf);
         ServerPlayNetworking.send(recipient, channel, buf);

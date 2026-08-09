@@ -3,9 +3,8 @@ package dev.overgrown.apoli.client.render;
 import com.google.gson.JsonObject;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.client.model.BedrockModelParser;
+import dev.overgrown.apoli.client.model.CustomModel;
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
-import net.minecraft.client.model.geom.ModelPart;
-import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -22,8 +21,7 @@ public final class CustomModelManager implements SimpleSynchronousResourceReload
 
     private static final String[] PREFIXES = {"geo/", "models/apoli/"};
     private static final String SUFFIX = ".geo.json";
-    private static final Map<ResourceLocation, LayerDefinition> DEFINITIONS = new HashMap<>();
-    private static final Map<ResourceLocation, ModelPart> BAKED = new HashMap<>();
+    private static final Map<ResourceLocation, CustomModel> MODELS = new HashMap<>();
 
     private CustomModelManager() {}
 
@@ -34,8 +32,7 @@ public final class CustomModelManager implements SimpleSynchronousResourceReload
 
     @Override
     public void onResourceManagerReload(ResourceManager manager) {
-        DEFINITIONS.clear();
-        BAKED.clear();
+        MODELS.clear();
         for (String prefix : PREFIXES) {
             String scanPath = prefix.substring(0, prefix.length() - 1);
             Map<ResourceLocation, Resource> found = manager.listResources(
@@ -48,32 +45,22 @@ public final class CustomModelManager implements SimpleSynchronousResourceReload
                 }
                 String trimmed = path.substring(prefix.length(), path.length() - SUFFIX.length());
                 ResourceLocation id = new ResourceLocation(file.getNamespace(), trimmed);
-                if (DEFINITIONS.containsKey(id)) {
+                if (MODELS.containsKey(id)) {
                     continue;
                 }
                 try (InputStream stream = entry.getValue().open()) {
                     JsonObject json = GsonHelper.parse(new InputStreamReader(stream));
-                    DEFINITIONS.put(id, BedrockModelParser.parse(json));
+                    MODELS.put(id, BedrockModelParser.parse(id, json));
                 } catch (Exception e) {
                     Apoli.LOGGER.error("[Apoli] Failed to load custom model {}: {}", id, e.getMessage());
                 }
             }
         }
-        Apoli.LOGGER.info("[Apoli] Loaded {} custom model(s) for custom_model_render.", DEFINITIONS.size());
+        Apoli.LOGGER.info("[Apoli] Loaded {} custom model(s) for custom_model_render.", MODELS.size());
     }
 
     @Nullable
-    public static ModelPart getBaked(ResourceLocation id) {
-        ModelPart cached = BAKED.get(id);
-        if (cached != null) {
-            return cached;
-        }
-        LayerDefinition definition = DEFINITIONS.get(id);
-        if (definition == null) {
-            return null;
-        }
-        ModelPart baked = definition.bakeRoot();
-        BAKED.put(id, baked);
-        return baked;
+    public static CustomModel get(ResourceLocation id) {
+        return MODELS.get(id);
     }
 }

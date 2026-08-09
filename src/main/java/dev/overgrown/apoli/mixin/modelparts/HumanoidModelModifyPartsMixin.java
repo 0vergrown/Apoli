@@ -1,5 +1,7 @@
 package dev.overgrown.apoli.mixin.modelparts;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import dev.overgrown.apoli.client.render.ModelPartAnimator;
 import dev.overgrown.apoli.client.render.ModelPartLookup;
 import dev.overgrown.apoli.data.ModelPartTransformation;
@@ -31,6 +33,14 @@ public abstract class HumanoidModelModifyPartsMixin {
     private final List<ModelPart> apoli$scratch = new ArrayList<>(2);
     @Unique
     private boolean apoli$hadPower;
+    @Unique
+    private boolean apoli$poseOverridden;
+    @Unique
+    private float apoli$savedSwimAmount;
+    @Unique
+    private boolean apoli$savedCrouching;
+    @Unique
+    private boolean apoli$savedRiding;
 
     @Inject(method = SETUP_ANIM, at = @At("HEAD"))
     private void apoli$modifyPartsHead(LivingEntity entity, float f, float g, float h, float i, float j, CallbackInfo ci) {
@@ -43,23 +53,49 @@ public abstract class HumanoidModelModifyPartsMixin {
             apoli$originals.clear();
         }
         apoli$hadPower = has;
+
+        apoli$poseOverridden = ModelPartAnimator.overridesPose(entity);
+        if (apoli$poseOverridden) {
+            HumanoidModel<?> model = (HumanoidModel<?>) (Object) this;
+            apoli$savedSwimAmount = model.swimAmount;
+            apoli$savedCrouching = model.crouching;
+            apoli$savedRiding = model.riding;
+            model.swimAmount = 0.0F;
+            model.crouching = false;
+            model.riding = false;
+        }
+    }
+
+    @WrapOperation(method = SETUP_ANIM, at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/world/entity/LivingEntity;getFallFlyingTicks()I"))
+    private int apoli$neutralizeFallFlying(LivingEntity entity, Operation<Integer> original) {
+        return apoli$poseOverridden ? 0 : original.call(entity);
     }
 
     @Inject(method = SETUP_ANIM, at = @At("TAIL"))
     private void apoli$modifyPartsTail(LivingEntity entity, float f, float g, float h, float i, float j, CallbackInfo ci) {
         List<ModelPartAnimator.Slot> slots = ModelPartAnimator.update(entity);
-        if (slots.isEmpty()) return;
-        HumanoidModel<?> model = (HumanoidModel<?>) (Object) this;
-        for (int s = 0; s < slots.size(); s++) {
-            ModelPartAnimator.Slot slot = slots.get(s);
-            if (slot.weight() <= 0.0F) continue;
-            apoli$scratch.clear();
-            ModelPartLookup.resolveInto(model, slot.transformation().normalizedPart(), apoli$scratch);
-            for (int p = 0; p < apoli$scratch.size(); p++) {
-                apoli$apply(apoli$scratch.get(p), slot);
+        if (!slots.isEmpty()) {
+            HumanoidModel<?> model = (HumanoidModel<?>) (Object) this;
+            for (int s = 0; s < slots.size(); s++) {
+                ModelPartAnimator.Slot slot = slots.get(s);
+                if (slot.weight() <= 0.0F) continue;
+                apoli$scratch.clear();
+                ModelPartLookup.resolveInto(model, slot.transformation().normalizedPart(), apoli$scratch);
+                for (int p = 0; p < apoli$scratch.size(); p++) {
+                    apoli$apply(apoli$scratch.get(p), slot);
+                }
             }
+            apoli$scratch.clear();
         }
-        apoli$scratch.clear();
+
+        if (apoli$poseOverridden) {
+            HumanoidModel<?> model = (HumanoidModel<?>) (Object) this;
+            model.swimAmount = apoli$savedSwimAmount;
+            model.crouching = apoli$savedCrouching;
+            model.riding = apoli$savedRiding;
+            apoli$poseOverridden = false;
+        }
     }
 
     @Unique

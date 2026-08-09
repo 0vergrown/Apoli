@@ -192,7 +192,8 @@ public final class ApoliCloneCommand {
             ctx.getSource().sendSuccess(() -> Component.literal("  " + clone.getStringUUID()
                 + " owner=" + (clone.getOwner() == null ? "none" : clone.getOwner().getName().getString())
                 + (summonId == null ? "" : " id=" + summonId)
-                + " lifetime=" + clone.getMaxLifeTime()), false);
+                + " lifetime=" + clone.getMaxLifeTime()
+                + " remaining=" + clone.getRemainingLifeTime()), false);
         }
         return clones.size();
     }

@@ -49,8 +49,8 @@ public final class SkillTreeLoader extends SimpleJsonResourceReloadListener {
                 .ifPresent(tree -> trees.put(id, tree));
         }
 
-        SkillRegistry.setFileSkills(skills);
         SkillRegistry.setTrees(trees);
+        SkillRegistry.setFileSkills(skills);
         LOG.info("[Apoli] Loaded {} skill tree(s) and {} skill(s) from skill_trees files.", trees.size(), skills.size());
     }
 }

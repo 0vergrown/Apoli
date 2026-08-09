@@ -32,6 +32,7 @@ public final class ModelPartAnimator {
         }
         state.lastSample = now;
         state.now = now;
+        state.poseMask = 0;
 
         List<Slot> slots = state.slots;
         for (int i = 0; i < slots.size(); i++) slots.get(i).seen = false;
@@ -53,8 +54,16 @@ public final class ModelPartAnimator {
             slot.weight = weight;
             slot.value = slot.transformation.sample((float) (now - slot.startedAt));
         }
-        if (slots.isEmpty() && !ModifyModelPartsPower.has(entity)) STATES.remove(entity);
+        if (slots.isEmpty() && state.poseMask == 0 && !ModifyModelPartsPower.has(entity)) STATES.remove(entity);
         return slots;
+    }
+
+    public static boolean overridesPose(@Nullable LivingEntity entity) {
+        if (entity == null) return false;
+        if (STATES.isEmpty() && !ModifyModelPartsPower.has(entity)) return false;
+        update(entity);
+        State state = STATES.get(entity);
+        return state != null && ModifyModelPartsPower.masked(state.poseMask, entity.getPose());
     }
 
     private static float weight(Slot slot, double now) {
@@ -106,9 +115,11 @@ public final class ModelPartAnimator {
         private final List<Slot> slots = new ArrayList<>(4);
         private double lastSample = Double.NaN;
         private double now;
+        private int poseMask;
 
         @Override
         public void accept(ModifyModelPartsPower.Config config) {
+            poseMask |= config.overridePoseMask();
             List<ModelPartTransformation> transformations = config.transformations();
             for (int i = 0; i < transformations.size(); i++) mark(transformations.get(i));
         }

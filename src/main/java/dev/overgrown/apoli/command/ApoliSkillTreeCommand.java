@@ -261,7 +261,7 @@ public final class ApoliSkillTreeCommand {
 
         StringBuilder trees = new StringBuilder();
         for (SkillTree tree : SkillRegistry.trees()) {
-            boolean available = SkillTrees.treeAvailable(data, tree.id());
+            boolean available = SkillTrees.treeAvailable(player, data, tree.id());
             if (trees.length() > 0) trees.append(", ");
             trees.append(tree.id()).append(tree.autoGrant() ? " (auto)" : available ? " (granted)" : " (not granted)");
         }

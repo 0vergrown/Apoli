@@ -1,7 +1,9 @@
 package dev.overgrown.apoli.network.payload;
 
 import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.data.IconData;
 import dev.overgrown.apoli.skill.Skill;
+import dev.overgrown.apoli.skill.SkillFrame;
 import dev.overgrown.apoli.skill.SkillRegistry;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -14,8 +16,8 @@ import java.util.Optional;
 
 public record SkillDefsSyncS2C(List<Entry> entries, boolean legacyFormat) {
     public record Entry(ResourceLocation id, Optional<ResourceLocation> parent, Component name, Component description,
-                        ItemStack icon, List<ResourceLocation> powers, int cost, Optional<ResourceLocation> background,
-                        int order) {}
+                        IconData icon, List<ResourceLocation> powers, int cost, Optional<ResourceLocation> background,
+                        int order, SkillFrame frame, List<ResourceLocation> excludes) {}
 
     public static final ResourceLocation CHANNEL = Apoli.id("skill_defs_sync");
 
@@ -31,11 +33,12 @@ public record SkillDefsSyncS2C(List<Entry> entries, boolean legacyFormat) {
         List<Entry> entries = new ArrayList<>();
         for (dev.overgrown.apoli.skill.SkillTree tree : SkillRegistry.trees()) {
             entries.add(new Entry(tree.id(), Optional.empty(), tree.name(), tree.description(),
-                tree.icon(), List.of(), 0, tree.background(), tree.order()));
+                tree.icon(), List.of(), 0, tree.background(), tree.order(), tree.frame(), List.of()));
         }
         for (Skill skill : SkillRegistry.all()) {
             entries.add(new Entry(skill.id(), Optional.of(skill.parent()), skill.name(), skill.description(),
-                skill.icon(), skill.powers(), skill.cost(), Optional.empty(), skill.order()));
+                skill.icon(), skill.powers(), skill.cost(), Optional.empty(), skill.order(),
+                skill.frame(), skill.excludes()));
         }
         return new SkillDefsSyncS2C(entries, legacyFormat);
     }
@@ -47,12 +50,18 @@ public record SkillDefsSyncS2C(List<Entry> entries, boolean legacyFormat) {
             buf.writeOptional(e.parent(), FriendlyByteBuf::writeResourceLocation);
             buf.writeComponent(e.name());
             buf.writeComponent(e.description());
-            buf.writeItem(e.icon());
+            if (legacyFormat) {
+                buf.writeItem(e.icon().stack());
+            } else {
+                e.icon().write(buf);
+            }
             buf.writeCollection(e.powers(), FriendlyByteBuf::writeResourceLocation);
             buf.writeVarInt(e.cost());
             buf.writeOptional(e.background(), FriendlyByteBuf::writeResourceLocation);
             if (!legacyFormat) {
                 buf.writeVarInt(e.order());
+                buf.writeEnum(e.frame());
+                buf.writeCollection(e.excludes(), (b, x) -> b.writeResourceLocation(x));
             }
         }
     }
@@ -71,7 +80,7 @@ public record SkillDefsSyncS2C(List<Entry> entries, boolean legacyFormat) {
         return readEntries(buf, false);
     }
 
-    private static SkillDefsSyncS2C readEntries(FriendlyByteBuf buf, boolean withOrder) {
+    private static SkillDefsSyncS2C readEntries(FriendlyByteBuf buf, boolean modern) {
         int n = buf.readVarInt();
         List<Entry> entries = new ArrayList<>(Math.min(n, 1024));
         for (int i = 0; i < n; i++) {
@@ -79,12 +88,14 @@ public record SkillDefsSyncS2C(List<Entry> entries, boolean legacyFormat) {
             Optional<ResourceLocation> parent = buf.readOptional(FriendlyByteBuf::readResourceLocation);
             Component name = buf.readComponent();
             Component description = buf.readComponent();
-            ItemStack icon = buf.readItem();
+            IconData icon = modern ? IconData.read(buf) : IconData.ofItem(buf.readItem());
             List<ResourceLocation> powers = buf.readList(FriendlyByteBuf::readResourceLocation);
             int cost = buf.readVarInt();
             Optional<ResourceLocation> background = buf.readOptional(FriendlyByteBuf::readResourceLocation);
-            int order = withOrder ? buf.readVarInt() : 0;
-            entries.add(new Entry(id, parent, name, description, icon, powers, cost, background, order));
+            int order = modern ? buf.readVarInt() : 0;
+            SkillFrame frame = modern ? buf.readEnum(SkillFrame.class) : SkillFrame.TASK;
+            List<ResourceLocation> excludes = modern ? buf.readList(b -> b.readResourceLocation()) : List.of();
+            entries.add(new Entry(id, parent, name, description, icon, powers, cost, background, order, frame, excludes));
         }
         return new SkillDefsSyncS2C(entries);
     }
