@@ -7,6 +7,7 @@ import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.OptionalInt;
 import java.util.Set;
@@ -50,9 +51,33 @@ public interface PowerContainer {
 
     boolean unsuppressPower(ResourceLocation power, ResourceLocation source);
 
+    default boolean suppressAll(Collection<ResourceLocation> powers, ResourceLocation source) {
+        boolean any = false;
+        for (ResourceLocation power : powers) {
+            if (suppressPower(power, source)) any = true;
+        }
+        return any;
+    }
+
+    default boolean unsuppressAll(Collection<ResourceLocation> powers, ResourceLocation source) {
+        boolean any = false;
+        for (ResourceLocation power : powers) {
+            if (unsuppressPower(power, source)) any = true;
+        }
+        return any;
+    }
+
+    default boolean unsuppressAllFromSource(ResourceLocation source) {
+        return unsuppressAll(List.copyOf(directlySuppressedPowers()), source);
+    }
+
     boolean isSuppressed(ResourceLocation power);
 
     Set<ResourceLocation> suppressedPowers();
+
+    default Set<ResourceLocation> directlySuppressedPowers() {
+        return suppressedPowers();
+    }
 
     Set<ResourceLocation> suppressionSourcesOf(ResourceLocation power);
 

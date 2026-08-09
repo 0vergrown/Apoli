@@ -16,6 +16,14 @@ public final class EntityConditions {
     private EntityConditions() {}
 
     public static void register() {
+        ConditionTypes.ENTITY.register(
+            Apoli.id("attack_charge"),
+            new AttackChargeCondition(),
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("spam_attack"))
+                .addTypeAlias(Apoli.id("attack_cooldown"))
+                .build()
+        );
         ConditionTypes.ENTITY.register(Apoli.id("entity_type"), new EntityTypeCondition());
         ConditionTypes.ENTITY.register(Apoli.id("invisible"), new InvisibleCondition());
         ConditionTypes.ENTITY.register(Apoli.id("player_model_type"), new PlayerModelTypeCondition());

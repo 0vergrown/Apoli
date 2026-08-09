@@ -11,6 +11,10 @@ public final class ModCompat {
 
     public static final boolean LAMBDYNLIGHTS = ModList.get().isLoaded("lambdynlights");
 
+    public static final boolean EARS = ModList.get().isLoaded("ears");
+
+    public static final boolean SKIN_LAYERS_3D = ModList.get().isLoaded("skinlayers3d");
+
     public static final boolean ICARUS = ModList.get().isLoaded("icarus");
 
     public static final boolean FIGURA = ModList.get().isLoaded("figura");

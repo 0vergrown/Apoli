@@ -8,14 +8,17 @@ import dev.overgrown.apoli.action.DelayedActionQueue;
 
 import java.util.Optional;
 import java.util.function.BiConsumer;
+import java.util.function.Predicate;
 
 public final class LoopMetaAction<CTX, W> implements ActionType<CTX, LoopMetaAction.Cfg<W>> {
     private final Codec<W> wrapperCodec;
     private final BiConsumer<W, CTX> runner;
+    private final Predicate<CTX> aliveCheck;
 
-    public LoopMetaAction(Codec<W> wrapperCodec, BiConsumer<W, CTX> runner) {
+    public LoopMetaAction(Codec<W> wrapperCodec, BiConsumer<W, CTX> runner, Predicate<CTX> aliveCheck) {
         this.wrapperCodec = wrapperCodec;
         this.runner = runner;
+        this.aliveCheck = aliveCheck;
     }
 
     public record Cfg<W>(int value, int ticks, Optional<W> beforeAction, Optional<W> action, Optional<W> afterAction) {}
@@ -66,7 +69,7 @@ public final class LoopMetaAction<CTX, W> implements ActionType<CTX, LoopMetaAct
     private static final int MAX_SYNC_ITERATIONS = 4096;
 
     private void arm(int remaining, int interval, W body, Optional<W> afterAction, CTX ctx) {
-        DelayedActionQueue.schedule(interval, () -> {
+        DelayedActionQueue.schedule(interval, () -> aliveCheck.test(ctx), () -> {
             runner.accept(body, ctx);
             if (remaining > 1) {
                 arm(remaining - 1, interval, body, afterAction, ctx);

@@ -22,6 +22,9 @@ public final class ApoliIds {
     public static final ResourceLocation MODIFY_DAMAGE = Apoli.id("modify_damage");
     public static final ResourceLocation ACTION_ON_HIT = Apoli.id("action_on_hit");
     public static final ResourceLocation ACTION_WHEN_HIT = Apoli.id("action_when_hit");
+    public static final ResourceLocation ACTION_ON_COLLISION = Apoli.id("action_on_collision");
+    public static final ResourceLocation REPLACE_SOUND_EMISSION = Apoli.id("replace_sound_emission");
+    public static final ResourceLocation REPLACE_SOUND_RECEPTION = Apoli.id("replace_sound_reception");
     public static final ResourceLocation MODIFY_CRAFTING = Apoli.id("modify_crafting");
     public static final ResourceLocation ACTION_ON_SPEAK = Apoli.id("action_on_speak");
     public static final ResourceLocation ACTION_ON_REPLY = Apoli.id("action_on_reply");
@@ -30,6 +33,27 @@ public final class ApoliIds {
     public static final ResourceLocation ACTION_ON_KEY_SEQUENCE = Apoli.id("action_on_key_sequence");
     public static final ResourceLocation SHOW_BOTH_ARMS = Apoli.id("show_both_arms");
     public static final ResourceLocation EMISSIVE = Apoli.id("emissive");
+    public static final ResourceLocation CREATIVE_FLIGHT = Apoli.id("creative_flight");
+    public static final ResourceLocation PREVENT_FEATURE_RENDER = Apoli.id("prevent_feature_render");
+    public static final ResourceLocation PREVENT_BLOCK_USE = Apoli.id("prevent_block_use");
+    public static final ResourceLocation ACTION_ON_BLOCK_USE = Apoli.id("action_on_block_use");
+    public static final ResourceLocation ACTION_ON_BLOCK_BREAK = Apoli.id("action_on_block_break");
+    public static final ResourceLocation ACTION_ON_BLOCK_PLACE = Apoli.id("action_on_block_place");
+    public static final ResourceLocation PREVENT_BLOCK_PLACE = Apoli.id("prevent_block_place");
+    public static final ResourceLocation MODIFY_BREAK_SPEED = Apoli.id("modify_break_speed");
+    public static final ResourceLocation MODIFY_JUMP = Apoli.id("modify_jump");
+    public static final ResourceLocation MODIFY_BLOCK_STUCK_SPEED = Apoli.id("modify_block_stuck_speed");
+    public static final ResourceLocation SCARE_MOBS = Apoli.id("scare_mobs");
+    public static final ResourceLocation MODIFY_SWIM_SPEED = Apoli.id("modify_swim_speed");
+    public static final ResourceLocation WATER_BREATHING = Apoli.id("water_breathing");
+    public static final ResourceLocation PREVENT_ENTITY_RENDER = Apoli.id("prevent_entity_render");
+    public static final ResourceLocation PREVENT_BLOCK_SELECTION = Apoli.id("prevent_block_selection");
+    public static final ResourceLocation ACTION_ON_WAKE_UP = Apoli.id("action_on_wake_up");
+    public static final ResourceLocation MODIFY_BLOCK_RENDER = Apoli.id("modify_block_render");
+    public static final ResourceLocation EDIBLE_ITEM = Apoli.id("edible_item");
+    public static final ResourceLocation MODIFY_TYPE_TAG = Apoli.id("modify_type_tag");
+    public static final ResourceLocation MODIFY_PLAYER_SPAWN = Apoli.id("modify_player_spawn");
+    public static final ResourceLocation PREVENT_ITEM_USE = Apoli.id("prevent_item_use");
 
     private ApoliIds() {}
 }

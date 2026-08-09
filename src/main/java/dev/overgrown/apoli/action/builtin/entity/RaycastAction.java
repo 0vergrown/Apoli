@@ -328,11 +328,14 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         MinecraftServer server = level.getServer();
         if (server != null) {
             CommandSourceStack cmdSrc = source.createCommandSourceStack().withPermission(4).withSuppressedOutput();
-            if (cfg.hooks.commandAtHit.isPresent() && blockHit != null && !entityStops) {
-                Vec3 hitPos = blockHit.getLocation();
+            if (cfg.hooks.commandAtHit.isPresent() && anyHit) {
+                boolean entityFirst = anyEntityHit && nearestEntityHitDistSq <= blockHitDistSq;
+                Vec3 hitPos = entityFirst || blockHit == null ? nearestEntityHit : blockHit.getLocation();
                 float off = cfg.hooks.commandHitOffset.orElse(0.0f);
                 if (off != 0) {
-                    Vec3 normal = Vec3.atLowerCornerOf(blockHit.getDirection().getNormal());
+                    Vec3 normal = entityFirst || blockHit == null
+                        ? dir.scale(-1.0)
+                        : Vec3.atLowerCornerOf(blockHit.getDirection().getNormal());
                     hitPos = hitPos.add(normal.scale(off));
                 }
                 CommandSourceStack atPos = cmdSrc.withPosition(hitPos);

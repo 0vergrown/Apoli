@@ -76,7 +76,10 @@ public final class Apoli {
     public Apoli(IEventBus modBus, ModContainer container) {
         LOGGER.info("[Apoli] Initializing...");
 
-        dev.overgrown.apoli.data.message.TranslationKeyResolver.load();
+        if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
+            dev.overgrown.apoli.client.config.ApoliConfigScreens.register(container);
+        }
+
         ApoliAliases.bootstrap();
         ConditionTypes.bootstrap();
         ActionTypes.bootstrap();
@@ -109,6 +112,7 @@ public final class Apoli {
         event.addListener(powerLoader);
         event.addListener(keybindLoader);
         event.addListener(skillLoader);
+        event.addListener(new dev.overgrown.apoli.global.GlobalPowerLoader());
     }
 
     @SubscribeEvent
@@ -132,6 +136,20 @@ public final class Apoli {
                     ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal("[Apoli] Simulated speech: \"" + text + "\""), false);
                     return 1;
                 })));
+        event.getDispatcher().register(net.minecraft.commands.Commands.literal("apoli:message")
+            .requires(source -> source.hasPermission(0))
+            .then(net.minecraft.commands.Commands.argument("text", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
+                .executes(ctx -> {
+                    net.minecraft.world.entity.Entity holder = ctx.getSource().getEntityOrException();
+                    String text = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "text");
+                    dev.overgrown.apoli.compat.voicechat.ActionOnSendingMessagePower.Report report =
+                        dev.overgrown.apoli.compat.voicechat.ActionOnSendingMessagePower.diagnose(
+                            holder, text, net.minecraft.network.chat.ChatType.CHAT.location());
+                    for (String line : report.lines()) {
+                        ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(line), false);
+                    }
+                    return report.matched() ? 1 : 0;
+                })));
     }
 
     @SubscribeEvent
@@ -140,17 +158,7 @@ public final class Apoli {
         if (sender == null) {
             return;
         }
-        String content = event.getRawText();
-        boolean[] prevented = {false};
-        dev.overgrown.apoli.power.PowerLookup.forEach(sender, dev.overgrown.apoli.power.ApoliIds.ACTION_ON_SENDING_MESSAGE,
-            dev.overgrown.apoli.compat.voicechat.ActionOnSendingMessagePower.Config.class, cfg -> {
-                if (dev.overgrown.apoli.compat.voicechat.ActionOnSendingMessagePower.process(cfg, sender, content, null)) {
-                    prevented[0] = true;
-                }
-            });
-        if (prevented[0]) {
-            event.setCanceled(true);
-        }
+        dev.overgrown.apoli.compat.voicechat.MessagePowerHandler.handle(event);
     }
 
     @SubscribeEvent
@@ -168,6 +176,8 @@ public final class Apoli {
             ApoliNetwork.broadcastPowers(event.getPlayerList().getServer());
             ApoliNetwork.broadcastKeybinds(event.getPlayerList().getServer(), SyncKeybindsS2C.fromCurrent());
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(event.getPlayerList().getServer());
+            dev.overgrown.apoli.global.GlobalPowers.reapplyAll(event.getPlayerList().getServer());
+            dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
             for (ServerPlayer player : event.getPlayerList().getPlayers()) {
                 dev.overgrown.apoli.skill.SkillTrees.grantOnJoin(player);
                 ApoliNetwork.sendSkillDefs(player);
@@ -178,6 +188,7 @@ public final class Apoli {
 
     @SubscribeEvent
     public void onServerStarted(net.neoforged.neoforge.event.server.ServerStartedEvent event) {
+            dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
         dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(event.getServer());
         dev.overgrown.apoli.entity.GrabManager.clearAll();
         dev.overgrown.apoli.block.GhostBlocks.clear();
@@ -243,6 +254,16 @@ public final class Apoli {
     }
 
     @SubscribeEvent
+    public void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
+        InteractionResult result = dev.overgrown.apoli.power.builtin.BlockUseHandler.handle(
+            event.getEntity(), event.getLevel(), event.getHand(), event.getHitVec());
+        if (result != InteractionResult.PASS) {
+            event.setCancellationResult(result);
+            event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent
     public void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
         if (event.getLevel().isClientSide()) return;
         InteractionResult result = ActionOnUseHandler.fire(event.getEntity(), event.getTarget(), event.getHand());
@@ -276,6 +297,7 @@ public final class Apoli {
     @SubscribeEvent
     public void onEntityJoinLevel(EntityJoinLevelEvent event) {
         if (event.getLevel().isClientSide()) return;
+        dev.overgrown.apoli.global.GlobalPowers.applyTo(event.getEntity());
         PowerContainer c = PowerContainer.of(event.getEntity());
         if (c == null || c.isEmpty()) return;
         PoweredEntities.register(event.getEntity());

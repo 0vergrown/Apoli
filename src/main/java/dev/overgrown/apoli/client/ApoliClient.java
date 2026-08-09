@@ -96,6 +96,9 @@ public final class ApoliClient {
             if (dev.overgrown.apoli.compat.ModCompat.LAMBDYNLIGHTS) {
                 dev.overgrown.apoli.compat.lambdynlights.LambDynamicLightsCompat.init();
             }
+            if (dev.overgrown.apoli.compat.ModCompat.EARS) {
+                dev.overgrown.apoli.compat.ears.EarsCompat.init();
+            }
         });
     }
 

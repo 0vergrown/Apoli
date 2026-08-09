@@ -30,7 +30,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public final class ApoliNetwork {
 
-    private static final String PROTOCOL_VERSION = "6";
+    private static final String PROTOCOL_VERSION = "7";
 
     private ApoliNetwork() {}
 
@@ -169,23 +169,28 @@ public final class ApoliNetwork {
         });
     }
 
+    public static boolean connected(ServerPlayer recipient) {
+        return recipient != null && recipient.connection != null;
+    }
+
     public static void sendPowers(ServerPlayer recipient) {
-        dev.overgrown.apoli.network.PowerSyncCache.sendTo(recipient);
+        if (connected(recipient)) dev.overgrown.apoli.network.PowerSyncCache.sendTo(recipient);
     }
 
     public static void broadcastRopeCreate(net.minecraft.server.level.ServerLevel level, RopeCreateS2C payload) {
-        for (ServerPlayer p : level.players()) PacketDistributor.sendToPlayer(p, payload);
+        for (ServerPlayer p : level.players()) { if (connected(p)) PacketDistributor.sendToPlayer(p, payload); }
     }
 
     public static void broadcastRopeDelete(net.minecraft.server.level.ServerLevel level, RopeDeleteS2C payload) {
-        for (ServerPlayer p : level.players()) PacketDistributor.sendToPlayer(p, payload);
+        for (ServerPlayer p : level.players()) { if (connected(p)) PacketDistributor.sendToPlayer(p, payload); }
     }
 
     public static void broadcastRopeVerletLength(net.minecraft.server.level.ServerLevel level, RopeVerletLengthS2C payload) {
-        for (ServerPlayer p : level.players()) PacketDistributor.sendToPlayer(p, payload);
+        for (ServerPlayer p : level.players()) { if (connected(p)) PacketDistributor.sendToPlayer(p, payload); }
     }
 
     public static void sendEntityPowers(ServerPlayer recipient, SyncEntityPowersS2C payload) {
+        if (!connected(recipient)) return;
         PacketDistributor.sendToPlayer(recipient, payload);
     }
 
@@ -198,10 +203,12 @@ public final class ApoliNetwork {
     }
 
     public static void sendActivated(ServerPlayer recipient, PowerActivatedS2C payload) {
+        if (!connected(recipient)) return;
         PacketDistributor.sendToPlayer(recipient, payload);
     }
 
     public static void sendKeybinds(ServerPlayer recipient, SyncKeybindsS2C payload) {
+        if (!connected(recipient)) return;
         PacketDistributor.sendToPlayer(recipient, payload);
     }
 
@@ -228,6 +235,7 @@ public final class ApoliNetwork {
     }
 
     public static void sendTextDisplay(ServerPlayer recipient, dev.overgrown.apoli.network.payload.TextDisplayS2C payload) {
+        if (!connected(recipient)) return;
         PacketDistributor.sendToPlayer(recipient, payload);
     }
 
@@ -237,6 +245,7 @@ public final class ApoliNetwork {
     }
 
     public static void sendForceKey(ServerPlayer recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C payload) {
+        if (!connected(recipient)) return;
         PacketDistributor.sendToPlayer(recipient, payload);
     }
 
@@ -245,6 +254,7 @@ public final class ApoliNetwork {
     }
 
     public static void sendLabel(ServerPlayer recipient, dev.overgrown.apoli.network.payload.LabelUpdateS2C payload) {
+        if (!connected(recipient)) return;
         PacketDistributor.sendToPlayer(recipient, payload);
     }
 
@@ -301,15 +311,18 @@ public final class ApoliNetwork {
                                       java.util.Optional<net.minecraft.resources.ResourceLocation> sprite,
                                       java.util.List<dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.Entry> display,
                                       java.util.List<dev.overgrown.apoli.action.EntityAction> actions) {
+        if (!connected(player)) return;
         int nonce = dev.overgrown.apoli.radial.RadialMenuManager.open(player, actions);
         PacketDistributor.sendToPlayer(player, new dev.overgrown.apoli.network.payload.RadialMenuOpenS2C(nonce, sprite, display));
     }
 
     public static void sendSkillDefs(ServerPlayer recipient) {
+        if (!connected(recipient)) return;
         PacketDistributor.sendToPlayer(recipient, SkillDefsSyncS2C.fromCurrent());
     }
 
     public static void sendSkillState(ServerPlayer recipient) {
+        if (!connected(recipient)) return;
         SkillData data = SkillDataAttachment.get(recipient);
         dev.overgrown.apoli.skill.SkillTrees.Visibility vis =
             dev.overgrown.apoli.skill.SkillTrees.computeVisibility(recipient);
@@ -323,6 +336,7 @@ public final class ApoliNetwork {
     }
 
     public static void sendDisguise(ServerPlayer recipient, DisguiseUpdateS2C payload) {
+        if (!connected(recipient)) return;
         PacketDistributor.sendToPlayer(recipient, payload);
     }
 

@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.action.builtin.meta;
 
 import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.action.ActionLiveness;
 import dev.overgrown.apoli.action.ActionTypes;
 import dev.overgrown.apoli.action.BiEntityAction;
 import dev.overgrown.apoli.action.BlockAction;
@@ -36,8 +37,8 @@ public final class MetaActions {
             dev.overgrown.apoli.condition.context.EntityCtx::entity,
             dev.overgrown.apoli.condition.context.EntityCtx::level), chanceAliases());
         reg.register(CHOICE, new ChoiceMetaAction<>(EntityAction.CODEC, EntityAction::run));
-        reg.register(DELAY, new DelayMetaAction<>(EntityAction.CODEC, EntityAction::run));
-        reg.register(LOOP, new LoopMetaAction<>(EntityAction.CODEC, EntityAction::run));
+        reg.register(DELAY, new DelayMetaAction<>(EntityAction.CODEC, EntityAction::run, ActionLiveness.entity()));
+        reg.register(LOOP, new LoopMetaAction<>(EntityAction.CODEC, EntityAction::run, ActionLiveness.entity()));
         reg.register(IF_ELSE, new IfElseMetaAction<>(EntityCondition.CODEC, EntityAction.CODEC,
             EntityCondition::test, EntityAction::run));
         reg.register(IF_ELSE_LIST, new IfElseListMetaAction<>(EntityCondition.CODEC, EntityAction.CODEC,
@@ -51,8 +52,8 @@ public final class MetaActions {
             dev.overgrown.apoli.condition.context.BiEntityCtx::actor,
             dev.overgrown.apoli.condition.context.BiEntityCtx::level), chanceAliases());
         reg.register(CHOICE, new ChoiceMetaAction<>(BiEntityAction.CODEC, BiEntityAction::run));
-        reg.register(DELAY, new DelayMetaAction<>(BiEntityAction.CODEC, BiEntityAction::run));
-        reg.register(LOOP, new LoopMetaAction<>(BiEntityAction.CODEC, BiEntityAction::run));
+        reg.register(DELAY, new DelayMetaAction<>(BiEntityAction.CODEC, BiEntityAction::run, ActionLiveness.biEntity()));
+        reg.register(LOOP, new LoopMetaAction<>(BiEntityAction.CODEC, BiEntityAction::run, ActionLiveness.biEntity()));
         reg.register(IF_ELSE, new IfElseMetaAction<>(BiEntityCondition.CODEC, BiEntityAction.CODEC,
             BiEntityCondition::test, BiEntityAction::run));
         reg.register(IF_ELSE_LIST, new IfElseListMetaAction<>(BiEntityCondition.CODEC, BiEntityAction.CODEC,
@@ -66,8 +67,8 @@ public final class MetaActions {
             ctx -> null,
             dev.overgrown.apoli.condition.context.BlockCtx::level), chanceAliases());
         reg.register(CHOICE, new ChoiceMetaAction<>(BlockAction.CODEC, BlockAction::run));
-        reg.register(DELAY, new DelayMetaAction<>(BlockAction.CODEC, BlockAction::run));
-        reg.register(LOOP, new LoopMetaAction<>(BlockAction.CODEC, BlockAction::run));
+        reg.register(DELAY, new DelayMetaAction<>(BlockAction.CODEC, BlockAction::run, ActionLiveness.always()));
+        reg.register(LOOP, new LoopMetaAction<>(BlockAction.CODEC, BlockAction::run, ActionLiveness.always()));
         reg.register(IF_ELSE, new IfElseMetaAction<>(BlockCondition.CODEC, BlockAction.CODEC,
             BlockCondition::test, BlockAction::run));
         reg.register(IF_ELSE_LIST, new IfElseListMetaAction<>(BlockCondition.CODEC, BlockAction.CODEC,
@@ -81,8 +82,8 @@ public final class MetaActions {
             dev.overgrown.apoli.condition.context.ItemCtx::holder,
             dev.overgrown.apoli.condition.context.ItemCtx::level), chanceAliases());
         reg.register(CHOICE, new ChoiceMetaAction<>(ItemAction.CODEC, ItemAction::run));
-        reg.register(DELAY, new DelayMetaAction<>(ItemAction.CODEC, ItemAction::run));
-        reg.register(LOOP, new LoopMetaAction<>(ItemAction.CODEC, ItemAction::run));
+        reg.register(DELAY, new DelayMetaAction<>(ItemAction.CODEC, ItemAction::run, ActionLiveness.item()));
+        reg.register(LOOP, new LoopMetaAction<>(ItemAction.CODEC, ItemAction::run, ActionLiveness.item()));
         reg.register(IF_ELSE, new IfElseMetaAction<>(ItemCondition.CODEC, ItemAction.CODEC,
             ItemCondition::test, ItemAction::run));
         reg.register(IF_ELSE_LIST, new IfElseListMetaAction<>(ItemCondition.CODEC, ItemAction.CODEC,

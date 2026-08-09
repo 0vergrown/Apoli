@@ -180,6 +180,12 @@ dependencies {
     // Simple Voice Chat API — compiled against, optional at runtime. The voicechat compat plugin is
     // only discovered by SVC (via @ForgeVoicechatPlugin) when SVC is installed, so Apoli runs fine
     // without it and the voice_* conditions simply read false.
+    // 3D Skin Layers + Ears (compile-only, optional at runtime) — the render powers that recolour or
+    // replace the player skin have to reach into these mods, because they draw their own geometry
+    // from the raw skin file instead of the vanilla model. Gated by their mixin config plugins.
+    compileOnly "maven.modrinth:3dskinlayers:${project.skinlayers_version}"
+    compileOnly "maven.modrinth:ears:${project.ears_version}"
+
     compileOnly "de.maxhenkel.voicechat:voicechat-api:${project.voicechat_api_version}"
 
     // Vosk offline speech. Bundled, but NOT via jarJar — see the voskRuntime configuration above.

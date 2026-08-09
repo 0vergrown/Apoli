@@ -36,7 +36,9 @@ displayName="${mod_name}" #mandatory
 #displayURL="https://change.me.to.your.mods.homepage.example.invalid/" #optional
 
 # A file name (in the root of the mod JAR) containing a logo for display
-#logoFile="examplemod.png" #optional
+logoFile="assets/apoli/icon.png"
+# Catalogue reads these; logoFile already doubles as its icon because the image is square.
+catalogueImageIcon="assets/apoli/icon.png"
 
 # A text field displayed in the mod UI
 #credits="" #optional
@@ -61,6 +63,15 @@ config="${mod_id}-icarus.mixins.json"
 # so it silently skips when Figura is absent.
 [[mixins]]
 config="${mod_id}-figura.mixins.json"
+
+# Optional 3D Skin Layers compatibility — makes its extruded skin layers follow apoli:model_color,
+# apoli:custom_model_render and apoli:prevent_feature_render. Its IMixinConfigPlugin no-ops when absent.
+[[mixins]]
+config="${mod_id}-skinlayers.mixins.json"
+
+# Optional Ears compatibility — same idea for Ears' ears/tail/wings/snout geometry.
+[[mixins]]
+config="${mod_id}-ears.mixins.json"
 
 # The [[accessTransformers]] block allows you to declare where your AT file is.
 # If this block is omitted, a fallback attempt will be made to load an AT from META-INF/accesstransformer.cfg
@@ -102,7 +113,7 @@ config="${mod_id}-figura.mixins.json"
     modId="origins"
     type="incompatible"
     reason="Origins older than 1.9.3 was built against an older Apoli API. Update Origins."
-    versionRange="[0,1.9.3)"
+    versionRange="[0,1.11.2)"
     ordering="NONE"
     side="BOTH"
 

@@ -17,6 +17,7 @@ import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -35,6 +36,8 @@ public final class PowerContainerImpl implements PowerContainer {
     private @Nullable CompoundTag cachedSaveTag;
     private @Nullable Map<ResourceLocation, List<ResourceLocation>> typeIndex;
     private @Nullable List<TickEntry> tickList;
+    private @Nullable Set<ResourceLocation> effectiveSuppressed;
+    private Set<ResourceLocation> notifiedSuppressed = Set.of();
     private int cacheGeneration = -1;
 
     private record TickEntry(ResourceLocation powerId, Power power, PowerType<?> type) {}
@@ -94,6 +97,7 @@ public final class PowerContainerImpl implements PowerContainer {
         Set<ResourceLocation> sources = bySources.computeIfAbsent(power, k -> new HashSet<>());
         boolean first = sources.isEmpty();
         boolean added = sources.add(source);
+        if (added) this.effectiveSuppressed = null;
         if (added && first && owner != null && owner.level() instanceof ServerLevel) {
             Power loaded = ApoliPowers.get(power);
             if (loaded != null) {
@@ -101,7 +105,10 @@ public final class PowerContainerImpl implements PowerContainer {
                 if (type != null) invokeOnAdded(type, power, loaded.config(), source);
             }
         }
-        if (added) markStructureDirty();
+        if (added) {
+            markStructureDirty();
+            refreshSuppression();
+        }
         if (wasEmpty && !bySources.isEmpty()) PoweredEntities.register(owner);
         return added;
     }
@@ -129,7 +136,10 @@ public final class PowerContainerImpl implements PowerContainer {
             }
             if (auxInt.remove(power) != null) markDirty();
         }
-        if (removed) markStructureDirty();
+        if (removed) {
+            markStructureDirty();
+            refreshSuppression();
+        }
         return removed;
     }
 
@@ -160,6 +170,7 @@ public final class PowerContainerImpl implements PowerContainer {
             }
         }
         removeAllFromSource(power);
+        refreshSuppression();
         return true;
     }
 
@@ -168,6 +179,7 @@ public final class PowerContainerImpl implements PowerContainer {
         if (bySources.isEmpty()) return;
         bySources.clear();
         suppressedBySources.clear();
+        notifiedSuppressed = Set.of();
         if (!auxInt.isEmpty()) {
             auxInt.clear();
             markDirty();
@@ -204,7 +216,10 @@ public final class PowerContainerImpl implements PowerContainer {
         Set<ResourceLocation> sources = suppressedBySources.computeIfAbsent(power, k -> new HashSet<>());
         boolean wasSuppressed = !sources.isEmpty();
         boolean added = sources.add(source);
-        if (added && !wasSuppressed) markStructureDirty();
+        if (added && !wasSuppressed) {
+            markStructureDirty();
+            refreshSuppression();
+        }
         return added;
     }
 
@@ -214,17 +229,58 @@ public final class PowerContainerImpl implements PowerContainer {
         if (sources == null) return false;
         boolean removed = sources.remove(source);
         if (sources.isEmpty()) suppressedBySources.remove(power);
-        if (removed && !isSuppressed(power)) markStructureDirty();
+        if (removed && !suppressedBySources.containsKey(power)) {
+            markStructureDirty();
+            refreshSuppression();
+        }
         return removed;
     }
 
     @Override
+    public boolean suppressAll(Collection<ResourceLocation> powers, ResourceLocation source) {
+        boolean any = false;
+        for (ResourceLocation power : powers) {
+            Set<ResourceLocation> sources = suppressedBySources.computeIfAbsent(power, k -> new HashSet<>());
+            boolean wasSuppressed = sources.size() > (sources.contains(source) ? 1 : 0);
+            if (sources.add(source) && !wasSuppressed) any = true;
+        }
+        if (any) {
+            markStructureDirty();
+            refreshSuppression();
+        }
+        return any;
+    }
+
+    @Override
+    public boolean unsuppressAll(Collection<ResourceLocation> powers, ResourceLocation source) {
+        boolean any = false;
+        for (ResourceLocation power : powers) {
+            Set<ResourceLocation> sources = suppressedBySources.get(power);
+            if (sources == null) continue;
+            boolean removed = sources.remove(source);
+            if (sources.isEmpty()) suppressedBySources.remove(power);
+            if (removed && !suppressedBySources.containsKey(power)) any = true;
+        }
+        if (any) {
+            markStructureDirty();
+            refreshSuppression();
+        }
+        return any;
+    }
+
+    @Override
     public boolean isSuppressed(ResourceLocation power) {
-        return suppressedBySources.containsKey(power);
+        if (suppressedBySources.isEmpty()) return false;
+        return effectiveSuppressed().contains(power);
     }
 
     @Override
     public Set<ResourceLocation> suppressedPowers() {
+        return effectiveSuppressed();
+    }
+
+    @Override
+    public Set<ResourceLocation> directlySuppressedPowers() {
         return Set.copyOf(suppressedBySources.keySet());
     }
 
@@ -234,7 +290,65 @@ public final class PowerContainerImpl implements PowerContainer {
         return sources == null ? Set.of() : Set.copyOf(sources);
     }
 
-    private void releaseSuppressionSource(ResourceLocation source) {
+    private Set<ResourceLocation> effectiveSuppressed() {
+        Set<ResourceLocation> cached = this.effectiveSuppressed;
+        if (cached == null) {
+            cached = computeEffectiveSuppressed();
+            this.effectiveSuppressed = cached;
+        }
+        return cached;
+    }
+
+    private Set<ResourceLocation> computeEffectiveSuppressed() {
+        if (suppressedBySources.isEmpty()) return Set.of();
+        Set<ResourceLocation> out = new HashSet<>(suppressedBySources.keySet());
+        boolean grew = !bySources.isEmpty();
+        while (grew) {
+            grew = false;
+            for (Map.Entry<ResourceLocation, Set<ResourceLocation>> entry : bySources.entrySet()) {
+                if (out.contains(entry.getKey())) continue;
+                for (ResourceLocation grantedBy : entry.getValue()) {
+                    if (!out.contains(grantedBy)) continue;
+                    out.add(entry.getKey());
+                    grew = true;
+                    break;
+                }
+            }
+        }
+        return Set.copyOf(out);
+    }
+
+    private void refreshSuppression() {
+        if (suppressedBySources.isEmpty() && notifiedSuppressed.isEmpty()) return;
+        Set<ResourceLocation> now = effectiveSuppressed();
+        if (now.equals(notifiedSuppressed)) return;
+        Set<ResourceLocation> before = notifiedSuppressed;
+        notifiedSuppressed = now;
+        if (owner == null || !(owner.level() instanceof ServerLevel)) return;
+        for (ResourceLocation powerId : now) {
+            if (!before.contains(powerId)) fireSuppression(powerId, true);
+        }
+        for (ResourceLocation powerId : before) {
+            if (!now.contains(powerId)) fireSuppression(powerId, false);
+        }
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private void fireSuppression(ResourceLocation powerId, boolean suppressed) {
+        Power loaded = ApoliPowers.get(powerId);
+        if (loaded == null) return;
+        PowerType type = PowerTypeRegistry.get(loaded.typeId());
+        if (type == null) return;
+        if (suppressed) type.onSuppressed(powerId, loaded.config(), this);
+        else type.onUnsuppressed(powerId, loaded.config(), this);
+    }
+
+    @Override
+    public boolean unsuppressAllFromSource(ResourceLocation source) {
+        return releaseSuppressionSource(source);
+    }
+
+    private boolean releaseSuppressionSource(ResourceLocation source) {
         boolean changed = false;
         for (var it = suppressedBySources.values().iterator(); it.hasNext(); ) {
             Set<ResourceLocation> set = it.next();
@@ -243,7 +357,11 @@ public final class PowerContainerImpl implements PowerContainer {
                 if (set.isEmpty()) it.remove();
             }
         }
-        if (changed) markStructureDirty();
+        if (changed) {
+            markStructureDirty();
+            refreshSuppression();
+        }
+        return changed;
     }
 
     @Override
@@ -270,6 +388,7 @@ public final class PowerContainerImpl implements PowerContainer {
         this.cachedSaveTag = null;
         this.typeIndex = null;
         this.tickList = null;
+        this.effectiveSuppressed = null;
     }
 
     public boolean isDirty() {
@@ -300,6 +419,8 @@ public final class PowerContainerImpl implements PowerContainer {
         this.cachedSaveTag = null;
         this.typeIndex = null;
         this.tickList = null;
+        this.effectiveSuppressed = null;
+        this.notifiedSuppressed = computeEffectiveSuppressed();
     }
 
     private void ensureCacheGeneration() {
@@ -337,8 +458,10 @@ public final class PowerContainerImpl implements PowerContainer {
             if (bySources.isEmpty()) {
                 list = List.of();
             } else {
+                Set<ResourceLocation> suppressed = effectiveSuppressed();
                 List<TickEntry> building = new ArrayList<>(bySources.size());
                 for (ResourceLocation powerId : bySources.keySet()) {
+                    if (suppressed.contains(powerId)) continue;
                     Power power = ApoliPowers.get(powerId);
                     if (power == null) continue;
                     PowerType<?> type = PowerTypeRegistry.get(power.typeId());
@@ -453,6 +576,7 @@ public final class PowerContainerImpl implements PowerContainer {
         c.auxInt.putAll(aux);
         c.auxNbt.putAll(nbt);
         suppressed.forEach((k, v) -> c.suppressedBySources.put(k, new HashSet<>(v)));
+        c.notifiedSuppressed = c.computeEffectiveSuppressed();
         return c;
     }));
 

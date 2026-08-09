@@ -45,7 +45,7 @@ public final class RopeManager {
         Vec3 pa = from.position(level);
         Vec3 pb = to.position(level);
         double dist = (pa != null && pb != null) ? pa.distanceTo(pb) : params.maxLength();
-        double length = Mth.clamp(dist, params.minLength(), params.maxLength());
+        double length = params.initialLength(dist);
 
         int id = nextId++;
         Rope rope = new Rope(id, from, to, fromEntity, toEntity, slot, owner, params, texture,

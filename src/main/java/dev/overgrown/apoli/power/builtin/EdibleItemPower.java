@@ -27,9 +27,18 @@ public final class EdibleItemPower extends PowerType<EdibleItemPower.Config> {
         public static final Codec<ConsumeAnimation> CODEC = StringRepresentable.fromEnum(ConsumeAnimation::values);
         private final String name;
         private final UseAnim vanilla;
-        ConsumeAnimation(String n, UseAnim a) { this.name = n; this.vanilla = a; }
-        @Override public String getSerializedName() { return name; }
-        public UseAnim vanilla() { return vanilla; }
+        ConsumeAnimation(String n, UseAnim a) {
+            this.name = n; this.vanilla = a;
+        }
+
+        @Override
+        public String getSerializedName() {
+            return name;
+        }
+
+        public UseAnim vanilla() {
+            return vanilla;
+        }
     }
 
     public record Config(

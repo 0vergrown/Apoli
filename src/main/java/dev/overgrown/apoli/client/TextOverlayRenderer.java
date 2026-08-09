@@ -23,6 +23,7 @@ public final class TextOverlayRenderer {
     }
 
     private static final Entry[] SLOTS = new Entry[TextBar.VALUES.length];
+    private static final float ABOVE_CHAT_Z = 200.0f;
     private static long guiTicks;
 
     public static void apply(TextDisplayS2C payload) {
@@ -82,7 +83,10 @@ public final class TextOverlayRenderer {
             int alphaBits = (int) (alpha * 255.0f) << 24;
             if ((alphaBits & 0xFC000000) == 0) continue;
             int color = 0xFFFFFF | alphaBits;
+            graphics.pose().pushPose();
+            graphics.pose().translate(0.0f, 0.0f, ABOVE_CHAT_Z);
             draw(graphics, font, TextBar.VALUES[i], entry.text, color, width, height);
+            graphics.pose().popPose();
         }
     }
 

@@ -315,7 +315,7 @@ public final class ApoliPowerCommand {
         for (Entity e : EntityArgument.getEntities(ctx, "targets")) {
             PowerContainer c = PowerContainer.of(e);
             if (c == null) continue;
-            for (ResourceLocation power : c.suppressedPowers()) {
+            for (ResourceLocation power : c.directlySuppressedPowers()) {
                 for (ResourceLocation source : c.suppressionSourcesOf(power)) {
                     if (c.unsuppressPower(power, source)) affected++;
                 }
@@ -378,7 +378,7 @@ public final class ApoliPowerCommand {
         try {
             for (Entity e : EntityArgument.getEntities(ctx, "targets")) {
                 PowerContainer c = PowerContainer.of(e);
-                if (c != null) suppressed.addAll(c.suppressedPowers());
+                if (c != null) suppressed.addAll(c.directlySuppressedPowers());
             }
         } catch (Exception ignored) {}
         return SharedSuggestionProvider.suggestResource(suppressed, builder);

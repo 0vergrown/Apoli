@@ -20,23 +20,42 @@ public final class ShowBothArmsPower extends PowerType<ShowBothArmsPower.Config>
     public static final int MAIN = 1;
     public static final int OFF = 2;
 
-    public record Config(boolean mainHand, boolean offHand) {}
+    public static final int MAX_GHOST_ARMS = 16;
+
+    public record Config(boolean mainHand, boolean offHand, int ghostArms, float ghostSpacing, float ghostAlpha) {}
+
+    public static final class Arms {
+        public int mask;
+        public int ghosts;
+        public float spacing = 0.12F;
+        public float alpha = 0.35F;
+
+        private void clear() {
+            this.mask = 0;
+            this.ghosts = 0;
+            this.spacing = 0.12F;
+            this.alpha = 0.35F;
+        }
+    }
 
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.BOOL.optionalFieldOf("main_hand", false).forGetter(Config::mainHand),
-            Codec.BOOL.optionalFieldOf("off_hand", true).forGetter(Config::offHand)
+            Codec.BOOL.optionalFieldOf("off_hand", true).forGetter(Config::offHand),
+            Codec.intRange(0, MAX_GHOST_ARMS).optionalFieldOf("ghost_arms", 0).forGetter(Config::ghostArms),
+            Codec.FLOAT.optionalFieldOf("ghost_spacing", 0.12F).forGetter(Config::ghostSpacing),
+            Codec.FLOAT.optionalFieldOf("ghost_alpha", 0.35F).forGetter(Config::ghostAlpha)
         ).apply(i, Config::new));
     }
 
-    public static int armMask(@Nullable Entity entity) {
-        if (entity == null) return 0;
+    public static boolean resolve(@Nullable Entity entity, Arms out) {
+        out.clear();
+        if (entity == null) return false;
         PowerContainer container = PowerContainer.of(entity);
-        if (container == null || container.isEmpty()) return 0;
+        if (container == null || container.isEmpty()) return false;
         List<ResourceLocation> powers = container.powersOfType(ApoliIds.SHOW_BOTH_ARMS);
-        if (powers.isEmpty()) return 0;
-        int mask = 0;
+        if (powers.isEmpty()) return false;
         EntityCtx ctx = null;
         for (int i = 0; i < powers.size(); i++) {
             ResourceLocation powerId = powers.get(i);
@@ -48,10 +67,14 @@ public final class ShowBothArmsPower extends PowerType<ShowBothArmsPower.Config>
                 if (ctx == null) ctx = EntityCtx.of(entity, entity.level());
                 if (!power.condition().get().test(ctx)) continue;
             }
-            if (cfg.mainHand) mask |= MAIN;
-            if (cfg.offHand) mask |= OFF;
-            if (mask == (MAIN | OFF)) break;
+            if (cfg.mainHand) out.mask |= MAIN;
+            if (cfg.offHand) out.mask |= OFF;
+            if (cfg.ghostArms > out.ghosts) {
+                out.ghosts = cfg.ghostArms;
+                out.spacing = cfg.ghostSpacing;
+                out.alpha = cfg.ghostAlpha;
+            }
         }
-        return mask;
+        return out.mask != 0 || out.ghosts > 0;
     }
 }

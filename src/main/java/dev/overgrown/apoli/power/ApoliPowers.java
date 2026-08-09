@@ -12,6 +12,7 @@ import java.util.Set;
 public final class ApoliPowers {
     private static volatile Map<ResourceLocation, Power> POWERS = Map.of();
     private static volatile Set<ResourceLocation> SUB_POWERS = Set.of();
+    private static volatile Set<ResourceLocation> TYPES_IN_USE = Set.of();
 
     private static volatile int GENERATION = 0;
 
@@ -39,13 +40,20 @@ public final class ApoliPowers {
         return out;
     }
 
+    public static boolean anyOfType(ResourceLocation canonicalTypeId) {
+        return TYPES_IN_USE.contains(canonicalTypeId);
+    }
+
     public static void replaceAll(Map<ResourceLocation, Power> loaded) {
         POWERS = Map.copyOf(loaded);
         Set<ResourceLocation> subs = new HashSet<>();
+        Set<ResourceLocation> types = new HashSet<>();
         for (Power p : POWERS.values()) {
             if (p.config() instanceof MultiplePower.Cfg cfg) subs.addAll(cfg.subPowerIds());
+            types.add(PowerTypeRegistry.resolveId(p.typeId()));
         }
         SUB_POWERS = Set.copyOf(subs);
+        TYPES_IN_USE = Set.copyOf(types);
         GENERATION++;
     }
 }

@@ -107,6 +107,16 @@ public final class GameEventListenerPower extends PowerType<GameEventListenerPow
     }
 
     @Override
+    public void onSuppressed(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+        onRemoved(powerId, cfg, holder, powerId);
+    }
+
+    @Override
+    public void onUnsuppressed(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+        onAdded(powerId, cfg, holder, powerId);
+    }
+
+    @Override
     public void tick(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         if (!(holder.rawOwner() instanceof LivingEntity entity)) return;
         Level level = entity.level();

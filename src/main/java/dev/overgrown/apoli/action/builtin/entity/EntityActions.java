@@ -12,6 +12,7 @@ public final class EntityActions {
     private EntityActions() {}
 
     public static void register() {
+        ActionTypes.ENTITY.register(Apoli.id("run_function"), new RunFunctionAction());
         ActionTypes.ENTITY.register(Apoli.id("add_velocity"), new AddVelocityAction());
         ActionTypes.ENTITY.register(Apoli.id("nothing"), new NothingAction());
         ActionTypes.ENTITY.register(
@@ -102,6 +103,14 @@ public final class EntityActions {
                 .addTypeAlias(Apoli.id("replace_inventory"), java.util.Map.of("operation", "replace"))
                 .addTypeAlias(Apoli.id("drop_inventory"), java.util.Map.of("operation", "drop"))
                 .build());
+        ActionTypes.ENTITY.register(Apoli.id("change_slot"), new ChangeSlotAction(),
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("swap_slot"), java.util.Map.of("operation", "swap"))
+                .addTypeAlias(Apoli.id("move_slot"), java.util.Map.of("operation", "move"))
+                .build());
+        ActionTypes.ENTITY.register(Apoli.id("change_selected_slot"), new ChangeSelectedSlotAction(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("set_selected_slot")).build());
+
         ActionTypes.ENTITY.register(Apoli.id("give"), new GiveAction());
         ActionTypes.ENTITY.register(Apoli.id("equipped_item_action"), new EquippedItemAction());
         ActionTypes.ENTITY.register(Apoli.id("damage"), new DamageAction());

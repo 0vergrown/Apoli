@@ -59,6 +59,7 @@ public class CloneEntity extends Monster implements OwnableEntity, CrossbowAttac
     private boolean canSit = true;
     private boolean followOwner = true;
     private int maxLifeTime = 1200;
+    private int lifeTicks = 1200;
     @Nullable
     private ResourceLocation summonId;
 
@@ -129,10 +130,15 @@ public class CloneEntity extends Monster implements OwnableEntity, CrossbowAttac
         super.tick();
         if (this.level().isClientSide) return;
         LivingEntity owner = this.getOwner();
-        boolean expired = this.maxLifeTime > 0 && this.tickCount > this.maxLifeTime;
+        boolean expired = this.maxLifeTime > 0 && --this.lifeTicks <= 0;
         if (owner == null || owner.level() != this.level() || expired) {
             this.discard();
         }
+    }
+
+    @Override
+    protected boolean shouldDespawnInPeaceful() {
+        return false;
     }
 
     @Override
@@ -291,11 +297,17 @@ public class CloneEntity extends Monster implements OwnableEntity, CrossbowAttac
     @Override
     public void setMaxLifeTime(int ticks) {
         this.maxLifeTime = ticks;
+        this.lifeTicks = ticks;
     }
 
     @Override
     public int getMaxLifeTime() {
         return this.maxLifeTime;
+    }
+
+    @Override
+    public int getRemainingLifeTime() {
+        return this.maxLifeTime > 0 ? this.lifeTicks : -1;
     }
 
     @Override
@@ -321,6 +333,7 @@ public class CloneEntity extends Monster implements OwnableEntity, CrossbowAttac
         tag.putBoolean("CanSit", this.canSit);
         tag.putBoolean("FollowOwner", this.followOwner);
         tag.putInt("MaxLifeTime", this.maxLifeTime);
+        tag.putInt("LifeTicks", this.lifeTicks);
         if (this.summonId != null) tag.putString("SummonId", this.summonId.toString());
     }
 
@@ -337,7 +350,8 @@ public class CloneEntity extends Monster implements OwnableEntity, CrossbowAttac
         if (tag.contains("CanAttack")) this.canAttack = tag.getBoolean("CanAttack");
         if (tag.contains("CanSit")) this.canSit = tag.getBoolean("CanSit");
         if (tag.contains("FollowOwner")) this.followOwner = tag.getBoolean("FollowOwner");
-        if (tag.contains("MaxLifeTime")) this.maxLifeTime = tag.getInt("MaxLifeTime");
+        if (tag.contains("MaxLifeTime")) this.setMaxLifeTime(tag.getInt("MaxLifeTime"));
+        if (tag.contains("LifeTicks")) this.lifeTicks = tag.getInt("LifeTicks");
         if (tag.contains("SummonId")) this.summonId = ResourceLocation.tryParse(tag.getString("SummonId"));
         this.updateWeaponGoals();
     }
