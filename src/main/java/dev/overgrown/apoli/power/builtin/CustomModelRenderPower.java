@@ -148,6 +148,19 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         return found[0];
     }
 
+    public static boolean replacesSkin(@Nullable LivingEntity entity) {
+        boolean[] hit = {false};
+        PowerLookup.forEach(entity, CANONICAL, Config.class, cfg -> {
+            if (hit[0] || cfg.renderAsOverlay() || hiddenByEquipment(entity, cfg.hiddenSlots())) {
+                return;
+            }
+            hit[0] = cfg.mode() == Mode.TEXTURE
+                ? cfg.wideTexture().isPresent()
+                : cfg.model().isPresent() && cfg.texture().isPresent();
+        });
+        return hit[0];
+    }
+
     public static boolean shouldHideCape(@Nullable LivingEntity entity) {
         boolean[] hide = {false};
         PowerLookup.forEach(entity, CANONICAL, Config.class, cfg -> {

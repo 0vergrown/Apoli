@@ -82,7 +82,6 @@ public final class Apoli implements ModInitializer {
     public void onInitialize() {
         LOGGER.info("[Apoli] Initializing...");
 
-        dev.overgrown.apoli.data.message.TranslationKeyResolver.load();
         ApoliAliases.bootstrap();
         ConditionTypes.bootstrap();
         ActionTypes.bootstrap();
@@ -109,6 +108,8 @@ public final class Apoli implements ModInitializer {
             new IdentifiedReloader(id("keybinds_reloader"), keybindLoader));
         ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(
             new IdentifiedReloader(id("skill_trees_reloader"), skillLoader));
+        ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(
+            new IdentifiedReloader(id("global_powers_reloader"), new dev.overgrown.apoli.global.GlobalPowerLoader()));
 
         ServerLifecycleEvents.SERVER_STARTING.register(server -> {
             powerLoader.attachServer(server);
@@ -118,6 +119,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.entity.PlayerModelTypes.clear();
         });
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
             ApoliNetwork.broadcastPowers(server);
             ApoliNetwork.broadcastKeybinds(server, SyncKeybindsS2C.fromCurrent());
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(server);
@@ -127,7 +129,9 @@ public final class Apoli implements ModInitializer {
                 dev.overgrown.apoli.compat.voicechat.VoicePowerHandler::onSpeakStop);
         });
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> {
+            dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(server);
+            dev.overgrown.apoli.global.GlobalPowers.reapplyAll(server);
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 dev.overgrown.apoli.skill.SkillTrees.grantOnJoin(player);
                 ApoliNetwork.sendSkillDefs(player);
@@ -146,17 +150,17 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.compat.voicechat.VoiceState.clear();
         });
 
-        net.fabricmc.fabric.api.message.v1.ServerMessageEvents.ALLOW_CHAT_MESSAGE.register((message, sender, params) -> {
-            String content = message.signedContent();
-            boolean[] prevented = {false};
-            PowerLookup.forEach(sender, ApoliIds.ACTION_ON_SENDING_MESSAGE,
-                dev.overgrown.apoli.compat.voicechat.ActionOnSendingMessagePower.Config.class, cfg -> {
-                    if (dev.overgrown.apoli.compat.voicechat.ActionOnSendingMessagePower.process(cfg, sender, content, null)) {
-                        prevented[0] = true;
-                    }
-                });
-            return !prevented[0];
-        });
+        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register(
+            (player, level, hand, hitResult) ->
+                dev.overgrown.apoli.power.builtin.BlockUseHandler.handle(player, level, hand, hitResult));
+
+        net.fabricmc.fabric.api.message.v1.ServerMessageEvents.ALLOW_CHAT_MESSAGE.register((message, sender, params) ->
+            dev.overgrown.apoli.compat.voicechat.MessagePowerHandler.handle(
+                sender, sender, message.signedContent(), params));
+
+        net.fabricmc.fabric.api.message.v1.ServerMessageEvents.ALLOW_COMMAND_MESSAGE.register((message, source, params) ->
+            dev.overgrown.apoli.compat.voicechat.MessagePowerHandler.handle(
+                source.getEntity(), source.getPlayer(), message.signedContent(), params));
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registry, env) -> {
             ApoliPowerCommand.register(dispatcher);
@@ -177,6 +181,20 @@ public final class Apoli implements ModInitializer {
                         dev.overgrown.apoli.compat.voicechat.ActionOnSpeechPower.fire(player, text, language);
                         ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal("[Apoli] Simulated speech: \"" + text + "\""), false);
                         return 1;
+                    })));
+            dispatcher.register(net.minecraft.commands.Commands.literal("apoli:message")
+                .requires(source -> source.hasPermission(0))
+                .then(net.minecraft.commands.Commands.argument("text", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
+                    .executes(ctx -> {
+                        Entity holder = ctx.getSource().getEntityOrException();
+                        String text = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "text");
+                        dev.overgrown.apoli.compat.voicechat.ActionOnSendingMessagePower.Report report =
+                            dev.overgrown.apoli.compat.voicechat.ActionOnSendingMessagePower.diagnose(
+                                holder, text, net.minecraft.network.chat.ChatType.CHAT.location());
+                        for (String line : report.lines()) {
+                            ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(line), false);
+                        }
+                        return report.matched() ? 1 : 0;
                     })));
         });
 
@@ -271,6 +289,7 @@ public final class Apoli implements ModInitializer {
         });
 
         ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
+            dev.overgrown.apoli.global.GlobalPowers.applyTo(entity);
             PowerContainer c = PowerContainer.of(entity);
             if (c != null && !c.isEmpty()) {
                 PoweredEntities.register(entity);

@@ -11,6 +11,10 @@ public abstract class PowerType<C> {
 
     public void onRemoved(ResourceLocation powerId, C cfg, PowerContainer holder, ResourceLocation source) {}
 
+    public void onSuppressed(ResourceLocation powerId, C cfg, PowerContainer holder) {}
+
+    public void onUnsuppressed(ResourceLocation powerId, C cfg, PowerContainer holder) {}
+
     public void tick(ResourceLocation powerId, C cfg, PowerContainer holder) {}
 
     public boolean isActive(ResourceLocation powerId, C cfg, EntityCtx ctx) {

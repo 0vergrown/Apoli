@@ -38,7 +38,7 @@ public class MinionRenderer extends MobRenderer<MinionEntity, MinionModel> {
     protected RenderType getRenderType(MinionEntity minion, boolean bodyVisible, boolean translucent, boolean glowing) {
         for (int i = 0; i < this.geometry.size(); i++) {
             GeometryRender render = this.geometry.get(i);
-            if (!render.renderAsOverlay() && CustomModelManager.getBaked(render.model()) != null) {
+            if (!render.renderAsOverlay() && CustomModelManager.get(render.model()) != null) {
                 return null;
             }
         }

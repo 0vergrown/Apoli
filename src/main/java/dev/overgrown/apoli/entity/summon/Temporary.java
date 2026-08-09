@@ -8,6 +8,8 @@ public interface Temporary {
 
     int getMaxLifeTime();
 
+    int getRemainingLifeTime();
+
     @Nullable
     ResourceLocation getSummonId();
 }

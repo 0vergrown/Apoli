@@ -30,7 +30,7 @@ public record Power(
 
     public Optional<Skill> toSkill(ResourceLocation id) {
         return skill.map(info -> new Skill(
-            id, info.parent(), displayName(id), displayDescription(id), info.icon(),
+            id, info.parent(), displayName(id), displayDescription(id), info.icon(), info.frame(),
             List.of(id), info.condition(), info.visibilityCondition(),
             info.excludes(), info.cost(), info.order()));
     }
@@ -66,7 +66,7 @@ public record Power(
         return RecordCodecBuilder.mapCodec(instance -> instance.group(
             LoggedOptionalField.of("name", TextComponent.CODEC).forGetter(Power::name),
             LoggedOptionalField.of("description", TextComponent.CODEC).forGetter(Power::description),
-            LoggedOptionalField.of("condition", EntityCondition.CODEC).forGetter(Power::condition),
+            LoggedOptionalField.strict("condition", EntityCondition.CODEC).forGetter(Power::condition),
             Codec.BOOL.optionalFieldOf("hidden", false).forGetter(Power::hidden),
             LoggedOptionalField.of("skill", SkillInfo.CODEC).forGetter(Power::skill),
             type.configCodec().forGetter((Power p) -> {

@@ -1,7 +1,9 @@
 package dev.overgrown.apoli.network.payload;
 
 import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.data.IconData;
 import dev.overgrown.apoli.skill.Skill;
+import dev.overgrown.apoli.skill.SkillFrame;
 import dev.overgrown.apoli.skill.SkillRegistry;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -17,8 +19,8 @@ import java.util.Optional;
 
 public record SkillDefsSyncS2C(List<Entry> entries, boolean legacyFormat) implements CustomPacketPayload {
     public record Entry(ResourceLocation id, Optional<ResourceLocation> parent, Component name, Component description,
-                        ItemStack icon, List<ResourceLocation> powers, int cost, Optional<ResourceLocation> background,
-                        int order) {}
+                        IconData icon, List<ResourceLocation> powers, int cost, Optional<ResourceLocation> background,
+                        int order, SkillFrame frame, List<ResourceLocation> excludes) {}
 
     public static final Type<SkillDefsSyncS2C> TYPE = new Type<>(Apoli.id("skill_defs_sync"));
     public static final StreamCodec<RegistryFriendlyByteBuf, SkillDefsSyncS2C> STREAM_CODEC = StreamCodec.of(
@@ -36,11 +38,12 @@ public record SkillDefsSyncS2C(List<Entry> entries, boolean legacyFormat) implem
         List<Entry> entries = new ArrayList<>();
         for (dev.overgrown.apoli.skill.SkillTree tree : SkillRegistry.trees()) {
             entries.add(new Entry(tree.id(), Optional.empty(), tree.name(), tree.description(),
-                tree.icon(), List.of(), 0, tree.background(), tree.order()));
+                tree.icon(), List.of(), 0, tree.background(), tree.order(), tree.frame(), List.of()));
         }
         for (Skill skill : SkillRegistry.all()) {
             entries.add(new Entry(skill.id(), Optional.of(skill.parent()), skill.name(), skill.description(),
-                skill.icon(), skill.powers(), skill.cost(), Optional.empty(), skill.order()));
+                skill.icon(), skill.powers(), skill.cost(), Optional.empty(), skill.order(),
+                skill.frame(), skill.excludes()));
         }
         return new SkillDefsSyncS2C(entries, legacyFormat);
     }
@@ -52,12 +55,18 @@ public record SkillDefsSyncS2C(List<Entry> entries, boolean legacyFormat) implem
             buf.writeOptional(e.parent, (b, p) -> b.writeResourceLocation(p));
             ComponentSerialization.STREAM_CODEC.encode(buf, e.name);
             ComponentSerialization.STREAM_CODEC.encode(buf, e.description);
-            ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, e.icon);
+            if (payload.legacyFormat) {
+                ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, e.icon.stack());
+            } else {
+                e.icon.write(buf);
+            }
             buf.writeCollection(e.powers, (b, p) -> b.writeResourceLocation(p));
             buf.writeVarInt(e.cost);
             buf.writeOptional(e.background, (b, bg) -> b.writeResourceLocation(bg));
             if (!payload.legacyFormat) {
                 buf.writeVarInt(e.order);
+                buf.writeEnum(e.frame);
+                buf.writeCollection(e.excludes, (b, x) -> b.writeResourceLocation(x));
             }
         }
     }
@@ -76,7 +85,7 @@ public record SkillDefsSyncS2C(List<Entry> entries, boolean legacyFormat) implem
         return readEntries(buf, false);
     }
 
-    private static SkillDefsSyncS2C readEntries(RegistryFriendlyByteBuf buf, boolean withOrder) {
+    private static SkillDefsSyncS2C readEntries(RegistryFriendlyByteBuf buf, boolean modern) {
         int n = buf.readVarInt();
         List<Entry> entries = new ArrayList<>(Math.min(n, 1024));
         for (int i = 0; i < n; i++) {
@@ -84,12 +93,16 @@ public record SkillDefsSyncS2C(List<Entry> entries, boolean legacyFormat) implem
             Optional<ResourceLocation> parent = buf.readOptional(b -> b.readResourceLocation());
             Component name = ComponentSerialization.STREAM_CODEC.decode(buf);
             Component description = ComponentSerialization.STREAM_CODEC.decode(buf);
-            ItemStack icon = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
+            IconData icon = modern
+                ? IconData.read(buf)
+                : IconData.ofItem(ItemStack.OPTIONAL_STREAM_CODEC.decode(buf));
             List<ResourceLocation> powers = buf.readList(b -> b.readResourceLocation());
             int cost = buf.readVarInt();
             Optional<ResourceLocation> background = buf.readOptional(b -> b.readResourceLocation());
-            int order = withOrder ? buf.readVarInt() : 0;
-            entries.add(new Entry(id, parent, name, description, icon, powers, cost, background, order));
+            int order = modern ? buf.readVarInt() : 0;
+            SkillFrame frame = modern ? buf.readEnum(SkillFrame.class) : SkillFrame.TASK;
+            List<ResourceLocation> excludes = modern ? buf.readList(b -> b.readResourceLocation()) : List.of();
+            entries.add(new Entry(id, parent, name, description, icon, powers, cost, background, order, frame, excludes));
         }
         return new SkillDefsSyncS2C(entries);
     }

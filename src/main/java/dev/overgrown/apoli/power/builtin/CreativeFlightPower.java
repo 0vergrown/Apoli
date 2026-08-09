@@ -1,7 +1,9 @@
 package dev.overgrown.apoli.power.builtin;
 
 import com.mojang.serialization.MapCodec;
+import dev.overgrown.apoli.power.ApoliIds;
 import dev.overgrown.apoli.power.PowerContainer;
+import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
@@ -20,33 +22,42 @@ public final class CreativeFlightPower extends PowerType<CreativeFlightPower.Con
 
     @Override
     public void onAdded(ResourceLocation powerId, Config cfg, PowerContainer holder, ResourceLocation source) {
-        applyFlight(holder.owner(), true);
+        sync(holder.owner());
     }
 
     @Override
     public void onRemoved(ResourceLocation powerId, Config cfg, PowerContainer holder, ResourceLocation source) {
-        if (holder.owner() instanceof Player p && !p.getAbilities().instabuild && !p.isSpectator()) {
-            applyFlight(p, false);
-        }
+        sync(holder.owner());
+    }
+
+    @Override
+    public void onSuppressed(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+        sync(holder.owner());
+    }
+
+    @Override
+    public void onUnsuppressed(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+        sync(holder.owner());
     }
 
     @Override
     public void tick(ResourceLocation powerId, Config cfg, PowerContainer holder) {
-        LivingEntity owner = holder.owner();
-        if (owner instanceof Player p) {
-            Abilities abilities = p.getAbilities();
-            if (!abilities.mayfly) {
-                abilities.mayfly = true;
-                p.onUpdateAbilities();
-            }
-        }
+        sync(holder.owner());
     }
 
-    private static void applyFlight(LivingEntity entity, boolean enabled) {
-        if (!(entity instanceof Player p)) return;
-        Abilities abilities = p.getAbilities();
-        abilities.mayfly = enabled;
-        if (!enabled) abilities.flying = false;
-        p.onUpdateAbilities();
+    private static void sync(LivingEntity owner) {
+        if (!(owner instanceof Player player)) return;
+        Abilities abilities = player.getAbilities();
+        if (PowerLookup.hasActive(player, ApoliIds.CREATIVE_FLIGHT)) {
+            if (!abilities.mayfly) {
+                abilities.mayfly = true;
+                player.onUpdateAbilities();
+            }
+            return;
+        }
+        if (!abilities.mayfly || abilities.instabuild || player.isSpectator()) return;
+        abilities.mayfly = false;
+        abilities.flying = false;
+        player.onUpdateAbilities();
     }
 }

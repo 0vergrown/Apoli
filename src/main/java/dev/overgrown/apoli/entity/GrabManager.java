@@ -22,6 +22,7 @@ public final class GrabManager {
 
     private static final Map<UUID, Grab> BY_GRABBED = new HashMap<>();
     private static final Set<UUID> KEYBINDS_DISABLED = new HashSet<>();
+    private static final double MIN_HOLD_CLEARANCE = 0.5;
 
     private GrabManager() {}
 
@@ -70,9 +71,12 @@ public final class GrabManager {
             Vec3 look = Vec3.directionFromRotation(pitch, yaw);
             Vec3 eye = grabberEntity.getEyePosition();
             Vec3 current = grabbedEntity.position();
+            double holdY = Math.max(
+                eye.y + look.y * grab.distance() - grabbedEntity.getBbHeight() / 2.0,
+                grabberEntity.getY() + MIN_HOLD_CLEARANCE);
             Vec3 delta = new Vec3(
                 eye.x + look.x * grab.distance() - current.x,
-                eye.y + look.y * grab.distance() - grabbedEntity.getBbHeight() / 2.0 - current.y,
+                holdY - current.y,
                 eye.z + look.z * grab.distance() - current.z);
             Vec3 allowed = Entity.collideBoundingBox(grabbedEntity, delta, grabbedEntity.getBoundingBox(),
                 grabbedEntity.level(), List.of());

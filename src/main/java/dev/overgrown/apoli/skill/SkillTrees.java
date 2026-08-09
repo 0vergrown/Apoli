@@ -18,10 +18,13 @@ public final class SkillTrees {
 
     public static final ResourceLocation POWER_SOURCE = Apoli.id("skill_tree");
 
-    public static boolean treeAvailable(SkillData data, ResourceLocation treeId) {
+    public static boolean treeAvailable(@Nullable ServerPlayer player, SkillData data, ResourceLocation treeId) {
         SkillTree tree = SkillRegistry.tree(treeId);
         if (tree == null) return false;
-        return tree.autoGrant() || data.hasTree(treeId);
+        if (!tree.autoGrant() && !data.hasTree(treeId)) return false;
+        if (tree.condition().isEmpty()) return true;
+        if (player == null) return true;
+        return tree.condition().get().test(new EntityCtx(player, player.level()));
     }
 
     public static boolean grantTree(ServerPlayer player, ResourceLocation treeId) {
@@ -49,15 +52,20 @@ public final class SkillTrees {
         SkillData data = SkillDataAttachment.get(player);
         Set<ResourceLocation> desired = new HashSet<>();
         for (SkillTree tree : SkillRegistry.trees()) {
-            if (!treeAvailable(data, tree.id())) continue;
+            if (!treeAvailable(player, data, tree.id())) continue;
             desired.addAll(tree.defaultPowers());
         }
         for (ResourceLocation skillId : data.purchasedView()) {
             Skill skill = SkillRegistry.get(skillId);
-            if (skill == null || !treeAvailable(data, SkillRegistry.rootOf(skillId))) continue;
+            if (skill == null || !treeAvailable(player, data, SkillRegistry.rootOf(skillId))) continue;
             desired.addAll(skill.powers());
         }
         return desired;
+    }
+
+    public static void refresh(ServerPlayer player) {
+        reconcilePowers(player);
+        ApoliNetwork.sendSkillState(player);
     }
 
     private static void reconcilePowers(ServerPlayer player) {
@@ -100,7 +108,7 @@ public final class SkillTrees {
         if (!parentSatisfied(data, skill)) return false;
 
         ResourceLocation root = SkillRegistry.rootOf(skillId);
-        if (!treeAvailable(data, root)) return false;
+        if (!treeAvailable(player, data, root)) return false;
         if (excluded(data, skillId)) return false;
         if (data.getPoints(root) < skill.cost()) return false;
         EntityCtx ctx = new EntityCtx(player, player.level());
@@ -170,11 +178,11 @@ public final class SkillTrees {
         Set<ResourceLocation> hidden = new HashSet<>();
         Set<ResourceLocation> locked = new HashSet<>();
         for (SkillTree tree : SkillRegistry.trees()) {
-            if (!treeAvailable(data, tree.id())) hidden.add(tree.id());
+            if (!treeAvailable(player, data, tree.id())) hidden.add(tree.id());
         }
         for (Skill skill : SkillRegistry.all()) {
             ResourceLocation id = skill.id();
-            boolean treeVisible = treeAvailable(data, SkillRegistry.rootOf(id));
+            boolean treeVisible = treeAvailable(player, data, SkillRegistry.rootOf(id));
             boolean selfVisible = skill.visibilityCondition().isEmpty() || skill.visibilityCondition().get().test(ctx);
             if (!treeVisible || !selfVisible) {
                 hidden.add(id);

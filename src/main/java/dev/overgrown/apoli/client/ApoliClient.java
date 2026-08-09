@@ -160,6 +160,7 @@ public final class ApoliClient implements ClientModInitializer {
                 @Override
                 public void onResourceManagerReload(net.minecraft.server.packs.resources.ResourceManager manager) {
                     dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.onResourcesReloaded();
+                    IconRenderer.clearCache();
                 }
             });
 
@@ -172,6 +173,9 @@ public final class ApoliClient implements ClientModInitializer {
 
         if (dev.overgrown.apoli.compat.ModCompat.LAMBDYNLIGHTS) {
             dev.overgrown.apoli.compat.lambdynlights.LambDynamicLightsCompat.init();
+        }
+        if (dev.overgrown.apoli.compat.ModCompat.EARS) {
+            dev.overgrown.apoli.compat.ears.EarsCompat.init();
         }
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {

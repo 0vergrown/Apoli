@@ -26,4 +26,8 @@ public final class ModCompat {
     public static final boolean NERB = FabricLoader.getInstance().isModLoaded("nerb");
 
     public static final boolean LAMBDYNLIGHTS = FabricLoader.getInstance().isModLoaded("lambdynlights");
+
+    public static final boolean EARS = FabricLoader.getInstance().isModLoaded("ears");
+
+    public static final boolean SKIN_LAYERS_3D = FabricLoader.getInstance().isModLoaded("skinlayers3d");
 }

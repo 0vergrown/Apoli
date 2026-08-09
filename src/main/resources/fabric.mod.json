@@ -23,13 +23,26 @@
       ],
       "voicechat":[
          "dev.overgrown.apoli.compat.voicechat.ApoliVoicechatPlugin"
+      ],
+      "modmenu":[
+         "dev.overgrown.apoli.compat.modmenu.ApoliModMenu"
       ]
+   },
+   "custom":{
+      "catalogue":{
+         "configFactory":"dev.overgrown.apoli.compat.catalogue.CatalogueConfigFactory",
+         "icon":{
+            "image":"assets/apoli/icon.png"
+         }
+      }
    },
    "mixins":[
       "apoli.mixins.json",
       "apoli-icarus.mixins.json",
       "apoli-figura.mixins.json",
-      "apoli-accessory.mixins.json"
+      "apoli-accessory.mixins.json",
+      "apoli-skinlayers.mixins.json",
+      "apoli-ears.mixins.json"
    ],
    "depends":{
       "fabricloader":">=0.19.3",
@@ -38,6 +51,6 @@
       "fabric-api":"*"
    },
    "breaks":{
-      "origins":"<1.9.3"
+      "origins":"<1.11.2"
    }
 }

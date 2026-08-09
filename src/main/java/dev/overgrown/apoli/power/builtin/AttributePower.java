@@ -60,9 +60,19 @@ public final class AttributePower extends PowerType<AttributePower.Cfg> {
     @Override
     public void onAdded(ResourceLocation powerId, Cfg cfg, PowerContainer holder, ResourceLocation source) {
         LivingEntity entity = holder.owner();
-        if (entity == null) return;
+        if (entity == null || holder.isSuppressed(powerId)) return;
         for (int idx = 0; idx < cfg.modifiers.size(); idx++) {
             reapplyOne(entity, holder, powerId, idx, cfg.modifiers.get(idx), cfg.updateHealth);
+        }
+    }
+
+    @Override
+    public void onSuppressed(ResourceLocation powerId, Cfg cfg, PowerContainer holder) {
+        LivingEntity entity = holder.owner();
+        if (entity == null) return;
+        for (int idx = 0; idx < cfg.modifiers.size(); idx++) {
+            removeOne(entity, powerId, idx, cfg.modifiers.get(idx), cfg.updateHealth);
+            APPLIED.remove(new TrackKey(entity.getUUID(), powerId, idx));
         }
     }
 

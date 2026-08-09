@@ -3,11 +3,17 @@ package dev.overgrown.apoli.mixin.custom_model;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import dev.overgrown.apoli.client.model.CustomModel;
+import dev.overgrown.apoli.client.render.CustomModelManager;
 import dev.overgrown.apoli.client.render.CustomModelRenderLayer;
+import dev.overgrown.apoli.client.render.GeometryRenderer;
+import dev.overgrown.apoli.client.render.GhostArmState;
 import dev.overgrown.apoli.client.render.ModelPartLookup;
 import dev.overgrown.apoli.client.render.OverlayRenderTypes;
+import dev.overgrown.apoli.client.render.PlayerRestPose;
 import dev.overgrown.apoli.data.ModelParts;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower;
+import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.GeometryRender;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.ResolvedLayer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -70,11 +76,13 @@ public abstract class PlayerRendererCustomModelMixin extends LivingEntityRendere
     @Inject(method = "renderRightHand", at = @At("TAIL"))
     private void apoli$rightArmOverlay(PoseStack pose, MultiBufferSource buffers, int light, AbstractClientPlayer player, CallbackInfo ci) {
         apoli$renderArmOverlay(pose, buffers, light, player, this.getModel().rightArm, this.getModel().rightSleeve);
+        apoli$renderArmGeometry(pose, buffers, light, player, ModelParts.RIGHT_ARM);
     }
 
     @Inject(method = "renderLeftHand", at = @At("TAIL"))
     private void apoli$leftArmOverlay(PoseStack pose, MultiBufferSource buffers, int light, AbstractClientPlayer player, CallbackInfo ci) {
         apoli$renderArmOverlay(pose, buffers, light, player, this.getModel().leftArm, this.getModel().leftSleeve);
+        apoli$renderArmGeometry(pose, buffers, light, player, ModelParts.LEFT_ARM);
     }
 
     @Unique
@@ -84,13 +92,14 @@ public abstract class PlayerRendererCustomModelMixin extends LivingEntityRendere
         if (layers.isEmpty()) {
             return;
         }
+        float alphaScale = GhostArmState.isActive() ? GhostArmState.alpha() : 1.0F;
         PlayerModel<AbstractClientPlayer> model = this.getModel();
         for (ResolvedLayer layer : layers) {
             if (!layer.showFirstPerson() || !apoli$layerAffectsArm(model, layer, arm, sleeve)) {
                 continue;
             }
             ResourceLocation texture = layer.texture(apoli$slim);
-            int color = FastColor.ARGB32.colorFromFloat(layer.alpha(), layer.red(), layer.green(), layer.blue());
+            int color = FastColor.ARGB32.colorFromFloat(layer.alpha() * alphaScale, layer.red(), layer.green(), layer.blue());
             VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(layer.mode(), texture));
             boolean scaled = layer.scale() != 1.0F;
             if (scaled) {
@@ -102,6 +111,31 @@ public abstract class PlayerRendererCustomModelMixin extends LivingEntityRendere
             if (scaled) {
                 pose.popPose();
             }
+        }
+    }
+
+    @Unique
+    private void apoli$renderArmGeometry(PoseStack pose, MultiBufferSource buffers, int light,
+                                         AbstractClientPlayer player, String slot) {
+        List<GeometryRender> geometry = CustomModelRenderPower.collectGeometry(player);
+        if (geometry.isEmpty()) {
+            return;
+        }
+        float alphaScale = GhostArmState.isActive() ? GhostArmState.alpha() : 1.0F;
+        PlayerModel<AbstractClientPlayer> model = this.getModel();
+        PlayerModel<AbstractClientPlayer> rest = PlayerRestPose.get();
+        for (int i = 0; i < geometry.size(); i++) {
+            GeometryRender render = geometry.get(i);
+            if (!render.showFirstPerson()) {
+                continue;
+            }
+            CustomModel custom = CustomModelManager.get(render.model());
+            if (custom == null) {
+                continue;
+            }
+            GeometryRenderer.syncPlayer(custom, model, rest);
+            GeometryRenderer.applyVisibility(custom, render.bodyParts());
+            GeometryRenderer.drawSlot(render, custom, slot, alphaScale, pose, buffers, light);
         }
     }
 

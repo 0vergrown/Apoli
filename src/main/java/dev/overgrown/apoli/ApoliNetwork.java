@@ -88,51 +88,55 @@ public final class ApoliNetwork {
     }
 
     public static void sendPowers(ServerPlayer recipient) {
-        PowerSyncCache.sendTo(recipient);
+        if (connected(recipient)) PowerSyncCache.sendTo(recipient);
+    }
+
+    public static boolean connected(ServerPlayer recipient) {
+        return recipient != null && recipient.connection != null;
     }
 
     public static void sendEntityPowers(ServerPlayer recipient, SyncEntityPowersS2C payload) {
-        ServerPlayNetworking.send(recipient, payload);
+        if (connected(recipient)) ServerPlayNetworking.send(recipient, payload);
     }
 
     public static void sendActivated(ServerPlayer recipient, PowerActivatedS2C payload) {
-        ServerPlayNetworking.send(recipient, payload);
+        if (connected(recipient)) ServerPlayNetworking.send(recipient, payload);
     }
 
     public static void sendKeybinds(ServerPlayer recipient, SyncKeybindsS2C payload) {
-        ServerPlayNetworking.send(recipient, payload);
+        if (connected(recipient)) ServerPlayNetworking.send(recipient, payload);
     }
 
     public static void sendApplyVelocityToTrackers(Entity entity, ApplyVelocityS2C payload) {
         for (ServerPlayer viewer : PlayerLookup.tracking(entity)) {
-            ServerPlayNetworking.send(viewer, payload);
+            if (connected(viewer)) ServerPlayNetworking.send(viewer, payload);
         }
-        if (entity instanceof ServerPlayer self) {
+        if (entity instanceof ServerPlayer self && connected(self)) {
             ServerPlayNetworking.send(self, payload);
         }
     }
 
     public static void broadcastDisguise(Entity entity, DisguiseUpdateS2C payload) {
         for (ServerPlayer viewer : PlayerLookup.tracking(entity)) {
-            ServerPlayNetworking.send(viewer, payload);
+            if (connected(viewer)) ServerPlayNetworking.send(viewer, payload);
         }
-        if (entity instanceof ServerPlayer self) {
+        if (entity instanceof ServerPlayer self && connected(self)) {
             ServerPlayNetworking.send(self, payload);
         }
     }
 
     public static void sendDisguise(ServerPlayer recipient, DisguiseUpdateS2C payload) {
-        ServerPlayNetworking.send(recipient, payload);
+        if (connected(recipient)) ServerPlayNetworking.send(recipient, payload);
     }
 
     public static void sendTextDisplay(ServerPlayer recipient, dev.overgrown.apoli.network.payload.TextDisplayS2C payload) {
-        if (ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.TextDisplayS2C.TYPE)) {
+        if (connected(recipient) && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.TextDisplayS2C.TYPE)) {
             ServerPlayNetworking.send(recipient, payload);
         }
     }
 
     public static void sendForceKey(ServerPlayer recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C payload) {
-        if (ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C.TYPE)) {
+        if (connected(recipient) && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C.TYPE)) {
             ServerPlayNetworking.send(recipient, payload);
         }
     }
@@ -147,12 +151,13 @@ public final class ApoliNetwork {
     }
 
     public static void sendLabel(ServerPlayer recipient, dev.overgrown.apoli.network.payload.LabelUpdateS2C payload) {
-        if (ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.LabelUpdateS2C.TYPE)) {
+        if (connected(recipient) && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.LabelUpdateS2C.TYPE)) {
             ServerPlayNetworking.send(recipient, payload);
         }
     }
 
     public static void sendSkillDefs(ServerPlayer recipient) {
+        if (!connected(recipient)) return;
         boolean legacy = ProtocolCompat.useLegacyFormats(recipient);
         if (legacy) {
             ProtocolCompat.markSentLegacy(recipient);
@@ -161,6 +166,7 @@ public final class ApoliNetwork {
     }
 
     public static void sendSkillState(ServerPlayer recipient) {
+        if (!connected(recipient)) return;
         SkillData data = SkillDataAttachment.get(recipient);
         dev.overgrown.apoli.skill.SkillTrees.Visibility vis =
             dev.overgrown.apoli.skill.SkillTrees.computeVisibility(recipient);
@@ -191,6 +197,7 @@ public final class ApoliNetwork {
                                       java.util.Optional<net.minecraft.resources.ResourceLocation> sprite,
                                       java.util.List<dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.Entry> display,
                                       java.util.List<dev.overgrown.apoli.action.EntityAction> actions) {
+        if (!connected(player)) return;
         if (!ServerPlayNetworking.canSend(player, dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.TYPE)) return;
         int nonce = dev.overgrown.apoli.radial.RadialMenuManager.open(player, actions);
         ServerPlayNetworking.send(player, new dev.overgrown.apoli.network.payload.RadialMenuOpenS2C(nonce, sprite, display));

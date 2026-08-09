@@ -13,6 +13,9 @@ import dev.overgrown.apoli.compat.hardcorerevival.power.ActionOnKnockoutPower;
 import dev.overgrown.apoli.compat.hardcorerevival.power.ActionOnRevivePower;
 import dev.overgrown.apoli.compat.icarus.WingsPower;
 import dev.overgrown.apoli.power.builtin.ActionOnBlockBreakPower;
+import dev.overgrown.apoli.power.builtin.ActionOnCollisionPower;
+import dev.overgrown.apoli.power.builtin.ReplaceSoundEmissionPower;
+import dev.overgrown.apoli.power.builtin.ReplaceSoundReceptionPower;
 import dev.overgrown.apoli.power.builtin.ActionOnBlockPlacePower;
 import dev.overgrown.apoli.power.builtin.ActionOnBlockUsePower;
 import dev.overgrown.apoli.power.builtin.ActionOnCallbackPower;
@@ -33,11 +36,13 @@ import dev.overgrown.apoli.power.builtin.ClimbingPower;
 import dev.overgrown.apoli.power.builtin.CooldownPower;
 import dev.overgrown.apoli.power.builtin.CreativeFlightPower;
 import dev.overgrown.apoli.power.builtin.DisableRegenPower;
+import dev.overgrown.apoli.power.builtin.DisableSlotPower;
 import dev.overgrown.apoli.power.builtin.EdibleItemPower;
 import dev.overgrown.apoli.power.builtin.EffectImmunityPower;
 import dev.overgrown.apoli.power.builtin.ElytraFlightPower;
 import dev.overgrown.apoli.power.builtin.EntityGlowPower;
-import dev.overgrown.apoli.power.builtin.EntityGroupPower;
+import dev.overgrown.apoli.power.builtin.FunctionPower;
+import dev.overgrown.apoli.power.builtin.ModifyTypeTagPower;
 import dev.overgrown.apoli.power.builtin.EntitySetPower;
 import dev.overgrown.apoli.power.builtin.ExhaustPower;
 import dev.overgrown.apoli.power.builtin.FireProjectilePower;
@@ -68,7 +73,10 @@ import dev.overgrown.apoli.power.builtin.ModifyExhaustionPower;
 import dev.overgrown.apoli.power.builtin.ModifyFallingPower;
 import dev.overgrown.apoli.power.builtin.ModifyHarvestPower;
 import dev.overgrown.apoli.power.builtin.ModifyHealingPower;
+import dev.overgrown.apoli.power.builtin.ModifyBlockStuckSpeedPower;
 import dev.overgrown.apoli.power.builtin.ModifyJumpPower;
+import dev.overgrown.apoli.power.builtin.ScareMobsPower;
+import dev.overgrown.apoli.power.builtin.WaterBreathingPower;
 import dev.overgrown.apoli.power.builtin.ModifyLabelRenderPower;
 import dev.overgrown.apoli.power.builtin.ModifyPlayerModelPower;
 import dev.overgrown.apoli.power.builtin.EmissivePower;
@@ -137,7 +145,9 @@ public final class PowerTypes {
             AliasingOptions.builder().addTypeAlias("sync:action_on_key_sequence").build()
         );
         PowerTypeRegistry.register(Apoli.id("entity_set"), new EntitySetPower());
-        PowerTypeRegistry.register(Apoli.id("entity_group"), new EntityGroupPower());
+        PowerTypeRegistry.register(Apoli.id("modify_type_tag"), new ModifyTypeTagPower(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("entity_group")).build());
+        PowerTypeRegistry.register(Apoli.id("function"), new FunctionPower());
         PowerTypeRegistry.register(Apoli.id("multiple"), new MultiplePower());
         PowerTypeRegistry.register(Apoli.id("resource"), new ResourcePower());
         PowerTypeRegistry.register(Apoli.id("cooldown"), new CooldownPower());
@@ -199,6 +209,11 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("grounded"), new GroundedPower());
         PowerTypeRegistry.register(Apoli.id("restrict_armor"), new RestrictArmorPower());
         PowerTypeRegistry.register(
+            Apoli.id("disable_slot"),
+            new DisableSlotPower(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("restrict_slot")).build()
+        );
+        PowerTypeRegistry.register(
             Apoli.id("entity_glow"),
             new EntityGlowPower(),
             AliasingOptions.builder().addTypeAlias(Apoli.id("self_glow")).build()
@@ -229,6 +244,9 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("modify_harvest"), new ModifyHarvestPower());
         PowerTypeRegistry.register(Apoli.id("modify_healing"), new ModifyHealingPower());
         PowerTypeRegistry.register(Apoli.id("modify_jump"), new ModifyJumpPower());
+        PowerTypeRegistry.register(Apoli.id("modify_block_stuck_speed"), new ModifyBlockStuckSpeedPower());
+        PowerTypeRegistry.register(Apoli.id("scare_mobs"), new ScareMobsPower());
+        PowerTypeRegistry.register(Apoli.id("water_breathing"), new WaterBreathingPower());
         PowerTypeRegistry.register(Apoli.id("modify_player_spawn"), new ModifyPlayerSpawnPower());
         PowerTypeRegistry.register(Apoli.id("modify_projectile_damage"), new ModifyProjectileDamagePower());
         PowerTypeRegistry.register(Apoli.id("modify_slipperiness"), new ModifySlipperinessPower());
@@ -275,6 +293,9 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("action_on_item_pickup"), new ActionOnItemPickupPower());
         PowerTypeRegistry.register(Apoli.id("action_on_item_use"), new ActionOnItemUsePower());
         PowerTypeRegistry.register(Apoli.id("action_on_land"), new ActionOnLandPower());
+        PowerTypeRegistry.register(Apoli.id("action_on_collision"), new ActionOnCollisionPower());
+        PowerTypeRegistry.register(Apoli.id("replace_sound_emission"), new ReplaceSoundEmissionPower());
+        PowerTypeRegistry.register(Apoli.id("replace_sound_reception"), new ReplaceSoundReceptionPower());
         PowerTypeRegistry.register(Apoli.id("action_on_wake_up"), new ActionOnWakeUpPower());
 
         PowerTypeRegistry.register(Apoli.id("freeze"), new FreezePower());

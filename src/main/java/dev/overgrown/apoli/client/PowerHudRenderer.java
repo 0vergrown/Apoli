@@ -8,6 +8,7 @@ import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.power.PowerTypeRegistry;
+import dev.overgrown.apoli.power.builtin.ActionOnCollisionPower;
 import dev.overgrown.apoli.power.builtin.ActionOnHitPower;
 import dev.overgrown.apoli.power.builtin.ActionOnKeyPressPower;
 import dev.overgrown.apoli.power.builtin.ActionOnKeySequencePower;
@@ -124,6 +125,11 @@ public final class PowerHudRenderer {
             hud = cfg.hudRender();
             fill = cooldownProgress(remaining, cfg.cooldown());
         } else if (type instanceof ActionWhenHitPower && config instanceof ActionWhenHitPower.Config cfg) {
+            int remaining = auxRemaining(powerId) - (int) player.level().getGameTime();
+            if (remaining <= 0) return;
+            hud = cfg.hudRender();
+            fill = cooldownProgress(remaining, cfg.cooldown());
+        } else if (type instanceof ActionOnCollisionPower && config instanceof ActionOnCollisionPower.Config cfg) {
             int remaining = auxRemaining(powerId) - (int) player.level().getGameTime();
             if (remaining <= 0) return;
             hud = cfg.hudRender();

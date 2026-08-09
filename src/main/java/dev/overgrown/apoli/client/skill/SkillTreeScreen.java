@@ -2,7 +2,9 @@ package dev.overgrown.apoli.client.skill;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.overgrown.apoli.network.payload.BuySkillC2S;
+import dev.overgrown.apoli.client.IconRenderer;
 import dev.overgrown.apoli.network.payload.SkillDefsSyncS2C;
+import dev.overgrown.apoli.skill.SkillFrame;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
@@ -22,8 +24,16 @@ public class SkillTreeScreen extends Screen {
     private static final ResourceLocation TITLE_BOX = ResourceLocation.withDefaultNamespace("advancements/title_box");
     private static final ResourceLocation BOX_OBTAINED = ResourceLocation.withDefaultNamespace("advancements/box_obtained");
     private static final ResourceLocation BOX_UNOBTAINED = ResourceLocation.withDefaultNamespace("advancements/box_unobtained");
-    private static final ResourceLocation FRAME_OBTAINED = ResourceLocation.withDefaultNamespace("advancements/task_frame_obtained");
-    private static final ResourceLocation FRAME_UNOBTAINED = ResourceLocation.withDefaultNamespace("advancements/task_frame_unobtained");
+    private static final ResourceLocation[] FRAMES_OBTAINED = {
+        ResourceLocation.withDefaultNamespace("advancements/task_frame_obtained"),
+        ResourceLocation.withDefaultNamespace("advancements/goal_frame_obtained"),
+        ResourceLocation.withDefaultNamespace("advancements/challenge_frame_obtained")
+    };
+    private static final ResourceLocation[] FRAMES_UNOBTAINED = {
+        ResourceLocation.withDefaultNamespace("advancements/task_frame_unobtained"),
+        ResourceLocation.withDefaultNamespace("advancements/goal_frame_unobtained"),
+        ResourceLocation.withDefaultNamespace("advancements/challenge_frame_unobtained")
+    };
     private static final ResourceLocation DEFAULT_BACKGROUND = ResourceLocation.withDefaultNamespace("textures/block/andesite.png");
 
     private static final int WINDOW_WIDTH = 252;
@@ -61,6 +71,10 @@ public class SkillTreeScreen extends Screen {
     }
 
     public void refreshFromState() {
+        ResourceLocation previousRoot = currentRoot;
+        double previousScrollX = scrollX;
+        double previousScrollY = scrollY;
+        boolean hadView = centered;
         this.roots.clear();
         for (ResourceLocation r : ClientSkillState.roots()) {
             if (!ClientSkillState.isHidden(r)) this.roots.add(r);
@@ -69,6 +83,12 @@ public class SkillTreeScreen extends Screen {
             this.currentRoot = roots.isEmpty() ? null : roots.get(0);
         }
         layout();
+        if (hadView && currentRoot != null && currentRoot.equals(previousRoot)) {
+            scrollX = previousScrollX;
+            scrollY = previousScrollY;
+            centered = true;
+            clampScroll();
+        }
     }
 
     private void layout() {
@@ -200,14 +220,26 @@ public class SkillTreeScreen extends Screen {
             SkillDefsSyncS2C.Entry e = ClientSkillState.def(id);
             int[] pos = positions.get(id);
             if (e == null || pos == null) continue;
-            ResourceLocation frame = isObtained(e) ? FRAME_OBTAINED : FRAME_UNOBTAINED;
-            g.blitSprite(frame, ox + pos[0] + 3, oy + pos[1], 26, 26);
-            g.renderFakeItem(e.icon(), ox + pos[0] + 8, oy + pos[1] + 5);
+            drawFrame(g, ox + pos[0] + 3, oy + pos[1], e.frame(), isObtained(e));
+            IconRenderer.renderFake(g, e.icon(), ox + pos[0] + 8, oy + pos[1] + 5);
 
             if (ClientSkillState.isLocked(id)) {
                 g.fill(ox + pos[0] + 3, oy + pos[1], ox + pos[0] + 29, oy + pos[1] + 26, 0xB0000000);
             }
         }
+    }
+
+    private static void drawFrame(GuiGraphics g, int x, int y, SkillFrame frame, boolean obtained) {
+        ResourceLocation[] frames = obtained ? FRAMES_OBTAINED : FRAMES_UNOBTAINED;
+        g.blitSprite(frames[frameIndex(frame)], x, y, 26, 26);
+    }
+
+    private static int frameIndex(SkillFrame frame) {
+        return switch (frame) {
+            case TASK -> 0;
+            case GOAL -> 1;
+            case CHALLENGE -> 2;
+        };
     }
 
     private static boolean isObtained(SkillDefsSyncS2C.Entry e) {
@@ -237,9 +269,8 @@ public class SkillTreeScreen extends Screen {
             SkillDefsSyncS2C.Entry d = ClientSkillState.def(r);
             int tx = x + 4 + i * 29;
             int ty = y - 28 + 4;
-            boolean selected = r.equals(currentRoot);
-            g.blitSprite(selected ? FRAME_OBTAINED : FRAME_UNOBTAINED, tx, ty, 26, 26);
-            if (d != null) g.renderFakeItem(d.icon(), tx + 5, ty + 5);
+            drawFrame(g, tx, ty, d != null ? d.frame() : SkillFrame.TASK, r.equals(currentRoot));
+            if (d != null) IconRenderer.renderFake(g, d.icon(), tx + 5, ty + 5);
         }
     }
 
@@ -273,7 +304,6 @@ public class SkillTreeScreen extends Screen {
 
         boolean obtained = isObtained(e);
         ResourceLocation box = obtained ? BOX_OBTAINED : BOX_UNOBTAINED;
-        ResourceLocation frame = obtained ? FRAME_OBTAINED : FRAME_UNOBTAINED;
 
         boolean flipRight = wx + 26 + boxWidth >= INSIDE_W;
         int bx = flipRight ? wx + 26 - boxWidth : wx;
@@ -287,7 +317,7 @@ public class SkillTreeScreen extends Screen {
         int half = boxWidth / 2;
         g.blitSprite(box, 200, 26, 0, 0, bx, by, half, 26);
         g.blitSprite(box, 200, 26, 200 - (boxWidth - half), 0, bx + half, by, boxWidth - half, 26);
-        g.blitSprite(frame, wx + 3, wy, 26, 26);
+        drawFrame(g, wx + 3, wy, e.frame(), obtained);
         g.drawString(this.font, e.name(), bx + 32, by + 9, 0xFFFFFF);
         if (!lines.isEmpty()) {
             int textY = flipUp ? by + 26 - descPanelH + 7 : by + 9 + 17;
@@ -295,7 +325,7 @@ public class SkillTreeScreen extends Screen {
                 g.drawString(this.font, lines.get(i), bx + 5, textY + i * 9, 0xAAAAAA, false);
             }
         }
-        g.renderFakeItem(e.icon(), wx + 8, wy + 5);
+        IconRenderer.renderFake(g, e.icon(), wx + 8, wy + 5);
     }
 
     private List<FormattedCharSequence> tooltipLines(SkillDefsSyncS2C.Entry e) {
@@ -310,8 +340,16 @@ public class SkillTreeScreen extends Screen {
             }
         } else {
             parts.add(Component.translatable("screen.apoli.skill_tree.cost", e.cost()).withStyle(ChatFormatting.GOLD));
-            if (!ClientSkillState.parentSatisfied(e) || ClientSkillState.isLocked(e.id())) {
+            ResourceLocation blocker = ClientSkillState.excludedBy(e.id());
+            if (blocker != null) {
+                SkillDefsSyncS2C.Entry blockerDef = ClientSkillState.def(blocker);
+                parts.add(Component.translatable("screen.apoli.skill_tree.excluded",
+                    blockerDef != null ? blockerDef.name() : Component.literal(blocker.toString()))
+                    .withStyle(ChatFormatting.RED));
+            } else if (!ClientSkillState.parentSatisfied(e)) {
                 parts.add(Component.translatable("screen.apoli.skill_tree.locked").withStyle(ChatFormatting.RED));
+            } else if (ClientSkillState.isLocked(e.id())) {
+                parts.add(Component.translatable("screen.apoli.skill_tree.unavailable").withStyle(ChatFormatting.RED));
             } else if (ClientSkillState.points(ClientSkillState.rootOf(e.id())) < e.cost()) {
                 parts.add(Component.translatable("screen.apoli.skill_tree.not_enough").withStyle(ChatFormatting.RED));
             } else {

@@ -1,7 +1,0 @@
-{
-  "type": "apoli:action_on_hit",
-  "bientity_action": {
-    "type": "apoli:add_velocity",
-    "z": 2
-  }
-}

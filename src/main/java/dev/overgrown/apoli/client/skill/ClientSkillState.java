@@ -137,6 +137,21 @@ public final class ClientSkillState {
         return e.parent().isEmpty() || isObtained(e.parent().get());
     }
 
+    @Nullable
+    public static ResourceLocation excludedBy(ResourceLocation id) {
+        SkillDefsSyncS2C.Entry self = DEFS.get(id);
+        if (self != null) {
+            for (ResourceLocation other : self.excludes()) {
+                if (isPurchased(other)) return other;
+            }
+        }
+        for (ResourceLocation purchased : PURCHASED) {
+            SkillDefsSyncS2C.Entry other = DEFS.get(purchased);
+            if (other != null && other.excludes().contains(id)) return purchased;
+        }
+        return null;
+    }
+
     public static boolean canBuy(SkillDefsSyncS2C.Entry e) {
         return !e.powers().isEmpty()
             && !isPurchased(e.id())

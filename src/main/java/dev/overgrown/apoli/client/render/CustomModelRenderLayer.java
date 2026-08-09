@@ -2,11 +2,11 @@ package dev.overgrown.apoli.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import dev.overgrown.apoli.client.model.CustomModel;
 import dev.overgrown.apoli.data.ModelParts;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.GeometryRender;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.ResolvedLayer;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.AbstractClientPlayer;
@@ -20,7 +20,6 @@ import net.minecraft.util.FastColor;
 import java.util.List;
 
 public class CustomModelRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
-    private static final String[] SKELETON = {"head", "hat", "body", "right_arm", "left_arm", "right_leg", "left_leg"};
     private final boolean slim;
 
     public CustomModelRenderLayer(RenderLayerParent<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> parent, boolean slim) {
@@ -31,12 +30,6 @@ public class CustomModelRenderLayer extends RenderLayer<AbstractClientPlayer, Pl
     @Override
     public void render(PoseStack pose, MultiBufferSource buffers, int light, AbstractClientPlayer player,
                        float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
-        Minecraft mc = Minecraft.getInstance();
-        boolean firstPerson = mc.player == player && mc.options.getCameraType().isFirstPerson();
-        if (firstPerson) {
-            return;
-        }
-
         PlayerModel<AbstractClientPlayer> model = this.getParentModel();
 
         List<ResolvedLayer> layers = CustomModelRenderPower.collectTextureOverlays(player);
@@ -64,24 +57,18 @@ public class CustomModelRenderLayer extends RenderLayer<AbstractClientPlayer, Pl
         }
 
         List<GeometryRender> geometry = CustomModelRenderPower.collectGeometry(player);
+        if (geometry.isEmpty()) {
+            return;
+        }
+        PlayerModel<AbstractClientPlayer> rest = PlayerRestPose.get();
         for (GeometryRender render : geometry) {
-            ModelPart root = CustomModelManager.getBaked(render.model());
-            if (root == null) {
+            CustomModel custom = CustomModelManager.get(render.model());
+            if (custom == null) {
                 continue;
             }
-            syncPose(root, model);
-            GeometryRenderer.applyVisibility(root, render.bodyParts(), SKELETON);
-            GeometryRenderer.draw(render, root, pose, buffers, light);
+            GeometryRenderer.syncPlayer(custom, model, rest);
+            GeometryRenderer.applyVisibility(custom, render.bodyParts());
+            GeometryRenderer.draw(render, custom, pose, buffers, light);
         }
-    }
-
-    private void syncPose(ModelPart root, PlayerModel<AbstractClientPlayer> model) {
-        GeometryRenderer.syncBone(root, "head", model.head);
-        GeometryRenderer.syncBone(root, "hat", model.hat);
-        GeometryRenderer.syncBone(root, "body", model.body);
-        GeometryRenderer.syncBone(root, "right_arm", model.rightArm);
-        GeometryRenderer.syncBone(root, "left_arm", model.leftArm);
-        GeometryRenderer.syncBone(root, "right_leg", model.rightLeg);
-        GeometryRenderer.syncBone(root, "left_leg", model.leftLeg);
     }
 }

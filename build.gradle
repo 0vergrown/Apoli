@@ -26,7 +26,7 @@ repositories {
 		url = "https://api.modrinth.com/maven"
 		content { includeGroup "maven.modrinth" }
 	}
-	// Trinkets (accessory-slot compat backend).
+	// Trinkets (accessory-slot compat backend) and Mod Menu (the config-screen entrypoint).
 	maven {
 		name = "TerraformersMC"
 		url = "https://maven.terraformersmc.com/releases"
@@ -78,6 +78,20 @@ dependencies {
 	modCompileOnly "net.blay09.mods:balm-fabric:${project.balm_version}"
 	modCompileOnly "net.blay09.mods:hardcorerevival-fabric:${project.hardcore_revival_version}"
 
+	// Mod Menu (compile-only, optional at runtime) — supplies Apoli's in-game settings screen.
+	// The "modmenu" entrypoint is only resolved when Mod Menu is installed, and Menulogue forwards
+	// it to Catalogue. Catalogue on its own goes through custom.catalogue.configFactory instead,
+	// which is reflective and needs no dependency at all.
+	modCompileOnly("com.terraformersmc:modmenu:${project.modmenu_version}") {
+		exclude group: "net.fabricmc.fabric-api"
+	}
+
+	// 3D Skin Layers + Ears (compile-only, optional at runtime) — the render powers that recolour or
+	// replace the player skin have to reach into these mods, because they draw their own geometry
+	// from the raw skin file instead of the vanilla model. Gated by their mixin config plugins.
+	modCompileOnly "maven.modrinth:3dskinlayers:${project.skinlayers_version}"
+	modCompileOnly "maven.modrinth:ears:${project.ears_version}"
+
 	modCompileOnly "me.lucko:fabric-permissions-api:0.3.1"
 
 	compileOnly "de.maxhenkel.voicechat:voicechat-api:${project.voicechat_api_version}"
@@ -102,6 +116,10 @@ processResources {
 
 tasks.withType(JavaCompile).configureEach {
 	it.options.release = 21
+}
+
+test {
+	useJUnitPlatform()
 }
 
 java {
