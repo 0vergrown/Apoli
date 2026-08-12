@@ -14,6 +14,7 @@ import dev.overgrown.apoli.data.ItemSlot;
 import dev.overgrown.apoli.data.ItemStackData;
 import dev.overgrown.apoli.data.ProcessMode;
 import dev.overgrown.apoli.power.builtin.InventoryPower;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.Container;
@@ -69,7 +70,7 @@ public final class InventoryAction implements ActionType<EntityCtx, InventoryAct
             ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Cfg::itemCondition),
             ItemSlot.CODEC.optionalFieldOf("slot").forGetter(Cfg::slot),
             Codec.list(ItemSlot.CODEC).optionalFieldOf("slots").forGetter(Cfg::slots),
-            ResourceLocation.CODEC.optionalFieldOf("power").forGetter(Cfg::power),
+            IdCodecs.ID.optionalFieldOf("power").forGetter(Cfg::power),
             ProcessMode.CODEC.optionalFieldOf("process_mode", ProcessMode.STACKS).forGetter(Cfg::processMode),
             Codec.INT.optionalFieldOf("limit", 0).forGetter(Cfg::limit),
             ItemAction.CODEC.optionalFieldOf("item_action").forGetter(Cfg::itemAction),

@@ -73,6 +73,16 @@ config="${mod_id}-skinlayers.mixins.json"
 [[mixins]]
 config="${mod_id}-ears.mixins.json"
 
+# Optional Sable compatibility — apoli:phasing on blocks that Sable moved into a sub-level. Sable
+# collides those with the cached 2-arg collision shape, which never reaches the normal phasing hook.
+[[mixins]]
+config="${mod_id}-sable.mixins.json"
+
+# Optional Better Combat compatibility — its swing handler dereferences Minecraft.hitResult without a
+# null check, which crashes the render thread on the first attack of a session. Keeps the field set.
+[[mixins]]
+config="${mod_id}-bettercombat.mixins.json"
+
 # The [[accessTransformers]] block allows you to declare where your AT file is.
 # If this block is omitted, a fallback attempt will be made to load an AT from META-INF/accesstransformer.cfg
 #[[accessTransformers]]

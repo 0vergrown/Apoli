@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.data.EquipmentSlot;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
@@ -16,7 +17,7 @@ import java.util.List;
 public class AddPowerFunction extends LootItemConditionalFunction {
     public static final MapCodec<AddPowerFunction> CODEC = RecordCodecBuilder.mapCodec(
         instance -> commonFields(instance).and(instance.group(
-            ResourceLocation.CODEC.fieldOf("power").forGetter(f -> f.power),
+            IdCodecs.ID.fieldOf("power").forGetter(f -> f.power),
             EquipmentSlot.CODEC.listOf().fieldOf("slot").forGetter(f -> f.slots),
             Codec.BOOL.optionalFieldOf("hidden", false).forGetter(f -> f.hidden),
             Codec.BOOL.optionalFieldOf("negative", false).forGetter(f -> f.negative)

@@ -6,6 +6,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.EntityCondition;
 import dev.overgrown.apoli.data.IconData;
 import dev.overgrown.apoli.data.TextComponent;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
@@ -31,8 +32,8 @@ public record SkillTree(
             TextComponent.CODEC.optionalFieldOf("description", Component.empty()).forGetter(SkillTree::description),
             IconData.CODEC.optionalFieldOf("icon", IconData.grassBlock()).forGetter(SkillTree::icon),
             SkillFrame.CODEC.optionalFieldOf("frame", SkillFrame.TASK).forGetter(SkillTree::frame),
-            ResourceLocation.CODEC.optionalFieldOf("background").forGetter(SkillTree::background),
-            ResourceLocation.CODEC.listOf().optionalFieldOf("default_powers", List.of()).forGetter(SkillTree::defaultPowers),
+            IdCodecs.ID.optionalFieldOf("background").forGetter(SkillTree::background),
+            IdCodecs.ID.listOf().optionalFieldOf("default_powers", List.of()).forGetter(SkillTree::defaultPowers),
             Codec.INT.optionalFieldOf("order", 0).forGetter(SkillTree::order),
             Codec.BOOL.optionalFieldOf("auto_grant", true).forGetter(SkillTree::autoGrant),
             Codec.BOOL.optionalFieldOf("refundable", true).forGetter(SkillTree::refundable),

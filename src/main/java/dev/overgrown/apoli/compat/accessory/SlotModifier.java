@@ -4,6 +4,7 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.data.AttributeModifierOperation;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 
@@ -13,7 +14,7 @@ public record SlotModifier(String slot, ResourceLocation id, double amount, Attr
 
     public static final Codec<SlotModifier> CODEC = RecordCodecBuilder.create(i -> i.group(
         Codec.STRING.fieldOf("slot").forGetter(SlotModifier::slot),
-        ResourceLocation.CODEC.fieldOf("id").forGetter(SlotModifier::id),
+        IdCodecs.ID.fieldOf("id").forGetter(SlotModifier::id),
         Codec.DOUBLE.optionalFieldOf("amount", 0.0).forGetter(SlotModifier::amount),
         AttributeModifierOperation.CODEC.optionalFieldOf("operation", AttributeModifierOperation.ADD_BASE_EARLY).forGetter(SlotModifier::operation)
     ).apply(i, SlotModifier::new));

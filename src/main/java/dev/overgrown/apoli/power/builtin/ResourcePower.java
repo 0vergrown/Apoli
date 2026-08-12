@@ -83,6 +83,21 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         }
     }
 
+    @Override
+    public OptionalInt readResource(ResourceLocation powerId, Cfg cfg, PowerContainer holder) {
+        return readValue(holder, powerId);
+    }
+
+    @Override
+    public OptionalInt writeResource(ResourceLocation powerId, Cfg cfg, PowerContainer holder, int value) {
+        return writeValue(holder, powerId, value);
+    }
+
+    @Override
+    public OptionalInt resourceBound(ResourceLocation powerId, Cfg cfg, PowerContainer holder, boolean max) {
+        return boundOf(holder, powerId, max);
+    }
+
     public int evalStartValue(Cfg cfg, PowerContainer holder) {
         return cfg.startValue.orElse(cfg.min).evalIntWith(holder.rawOwner(), holder, 0);
     }

@@ -6,6 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.JsonOps;
+import dev.overgrown.apoli.loader.IdWildcards;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
@@ -30,7 +31,7 @@ public final class SkillTreeLoader extends SimpleJsonResourceReloadListener {
 
         for (Map.Entry<ResourceLocation, JsonElement> e : data.entrySet()) {
             ResourceLocation id = e.getKey();
-            if (!(e.getValue() instanceof JsonObject obj)) {
+            if (!(IdWildcards.apply(e.getValue(), id) instanceof JsonObject obj)) {
                 LOG.error("[Apoli] Skill tree file {} is empty or not a JSON object — skipping.", id);
                 continue;
             }

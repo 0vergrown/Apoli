@@ -8,6 +8,7 @@ import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerTypeRegistry;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 
 public final class PowerTypeCondition implements ConditionType<EntityCtx, PowerTypeCondition.Cfg> {
@@ -16,7 +17,7 @@ public final class PowerTypeCondition implements ConditionType<EntityCtx, PowerT
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("power_type").forGetter(Cfg::powerType)
+            IdCodecs.ID.fieldOf("power_type").forGetter(Cfg::powerType)
         ).apply(i, Cfg::new));
     }
 

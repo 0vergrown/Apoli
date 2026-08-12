@@ -18,6 +18,8 @@ import java.util.Optional;
 
 public final class ActionOverTimePower extends PowerType<ActionOverTimePower.Config> {
 
+    public static final ResourceLocation CANONICAL = dev.overgrown.apoli.Apoli.id("action_over_time");
+
     public record Config(
         int interval,
         Optional<EntityAction> entityAction,
@@ -74,6 +76,15 @@ public final class ActionOverTimePower extends PowerType<ActionOverTimePower.Con
             cfg.fallingAction.ifPresent(a -> a.run(EntityCtx.of(holder.rawOwner(), level)));
         }
         setActiveFlag(holder, powerId, false);
+    }
+
+    public static void resetEdges(Entity entity) {
+        PowerContainer container = PowerContainer.of(entity);
+        if (!(container instanceof PowerContainerImpl impl) || impl.isEmpty()) return;
+        java.util.List<ResourceLocation> powers = container.powersOfType(CANONICAL);
+        for (int i = 0; i < powers.size(); i++) {
+            impl.removeAux(powers.get(i));
+        }
     }
 
     private static boolean conditionHolds(EntityCtx ctx, ResourceLocation powerId) {

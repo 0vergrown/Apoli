@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -52,9 +53,9 @@ public final class ModifyPlayerSpawnPower extends PowerType<ModifyPlayerSpawnPow
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("dimension").forGetter(Config::dimension),
-            ResourceLocation.CODEC.optionalFieldOf("biome").forGetter(Config::biome),
-            ResourceLocation.CODEC.optionalFieldOf("structure").forGetter(Config::structure),
+            IdCodecs.ID.fieldOf("dimension").forGetter(Config::dimension),
+            IdCodecs.ID.optionalFieldOf("biome").forGetter(Config::biome),
+            IdCodecs.ID.optionalFieldOf("structure").forGetter(Config::structure),
             SpawnStrategy.CODEC.optionalFieldOf("spawn_strategy", SpawnStrategy.DEFAULT).forGetter(Config::spawnStrategy),
             Codec.FLOAT.optionalFieldOf("dimension_distance_multiplier").forGetter(Config::dimensionDistanceMultiplier)
         ).apply(i, Config::new));

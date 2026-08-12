@@ -10,6 +10,7 @@ import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.entity.ApoliEntities;
 import dev.overgrown.apoli.entity.summon.CloneEntity;
 import dev.overgrown.apoli.entity.summon.Summons;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -45,11 +46,11 @@ public final class SummonCloneAction implements ActionType<EntityCtx, SummonClon
             Codec.BOOL.optionalFieldOf("inherit_equipment", true).forGetter(Cfg::inheritEquipment),
             Codec.BOOL.optionalFieldOf("inherit_enchantments", true).forGetter(Cfg::inheritEnchantments),
             Codec.BOOL.optionalFieldOf("slim", false).forGetter(Cfg::slim),
-            ResourceLocation.CODEC.optionalFieldOf("wide_texture").forGetter(Cfg::wideTexture),
-            ResourceLocation.CODEC.optionalFieldOf("slim_texture").forGetter(Cfg::slimTexture),
+            IdCodecs.ID.optionalFieldOf("wide_texture").forGetter(Cfg::wideTexture),
+            IdCodecs.ID.optionalFieldOf("slim_texture").forGetter(Cfg::slimTexture),
             Codec.INT.optionalFieldOf("max_life_ticks", 1200).forGetter(Cfg::maxLifeTicks),
-            ResourceLocation.CODEC.optionalFieldOf("summon_id").forGetter(Cfg::summonId),
-            ResourceLocation.CODEC.listOf().optionalFieldOf("powers", List.of()).forGetter(Cfg::powers),
+            IdCodecs.ID.optionalFieldOf("summon_id").forGetter(Cfg::summonId),
+            IdCodecs.ID.listOf().optionalFieldOf("powers", List.of()).forGetter(Cfg::powers),
             BiEntityAction.CODEC.optionalFieldOf("bientity_action").forGetter(Cfg::bientityAction)
         ).apply(i, Cfg::new));
     }

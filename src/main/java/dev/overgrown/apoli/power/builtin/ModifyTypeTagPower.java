@@ -11,6 +11,7 @@ import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
@@ -37,16 +38,8 @@ public final class ModifyTypeTagPower extends PowerType<ModifyTypeTagPower.Cfg> 
         }
     }
 
-    private static final Codec<TagKey<EntityType<?>>> TAG_CODEC = Codec.STRING.comapFlatMap(
-        raw -> {
-            String id = raw.startsWith("#") ? raw.substring(1) : raw;
-            ResourceLocation parsed = ResourceLocation.tryParse(id);
-            return parsed == null
-                ? DataResult.error(() -> "Not a valid entity type tag: " + raw)
-                : DataResult.success(TagKey.create(Registries.ENTITY_TYPE, parsed));
-        },
-        tag -> "#" + tag.location()
-    );
+    private static final Codec<TagKey<EntityType<?>>> TAG_CODEC =
+        IdCodecs.tagKey(Registries.ENTITY_TYPE);
 
     private static final Codec<List<TagKey<EntityType<?>>>> TAGS_CODEC = Codec.either(
         TAG_CODEC, TAG_CODEC.listOf()

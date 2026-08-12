@@ -9,6 +9,7 @@ import dev.overgrown.apoli.action.EntityAction;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.PowerContainer;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.Entity;
@@ -54,8 +55,8 @@ public final class TransferAction implements ActionType<BiEntityCtx, TransferAct
         return RecordCodecBuilder.mapCodec(i -> i.group(
             Mode.CODEC.optionalFieldOf("mode", Mode.STEAL).forGetter(Cfg::mode),
             Codec.BOOL.optionalFieldOf("copy", false).forGetter(Cfg::copy),
-            ResourceLocation.CODEC.listOf().optionalFieldOf("sources").forGetter(Cfg::sources),
-            ResourceLocation.CODEC.optionalFieldOf("new_source", DEFAULT_SOURCE).forGetter(Cfg::newSource),
+            IdCodecs.ID.listOf().optionalFieldOf("sources").forGetter(Cfg::sources),
+            IdCodecs.ID.optionalFieldOf("new_source", DEFAULT_SOURCE).forGetter(Cfg::newSource),
             Codec.BOOL.optionalFieldOf("preserve_source", false).forGetter(Cfg::preserveSource),
             EntityAction.CODEC.optionalFieldOf("actor_action").forGetter(Cfg::actorAction),
             EntityAction.CODEC.optionalFieldOf("target_action").forGetter(Cfg::targetAction)

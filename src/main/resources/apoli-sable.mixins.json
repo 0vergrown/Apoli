@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "package": "dev.overgrown.apoli.compat.sable.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "dev.overgrown.apoli.compat.sable.mixin.SableCompatMixinPlugin",
+  "mixins": [
+    "EntityMoveScopeMixin",
+    "BlockStateCollisionShapeMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

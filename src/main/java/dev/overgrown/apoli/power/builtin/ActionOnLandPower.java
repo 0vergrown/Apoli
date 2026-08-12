@@ -2,18 +2,19 @@ package dev.overgrown.apoli.power.builtin;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.action.EntityAction;
 import dev.overgrown.apoli.condition.context.EntityCtx;
-import dev.overgrown.apoli.power.ApoliPowers;
-import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
-import dev.overgrown.apoli.power.PowerContainerImpl;
+import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 
 public final class ActionOnLandPower extends PowerType<ActionOnLandPower.Config> {
+    public static final ResourceLocation CANONICAL = Apoli.id("action_on_land");
+
     public record Config(EntityAction entityAction) {}
 
     @Override
@@ -23,47 +24,13 @@ public final class ActionOnLandPower extends PowerType<ActionOnLandPower.Config>
         ).apply(i, Config::new));
     }
 
-    @Override
-    public void onAdded(ResourceLocation powerId, Config cfg, PowerContainer holder, ResourceLocation source) {
-        if (holder instanceof PowerContainerImpl impl && impl.getAuxInt(powerId).isEmpty()) {
-            impl.setAuxInt(powerId, 0);
-        }
-    }
+    public static void onLand(LivingEntity entity) {
+        PowerContainer container = PowerContainer.of(entity);
+        if (container == null || container.isEmpty()) return;
+        if (container.powersOfType(CANONICAL).isEmpty()) return;
+        if (!(entity.level() instanceof ServerLevel level)) return;
 
-    @Override
-    public void onRemoved(ResourceLocation powerId, Config cfg, PowerContainer holder, ResourceLocation source) {
-        if (holder instanceof PowerContainerImpl impl && !holder.hasPower(powerId)) impl.removeAux(powerId);
-    }
-
-    @Override
-    public void tick(ResourceLocation powerId, Config cfg, PowerContainer holder) {
-        if (!(holder instanceof PowerContainerImpl impl)) return;
-        LivingEntity owner = holder.owner();
-        if (owner == null || !(owner.level() instanceof ServerLevel level)) return;
-
-        if (!owner.onGround()) {
-            impl.setAuxInt(powerId, Math.max(1, Math.round(owner.fallDistance * 100.0F)));
-            return;
-        }
-
-        int airborneFall = impl.getAuxInt(powerId).orElse(0);
-        if (airborneFall <= 0) return;
-        impl.setAuxInt(powerId, 0);
-
-        float saved = owner.fallDistance;
-        boolean wasInvulnerable = owner.isInvulnerable();
-        owner.fallDistance = Math.max(saved, airborneFall / 100.0F);
-        owner.setInvulnerable(true);
-        try {
-            Power loaded = ApoliPowers.get(powerId);
-            if (loaded != null && loaded.condition().isPresent()
-                && !loaded.condition().get().test(new EntityCtx(owner, level))) {
-                return;
-            }
-            cfg.entityAction().run(new EntityCtx(owner, level));
-        } finally {
-            owner.fallDistance = saved;
-            owner.setInvulnerable(wasInvulnerable);
-        }
+        EntityCtx ctx = new EntityCtx(entity, level);
+        PowerLookup.forEach(entity, CANONICAL, Config.class, cfg -> cfg.entityAction().run(ctx));
     }
 }

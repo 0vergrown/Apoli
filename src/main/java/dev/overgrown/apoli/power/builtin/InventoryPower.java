@@ -51,10 +51,38 @@ public final class InventoryPower extends PowerType<InventoryPower.Config> {
         ).apply(i, Config::new));
     }
 
+    private static final java.util.Map<java.util.UUID, java.util.Map<ResourceLocation, SimpleContainer>> OPEN_CONTAINERS =
+        new java.util.HashMap<>();
+
+    private static SimpleContainer liveContainer(java.util.UUID owner, ResourceLocation powerId) {
+        java.util.Map<ResourceLocation, SimpleContainer> byPower = OPEN_CONTAINERS.get(owner);
+        return byPower == null ? null : byPower.get(powerId);
+    }
+
+    private static void releaseContainer(java.util.UUID owner, ResourceLocation powerId) {
+        java.util.Map<ResourceLocation, SimpleContainer> byPower = OPEN_CONTAINERS.get(owner);
+        if (byPower == null) return;
+        byPower.remove(powerId);
+        if (byPower.isEmpty()) OPEN_CONTAINERS.remove(owner);
+    }
+
+    public static void onPlayerLeave(java.util.UUID owner) {
+        OPEN_CONTAINERS.remove(owner);
+    }
+
     public void open(ResourceLocation powerId, Config cfg, ServerPlayer player, PowerContainerImpl container) {
         HolderLookup.Provider registries = player.registryAccess();
-        SimpleContainer inv = load(container.getAuxNbt(powerId), cfg.containerType().slots(), registries);
+        java.util.UUID owner = player.getUUID();
+        SimpleContainer inv = new SimpleContainer(cfg.containerType().slots()) {
+            @Override
+            public void stopOpen(net.minecraft.world.entity.player.Player closing) {
+                releaseContainer(owner, powerId);
+                super.stopOpen(closing);
+            }
+        };
+        fill(inv, container.getAuxNbt(powerId), registries);
         inv.addListener(changed -> container.setAuxNbt(powerId, save(inv, registries)));
+        OPEN_CONTAINERS.computeIfAbsent(owner, k -> new java.util.HashMap<>(2)).put(powerId, inv);
         player.openMenu(cfg.containerType().menuProvider(cfg.title(), inv));
     }
 
@@ -96,24 +124,30 @@ public final class InventoryPower extends PowerType<InventoryPower.Config> {
         if (!(PowerContainer.of(holder) instanceof PowerContainerImpl impl)) return null;
         Power loaded = ApoliPowers.get(powerId);
         if (loaded == null || !(loaded.config() instanceof Config cfg)) return null;
+        SimpleContainer live = liveContainer(holder.getUUID(), powerId);
+        if (live != null) return live;
         return load(impl.getAuxNbt(powerId), cfg.containerType().slots(), level.registryAccess());
     }
 
     public static void saveContainer(LivingEntity holder, ResourceLocation powerId, SimpleContainer container) {
-        if (holder.level() instanceof ServerLevel level
-            && PowerContainer.of(holder) instanceof PowerContainerImpl impl) {
-            impl.setAuxNbt(powerId, save(container, level.registryAccess()));
-        }
+        if (!(holder.level() instanceof ServerLevel level)
+            || !(PowerContainer.of(holder) instanceof PowerContainerImpl impl)) return;
+        impl.setAuxNbt(powerId, save(container, level.registryAccess()));
+        if (container == liveContainer(holder.getUUID(), powerId)) container.setChanged();
     }
 
     private static SimpleContainer load(CompoundTag stored, int slots, HolderLookup.Provider registries) {
         SimpleContainer inv = new SimpleContainer(slots);
-        if (stored != null) {
-            NonNullList<ItemStack> items = NonNullList.withSize(slots, ItemStack.EMPTY);
-            ContainerHelper.loadAllItems(stored, items, registries);
-            for (int i = 0; i < slots; i++) inv.setItem(i, items.get(i));
-        }
+        fill(inv, stored, registries);
         return inv;
+    }
+
+    private static void fill(SimpleContainer inv, CompoundTag stored, HolderLookup.Provider registries) {
+        if (stored == null) return;
+        int slots = inv.getContainerSize();
+        NonNullList<ItemStack> items = NonNullList.withSize(slots, ItemStack.EMPTY);
+        ContainerHelper.loadAllItems(stored, items, registries);
+        for (int i = 0; i < slots; i++) inv.setItem(i, items.get(i));
     }
 
     private static CompoundTag save(SimpleContainer inv, HolderLookup.Provider registries) {

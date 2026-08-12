@@ -11,6 +11,7 @@ import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.SetIteration;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.builtin.EntitySetPower;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -33,7 +34,7 @@ public final class ActionOnEntitySetAction implements ActionType<EntityCtx, Acti
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("set").forGetter(Cfg::set),
+            IdCodecs.ID.fieldOf("set").forGetter(Cfg::set),
             BiEntityAction.CODEC.fieldOf("bientity_action").forGetter(Cfg::biEntityAction),
             BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Cfg::biEntityCondition),
             Codec.INT.optionalFieldOf("limit", 0).forGetter(Cfg::limit),

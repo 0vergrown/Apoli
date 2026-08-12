@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 
 public final class DimensionCondition implements ConditionType<EntityCtx, DimensionCondition.Cfg> {
@@ -12,7 +13,7 @@ public final class DimensionCondition implements ConditionType<EntityCtx, Dimens
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("dimension").forGetter(Cfg::dimension)
+            IdCodecs.ID.fieldOf("dimension").forGetter(Cfg::dimension)
         ).apply(i, Cfg::new));
     }
 

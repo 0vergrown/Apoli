@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.EntityAction;
 import dev.overgrown.apoli.condition.EntityCondition;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -31,10 +32,10 @@ public record RadialMenuEntry(
     public static final Codec<RadialMenuEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
         ItemStackData.CODEC.optionalFieldOf("item").forGetter(e ->
             e.item.isEmpty() ? Optional.<ItemStackData>empty() : Optional.of(new ItemStackData(e.item))),
-        ResourceLocation.CODEC.optionalFieldOf("button_texture").forGetter(RadialMenuEntry::buttonTexture),
-        ResourceLocation.CODEC.optionalFieldOf("icon").forGetter(RadialMenuEntry::icon),
-        ResourceLocation.CODEC.optionalFieldOf("highlight_icon_texture").forGetter(RadialMenuEntry::highlightIcon),
-        ResourceLocation.CODEC.optionalFieldOf("highlight_button_texture").forGetter(RadialMenuEntry::highlightButtonTexture),
+        IdCodecs.ID.optionalFieldOf("button_texture").forGetter(RadialMenuEntry::buttonTexture),
+        IdCodecs.ID.optionalFieldOf("icon").forGetter(RadialMenuEntry::icon),
+        IdCodecs.ID.optionalFieldOf("highlight_icon_texture").forGetter(RadialMenuEntry::highlightIcon),
+        IdCodecs.ID.optionalFieldOf("highlight_button_texture").forGetter(RadialMenuEntry::highlightButtonTexture),
         EntityAction.CODEC.fieldOf("entity_action").forGetter(RadialMenuEntry::entityAction),
         EntityCondition.CODEC.optionalFieldOf("condition").forGetter(RadialMenuEntry::condition),
         Codec.INT.optionalFieldOf("distance", -1).forGetter(RadialMenuEntry::distance),

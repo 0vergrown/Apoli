@@ -3,6 +3,7 @@ package dev.overgrown.apoli.item;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.data.EquipmentSlot;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
@@ -15,7 +16,7 @@ import java.util.List;
 public class RemovePowerFunction extends LootItemConditionalFunction {
     public static final MapCodec<RemovePowerFunction> CODEC = RecordCodecBuilder.mapCodec(
         instance -> commonFields(instance).and(instance.group(
-            ResourceLocation.CODEC.fieldOf("power").forGetter(f -> f.power),
+            IdCodecs.ID.fieldOf("power").forGetter(f -> f.power),
             EquipmentSlot.CODEC.listOf().optionalFieldOf("slot", List.of()).forGetter(f -> f.slots)
         )).apply(instance, RemovePowerFunction::new));
 

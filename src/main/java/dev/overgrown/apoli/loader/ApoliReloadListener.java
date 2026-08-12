@@ -5,7 +5,6 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.JsonOps;
 import dev.overgrown.apoli.Apoli;
@@ -33,7 +32,6 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
     private static final Gson GSON = new GsonBuilder().setLenient().create();
     private static final String DIR = "powers";
     private static final ResourceLocation MULTIPLE = Apoli.id("multiple");
-    private static final String STAR = "*:*";
 
     private MinecraftServer server;
 
@@ -60,7 +58,8 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
         Map<ResourceLocation, Power> loaded = new HashMap<>(expanded.size());
         for (Map.Entry<ResourceLocation, JsonElement> e : expanded.entrySet()) {
             ResourceLocation id = e.getKey();
-            JsonElement json = applyAliasFieldRenames(e.getValue());
+            JsonElement json = IdWildcards.apply(e.getValue(), id);
+            json = applyAliasFieldRenames(json);
             json = applyAliasDefaults(json);
             dev.overgrown.apoli.codec.LoggedOptionalField.setContext(id);
             try {
@@ -107,7 +106,7 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
                 LOG.error("[Apoli] Sub-power key '{}' on {} would produce an invalid identifier — skipping.", key, id);
                 continue;
             }
-            JsonObject substituted = (JsonObject) substituteWildcards(subObj.deepCopy(), id);
+            JsonObject substituted = (JsonObject) IdWildcards.apply(subObj.deepCopy(), id);
             if (!substituted.has("type")) {
                 LOG.error("[Apoli] Sub-power '{}' of {} has no 'type' field — skipping. (If this was meant to be power data rather than a sub-power, it is not a recognized field of apoli:multiple.)", key, id);
                 continue;
@@ -178,24 +177,5 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
 
     private static ResourceLocation subPowerId(ResourceLocation superId, String key) {
         return ResourceLocation.tryParse(superId.getNamespace() + ":" + superId.getPath() + "_" + key);
-    }
-
-    private static JsonElement substituteWildcards(JsonElement json, ResourceLocation superId) {
-        String replacement = superId.getNamespace() + ":" + superId.getPath();
-        if (json instanceof JsonObject obj) {
-            for (Map.Entry<String, JsonElement> e : new ArrayList<>(obj.entrySet())) {
-                obj.add(e.getKey(), substituteWildcards(e.getValue(), superId));
-            }
-            return obj;
-        }
-        if (json instanceof JsonArray arr) {
-            for (int i = 0; i < arr.size(); i++) arr.set(i, substituteWildcards(arr.get(i), superId));
-            return arr;
-        }
-        if (json instanceof JsonPrimitive p && p.isString()) {
-            String s = p.getAsString();
-            if (s.contains(STAR)) return new JsonPrimitive(s.replace(STAR, replacement));
-        }
-        return json;
     }
 }

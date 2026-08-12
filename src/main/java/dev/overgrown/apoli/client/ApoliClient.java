@@ -79,8 +79,10 @@ public final class ApoliClient {
 
     @SubscribeEvent
     public static void onRegisterClientReloadListeners(net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent event) {
-        event.registerReloadListener((net.minecraft.server.packs.resources.ResourceManagerReloadListener) manager ->
-            dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.onResourcesReloaded());
+        event.registerReloadListener((net.minecraft.server.packs.resources.ResourceManagerReloadListener) manager -> {
+            dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.onResourcesReloaded();
+            ShaderPowerState.invalidate();
+        });
         event.registerReloadListener(dev.overgrown.apoli.client.render.CustomModelManager.INSTANCE);
     }
 
@@ -89,6 +91,8 @@ public final class ApoliClient {
         event.enqueueWork(() -> {
             PowerContainerAttachment.setClientLookup(entity ->
                 ClientPowerState.powersFor(entity.getId()).isEmpty() ? null : new ClientPowerContainer(entity));
+            dev.overgrown.apoli.power.PowerResources.setClientCooldownLookup((owner, powerId) ->
+                owner == Minecraft.getInstance().player ? ClientPowerState.getCooldown(powerId) : 0);
             HeldKeys.setClientLookup((entity, key) ->
                 entity == Minecraft.getInstance().player && KeyPressWatcher.isLocalHeld(key));
             KeyPressWatcher.setSender(keys -> PacketDistributor.sendToServer(new KeyHeldC2S(keys)));
@@ -109,6 +113,7 @@ public final class ApoliClient {
         public static void onClientTick(ClientTickEvent.Post event) {
             Minecraft mc = Minecraft.getInstance();
             CursorSpeedState.tick(mc);
+            ShaderPowerState.clientTick(mc);
             PhasingRenderState.clientTick(mc);
             RopeClientManager.tick();
             TextOverlayRenderer.tick();
@@ -138,6 +143,7 @@ public final class ApoliClient {
         public static void onDisconnect(ClientPlayerNetworkEvent.LoggingOut event) {
             DynamicKeyMappingManager.unregisterAll();
             ClientPowerState.clear();
+            ShaderPowerState.clear();
             TextOverlayRenderer.clear();
             ClientLabelState.clear();
             RopeClientManager.clear();

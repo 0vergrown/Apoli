@@ -7,6 +7,7 @@ import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.AttributeModifier;
 import dev.overgrown.apoli.data.AttributeModifierHelper;
 import dev.overgrown.apoli.data.Expression;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -29,12 +30,14 @@ public final class DamageAction implements ActionType<EntityCtx, DamageAction.Cf
 
     @Override
     public MapCodec<Cfg> codec() {
-        return RecordCodecBuilder.mapCodec(i -> i.group(
-            Expression.FLOAT_OR_EXPR.optionalFieldOf("amount").forGetter(Cfg::amount),
-            ResourceLocation.CODEC.fieldOf("damage_type").forGetter(Cfg::damageType),
-            AttributeModifier.CODEC.optionalFieldOf("modifier").forGetter(Cfg::modifier),
-            AttributeModifier.LIST_OR_SINGLE.optionalFieldOf("modifiers").forGetter(Cfg::modifiers)
-        ).apply(i, Cfg::new));
+        return dev.overgrown.apoli.alias.AliasingMapCodec.<Cfg>wrap(
+            RecordCodecBuilder.mapCodec(i -> i.group(
+                dev.overgrown.apoli.codec.LoggedOptionalField.strict("amount", Expression.FLOAT_OR_EXPR).forGetter(Cfg::amount),
+                IdCodecs.ID.fieldOf("damage_type").forGetter(Cfg::damageType),
+                AttributeModifier.CODEC.optionalFieldOf("modifier").forGetter(Cfg::modifier),
+                AttributeModifier.LIST_OR_SINGLE.optionalFieldOf("modifiers").forGetter(Cfg::modifiers)
+            ).apply(i, Cfg::new)),
+            java.util.Map.of("damage", "amount"));
     }
 
     @Override

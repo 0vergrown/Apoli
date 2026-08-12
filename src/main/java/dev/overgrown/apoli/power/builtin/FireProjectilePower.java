@@ -16,7 +16,9 @@ import dev.overgrown.apoli.data.HudRender;
 import dev.overgrown.apoli.data.Key;
 import dev.overgrown.apoli.data.Nbt;
 import dev.overgrown.apoli.power.PowerContainer;
+import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -32,6 +34,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.UUID;
 
 public final class FireProjectilePower extends PowerType<FireProjectilePower.Config> {
@@ -70,8 +73,8 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
     ) {}
 
     private static final MapCodec<Params> PARAMS = RecordCodecBuilder.mapCodec(i -> i.group(
-        ResourceLocation.CODEC.optionalFieldOf("entity_type").forGetter(Params::entityType),
-        ResourceLocation.CODEC.optionalFieldOf("texture_location").forGetter(Params::textureLocation),
+        IdCodecs.ID.optionalFieldOf("entity_type").forGetter(Params::entityType),
+        IdCodecs.ID.optionalFieldOf("texture_location").forGetter(Params::textureLocation),
         Codec.INT.optionalFieldOf("cooldown", 1).forGetter(Params::cooldown),
         HudRender.CODEC.optionalFieldOf("hud_render").forGetter(Params::hudRender),
         Codec.INT.optionalFieldOf("count", 1).forGetter(Params::count),
@@ -79,7 +82,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         Codec.INT.optionalFieldOf("start_delay", 0).forGetter(Params::startDelay),
         Codec.FLOAT.optionalFieldOf("speed", 1.5f).forGetter(Params::speed),
         Codec.FLOAT.optionalFieldOf("divergence", 1.0f).forGetter(Params::divergence),
-        ResourceLocation.CODEC.optionalFieldOf("sound").forGetter(Params::sound),
+        IdCodecs.ID.optionalFieldOf("sound").forGetter(Params::sound),
         Nbt.CODEC.optionalFieldOf("tag").forGetter(Params::tag),
         Codec.BOOL.optionalFieldOf("allow_conditional_cancelling", false).forGetter(Params::allowConditionalCancelling),
         Codec.BOOL.optionalFieldOf("block_action_cancels_miss_action", false).forGetter(Params::blockActionCancelsMissAction),
@@ -148,6 +151,34 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
             st.finishedStartDelay = p.startDelay() <= 0;
         }
         return true;
+    }
+
+    @Override
+    public OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+        Entity owner = holder.rawOwner();
+        if (owner.level().isClientSide()) {
+            return OptionalInt.of(PowerResources.clientCooldown(holder, powerId));
+        }
+        FireState st = states.get(new StateKey(owner.getUUID(), powerId));
+        return OptionalInt.of(st == null ? 0 : Math.max(0, st.cooldown));
+    }
+
+    @Override
+    public OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
+        Entity owner = holder.rawOwner();
+        if (owner.level().isClientSide()) return OptionalInt.empty();
+        int clamped = Math.max(0, Math.min(value, Math.max(cfg.params().cooldown(), 0)));
+        states.computeIfAbsent(new StateKey(owner.getUUID(), powerId), x -> new FireState()).cooldown = clamped;
+        if (owner instanceof net.minecraft.server.level.ServerPlayer player) {
+            dev.overgrown.apoli.ApoliNetwork.sendActivated(player,
+                new dev.overgrown.apoli.network.payload.PowerActivatedS2C(powerId, clamped));
+        }
+        return OptionalInt.of(clamped);
+    }
+
+    @Override
+    public OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
+        return OptionalInt.of(max ? Math.max(cfg.params().cooldown(), 0) : 0);
     }
 
     @Override

@@ -12,7 +12,8 @@ import dev.overgrown.apoli.data.AttributeModifier;
 import dev.overgrown.apoli.data.AttributeModifierOperation;
 import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.power.PowerContainer;
-import dev.overgrown.apoli.power.builtin.ResourcePower;
+import dev.overgrown.apoli.power.PowerResources;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 
@@ -26,7 +27,7 @@ public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyR
 
     private static final MapCodec<Cfg> CANONICAL = RecordCodecBuilder.mapCodec(i -> i.group(
         AttributeModifier.CODEC.fieldOf("modifier").forGetter(Cfg::modifier),
-        ResourceLocation.CODEC.fieldOf("resource").forGetter(Cfg::resource)
+        IdCodecs.ID.fieldOf("resource").forGetter(Cfg::resource)
     ).apply(i, Cfg::new));
 
     private static final MapCodec<Cfg> WITH_LEGACY = new MapCodec<>() {
@@ -54,7 +55,7 @@ public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyR
             if (resourceRaw == null) {
                 return DataResult.error(() -> "Legacy change_resource requires a 'resource' field");
             }
-            DataResult<ResourceLocation> resourceR = ResourceLocation.CODEC.parse(ops, resourceRaw);
+            DataResult<ResourceLocation> resourceR = IdCodecs.ID.parse(ops, resourceRaw);
             if (resourceR.error().isPresent()) {
                 return DataResult.error(() -> "Invalid 'resource': " + resourceR.error().get().message());
             }
@@ -110,9 +111,9 @@ public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyR
         Entity entity = ctx.entity();
         PowerContainer container = PowerContainer.of(entity);
         if (container == null) return;
-        OptionalInt cur = ResourcePower.readValue(container, cfg.resource);
+        OptionalInt cur = PowerResources.read(container, cfg.resource);
         if (cur.isEmpty()) return;
         double next = cfg.modifier.applyToValue(cur.getAsInt(), entity, container);
-        ResourcePower.writeValue(container, cfg.resource, (int) Math.round(next));
+        PowerResources.write(container, cfg.resource, (int) Math.round(next));
     }
 }

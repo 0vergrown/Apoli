@@ -6,6 +6,7 @@ import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.builtin.EntitySetPower;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 
 public final class InEntitySetCondition implements ConditionType<BiEntityCtx, InEntitySetCondition.Cfg> {
@@ -14,7 +15,7 @@ public final class InEntitySetCondition implements ConditionType<BiEntityCtx, In
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("set").forGetter(Cfg::set)
+            IdCodecs.ID.fieldOf("set").forGetter(Cfg::set)
         ).apply(i, Cfg::new));
     }
 

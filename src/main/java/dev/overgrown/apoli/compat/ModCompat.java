@@ -30,4 +30,8 @@ public final class ModCompat {
     }
 
     public static final boolean HARDCORE_REVIVAL = ModList.get().isLoaded("hardcorerevival");
+
+    public static final boolean BETTER_COMBAT = ModList.get().isLoaded("bettercombat");
+
+    public static final boolean PUFFISH_SKILLS = ModList.get().isLoaded("puffish_skills");
 }

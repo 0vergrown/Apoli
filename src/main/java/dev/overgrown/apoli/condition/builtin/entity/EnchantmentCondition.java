@@ -6,6 +6,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Comparison;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -31,7 +32,7 @@ public final class EnchantmentCondition implements ConditionType<EntityCtx, Ench
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("enchantment").forGetter(Cfg::enchantment),
+            IdCodecs.ID.fieldOf("enchantment").forGetter(Cfg::enchantment),
             Calculation.CODEC.optionalFieldOf("calculation", Calculation.SUM).forGetter(Cfg::calculation),
             Comparison.CODEC.fieldOf("comparison").forGetter(Cfg::comparison),
             Codec.INT.fieldOf("compare_to").forGetter(Cfg::compareTo)

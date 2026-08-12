@@ -11,6 +11,7 @@ import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerSources;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.List;
@@ -26,10 +27,10 @@ public final class GrantAllPowersAction implements ActionType<EntityCtx, GrantAl
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.optionalFieldOf("source").forGetter(Cfg::source),
+            IdCodecs.ID.optionalFieldOf("source").forGetter(Cfg::source),
             Codec.STRING.optionalFieldOf("namespace").forGetter(Cfg::namespace),
             Codec.BOOL.optionalFieldOf("include_hidden", true).forGetter(Cfg::includeHidden),
-            SingleOrList.of(ResourceLocation.CODEC).optionalFieldOf("from", List.of()).forGetter(Cfg::from)
+            SingleOrList.of(IdCodecs.ID).optionalFieldOf("from", List.of()).forGetter(Cfg::from)
         ).apply(i, Cfg::new));
     }
 

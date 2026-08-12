@@ -5,17 +5,22 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.EntityAction;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.ApoliNetwork;
 import dev.overgrown.apoli.data.HudRender;
 import dev.overgrown.apoli.data.Key;
+import dev.overgrown.apoli.network.payload.PowerActivatedS2C;
 import dev.overgrown.apoli.power.PowerContainer;
+import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.UUID;
 
 public final class ActionOnKeyPressPower extends PowerType<ActionOnKeyPressPower.Config> {
@@ -61,6 +66,34 @@ public final class ActionOnKeyPressPower extends PowerType<ActionOnKeyPressPower
 
     public int getCooldown(LivingEntity owner, ResourceLocation powerId) {
         return cooldowns.getOrDefault(new CooldownKey(owner.getUUID(), powerId), 0);
+    }
+
+    @Override
+    public OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+        Entity owner = holder.rawOwner();
+        if (owner.level().isClientSide()) {
+            return OptionalInt.of(PowerResources.clientCooldown(holder, powerId));
+        }
+        return OptionalInt.of(cooldowns.getOrDefault(new CooldownKey(owner.getUUID(), powerId), 0));
+    }
+
+    @Override
+    public OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
+        Entity owner = holder.rawOwner();
+        if (owner.level().isClientSide()) return OptionalInt.empty();
+        int clamped = Math.max(0, Math.min(value, Math.max(cfg.cooldown, 0)));
+        CooldownKey key = new CooldownKey(owner.getUUID(), powerId);
+        if (clamped <= 0) cooldowns.remove(key);
+        else cooldowns.put(key, clamped);
+        if (owner instanceof ServerPlayer player) {
+            ApoliNetwork.sendActivated(player, new PowerActivatedS2C(powerId, clamped));
+        }
+        return OptionalInt.of(clamped);
+    }
+
+    @Override
+    public OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
+        return OptionalInt.of(max ? Math.max(cfg.cooldown, 0) : 0);
     }
 
     private record CooldownKey(UUID entity, ResourceLocation powerId) {}

@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.StringRepresentable;
 
@@ -43,7 +44,7 @@ public final class OverlayPower extends PowerType<OverlayPower.Config> {
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("texture").forGetter(Config::texture),
+            IdCodecs.ID.fieldOf("texture").forGetter(Config::texture),
             Codec.FLOAT.optionalFieldOf("strength", 1f).forGetter(Config::strength),
             Codec.FLOAT.optionalFieldOf("red", 1f).forGetter(Config::red),
             Codec.FLOAT.optionalFieldOf("green", 1f).forGetter(Config::green),

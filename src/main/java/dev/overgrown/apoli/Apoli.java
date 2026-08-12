@@ -104,6 +104,10 @@ public final class Apoli {
         dev.overgrown.apoli.entity.LabelManager.setBroadcaster((entity, texts) ->
             ApoliNetwork.broadcastLabel(entity, new dev.overgrown.apoli.network.payload.LabelUpdateS2C(entity.getId(), texts)));
 
+        if (dev.overgrown.apoli.compat.ModCompat.PUFFISH_SKILLS) {
+            dev.overgrown.apoli.compat.skills.SkillsCompat.init();
+        }
+
         LOGGER.info("[Apoli] Ready. {} power type(s).", PowerTypeRegistry.view().size());
     }
 
@@ -205,6 +209,9 @@ public final class Apoli {
             ApoliNetwork.sendKeybinds(sp, SyncKeybindsS2C.fromCurrent());
             ApoliNetwork.sendPowers(sp);
             sendEntitySync(sp);
+            if (dev.overgrown.apoli.compat.ModCompat.PUFFISH_SKILLS) {
+                dev.overgrown.apoli.compat.skills.SkillsCompat.onJoin(sp);
+            }
             dev.overgrown.apoli.skill.SkillTrees.grantOnJoin(sp);
             ApoliNetwork.sendSkillDefs(sp);
             ApoliNetwork.sendSkillState(sp);
@@ -323,17 +330,26 @@ public final class Apoli {
         dev.overgrown.apoli.entity.LabelManager.onEntityGone(event.getEntity().getUUID());
         dev.overgrown.apoli.action.builtin.entity.TextAction.onPlayerLeave(event.getEntity().getUUID());
         dev.overgrown.apoli.entity.PlayerModelTypes.remove(event.getEntity().getUUID());
+        dev.overgrown.apoli.power.builtin.InventoryPower.onPlayerLeave(event.getEntity().getUUID());
     }
 
     @SubscribeEvent
     public void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (event.getEntity() instanceof ServerPlayer sp) {
-            ActionOnCallbackPower.fireLifecycle(sp, ActionOnCallbackPower.Config::entityActionRespawned);
+            dev.overgrown.apoli.power.builtin.ActionOverTimePower.resetEdges(sp);
+            resumePowers(sp);
+            ActionOnCallbackPower.fireRespawn(sp);
         }
     }
 
     @SubscribeEvent
+    public void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+        if (event.getEntity() instanceof ServerPlayer sp) resumePowers(sp);
+    }
+
+    @SubscribeEvent
     public void onPlayerClone(PlayerEvent.Clone event) {
+        PoweredEntities.unregister(event.getOriginal());
     }
 
     @SubscribeEvent
@@ -403,6 +419,21 @@ public final class Apoli {
         });
         dev.overgrown.apoli.block.GhostBlocks.tick(event.getServer());
         EntitySetPower.flushPendingRemovals();
+    }
+
+    public static void resumePowers(net.minecraft.world.entity.Entity entity) {
+        PowerContainer container = PowerContainer.of(entity);
+        if (!(container instanceof PowerContainerImpl impl) || impl.isEmpty()) return;
+        PoweredEntities.register(entity);
+        if (entity instanceof ServerPlayer player) {
+            player.server.execute(() -> {
+                ApoliNetwork.sendPowers(player);
+                sendEntitySync(player);
+            });
+            return;
+        }
+        ApoliNetwork.sendEntityPowersToTrackers(entity, new SyncEntityPowersS2C(
+            entity.getId(), impl.snapshot(), impl.auxIntSnapshot(), impl.suppressedPowers()));
     }
 
     public static void sendEntitySync(ServerPlayer player) {

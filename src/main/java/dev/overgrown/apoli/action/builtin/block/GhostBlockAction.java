@@ -9,6 +9,7 @@ import dev.overgrown.apoli.alias.AliasingMapCodec;
 import dev.overgrown.apoli.block.GhostBlocks;
 import dev.overgrown.apoli.condition.context.BlockCtx;
 import dev.overgrown.apoli.data.Nbt;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -28,7 +29,7 @@ public final class GhostBlockAction implements ActionType<BlockCtx, GhostBlockAc
     ) {}
 
     private static final MapCodec<Cfg> INNER = RecordCodecBuilder.mapCodec(i -> i.group(
-        ResourceLocation.CODEC.fieldOf("block").forGetter(Cfg::block),
+        IdCodecs.ID.fieldOf("block").forGetter(Cfg::block),
         Nbt.CODEC.optionalFieldOf("nbt").forGetter(Cfg::nbt),
         Codec.INT.optionalFieldOf("duration", 20).forGetter(Cfg::duration),
         BlockAction.CODEC.optionalFieldOf("block_action").forGetter(Cfg::blockAction),

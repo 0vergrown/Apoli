@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.List;
@@ -19,7 +20,7 @@ public final class MultiplePower extends PowerType<MultiplePower.Cfg> {
     @Override
     public MapCodec<Cfg> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.listOf().optionalFieldOf("sub_powers", List.of()).forGetter(Cfg::subPowerIds)
+            IdCodecs.ID.listOf().optionalFieldOf("sub_powers", List.of()).forGetter(Cfg::subPowerIds)
         ).apply(i, Cfg::new));
     }
 

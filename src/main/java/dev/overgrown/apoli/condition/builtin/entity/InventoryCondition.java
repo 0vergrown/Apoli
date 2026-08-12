@@ -12,6 +12,7 @@ import dev.overgrown.apoli.data.InventoryType;
 import dev.overgrown.apoli.data.ItemSlot;
 import dev.overgrown.apoli.data.ProcessMode;
 import dev.overgrown.apoli.power.builtin.InventoryPower;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.LivingEntity;
@@ -40,7 +41,7 @@ public final class InventoryCondition implements ConditionType<EntityCtx, Invent
             ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Cfg::itemCondition),
             Codec.list(ItemSlot.CODEC).optionalFieldOf("slots").forGetter(Cfg::slots),
             ItemSlot.CODEC.optionalFieldOf("slot").forGetter(Cfg::slot),
-            ResourceLocation.CODEC.optionalFieldOf("power").forGetter(Cfg::power),
+            IdCodecs.ID.optionalFieldOf("power").forGetter(Cfg::power),
             Comparison.CODEC.optionalFieldOf("comparison", Comparison.GREATER).forGetter(Cfg::comparison),
             Codec.INT.optionalFieldOf("compare_to", 0).forGetter(Cfg::compareTo)
         ).apply(i, Cfg::new));

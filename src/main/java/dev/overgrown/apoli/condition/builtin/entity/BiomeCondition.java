@@ -6,6 +6,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.BiomeCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
@@ -24,8 +25,8 @@ public final class BiomeCondition implements ConditionType<EntityCtx, BiomeCondi
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.optionalFieldOf("biome").forGetter(Cfg::biome),
-            Codec.list(ResourceLocation.CODEC).optionalFieldOf("biomes").forGetter(Cfg::biomes),
+            IdCodecs.ID.optionalFieldOf("biome").forGetter(Cfg::biome),
+            Codec.list(IdCodecs.ID).optionalFieldOf("biomes").forGetter(Cfg::biomes),
             dev.overgrown.apoli.condition.BiomeCondition.CODEC.optionalFieldOf("condition").forGetter(Cfg::condition)
         ).apply(i, Cfg::new));
     }

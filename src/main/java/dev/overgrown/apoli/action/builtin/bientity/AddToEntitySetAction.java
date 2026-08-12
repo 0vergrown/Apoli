@@ -7,6 +7,7 @@ import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.builtin.EntitySetPower;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Optional;
@@ -18,7 +19,7 @@ public final class AddToEntitySetAction implements ActionType<BiEntityCtx, AddTo
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("set").forGetter(Cfg::set),
+            IdCodecs.ID.fieldOf("set").forGetter(Cfg::set),
             Codec.INT.optionalFieldOf("time_limit").forGetter(Cfg::timeLimit)
         ).apply(i, Cfg::new));
     }

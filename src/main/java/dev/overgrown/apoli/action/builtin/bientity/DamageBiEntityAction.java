@@ -7,6 +7,7 @@ import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.data.AttributeModifier;
 import dev.overgrown.apoli.data.AttributeModifierHelper;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -20,7 +21,7 @@ import java.util.Optional;
 
 public final class DamageBiEntityAction implements ActionType<BiEntityCtx, DamageBiEntityAction.Cfg> {
     public record Cfg(
-        Optional<Float> amount,
+        Optional<dev.overgrown.apoli.data.Expression> amount,
         ResourceLocation damageType,
         Optional<AttributeModifier> modifier,
         Optional<List<AttributeModifier>> modifiers
@@ -32,12 +33,15 @@ public final class DamageBiEntityAction implements ActionType<BiEntityCtx, Damag
 
     @Override
     public MapCodec<Cfg> codec() {
-        return RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.FLOAT.optionalFieldOf("amount").forGetter(Cfg::amount),
-            ResourceLocation.CODEC.fieldOf("damage_type").forGetter(Cfg::damageType),
-            AttributeModifier.CODEC.optionalFieldOf("modifier").forGetter(Cfg::modifier),
-            AttributeModifier.LIST_OR_SINGLE.optionalFieldOf("modifiers").forGetter(Cfg::modifiers)
-        ).apply(i, Cfg::new));
+        return dev.overgrown.apoli.alias.AliasingMapCodec.<Cfg>wrap(
+            RecordCodecBuilder.mapCodec(i -> i.group(
+                dev.overgrown.apoli.codec.LoggedOptionalField.strict("amount",
+                    dev.overgrown.apoli.data.Expression.FLOAT_OR_EXPR).forGetter(Cfg::amount),
+                IdCodecs.ID.fieldOf("damage_type").forGetter(Cfg::damageType),
+                AttributeModifier.CODEC.optionalFieldOf("modifier").forGetter(Cfg::modifier),
+                AttributeModifier.LIST_OR_SINGLE.optionalFieldOf("modifiers").forGetter(Cfg::modifiers)
+            ).apply(i, Cfg::new)),
+            java.util.Map.of("damage", "amount"));
     }
 
     @Override
@@ -52,7 +56,7 @@ public final class DamageBiEntityAction implements ActionType<BiEntityCtx, Damag
         if (holder.isEmpty()) return;
         DamageSource source = new DamageSource(holder.get(), ctx.actor());
 
-        float base = cfg.amount.isPresent() ? cfg.amount.get() : livingTarget.getMaxHealth();
+        float base = cfg.amount.isPresent() ? (float) cfg.amount.get().eval(target) : livingTarget.getMaxHealth();
         List<AttributeModifier> mods = cfg.allModifiers();
         float finalAmount = mods.isEmpty() ? base : Math.max(0f, AttributeModifierHelper.apply(base, mods, livingTarget));
         if (finalAmount > 0f) target.hurt(source, finalAmount);

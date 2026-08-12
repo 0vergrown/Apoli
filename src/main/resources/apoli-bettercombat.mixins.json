@@ -1,0 +1,12 @@
+{
+  "required": false,
+  "package": "dev.overgrown.apoli.compat.bettercombat.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "dev.overgrown.apoli.compat.bettercombat.mixin.BetterCombatCompatMixinPlugin",
+  "client": [
+    "MinecraftHitResultGuardMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
