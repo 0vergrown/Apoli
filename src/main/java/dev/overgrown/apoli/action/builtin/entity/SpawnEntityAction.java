@@ -8,6 +8,7 @@ import dev.overgrown.apoli.action.EntityAction;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Nbt;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -30,7 +31,7 @@ public final class SpawnEntityAction implements ActionType<EntityCtx, SpawnEntit
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("entity_type").forGetter(Cfg::entityType),
+            IdCodecs.ID.fieldOf("entity_type").forGetter(Cfg::entityType),
             Nbt.CODEC.optionalFieldOf("tag").forGetter(Cfg::tag),
             EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Cfg::entityAction),
             BiEntityAction.CODEC.optionalFieldOf("bientity_action").forGetter(Cfg::bientityAction)

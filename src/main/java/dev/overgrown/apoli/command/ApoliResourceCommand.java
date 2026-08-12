@@ -10,7 +10,7 @@ import com.mojang.brigadier.tree.LiteralCommandNode;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
-import dev.overgrown.apoli.power.builtin.ResourcePower;
+import dev.overgrown.apoli.power.PowerResources;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -78,7 +78,7 @@ public final class ApoliResourceCommand {
         for (Entity e : EntityArgument.getEntities(ctx, "targets")) {
             PowerContainer c = PowerContainer.of(e);
             if (c == null) continue;
-            OptionalInt val = ResourcePower.readValue(c, power);
+            OptionalInt val = PowerResources.read(c, power);
             if (val.isEmpty()) continue;
             int v = val.getAsInt();
             ctx.getSource().sendSuccess(() -> Component.literal(
@@ -100,7 +100,7 @@ public final class ApoliResourceCommand {
         for (Entity e : EntityArgument.getEntities(ctx, "targets")) {
             PowerContainer c = PowerContainer.of(e);
             if (c == null) continue;
-            OptionalInt written = ResourcePower.writeValue(c, power, value);
+            OptionalInt written = PowerResources.write(c, power, value);
             if (written.isEmpty()) continue;
             int w = written.getAsInt();
             ctx.getSource().sendSuccess(() -> Component.literal(
@@ -120,9 +120,9 @@ public final class ApoliResourceCommand {
         for (Entity e : EntityArgument.getEntities(ctx, "targets")) {
             PowerContainer c = PowerContainer.of(e);
             if (c == null) continue;
-            OptionalInt cur = ResourcePower.readValue(c, power);
+            OptionalInt cur = PowerResources.read(c, power);
             if (cur.isEmpty()) continue;
-            OptionalInt written = ResourcePower.writeValue(c, power, cur.getAsInt() + delta);
+            OptionalInt written = PowerResources.write(c, power, cur.getAsInt() + delta);
             if (written.isEmpty()) continue;
             int w = written.getAsInt();
             ctx.getSource().sendSuccess(() -> Component.literal(
@@ -141,7 +141,7 @@ public final class ApoliResourceCommand {
         for (Entity e : EntityArgument.getEntities(ctx, "targets")) {
             PowerContainer c = PowerContainer.of(e);
             if (c == null) continue;
-            if (ResourcePower.readValue(c, power).isPresent()) {
+            if (PowerResources.read(c, power).isPresent()) {
                 ctx.getSource().sendSuccess(() -> Component.literal(
                     e.getName().getString() + " has resource " + power), false);
                 count++;
@@ -161,7 +161,7 @@ public final class ApoliResourceCommand {
                 if (c == null) continue;
                 for (ResourceLocation id : c.allPowers()) {
                     Power power = ApoliPowers.get(id);
-                    if (power != null && power.type() instanceof ResourcePower && !out.contains(id)) out.add(id);
+                    if (power != null && PowerResources.isResource(id) && !out.contains(id)) out.add(id);
                 }
             }
         } catch (Exception ignored) {
@@ -172,7 +172,7 @@ public final class ApoliResourceCommand {
     private static List<ResourceLocation> loadedResourcePowers() {
         List<ResourceLocation> out = new ArrayList<>();
         for (Map.Entry<ResourceLocation, Power> e : ApoliPowers.view().entrySet()) {
-            if (e.getValue().type() instanceof ResourcePower) out.add(e.getKey());
+            if (PowerResources.isResource(e.getKey())) out.add(e.getKey());
         }
         return out;
     }

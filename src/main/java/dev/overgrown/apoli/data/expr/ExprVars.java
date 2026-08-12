@@ -1,7 +1,7 @@
 package dev.overgrown.apoli.data.expr;
 
 import dev.overgrown.apoli.power.PowerContainer;
-import dev.overgrown.apoli.power.builtin.ResourcePower;
+import dev.overgrown.apoli.power.PowerResources;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -52,7 +52,7 @@ public final class ExprVars {
         if (depth[0] >= 8) return 0;
         depth[0]++;
         try {
-            java.util.OptionalInt bound = ResourcePower.boundOf(container, base, max);
+            java.util.OptionalInt bound = PowerResources.bound(container, base, max);
             if (bound.isPresent()) return bound.getAsInt();
         } finally {
             depth[0]--;
@@ -61,7 +61,9 @@ public final class ExprVars {
     }
 
     public static double readResource(@Nullable PowerContainer container, ResourceLocation id) {
-        return container != null ? container.getAuxIntOr(id, 0) : 0;
+        if (container == null) return 0;
+        java.util.OptionalInt value = PowerResources.read(container, id);
+        return value.isPresent() ? value.getAsInt() : container.getAuxIntOr(id, 0);
     }
 
     private static Level levelOf(@Nullable Entity entity, @Nullable Level level) {

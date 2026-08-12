@@ -9,6 +9,7 @@ import dev.overgrown.apoli.condition.BlockCondition;
 import dev.overgrown.apoli.condition.ItemCondition;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
@@ -50,7 +51,7 @@ public final class ReplaceLootTablePower extends PowerType<ReplaceLootTablePower
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.unboundedMap(Codec.STRING, ResourceLocation.CODEC).fieldOf("replace").forGetter(Config::replace),
+            Codec.unboundedMap(Codec.STRING, IdCodecs.ID).fieldOf("replace").forGetter(Config::replace),
             BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Config::bientityCondition),
             BlockCondition.CODEC.optionalFieldOf("block_condition").forGetter(Config::blockCondition),
             ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Config::itemCondition),

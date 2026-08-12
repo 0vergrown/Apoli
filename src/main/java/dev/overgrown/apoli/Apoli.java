@@ -198,6 +198,10 @@ public final class Apoli implements ModInitializer {
                     })));
         });
 
+        if (dev.overgrown.apoli.compat.ModCompat.PUFFISH_SKILLS) {
+            dev.overgrown.apoli.compat.skills.SkillsCompat.init();
+        }
+
         ServerTickEvents.END_SERVER_TICK.register(Apoli::onServerTick);
 
         EntityElytraEvents.CUSTOM.register((entity, tickElytra) ->
@@ -304,6 +308,9 @@ public final class Apoli implements ModInitializer {
                     ApoliNetwork.sendKeybinds(sp, SyncKeybindsS2C.fromCurrent());
                     ApoliNetwork.sendPowers(sp);
                     sendEntitySync(sp);
+                    if (dev.overgrown.apoli.compat.ModCompat.PUFFISH_SKILLS) {
+                        dev.overgrown.apoli.compat.skills.SkillsCompat.onJoin(sp);
+                    }
                     dev.overgrown.apoli.skill.SkillTrees.grantOnJoin(sp);
                     ApoliNetwork.sendSkillDefs(sp);
                     ApoliNetwork.sendSkillState(sp);
@@ -323,8 +330,21 @@ public final class Apoli implements ModInitializer {
             }
         });
 
-        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) ->
-            ActionOnCallbackPower.fireLifecycle(newPlayer, ActionOnCallbackPower.Config::entityActionRespawned));
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
+            PoweredEntities.unregister(oldPlayer);
+            dev.overgrown.apoli.power.builtin.ActionOverTimePower.resetEdges(newPlayer);
+            resumePowers(newPlayer);
+            ActionOnCallbackPower.fireRespawn(newPlayer);
+        });
+
+        net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD
+            .register((player, origin, destination) -> resumePowers(player));
+
+        net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents.AFTER_ENTITY_CHANGE_WORLD
+            .register((originalEntity, newEntity, origin, destination) -> {
+                PoweredEntities.unregister(originalEntity);
+                resumePowers(newEntity);
+            });
 
         net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DEATH.register(
             (entity, source) -> dev.overgrown.apoli.power.builtin.DeathHandler.onDeath(entity, source));
@@ -363,6 +383,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.entity.LabelManager.onEntityGone(handler.player.getUUID());
             dev.overgrown.apoli.action.builtin.entity.TextAction.onPlayerLeave(handler.player.getUUID());
             dev.overgrown.apoli.entity.PlayerModelTypes.remove(handler.player.getUUID());
+            dev.overgrown.apoli.power.builtin.InventoryPower.onPlayerLeave(handler.player.getUUID());
         });
 
         LOGGER.info("[Apoli] Ready. {} power type(s).", PowerTypeRegistry.view().size());
@@ -400,6 +421,20 @@ public final class Apoli implements ModInitializer {
         for (ServerPlayer viewer : PlayerLookup.tracking(entity)) {
             ApoliNetwork.sendEntityPowers(viewer, payload);
         }
+    }
+
+    private static void resumePowers(Entity entity) {
+        PowerContainer container = PowerContainer.of(entity);
+        if (!(container instanceof PowerContainerImpl impl) || impl.isEmpty()) return;
+        PoweredEntities.register(entity);
+        if (entity instanceof ServerPlayer player) {
+            player.server.execute(() -> {
+                ApoliNetwork.sendPowers(player);
+                sendEntitySync(player);
+            });
+            return;
+        }
+        syncEntityToTrackers(entity, impl);
     }
 
     private static void sendEntitySync(ServerPlayer player) {

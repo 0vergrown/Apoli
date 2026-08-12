@@ -8,6 +8,7 @@ import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.InventoryType;
 import dev.overgrown.apoli.data.ItemSlot;
 import dev.overgrown.apoli.power.builtin.InventoryPower;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.StringRepresentable;
@@ -53,7 +54,7 @@ public final class ChangeSlotAction implements ActionType<EntityCtx, ChangeSlotA
             ItemSlot.CODEC.fieldOf("slot_b").forGetter(Cfg::slotB),
             Operation.CODEC.optionalFieldOf("operation", Operation.SWAP).forGetter(Cfg::operation),
             InventoryType.CODEC.optionalFieldOf("inventory_type", InventoryType.INVENTORY).forGetter(Cfg::inventoryType),
-            ResourceLocation.CODEC.optionalFieldOf("power").forGetter(Cfg::power)
+            IdCodecs.ID.optionalFieldOf("power").forGetter(Cfg::power)
         ).apply(i, Cfg::new));
     }
 
@@ -70,9 +71,25 @@ public final class ChangeSlotAction implements ActionType<EntityCtx, ChangeSlotA
         runOnEntity(cfg, entity);
     }
 
+    private static SlotAccess accessFor(Entity entity, ItemSlot slot) {
+        if (entity instanceof LivingEntity living) {
+            net.minecraft.world.entity.EquipmentSlot equipment = switch (slot.index()) {
+                case ItemSlot.MAINHAND -> net.minecraft.world.entity.EquipmentSlot.MAINHAND;
+                case ItemSlot.OFFHAND -> net.minecraft.world.entity.EquipmentSlot.OFFHAND;
+                case ItemSlot.FEET -> net.minecraft.world.entity.EquipmentSlot.FEET;
+                case ItemSlot.LEGS -> net.minecraft.world.entity.EquipmentSlot.LEGS;
+                case ItemSlot.CHEST -> net.minecraft.world.entity.EquipmentSlot.CHEST;
+                case ItemSlot.HEAD -> net.minecraft.world.entity.EquipmentSlot.HEAD;
+                default -> null;
+            };
+            if (equipment != null) return SlotAccess.forEquipmentSlot(living, equipment);
+        }
+        return entity.getSlot(slot.index());
+    }
+
     private static void runOnEntity(Cfg cfg, Entity entity) {
-        SlotAccess refA = entity.getSlot(cfg.slotA().index());
-        SlotAccess refB = entity.getSlot(cfg.slotB().index());
+        SlotAccess refA = accessFor(entity, cfg.slotA());
+        SlotAccess refB = accessFor(entity, cfg.slotB());
         if (refA == SlotAccess.NULL || refB == SlotAccess.NULL) return;
 
         ItemStack stackA = refA.get().copy();

@@ -7,6 +7,7 @@ import dev.overgrown.apoli.alias.AliasingMapCodec;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.builtin.CooldownPower;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Map;
@@ -18,7 +19,7 @@ public final class TriggerCooldownAction implements ActionType<EntityCtx, Trigge
     public MapCodec<Cfg> codec() {
         return AliasingMapCodec.wrap(
             RecordCodecBuilder.<Cfg>mapCodec(i -> i.group(
-                ResourceLocation.CODEC.fieldOf("power").forGetter(Cfg::power)
+                IdCodecs.ID.fieldOf("power").forGetter(Cfg::power)
             ).apply(i, Cfg::new)),
             Map.of("resource", "power")
         );

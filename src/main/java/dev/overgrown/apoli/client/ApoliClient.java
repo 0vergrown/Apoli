@@ -59,6 +59,11 @@ public final class ApoliClient implements ClientModInitializer {
                 ? null
                 : new ClientPowerContainer(entity));
 
+        dev.overgrown.apoli.power.PowerResources.setClientCooldownLookup((owner, powerId) ->
+            owner == net.minecraft.client.Minecraft.getInstance().player
+                ? ClientPowerState.getCooldown(powerId)
+                : 0);
+
         HeldKeys.setClientLookup((entity, key) ->
             entity == net.minecraft.client.Minecraft.getInstance().player && KeyPressWatcher.isLocalHeld(key));
         KeyPressWatcher.setSender(keys -> ClientPlayNetworking.send(new KeyHeldC2S(keys)));
@@ -137,6 +142,7 @@ public final class ApoliClient implements ClientModInitializer {
             mc.execute(() -> {
                 DynamicKeyMappingManager.unregisterAll();
                 ClientPowerState.clear();
+                ShaderPowerState.clear();
                 TextOverlayRenderer.clear();
                 ClientLabelState.clear();
                 RopeClientManager.clear();
@@ -161,6 +167,7 @@ public final class ApoliClient implements ClientModInitializer {
                 public void onResourceManagerReload(net.minecraft.server.packs.resources.ResourceManager manager) {
                     dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.onResourcesReloaded();
                     IconRenderer.clearCache();
+                    ShaderPowerState.invalidate();
                 }
             });
 
@@ -180,6 +187,7 @@ public final class ApoliClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             CursorSpeedState.tick(mc);
+            ShaderPowerState.clientTick(mc);
             if (mc.player != null && !mc.isPaused()) ApoliKeyHandler.onClientTick();
             PhasingRenderState.clientTick(mc);
             RopeClientManager.tick();

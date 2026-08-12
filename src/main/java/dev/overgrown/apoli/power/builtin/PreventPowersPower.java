@@ -8,6 +8,7 @@ import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 
@@ -19,7 +20,7 @@ public final class PreventPowersPower extends PowerType<PreventPowersPower.Cfg> 
     @Override
     public MapCodec<Cfg> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.listOf().fieldOf("powers").forGetter(Cfg::powers),
+            IdCodecs.ID.listOf().fieldOf("powers").forGetter(Cfg::powers),
             Codec.INT.optionalFieldOf("update_rate", 5).forGetter(Cfg::updateRate)
         ).apply(i, Cfg::new));
     }

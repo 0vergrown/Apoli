@@ -9,6 +9,7 @@ import dev.overgrown.apoli.data.message.MessageFilter;
 import dev.overgrown.apoli.power.ApoliIds;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
@@ -41,7 +42,7 @@ public final class ActionOnSendingMessagePower extends PowerType<ActionOnSending
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.optionalFieldOf("message_type").forGetter(Config::messageType),
+            IdCodecs.ID.optionalFieldOf("message_type").forGetter(Config::messageType),
             EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction),
             MessageFilter.CODEC.optionalFieldOf("filter").forGetter(c -> Optional.<MessageFilter>empty()),
             MessageFilter.CODEC.listOf().optionalFieldOf("filters", List.of()).forGetter(Config::filters),

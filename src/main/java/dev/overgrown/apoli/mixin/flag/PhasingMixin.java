@@ -43,7 +43,7 @@ public abstract class PhasingMixin {
         }
 
         BlockState state = (BlockState) (Object) this;
-        Level level = living.level();
+        Level level = getter instanceof Level fromGetter ? fromGetter : living.level();
         boolean standingOnTop = isStandingOnTop(living, original, pos);
         boolean[] allow = new boolean[]{false};
         PowerLookup.forEach(living, ApoliIds.PHASING, PhasingPower.Config.class, cfg -> {

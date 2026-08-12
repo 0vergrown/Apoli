@@ -7,6 +7,7 @@ import dev.overgrown.apoli.alias.AliasingMapCodec;
 import dev.overgrown.apoli.codec.LazyCodec;
 import dev.overgrown.apoli.data.expr.ExprVars;
 import dev.overgrown.apoli.power.PowerContainer;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
@@ -30,9 +31,9 @@ public record AttributeModifier(
         MapCodec<AttributeModifier> rawMap = RecordCodecBuilder.mapCodec(i -> i.group(
             AttributeModifierOperation.CODEC.fieldOf("operation").forGetter(AttributeModifier::operation),
             Expression.FLOAT_OR_EXPR.optionalFieldOf("value", Expression.constant(0.0)).forGetter(AttributeModifier::value),
-            ResourceLocation.CODEC.optionalFieldOf("attribute").forGetter(AttributeModifier::attribute),
+            IdCodecs.ID.optionalFieldOf("attribute").forGetter(AttributeModifier::attribute),
             Codec.STRING.optionalFieldOf("name").forGetter(AttributeModifier::name),
-            ResourceLocation.CODEC.optionalFieldOf("resource").forGetter(AttributeModifier::resource),
+            IdCodecs.ID.optionalFieldOf("resource").forGetter(AttributeModifier::resource),
             new LazyCodec<AttributeModifier>(() -> ref[0]).optionalFieldOf("modifier").forGetter(AttributeModifier::nested)
         ).apply(i, AttributeModifier::new));
         Codec<AttributeModifier> built = AliasingMapCodec.wrap(rawMap, Map.of("amount", "value")).codec();

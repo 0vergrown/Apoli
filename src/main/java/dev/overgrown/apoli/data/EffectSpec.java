@@ -22,7 +22,7 @@ public record EffectSpec(
     boolean showParticles,
     boolean showIcon
 ) {
-    public static final Codec<EffectSpec> CODEC = AliasingMapCodec.wrap(
+    public static final com.mojang.serialization.MapCodec<EffectSpec> MAP_CODEC = AliasingMapCodec.wrap(
         RecordCodecBuilder.<EffectSpec>mapCodec(instance -> instance.group(
             BuiltInRegistries.MOB_EFFECT.holderByNameCodec().fieldOf("effect").forGetter(EffectSpec::effect),
             Expression.INT_OR_EXPR.optionalFieldOf("duration", Expression.constant(100)).forGetter(EffectSpec::duration),
@@ -32,7 +32,9 @@ public record EffectSpec(
             Codec.BOOL.optionalFieldOf("show_icon", true).forGetter(EffectSpec::showIcon)
         ).apply(instance, EffectSpec::new)),
         Map.of("id", "effect", "ambient", "is_ambient")
-    ).codec();
+    );
+
+    public static final Codec<EffectSpec> CODEC = MAP_CODEC.codec();
 
     public static final Codec<List<EffectSpec>> LIST_OR_SINGLE = Codec.either(CODEC, Codec.list(CODEC)).xmap(
         either -> either.map(List::of, list -> list),

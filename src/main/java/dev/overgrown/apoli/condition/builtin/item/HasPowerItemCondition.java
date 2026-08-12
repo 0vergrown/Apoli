@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.ItemCtx;
 import dev.overgrown.apoli.data.EquipmentSlot;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -20,7 +21,7 @@ public final class HasPowerItemCondition implements ConditionType<ItemCtx, HasPo
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("power").forGetter(Cfg::power),
+            IdCodecs.ID.fieldOf("power").forGetter(Cfg::power),
             EquipmentSlot.CODEC.optionalFieldOf("slot").forGetter(Cfg::slot)
         ).apply(i, Cfg::new));
     }

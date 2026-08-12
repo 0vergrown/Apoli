@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.power.PowerContainer;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Optional;
@@ -15,8 +16,8 @@ public final class PowerCondition implements ConditionType<EntityCtx, PowerCondi
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("power").forGetter(Cfg::power),
-            ResourceLocation.CODEC.optionalFieldOf("source").forGetter(Cfg::source)
+            IdCodecs.ID.fieldOf("power").forGetter(Cfg::power),
+            IdCodecs.ID.optionalFieldOf("source").forGetter(Cfg::source)
         ).apply(i, Cfg::new));
     }
 

@@ -9,6 +9,7 @@ import dev.overgrown.apoli.data.ModelParts;
 import dev.overgrown.apoli.data.RenderMode;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.LivingEntity;
@@ -106,10 +107,10 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(instance -> instance.group(
             Mode.CODEC.optionalFieldOf("mode", Mode.TEXTURE).forGetter(Config::mode),
-            ResourceLocation.CODEC.optionalFieldOf("wide_texture_location").forGetter(Config::wideTexture),
-            ResourceLocation.CODEC.optionalFieldOf("slim_texture_location").forGetter(Config::slimTexture),
-            ResourceLocation.CODEC.optionalFieldOf("model_location").forGetter(Config::model),
-            ResourceLocation.CODEC.optionalFieldOf("texture_location").forGetter(Config::texture),
+            IdCodecs.ID.optionalFieldOf("wide_texture_location").forGetter(Config::wideTexture),
+            IdCodecs.ID.optionalFieldOf("slim_texture_location").forGetter(Config::slimTexture),
+            IdCodecs.ID.optionalFieldOf("model_location").forGetter(Config::model),
+            IdCodecs.ID.optionalFieldOf("texture_location").forGetter(Config::texture),
             Codec.BOOL.optionalFieldOf("render_as_overlay", false).forGetter(Config::renderAsOverlay),
             Codec.BOOL.optionalFieldOf("hide_cape", false).forGetter(Config::hideCape),
             EquipmentSlot.CODEC.listOf().optionalFieldOf("hidden_slots", List.of()).forGetter(Config::hiddenSlots),

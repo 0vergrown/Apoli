@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.JsonOps;
+import dev.overgrown.apoli.loader.IdWildcards;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
@@ -30,7 +31,7 @@ public final class GlobalPowerLoader extends SimpleJsonResourceReloadListener {
         Map<ResourceLocation, GlobalPowerSet> byId = new HashMap<>(data.size());
         for (Map.Entry<ResourceLocation, JsonElement> entry : data.entrySet()) {
             ResourceLocation id = entry.getKey();
-            GlobalPowerSet.codec(id).parse(JsonOps.INSTANCE, entry.getValue())
+            GlobalPowerSet.codec(id).parse(JsonOps.INSTANCE, IdWildcards.apply(entry.getValue(), id))
                 .resultOrPartial(err -> LOG.error("[Apoli] Failed to parse global power set {}: {}", id, err))
                 .ifPresent(set -> {
                     GlobalPowerSet existing = byId.get(id);

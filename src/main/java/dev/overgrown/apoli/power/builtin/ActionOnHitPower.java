@@ -12,10 +12,12 @@ import dev.overgrown.apoli.data.HitSide;
 import dev.overgrown.apoli.data.HudRender;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerContainerImpl;
+import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Optional;
+import java.util.OptionalInt;
 
 import com.mojang.serialization.Codec;
 
@@ -69,5 +71,20 @@ public final class ActionOnHitPower extends PowerType<ActionOnHitPower.Config> {
     @Override
     public boolean isActive(ResourceLocation powerId, Config cfg, EntityCtx ctx) {
         return true;
+    }
+
+    @Override
+    public OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+        return PowerResources.readDeadline(holder, powerId);
+    }
+
+    @Override
+    public OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
+        return PowerResources.writeDeadline(holder, powerId, value, cfg.cooldown);
+    }
+
+    @Override
+    public OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
+        return OptionalInt.of(max ? Math.max(cfg.cooldown, 0) : 0);
     }
 }

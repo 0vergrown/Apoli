@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceKey;
@@ -27,7 +28,7 @@ public final class StatusEffectCondition implements ConditionType<EntityCtx, Sta
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("effect").forGetter(Cfg::effect),
+            IdCodecs.ID.fieldOf("effect").forGetter(Cfg::effect),
             Codec.INT.optionalFieldOf("min_amplifier").forGetter(Cfg::minAmplifier),
             Codec.INT.optionalFieldOf("max_amplifier").forGetter(Cfg::maxAmplifier),
             Codec.INT.optionalFieldOf("min_duration").forGetter(Cfg::minDuration),

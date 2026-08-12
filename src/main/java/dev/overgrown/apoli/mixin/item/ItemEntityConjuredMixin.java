@@ -13,7 +13,7 @@ public abstract class ItemEntityConjuredMixin {
     @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
     private void apoli$discardConjured(CallbackInfo ci) {
         ItemEntity self = (ItemEntity) (Object) this;
-        if (self.tickCount == 0 && !self.level().isClientSide() && ConjuredItems.isConjured(self.getItem())) {
+        if (!self.level().isClientSide() && ConjuredItems.isConjured(self.getItem())) {
             self.discard();
             ci.cancel();
         }

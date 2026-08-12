@@ -6,6 +6,7 @@ import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.EntityCondition;
 import dev.overgrown.apoli.condition.context.DamageCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.DamageTypeTags;
@@ -21,7 +22,7 @@ public final class ProjectileDamageCondition implements ConditionType<DamageCtx,
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.optionalFieldOf("projectile").forGetter(Cfg::projectile),
+            IdCodecs.ID.optionalFieldOf("projectile").forGetter(Cfg::projectile),
             EntityCondition.CODEC.optionalFieldOf("projectile_condition").forGetter(Cfg::projectileCondition)
         ).apply(i, Cfg::new));
     }

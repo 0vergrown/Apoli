@@ -11,6 +11,7 @@ import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.builtin.FunctionPower;
 import dev.overgrown.apoli.power.builtin.FunctionWarnings;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import org.slf4j.Logger;
 
@@ -29,7 +30,7 @@ public final class RunFunctionAction implements ActionType<EntityCtx, RunFunctio
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("function").forGetter(Cfg::function),
+            IdCodecs.ID.fieldOf("function").forGetter(Cfg::function),
             Codec.unboundedMap(Codec.STRING, Codec.PASSTHROUGH)
                 .optionalFieldOf("arguments", Map.of()).forGetter(Cfg::arguments)
         ).apply(i, Cfg::new));

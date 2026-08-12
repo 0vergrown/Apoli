@@ -30,4 +30,10 @@ public final class ModCompat {
     public static final boolean EARS = FabricLoader.getInstance().isModLoaded("ears");
 
     public static final boolean SKIN_LAYERS_3D = FabricLoader.getInstance().isModLoaded("skinlayers3d");
+
+    public static final boolean BETTER_COMBAT = FabricLoader.getInstance().isModLoaded("bettercombat");
+
+    public static final boolean PUFFISH_SKILLS = FabricLoader.getInstance().isModLoaded("puffish_skills");
+
+    public static final boolean PUFFISH_SKILLS_ORIGINS = FabricLoader.getInstance().isModLoaded("puffish_skills_origins");
 }

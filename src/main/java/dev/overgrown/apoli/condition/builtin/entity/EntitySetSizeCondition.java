@@ -8,6 +8,7 @@ import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Comparison;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.builtin.EntitySetPower;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 
 public final class EntitySetSizeCondition implements ConditionType<EntityCtx, EntitySetSizeCondition.Cfg> {
@@ -16,7 +17,7 @@ public final class EntitySetSizeCondition implements ConditionType<EntityCtx, En
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("set").forGetter(Cfg::set),
+            IdCodecs.ID.fieldOf("set").forGetter(Cfg::set),
             Comparison.CODEC.fieldOf("comparison").forGetter(Cfg::comparison),
             Codec.INT.fieldOf("compare_to").forGetter(Cfg::compareTo)
         ).apply(i, Cfg::new));

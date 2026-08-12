@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.power.PowerContainer;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 
 public final class RevokePowerAction implements ActionType<EntityCtx, RevokePowerAction.Cfg> {
@@ -13,8 +14,8 @@ public final class RevokePowerAction implements ActionType<EntityCtx, RevokePowe
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("power").forGetter(Cfg::power),
-            ResourceLocation.CODEC.fieldOf("source").forGetter(Cfg::source)
+            IdCodecs.ID.fieldOf("power").forGetter(Cfg::power),
+            IdCodecs.ID.fieldOf("source").forGetter(Cfg::source)
         ).apply(i, Cfg::new));
     }
 

@@ -15,6 +15,7 @@ import dev.overgrown.apoli.data.HitSide;
 import dev.overgrown.apoli.data.HudRender;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerContainerImpl;
+import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -22,6 +23,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Optional;
+import java.util.OptionalInt;
 
 public final class ActionOnKillPower extends PowerType<ActionOnKillPower.Config> {
     public record Config(
@@ -97,4 +99,20 @@ public final class ActionOnKillPower extends PowerType<ActionOnKillPower.Config>
         cfg.entityAction().ifPresent(a -> a.run(entityCtx));
         impl.setAuxInt(powerId, HitActionHandler.expiry(now, cfg.cooldown()));
     }
+
+    @Override
+    public OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+        return PowerResources.readDeadline(holder, powerId);
+    }
+
+    @Override
+    public OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
+        return PowerResources.writeDeadline(holder, powerId, value, cfg.cooldown());
+    }
+
+    @Override
+    public OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
+        return OptionalInt.of(max ? Math.max(cfg.cooldown(), 0) : 0);
+    }
+
 }

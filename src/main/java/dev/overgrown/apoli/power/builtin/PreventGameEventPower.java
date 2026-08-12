@@ -3,7 +3,9 @@ package dev.overgrown.apoli.power.builtin;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.EntityAction;
+import dev.overgrown.apoli.codec.IdCodecs;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.IdOrTag;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
@@ -17,8 +19,8 @@ import java.util.Optional;
 
 public final class PreventGameEventPower extends PowerType<PreventGameEventPower.Config> {
     public record Config(
-        Optional<ResourceLocation> event,
-        Optional<List<ResourceLocation>> events,
+        Optional<IdOrTag<GameEvent>> event,
+        Optional<List<IdOrTag<GameEvent>>> events,
         Optional<ResourceLocation> tag,
         Optional<EntityAction> entityAction
     ) {}
@@ -26,20 +28,19 @@ public final class PreventGameEventPower extends PowerType<PreventGameEventPower
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.optionalFieldOf("event").forGetter(Config::event),
-            ResourceLocation.CODEC.listOf().optionalFieldOf("events").forGetter(Config::events),
-            ResourceLocation.CODEC.optionalFieldOf("tag").forGetter(Config::tag),
+            IdOrTag.codec(Registries.GAME_EVENT).optionalFieldOf("event").forGetter(Config::event),
+            IdOrTag.codec(Registries.GAME_EVENT).listOf().optionalFieldOf("events").forGetter(Config::events),
+            IdCodecs.TAG.optionalFieldOf("tag").forGetter(Config::tag),
             EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction)
         ).apply(i, Config::new));
     }
 
     public static boolean matches(Config cfg, Holder<GameEvent> holder) {
-        if (cfg.event().isPresent()) {
-            if (holder.unwrapKey().map(k -> k.location().equals(cfg.event().get())).orElse(false)) return true;
-        }
+        if (cfg.event().isPresent() && cfg.event().get().matches(holder)) return true;
         if (cfg.events().isPresent()) {
-            for (ResourceLocation id : cfg.events().get()) {
-                if (holder.unwrapKey().map(k -> k.location().equals(id)).orElse(false)) return true;
+            List<IdOrTag<GameEvent>> events = cfg.events().get();
+            for (int i = 0; i < events.size(); i++) {
+                if (events.get(i).matches(holder)) return true;
             }
         }
         if (cfg.tag().isPresent()) {

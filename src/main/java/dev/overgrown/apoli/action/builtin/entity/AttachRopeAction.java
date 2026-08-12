@@ -11,6 +11,7 @@ import dev.overgrown.apoli.rope.RopeAnchor;
 import dev.overgrown.apoli.rope.RopeEndpointSource;
 import dev.overgrown.apoli.rope.RopeManager;
 import dev.overgrown.apoli.rope.RopeParams;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -27,7 +28,7 @@ public final class AttachRopeAction implements ActionType<EntityCtx, AttachRopeA
         RopeEndpointSource.CODEC.codec().optionalFieldOf("from", RopeEndpointSource.self()).forGetter(Cfg::from),
         RopeEndpointSource.CODEC.codec().optionalFieldOf("to", RopeEndpointSource.raycastBlock(30f)).forGetter(Cfg::to),
         Codec.STRING.optionalFieldOf("slot").forGetter(Cfg::slot),
-        ResourceLocation.CODEC.optionalFieldOf("texture", Apoli.id("textures/rope/rope.png")).forGetter(Cfg::texture),
+        IdCodecs.ID.optionalFieldOf("texture", Apoli.id("textures/rope/rope.png")).forGetter(Cfg::texture),
         Codec.BOOL.optionalFieldOf("toggle", true).forGetter(Cfg::toggle),
         RopeParams.CODEC.forGetter(Cfg::params)
     ).apply(i, Cfg::new));

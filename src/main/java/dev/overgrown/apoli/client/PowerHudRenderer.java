@@ -6,6 +6,7 @@ import dev.overgrown.apoli.data.HudRender;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
+import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.power.PowerTypeRegistry;
 import dev.overgrown.apoli.power.builtin.ActionOnCollisionPower;
@@ -73,7 +74,6 @@ public final class PowerHudRenderer {
         for (ResourceLocation powerId : ClientPowerState.localPowers()) {
             Power power = ApoliPowers.get(powerId);
             if (power == null) continue;
-            if (power.condition().isPresent() && !power.condition().get().test(ctx)) continue;
             collect(power, powerId, player, container, ctx);
         }
         if (RENDERABLES.isEmpty()) return;
@@ -89,63 +89,23 @@ public final class PowerHudRenderer {
 
     private static void collect(Power power, ResourceLocation powerId, LocalPlayer player,
                                 @Nullable PowerContainer container, EntityCtx ctx) {
+        if (container == null) return;
         PowerType<?> type = PowerTypeRegistry.get(power.typeId());
         Object config = power.config();
 
-        HudRender hud;
-        float fill;
+        HudRender hud = hudRenderOf(type, config);
+        if (hud == null) return;
 
-        if (type instanceof ActionOnKeyPressPower && config instanceof ActionOnKeyPressPower.Config cfg) {
-            int remaining = ClientPowerState.getCooldown(powerId);
-            if (remaining <= 0) return;
-            hud = cfg.hudRender();
-            fill = cooldownProgress(remaining, cfg.cooldown());
-        } else if (type instanceof ActionOnKeySequencePower && config instanceof ActionOnKeySequencePower.Config cfg) {
-            int remaining = ClientPowerState.getCooldown(powerId);
-            if (remaining <= 0) return;
-            hud = cfg.hudRender();
-            fill = cooldownProgress(remaining, cfg.cooldown());
-        } else if (type instanceof FireProjectilePower && config instanceof FireProjectilePower.Config cfg) {
-            if (cfg.params().hudRender().isEmpty()) return;
-            int remaining = ClientPowerState.getCooldown(powerId);
-            if (remaining <= 0) return;
-            hud = cfg.params().hudRender().get();
-            fill = cooldownProgress(remaining, cfg.params().cooldown());
-        } else if (type instanceof CooldownPower && config instanceof ResourcePower.Cfg cfg) {
-            OptionalInt remaining = ClientPowerState.getAuxInt(powerId);
-            if (remaining.isEmpty() || remaining.getAsInt() <= 0) return;
-            hud = cfg.hudRender();
-            fill = 1.0F - resourceFill(player, container, powerId, cfg);
-        } else if (type instanceof ResourcePower && config instanceof ResourcePower.Cfg cfg) {
-            hud = cfg.hudRender();
+        OptionalInt value = PowerResources.read(container, powerId);
+        if (value.isEmpty()) return;
+        int current = value.getAsInt();
+
+        float fill;
+        if (type instanceof ResourcePower && !(type instanceof CooldownPower) && config instanceof ResourcePower.Cfg cfg) {
             fill = resourceFill(player, container, powerId, cfg);
-        } else if (type instanceof ActionOnHitPower && config instanceof ActionOnHitPower.Config cfg) {
-            int remaining = auxRemaining(powerId) - (int) player.level().getGameTime();
-            if (remaining <= 0) return;
-            hud = cfg.hudRender();
-            fill = cooldownProgress(remaining, cfg.cooldown());
-        } else if (type instanceof ActionWhenHitPower && config instanceof ActionWhenHitPower.Config cfg) {
-            int remaining = auxRemaining(powerId) - (int) player.level().getGameTime();
-            if (remaining <= 0) return;
-            hud = cfg.hudRender();
-            fill = cooldownProgress(remaining, cfg.cooldown());
-        } else if (type instanceof ActionOnCollisionPower && config instanceof ActionOnCollisionPower.Config cfg) {
-            int remaining = auxRemaining(powerId) - (int) player.level().getGameTime();
-            if (remaining <= 0) return;
-            hud = cfg.hudRender();
-            fill = cooldownProgress(remaining, cfg.cooldown());
-        } else if (type instanceof ActionOnKillPower && config instanceof ActionOnKillPower.Config cfg) {
-            int remaining = auxRemaining(powerId) - (int) player.level().getGameTime();
-            if (remaining <= 0) return;
-            hud = cfg.hudRender();
-            fill = cooldownProgress(remaining, cfg.cooldown());
-        } else if (type instanceof GameEventListenerPower && config instanceof GameEventListenerPower.Config cfg) {
-            int remaining = auxRemaining(powerId) - (int) player.level().getGameTime();
-            if (remaining <= 0) return;
-            hud = cfg.hudRender();
-            fill = cooldownProgress(remaining, cfg.cooldown());
         } else {
-            return;
+            if (current <= 0) return;
+            fill = cooldownProgress(current, PowerResources.bound(container, powerId, true).orElse(0));
         }
 
         HudRender.Entry entry = hud.selectEntry(ctx);
@@ -153,9 +113,17 @@ public final class PowerHudRenderer {
         RENDERABLES.add(new Renderable(entry, fill, entry.order().orElse(0)));
     }
 
-    private static int auxRemaining(ResourceLocation powerId) {
-        OptionalInt v = ClientPowerState.getAuxInt(powerId);
-        return v.isEmpty() ? 0 : v.getAsInt();
+    private static @Nullable HudRender hudRenderOf(@Nullable PowerType<?> type, Object config) {
+        if (type instanceof ActionOnKeyPressPower && config instanceof ActionOnKeyPressPower.Config cfg) return cfg.hudRender();
+        if (type instanceof ActionOnKeySequencePower && config instanceof ActionOnKeySequencePower.Config cfg) return cfg.hudRender();
+        if (type instanceof FireProjectilePower && config instanceof FireProjectilePower.Config cfg) return cfg.params().hudRender().orElse(null);
+        if (type instanceof ResourcePower && config instanceof ResourcePower.Cfg cfg) return cfg.hudRender();
+        if (type instanceof ActionOnHitPower && config instanceof ActionOnHitPower.Config cfg) return cfg.hudRender();
+        if (type instanceof ActionWhenHitPower && config instanceof ActionWhenHitPower.Config cfg) return cfg.hudRender();
+        if (type instanceof ActionOnCollisionPower && config instanceof ActionOnCollisionPower.Config cfg) return cfg.hudRender();
+        if (type instanceof ActionOnKillPower && config instanceof ActionOnKillPower.Config cfg) return cfg.hudRender();
+        if (type instanceof GameEventListenerPower && config instanceof GameEventListenerPower.Config cfg) return cfg.hudRender();
+        return null;
     }
 
     private static float cooldownProgress(int remaining, int max) {

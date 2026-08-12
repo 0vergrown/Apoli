@@ -15,7 +15,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -127,12 +126,10 @@ public final class PowerContainerImpl implements PowerContainer {
                 if (loaded != null) {
                     PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
                     if (type != null) invokeOnRemoved(type, power, loaded.config(), source);
-                } else {
-                    if (owner instanceof LivingEntity living) {
-                        dev.overgrown.apoli.power.builtin.AttributePower.purge(living, power);
-                    }
-                    removeAllFromSource(power);
+                } else if (owner instanceof LivingEntity living) {
+                    dev.overgrown.apoli.power.builtin.AttributePower.purge(living, power);
                 }
+                removeAllFromSource(power);
             }
             if (auxInt.remove(power) != null) markDirty();
         }
@@ -214,9 +211,8 @@ public final class PowerContainerImpl implements PowerContainer {
     @Override
     public boolean suppressPower(ResourceLocation power, ResourceLocation source) {
         Set<ResourceLocation> sources = suppressedBySources.computeIfAbsent(power, k -> new HashSet<>());
-        boolean wasSuppressed = !sources.isEmpty();
         boolean added = sources.add(source);
-        if (added && !wasSuppressed) {
+        if (added) {
             markStructureDirty();
             refreshSuppression();
         }
@@ -229,7 +225,7 @@ public final class PowerContainerImpl implements PowerContainer {
         if (sources == null) return false;
         boolean removed = sources.remove(source);
         if (sources.isEmpty()) suppressedBySources.remove(power);
-        if (removed && !suppressedBySources.containsKey(power)) {
+        if (removed) {
             markStructureDirty();
             refreshSuppression();
         }
@@ -240,9 +236,7 @@ public final class PowerContainerImpl implements PowerContainer {
     public boolean suppressAll(Collection<ResourceLocation> powers, ResourceLocation source) {
         boolean any = false;
         for (ResourceLocation power : powers) {
-            Set<ResourceLocation> sources = suppressedBySources.computeIfAbsent(power, k -> new HashSet<>());
-            boolean wasSuppressed = sources.size() > (sources.contains(source) ? 1 : 0);
-            if (sources.add(source) && !wasSuppressed) any = true;
+            if (suppressedBySources.computeIfAbsent(power, k -> new HashSet<>()).add(source)) any = true;
         }
         if (any) {
             markStructureDirty();
@@ -257,9 +251,8 @@ public final class PowerContainerImpl implements PowerContainer {
         for (ResourceLocation power : powers) {
             Set<ResourceLocation> sources = suppressedBySources.get(power);
             if (sources == null) continue;
-            boolean removed = sources.remove(source);
+            if (sources.remove(source)) any = true;
             if (sources.isEmpty()) suppressedBySources.remove(power);
-            if (removed && !suppressedBySources.containsKey(power)) any = true;
         }
         if (any) {
             markStructureDirty();
@@ -307,12 +300,17 @@ public final class PowerContainerImpl implements PowerContainer {
             grew = false;
             for (Map.Entry<ResourceLocation, Set<ResourceLocation>> entry : bySources.entrySet()) {
                 if (out.contains(entry.getKey())) continue;
-                for (ResourceLocation grantedBy : entry.getValue()) {
-                    if (!out.contains(grantedBy)) continue;
-                    out.add(entry.getKey());
-                    grew = true;
+                Set<ResourceLocation> grantedBy = entry.getValue();
+                if (grantedBy.isEmpty()) continue;
+                boolean everySourceSuppressed = true;
+                for (ResourceLocation source : grantedBy) {
+                    if (out.contains(source)) continue;
+                    everySourceSuppressed = false;
                     break;
                 }
+                if (!everySourceSuppressed) continue;
+                out.add(entry.getKey());
+                grew = true;
             }
         }
         return Set.copyOf(out);

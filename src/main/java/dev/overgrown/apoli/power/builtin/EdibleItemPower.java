@@ -11,6 +11,7 @@ import dev.overgrown.apoli.data.AttributeModifier;
 import dev.overgrown.apoli.data.FoodComponent;
 import dev.overgrown.apoli.data.ItemStackData;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.item.UseAnim;
@@ -64,7 +65,7 @@ public final class EdibleItemPower extends PowerType<EdibleItemPower.Config> {
         FoodComponent.CODEC.fieldOf("food_component").forGetter(Config::foodComponent),
         ItemStackData.CODEC.optionalFieldOf("result_stack").forGetter(Config::resultStack),
         ConsumeAnimation.CODEC.optionalFieldOf("consume_animation", ConsumeAnimation.EAT).forGetter(Config::consumeAnimation),
-        ResourceLocation.CODEC.optionalFieldOf("consume_sound", DEFAULT_EAT_SOUND).forGetter(Config::consumeSound),
+        IdCodecs.ID.optionalFieldOf("consume_sound", DEFAULT_EAT_SOUND).forGetter(Config::consumeSound),
         AttributeModifier.CODEC.optionalFieldOf("consuming_time_modifier").forGetter(Config::consumingTimeModifier),
         Codec.list(AttributeModifier.CODEC).optionalFieldOf("consuming_time_modifiers").forGetter(Config::consumingTimeModifiers)
     ).apply(i, Config::new));

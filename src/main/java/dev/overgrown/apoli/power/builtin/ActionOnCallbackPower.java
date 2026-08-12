@@ -13,7 +13,9 @@ import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.power.PowerTypeRegistry;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
@@ -74,6 +76,22 @@ public final class ActionOnCallbackPower extends PowerType<ActionOnCallbackPower
             if (!(power.config() instanceof Config cfg)) continue;
             selector.apply(cfg).ifPresent(a -> a.run(ctx));
         }
+    }
+
+    public static void fireRespawn(ServerPlayer player) {
+        if (player == null) return;
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            fireRespawnNow(player);
+            return;
+        }
+        server.execute(() -> fireRespawnNow(player));
+    }
+
+    private static void fireRespawnNow(ServerPlayer player) {
+        if (player.isRemoved() || player.hasDisconnected()) return;
+        fireLifecycle(player, Config::entityActionAdded);
+        fireLifecycle(player, Config::entityActionRespawned);
     }
 
     public static void fireChosen(LivingEntity entity, boolean fromOrb) {
