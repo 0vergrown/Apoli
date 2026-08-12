@@ -7,6 +7,7 @@ import dev.overgrown.apoli.codec.SingleOrList;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerSources;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.List;
@@ -18,7 +19,7 @@ public final class RevokeAllPowersAction implements ActionType<EntityCtx, Revoke
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            SingleOrList.of(ResourceLocation.CODEC).fieldOf("source").forGetter(Cfg::sources)
+            SingleOrList.of(IdCodecs.ID).fieldOf("source").forGetter(Cfg::sources)
         ).apply(i, Cfg::new));
     }
 

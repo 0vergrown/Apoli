@@ -8,6 +8,7 @@ import dev.overgrown.apoli.action.ItemAction;
 import dev.overgrown.apoli.condition.ItemCondition;
 import dev.overgrown.apoli.data.ItemStackData;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Optional;
@@ -26,7 +27,7 @@ public final class ModifyCraftingPower extends PowerType<ModifyCraftingPower.Con
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.optionalFieldOf("recipe").forGetter(Config::recipe),
+            IdCodecs.ID.optionalFieldOf("recipe").forGetter(Config::recipe),
             ItemAction.CODEC.optionalFieldOf("item_action").forGetter(Config::itemAction),
             ItemAction.CODEC.optionalFieldOf("item_action_after_crafting").forGetter(Config::itemActionAfterCrafting),
             EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction),

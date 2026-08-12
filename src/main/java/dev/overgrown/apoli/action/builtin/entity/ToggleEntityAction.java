@@ -6,6 +6,7 @@ import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.builtin.TogglePower;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 
 public final class ToggleEntityAction implements ActionType<EntityCtx, ToggleEntityAction.Cfg> {
@@ -14,7 +15,7 @@ public final class ToggleEntityAction implements ActionType<EntityCtx, ToggleEnt
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("power").forGetter(Cfg::power)
+            IdCodecs.ID.fieldOf("power").forGetter(Cfg::power)
         ).apply(i, Cfg::new));
     }
 

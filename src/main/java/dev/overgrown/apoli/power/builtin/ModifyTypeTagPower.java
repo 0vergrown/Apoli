@@ -5,6 +5,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.overgrown.apoli.codec.IdCodecs;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.power.ApoliIds;
 import dev.overgrown.apoli.power.ApoliPowers;
@@ -39,16 +40,8 @@ public final class ModifyTypeTagPower extends PowerType<ModifyTypeTagPower.Cfg> 
         }
     }
 
-    private static final Codec<TagKey<EntityType<?>>> TAG_CODEC = Codec.STRING.comapFlatMap(
-        raw -> {
-            String id = raw.startsWith("#") ? raw.substring(1) : raw;
-            ResourceLocation parsed = ResourceLocation.tryParse(id);
-            return parsed == null
-                ? DataResult.error(() -> "Not a valid entity type tag: " + raw)
-                : DataResult.success(TagKey.create(Registries.ENTITY_TYPE, parsed));
-        },
-        tag -> "#" + tag.location()
-    );
+    private static final Codec<TagKey<EntityType<?>>> TAG_CODEC =
+        IdCodecs.tagKey(Registries.ENTITY_TYPE);
 
     private static final Codec<List<TagKey<EntityType<?>>>> TAGS_CODEC = Codec.either(
         TAG_CODEC, TAG_CODEC.listOf()

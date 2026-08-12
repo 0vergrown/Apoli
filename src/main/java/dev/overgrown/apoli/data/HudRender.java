@@ -5,6 +5,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.EntityCondition;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
@@ -52,7 +53,7 @@ public record HudRender(List<Entry> entries) {
     ) {
         public static final Codec<Entry> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.BOOL.optionalFieldOf("should_render", true).forGetter(Entry::shouldRender),
-            ResourceLocation.CODEC.optionalFieldOf("sprite_location", DEFAULT_SPRITE_LOCATION).forGetter(Entry::spriteLocation),
+            IdCodecs.ID.optionalFieldOf("sprite_location", DEFAULT_SPRITE_LOCATION).forGetter(Entry::spriteLocation),
             Codec.INT.optionalFieldOf("bar_index", 0).forGetter(Entry::barIndex),
             Codec.INT.optionalFieldOf("icon_index", 0).forGetter(Entry::iconIndex),
             EntityCondition.CODEC.optionalFieldOf("condition").forGetter(Entry::condition),

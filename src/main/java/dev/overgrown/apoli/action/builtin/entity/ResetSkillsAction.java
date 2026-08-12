@@ -7,6 +7,7 @@ import dev.overgrown.apoli.ApoliNetwork;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.skill.SkillTrees;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -19,7 +20,7 @@ public final class ResetSkillsAction implements ActionType<EntityCtx, ResetSkill
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.optionalFieldOf("tree").forGetter(Cfg::tree),
+            IdCodecs.ID.optionalFieldOf("tree").forGetter(Cfg::tree),
             Codec.BOOL.optionalFieldOf("refund", true).forGetter(Cfg::refund)
         ).apply(i, Cfg::new));
     }

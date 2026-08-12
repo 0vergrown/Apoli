@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
+import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.data.Space;
 import dev.overgrown.apoli.network.VelocityUpdater;
 import net.minecraft.util.StringRepresentable;
@@ -29,14 +30,16 @@ public final class AddVelocityAction implements ActionType<BiEntityCtx, AddVeloc
         }
     }
 
-    public record Cfg(double x, double y, double z, Reference reference, boolean set) {}
+    public record Cfg(Expression x, Expression y, Expression z, Reference reference, boolean set) {}
+
+    private static final Expression ZERO = Expression.constant(0.0);
 
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.DOUBLE.optionalFieldOf("x", 0.0).forGetter(Cfg::x),
-            Codec.DOUBLE.optionalFieldOf("y", 0.0).forGetter(Cfg::y),
-            Codec.DOUBLE.optionalFieldOf("z", 0.0).forGetter(Cfg::z),
+            Expression.DOUBLE_OR_EXPR.optionalFieldOf("x", ZERO).forGetter(Cfg::x),
+            Expression.DOUBLE_OR_EXPR.optionalFieldOf("y", ZERO).forGetter(Cfg::y),
+            Expression.DOUBLE_OR_EXPR.optionalFieldOf("z", ZERO).forGetter(Cfg::z),
             Reference.CODEC.optionalFieldOf("reference", Reference.POSITION).forGetter(Cfg::reference),
             Codec.BOOL.optionalFieldOf("set", false).forGetter(Cfg::set)
         ).apply(i, Cfg::new));
@@ -51,7 +54,8 @@ public final class AddVelocityAction implements ActionType<BiEntityCtx, AddVeloc
             case POSITION -> target.position().subtract(actor.position());
             case ROTATION -> actor.getLookAngle();
         };
-        Vec3 delta = Space.transformVectorToBase(forward, new Vec3(cfg.x, cfg.y, cfg.z), actor.getYRot(), true);
+        Vec3 amount = new Vec3(cfg.x.eval(target), cfg.y.eval(target), cfg.z.eval(target));
+        Vec3 delta = Space.transformVectorToBase(forward, amount, actor.getYRot(), true);
         VelocityUpdater.apply(target, delta, cfg.set);
     }
 }

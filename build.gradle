@@ -106,6 +106,11 @@ dependencies {
 	modCompileOnly "maven.modrinth:3dskinlayers:${project.skinlayers_version}"
 	modCompileOnly "maven.modrinth:ears:${project.ears_version}"
 
+	// Pufferfish's Skills (compile-only, optional at runtime) — the skill-tree compat registers the
+	// apoli:power / apoli:modify_resource rewards and lets apoli:grant_skill_tree unlock a Skills
+	// category. Gated by ModCompat.PUFFISH_SKILLS, so Apoli runs fine without it.
+	modCompileOnly "maven.modrinth:skills:${project.puffish_skills_version}"
+
 	modCompileOnly "me.lucko:fabric-permissions-api:0.3.1"
 
 	// Simple Voice Chat API (compile-only, optional at runtime) — the voice_* conditions and

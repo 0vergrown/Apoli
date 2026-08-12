@@ -9,6 +9,7 @@ import dev.overgrown.apoli.action.EntityAction;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.RadialMenuEntry;
 import dev.overgrown.apoli.network.payload.RadialMenuOpenS2C;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -24,7 +25,7 @@ public final class RadialMenuAction implements ActionType<EntityCtx, RadialMenuA
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.list(RadialMenuEntry.CODEC).fieldOf("entries").forGetter(Cfg::entries),
-            ResourceLocation.CODEC.optionalFieldOf("sprite_location").forGetter(Cfg::sprite)
+            IdCodecs.ID.optionalFieldOf("sprite_location").forGetter(Cfg::sprite)
         ).apply(instance, Cfg::new));
     }
 

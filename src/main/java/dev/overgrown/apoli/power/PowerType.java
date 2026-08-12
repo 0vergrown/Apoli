@@ -4,6 +4,8 @@ import com.mojang.serialization.MapCodec;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.OptionalInt;
+
 public abstract class PowerType<C> {
     public abstract MapCodec<C> configCodec();
 
@@ -23,5 +25,17 @@ public abstract class PowerType<C> {
 
     public boolean ticksNonLivingEntities() {
         return false;
+    }
+
+    public OptionalInt readResource(ResourceLocation powerId, C cfg, PowerContainer holder) {
+        return OptionalInt.empty();
+    }
+
+    public OptionalInt writeResource(ResourceLocation powerId, C cfg, PowerContainer holder, int value) {
+        return OptionalInt.empty();
+    }
+
+    public OptionalInt resourceBound(ResourceLocation powerId, C cfg, PowerContainer holder, boolean max) {
+        return OptionalInt.empty();
     }
 }

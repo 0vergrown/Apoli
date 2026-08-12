@@ -4,24 +4,23 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.BlockCtx;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 
 public final class InTagBlockCondition implements ConditionType<BlockCtx, InTagBlockCondition.Cfg> {
-    public record Cfg(ResourceLocation tag) {}
+    public record Cfg(TagKey<Block> tag) {}
 
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("tag").forGetter(Cfg::tag)
+            IdCodecs.<Block>tagKey(Registries.BLOCK).fieldOf("tag").forGetter(Cfg::tag)
         ).apply(i, Cfg::new));
     }
 
     @Override
     public boolean test(Cfg cfg, BlockCtx ctx) {
-        TagKey<Block> key = TagKey.create(Registries.BLOCK, cfg.tag);
-        return ctx.state().is(key);
+        return ctx.state().is(cfg.tag);
     }
 }

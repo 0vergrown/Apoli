@@ -4,6 +4,7 @@ import com.mojang.brigadier.StringReader;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -14,13 +15,13 @@ public record ParticleEffect(ResourceLocation type, String params) {
 
     public static final ParticleEffect EMPTY = new ParticleEffect(new ResourceLocation("minecraft", "poof"), "");
 
-    private static final Codec<ParticleEffect> STRING_CODEC = ResourceLocation.CODEC.xmap(
+    private static final Codec<ParticleEffect> STRING_CODEC = IdCodecs.ID.xmap(
         rl -> new ParticleEffect(rl, ""),
         ParticleEffect::type
     );
 
     private static final Codec<ParticleEffect> OBJECT_CODEC = RecordCodecBuilder.create(i -> i.group(
-        ResourceLocation.CODEC.fieldOf("type").forGetter(ParticleEffect::type),
+        IdCodecs.ID.fieldOf("type").forGetter(ParticleEffect::type),
         Codec.STRING.optionalFieldOf("params", "").forGetter(ParticleEffect::params)
     ).apply(i, ParticleEffect::new));
 

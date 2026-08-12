@@ -1,56 +1,57 @@
 {
-   "schemaVersion": 1,
-   "id": "apoli",
-   "version": "${version}",
-   "name": "Apoli",
-   "description": "A data-driven power system that's build for custom abilities, mechanics, and entire origin systems from JSON alone!",
-   "authors": [
-      "Overgrown"
-   ],
-   "contact": {
-      "homepage": "https://modrinth.com/mod/opoli",
-      "sources": "https://github.com/0vergrown/Apoli/tree/Fabric-1.20.1"
-   },
-   "license": "The A/O License",
-   "icon": "assets/apoli/icon.png",
-   "environment": "*",
-   "entrypoints": {
-      "main": [
-         "dev.overgrown.apoli.Apoli"
-      ],
-      "client": [
-         "dev.overgrown.apoli.ApoliClient"
-      ],
-      "voicechat": [
-         "dev.overgrown.apoli.compat.voicechat.ApoliVoicechatPlugin"
-      ],
-      "modmenu": [
-         "dev.overgrown.apoli.compat.modmenu.ApoliModMenu"
-      ]
-   },
-   "custom": {
-      "catalogue": {
-         "configFactory": "dev.overgrown.apoli.compat.catalogue.CatalogueConfigFactory",
-         "icon": {
-            "image": "assets/apoli/icon.png"
-         }
+  "schemaVersion": 1,
+  "id": "apoli",
+  "version": "${version}",
+  "name": "Apoli",
+  "description": "A data-driven power system that's build for custom abilities, mechanics, and entire origin systems from JSON alone!",
+  "authors": [
+    "Overgrown"
+  ],
+  "contact": {
+    "homepage": "https://modrinth.com/mod/opoli",
+    "sources": "https://github.com/0vergrown/Apoli/tree/Fabric-1.20.1"
+  },
+  "license": "The A/O License",
+  "icon": "assets/apoli/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "dev.overgrown.apoli.Apoli"
+    ],
+    "client": [
+      "dev.overgrown.apoli.ApoliClient"
+    ],
+    "voicechat": [
+      "dev.overgrown.apoli.compat.voicechat.ApoliVoicechatPlugin"
+    ],
+    "modmenu": [
+      "dev.overgrown.apoli.compat.modmenu.ApoliModMenu"
+    ]
+  },
+  "custom": {
+    "catalogue": {
+      "configFactory": "dev.overgrown.apoli.compat.catalogue.CatalogueConfigFactory",
+      "icon": {
+        "image": "assets/apoli/icon.png"
       }
-   },
-   "mixins": [
-      "apoli.mixins.json",
-      "apoli-icarus.mixins.json",
-      "apoli-figura.mixins.json",
-      "apoli-accessory.mixins.json",
-      "apoli-skinlayers.mixins.json",
-      "apoli-ears.mixins.json"
-   ],
-   "depends": {
-      "fabricloader": ">=0.19.3",
-      "minecraft": "~1.20.1",
-      "java": ">=17",
-      "fabric-api": "*"
-   },
-   "breaks": {
-      "origins": "<1.11.2"
-   }
+    }
+  },
+  "mixins": [
+    "apoli.mixins.json",
+    "apoli-icarus.mixins.json",
+    "apoli-figura.mixins.json",
+    "apoli-accessory.mixins.json",
+    "apoli-skinlayers.mixins.json",
+    "apoli-ears.mixins.json",
+    "apoli-bettercombat.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~1.20.1",
+    "java": ">=17",
+    "fabric-api": "*"
+  },
+  "breaks": {
+    "origins": "<1.11.2"
+  }
 }

@@ -3,6 +3,7 @@ package dev.overgrown.apoli.data;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -41,12 +42,12 @@ public record IconData(ItemStack stack, Optional<ResourceLocation> texture, int 
     }
 
     private static final Codec<IconData> TEXTURE_CODEC = RecordCodecBuilder.create(i -> i.group(
-        ResourceLocation.CODEC.fieldOf("texture").forGetter(icon -> icon.texture.orElseThrow()),
+        IdCodecs.ID.fieldOf("texture").forGetter(icon -> icon.texture.orElseThrow()),
         Codec.INT.optionalFieldOf("width", 0).forGetter(IconData::width),
         Codec.INT.optionalFieldOf("height", 0).forGetter(IconData::height)
     ).apply(i, IconData::ofTexture));
 
-    private static final Codec<IconData> ITEM_ID_CODEC = ResourceLocation.CODEC.xmap(
+    private static final Codec<IconData> ITEM_ID_CODEC = IdCodecs.ID.xmap(
         rl -> ofItem(new ItemStack(BuiltInRegistries.ITEM.get(rl))),
         icon -> BuiltInRegistries.ITEM.getKey(icon.stack.getItem()));
 

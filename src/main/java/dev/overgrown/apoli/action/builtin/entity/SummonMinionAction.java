@@ -11,6 +11,7 @@ import dev.overgrown.apoli.data.Vector;
 import dev.overgrown.apoli.entity.ApoliEntities;
 import dev.overgrown.apoli.entity.summon.MinionEntity;
 import dev.overgrown.apoli.entity.summon.Summons;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -36,14 +37,14 @@ public final class SummonMinionAction implements ActionType<EntityCtx, SummonMin
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.optionalFieldOf("texture").forGetter(Cfg::texture),
+            IdCodecs.ID.optionalFieldOf("texture").forGetter(Cfg::texture),
             Codec.BOOL.optionalFieldOf("follow_owner", false).forGetter(Cfg::followOwner),
             Vector.CODEC.optionalFieldOf("follow_offset").forGetter(Cfg::followOffset),
             Codec.FLOAT.optionalFieldOf("scale", 1f).forGetter(Cfg::scale),
             Codec.BOOL.optionalFieldOf("invulnerable", false).forGetter(Cfg::invulnerable),
             Codec.INT.optionalFieldOf("max_life_ticks", 1200).forGetter(Cfg::maxLifeTicks),
-            ResourceLocation.CODEC.optionalFieldOf("summon_id").forGetter(Cfg::summonId),
-            ResourceLocation.CODEC.listOf().optionalFieldOf("powers", List.of()).forGetter(Cfg::powers),
+            IdCodecs.ID.optionalFieldOf("summon_id").forGetter(Cfg::summonId),
+            IdCodecs.ID.listOf().optionalFieldOf("powers", List.of()).forGetter(Cfg::powers),
             BiEntityAction.CODEC.optionalFieldOf("bientity_action").forGetter(Cfg::bientityAction)
         ).apply(i, Cfg::new));
     }

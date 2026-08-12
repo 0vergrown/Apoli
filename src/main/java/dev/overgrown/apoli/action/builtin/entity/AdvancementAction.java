@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.advancements.Advancement;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.PlayerAdvancements;
@@ -51,7 +52,7 @@ public final class AdvancementAction implements ActionType<EntityCtx, Advancemen
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.optionalFieldOf("advancement").forGetter(Cfg::advancement),
+            IdCodecs.ID.optionalFieldOf("advancement").forGetter(Cfg::advancement),
             Codec.list(Codec.STRING).optionalFieldOf("criteria").forGetter(Cfg::criteria),
             Codec.STRING.optionalFieldOf("criterion").forGetter(Cfg::criterion),
             Selection.CODEC.optionalFieldOf("selection", Selection.ONLY).forGetter(Cfg::selection),

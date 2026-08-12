@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
@@ -55,7 +56,7 @@ public final class PlaySoundAction implements ActionType<EntityCtx, PlaySoundAct
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("sound").forGetter(Cfg::sound),
+            IdCodecs.ID.fieldOf("sound").forGetter(Cfg::sound),
             Category.CODEC.optionalFieldOf("category").forGetter(Cfg::category),
             Codec.FLOAT.optionalFieldOf("volume", 1.0f).forGetter(Cfg::volume),
             Codec.FLOAT.optionalFieldOf("pitch", 1.0f).forGetter(Cfg::pitch),

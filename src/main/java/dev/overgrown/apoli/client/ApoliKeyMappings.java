@@ -67,7 +67,7 @@ public final class ApoliKeyMappings {
         WAS_DOWN.put(km, down);
         boolean clicked = false;
         while (km.consumeClick()) clicked = true;
-        boolean tap = (down && !wasDown) || clicked;
+        boolean tap = !wasDown && (down || clicked);
         return new KeyState(down, tap);
     }
 

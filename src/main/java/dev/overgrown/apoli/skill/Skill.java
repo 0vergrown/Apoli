@@ -7,6 +7,7 @@ import dev.overgrown.apoli.codec.SingleOrList;
 import dev.overgrown.apoli.condition.EntityCondition;
 import dev.overgrown.apoli.data.IconData;
 import dev.overgrown.apoli.data.TextComponent;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
@@ -37,15 +38,15 @@ public record Skill(
 
     public static MapCodec<Skill> fileCodec(ResourceLocation id) {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("parent").forGetter(Skill::parent),
+            IdCodecs.ID.fieldOf("parent").forGetter(Skill::parent),
             TextComponent.CODEC.optionalFieldOf("name", Component.translatable(translationKey(id, "name"))).forGetter(Skill::name),
             TextComponent.CODEC.optionalFieldOf("description", Component.translatable(translationKey(id, "description"))).forGetter(Skill::description),
             IconData.CODEC.optionalFieldOf("icon", IconData.grassBlock()).forGetter(Skill::icon),
             SkillFrame.CODEC.optionalFieldOf("frame", SkillFrame.TASK).forGetter(Skill::frame),
-            SingleOrList.of(ResourceLocation.CODEC).optionalFieldOf("powers", List.of()).forGetter(Skill::powers),
+            SingleOrList.of(IdCodecs.ID).optionalFieldOf("powers", List.of()).forGetter(Skill::powers),
             EntityCondition.CODEC.optionalFieldOf("condition").forGetter(Skill::condition),
             EntityCondition.CODEC.optionalFieldOf("visibility_condition").forGetter(Skill::visibilityCondition),
-            ResourceLocation.CODEC.listOf().optionalFieldOf("excludes", List.of()).forGetter(Skill::excludes),
+            IdCodecs.ID.listOf().optionalFieldOf("excludes", List.of()).forGetter(Skill::excludes),
             Codec.INT.optionalFieldOf("cost", 0).forGetter(Skill::cost),
             Codec.INT.optionalFieldOf("order", 0).forGetter(Skill::order)
         ).apply(i, (parent, name, description, icon, frame, powers, condition, visibilityCondition, excludes, cost, order) ->

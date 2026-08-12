@@ -8,6 +8,7 @@ import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.skill.SkillData;
 import dev.overgrown.apoli.skill.SkillDataAttachment;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -17,7 +18,7 @@ public final class AddSkillPointsAction implements ActionType<EntityCtx, AddSkil
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("skill_tree").forGetter(Cfg::skillTree),
+            IdCodecs.ID.fieldOf("skill_tree").forGetter(Cfg::skillTree),
             Codec.INT.optionalFieldOf("points", 1).forGetter(Cfg::points)
         ).apply(i, Cfg::new));
     }

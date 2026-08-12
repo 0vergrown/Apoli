@@ -10,6 +10,7 @@ import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Nbt;
 import dev.overgrown.apoli.entity.disguise.DisguiseData;
 import dev.overgrown.apoli.entity.disguise.DisguiseManager;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
@@ -34,7 +35,7 @@ public final class DisguiseAsAction implements ActionType<EntityCtx, DisguiseAsA
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.optionalFieldOf("entity_type").forGetter(Cfg::entityType),
+            IdCodecs.ID.optionalFieldOf("entity_type").forGetter(Cfg::entityType),
             Codec.STRING.optionalFieldOf("player_name").forGetter(Cfg::playerName),
             Codec.STRING.optionalFieldOf("player_uuid").forGetter(Cfg::playerUuid),
             Nbt.CODEC.optionalFieldOf("nbt").forGetter(Cfg::nbt),

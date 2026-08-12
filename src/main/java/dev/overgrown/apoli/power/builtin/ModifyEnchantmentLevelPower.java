@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ItemCondition;
 import dev.overgrown.apoli.data.AttributeModifier;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.List;
@@ -21,7 +22,7 @@ public final class ModifyEnchantmentLevelPower extends PowerType<ModifyEnchantme
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("enchantment").forGetter(Config::enchantment),
+            IdCodecs.ID.fieldOf("enchantment").forGetter(Config::enchantment),
             ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Config::itemCondition),
             AttributeModifier.CODEC.optionalFieldOf("modifier").forGetter(Config::modifier),
             AttributeModifier.LIST_OR_SINGLE.optionalFieldOf("modifiers").forGetter(Config::modifiers)

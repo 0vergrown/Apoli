@@ -30,4 +30,8 @@ public final class ModCompat {
     }
 
     public static final boolean HARDCORE_REVIVAL = FabricLoader.getInstance().isModLoaded("hardcorerevival");
+
+    public static final boolean BETTER_COMBAT = FabricLoader.getInstance().isModLoaded("bettercombat");
+
+    public static final boolean PUFFISH_SKILLS = FabricLoader.getInstance().isModLoaded("puffish_skills");
 }

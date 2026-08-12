@@ -2,6 +2,7 @@ package dev.overgrown.apoli.data;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,9 +37,9 @@ public record OverlayLayer(
     }
 
     public static final Codec<OverlayLayer> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-        ResourceLocation.CODEC.optionalFieldOf("wide_texture_location").forGetter(OverlayLayer::wideTexture),
-        ResourceLocation.CODEC.optionalFieldOf("slim_texture_location").forGetter(OverlayLayer::slimTexture),
-        ResourceLocation.CODEC.optionalFieldOf("texture_location").forGetter(OverlayLayer::texture),
+        IdCodecs.ID.optionalFieldOf("wide_texture_location").forGetter(OverlayLayer::wideTexture),
+        IdCodecs.ID.optionalFieldOf("slim_texture_location").forGetter(OverlayLayer::slimTexture),
+        IdCodecs.ID.optionalFieldOf("texture_location").forGetter(OverlayLayer::texture),
         RenderMode.CODEC.optionalFieldOf("render_type", RenderMode.TRANSLUCENT).forGetter(OverlayLayer::renderType),
         ModelParts.PART_LIST_CODEC.optionalFieldOf("body_parts", List.of()).forGetter(OverlayLayer::bodyParts),
         Codec.FLOAT.optionalFieldOf("red", 1.0F).forGetter(OverlayLayer::red),

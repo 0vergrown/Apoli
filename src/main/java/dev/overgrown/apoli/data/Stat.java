@@ -3,6 +3,7 @@ package dev.overgrown.apoli.data;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -35,12 +36,12 @@ public final class Stat {
     }
 
     private static final Codec<Stat> OBJECT_CODEC = RecordCodecBuilder.create(i -> i.group(
-        ResourceLocation.CODEC.fieldOf("type").forGetter(Stat::type),
-        ResourceLocation.CODEC.fieldOf("id").forGetter(Stat::id)
+        IdCodecs.ID.fieldOf("type").forGetter(Stat::type),
+        IdCodecs.ID.fieldOf("id").forGetter(Stat::id)
     ).apply(i, Stat::new));
 
     public static final Codec<Stat> CODEC = Codec.either(
-        ResourceLocation.CODEC.xmap(id -> new Stat(CUSTOM, id), Stat::id),
+        IdCodecs.ID.xmap(id -> new Stat(CUSTOM, id), Stat::id),
         OBJECT_CODEC
     ).xmap(
         either -> either.map(Function.identity(), Function.identity()),

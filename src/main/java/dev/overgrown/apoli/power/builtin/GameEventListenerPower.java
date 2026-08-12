@@ -13,6 +13,7 @@ import dev.overgrown.apoli.data.HudRender;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerContainerImpl;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -79,9 +80,9 @@ public final class GameEventListenerPower extends PowerType<GameEventListenerPow
             BlockCondition.CODEC.optionalFieldOf("block_condition").forGetter(Config::blockCondition),
             Codec.INT.optionalFieldOf("cooldown", 1).forGetter(Config::cooldown),
             HudRender.CODEC.optionalFieldOf("hud_render", HudRender.DONT_RENDER).forGetter(Config::hudRender),
-            ResourceLocation.CODEC.optionalFieldOf("event").forGetter(Config::event),
-            Codec.list(ResourceLocation.CODEC).optionalFieldOf("events").forGetter(Config::events),
-            ResourceLocation.CODEC.optionalFieldOf("event_tag").forGetter(Config::eventTag),
+            IdCodecs.ID.optionalFieldOf("event").forGetter(Config::event),
+            Codec.list(IdCodecs.ID).optionalFieldOf("events").forGetter(Config::events),
+            IdCodecs.TAG.optionalFieldOf("event_tag").forGetter(Config::eventTag),
             Codec.BOOL.optionalFieldOf("show_particle", true).forGetter(Config::showParticle),
             Codec.INT.optionalFieldOf("range", 16).forGetter(Config::range)
         ).apply(i, Config::new));
@@ -114,6 +115,21 @@ public final class GameEventListenerPower extends PowerType<GameEventListenerPow
     @Override
     public void onUnsuppressed(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         onAdded(powerId, cfg, holder, powerId);
+    }
+
+    @Override
+    public java.util.OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+        return dev.overgrown.apoli.power.PowerResources.readDeadline(holder, powerId);
+    }
+
+    @Override
+    public java.util.OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
+        return dev.overgrown.apoli.power.PowerResources.writeDeadline(holder, powerId, value, cfg.cooldown());
+    }
+
+    @Override
+    public java.util.OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
+        return java.util.OptionalInt.of(max ? Math.max(cfg.cooldown(), 0) : 0);
     }
 
     @Override

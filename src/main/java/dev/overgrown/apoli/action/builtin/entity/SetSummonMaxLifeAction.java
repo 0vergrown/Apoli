@@ -6,6 +6,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.entity.summon.Temporary;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Optional;
@@ -17,7 +18,7 @@ public final class SetSummonMaxLifeAction implements ActionType<EntityCtx, SetSu
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.INT.fieldOf("amount").forGetter(Cfg::amount),
-            ResourceLocation.CODEC.optionalFieldOf("summon_id").forGetter(Cfg::summonId)
+            IdCodecs.ID.optionalFieldOf("summon_id").forGetter(Cfg::summonId)
         ).apply(i, Cfg::new));
     }
 

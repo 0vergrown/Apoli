@@ -14,6 +14,7 @@ import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerContainerImpl;
+import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -22,6 +23,7 @@ import net.minecraft.world.phys.AABB;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 public final class ActionOnCollisionPower extends PowerType<ActionOnCollisionPower.Config> {
     public record Config(
@@ -99,4 +101,20 @@ public final class ActionOnCollisionPower extends PowerType<ActionOnCollisionPow
             }
         }
     }
+
+    @Override
+    public OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+        return PowerResources.readDeadline(holder, powerId);
+    }
+
+    @Override
+    public OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
+        return PowerResources.writeDeadline(holder, powerId, value, cfg.cooldown());
+    }
+
+    @Override
+    public OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
+        return OptionalInt.of(max ? Math.max(cfg.cooldown(), 0) : 0);
+    }
+
 }

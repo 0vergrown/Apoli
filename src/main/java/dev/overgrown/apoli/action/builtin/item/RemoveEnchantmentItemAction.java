@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.ItemCtx;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -27,8 +28,8 @@ public final class RemoveEnchantmentItemAction implements ActionType<ItemCtx, Re
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.optionalFieldOf("enchantment").forGetter(Cfg::enchantment),
-            ResourceLocation.CODEC.listOf().optionalFieldOf("enchantments").forGetter(Cfg::enchantments),
+            IdCodecs.ID.optionalFieldOf("enchantment").forGetter(Cfg::enchantment),
+            IdCodecs.ID.listOf().optionalFieldOf("enchantments").forGetter(Cfg::enchantments),
             Codec.INT.optionalFieldOf("levels").forGetter(Cfg::levels),
             Codec.BOOL.optionalFieldOf("reset_repair_cost", false).forGetter(Cfg::resetRepairCost)
         ).apply(i, Cfg::new));

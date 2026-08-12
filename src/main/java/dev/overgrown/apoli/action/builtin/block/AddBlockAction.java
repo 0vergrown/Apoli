@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.BlockCtx;
 import dev.overgrown.apoli.data.Nbt;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -20,7 +21,7 @@ public final class AddBlockAction implements ActionType<BlockCtx, AddBlockAction
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("block").forGetter(Cfg::block),
+            IdCodecs.ID.fieldOf("block").forGetter(Cfg::block),
             Nbt.CODEC.optionalFieldOf("nbt").forGetter(Cfg::nbt)
         ).apply(i, Cfg::new));
     }

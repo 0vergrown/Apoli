@@ -6,6 +6,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Comparison;
+import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
@@ -18,7 +19,7 @@ public final class AttributeCondition implements ConditionType<EntityCtx, Attrib
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceLocation.CODEC.fieldOf("attribute").forGetter(Cfg::attribute),
+            IdCodecs.ID.fieldOf("attribute").forGetter(Cfg::attribute),
             Comparison.CODEC.fieldOf("comparison").forGetter(Cfg::comparison),
             Codec.FLOAT.fieldOf("compare_to").forGetter(Cfg::compareTo)
         ).apply(i, Cfg::new));
