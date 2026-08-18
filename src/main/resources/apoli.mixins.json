@@ -63,6 +63,7 @@
     "power.PlayerExhaustionMixin",
     "power.PlayerHarvestMixin",
     "power.ServerPlayerSpawnMixin",
+    "power.LivingEntityModifyHealingMixin",
     "projectile.ProjectileHitActionsMixin",
     "recipe.CraftingMenuAccessAccessor",
     "recipe.CraftingMenuGateMixin",
