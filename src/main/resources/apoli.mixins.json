@@ -112,6 +112,7 @@
     "player_model.PlayerRendererModelSwapMixin",
     "pose.LivingEntityRendererPoseMixin",
     "pose.PlayerRendererPoseMixin",
+    "power.LavaVisionMixin",
     "shader.GameRendererShaderAccessor",
     "shader.GameRendererShaderMixin",
     "sound.AbstractSoundInstanceMixin",
