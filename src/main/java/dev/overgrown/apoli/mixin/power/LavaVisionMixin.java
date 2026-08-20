@@ -12,22 +12,26 @@ public abstract class LavaVisionMixin {
 
     @ModifyExpressionValue(method = "setupFog", at = @At(value = "CONSTANT", args = "floatValue=0.25F", ordinal = 0))
     private static float apoli$modifyLavaVisibilityMinWithoutFireResistance(float original, Camera camera) { //v
-        return Math.max(0f, LavaVisionHandler.getModifier(camera.getEntity()).getB()) * 0.25f;
+        if(LavaVisionHandler.getModifier(camera.getEntity()).getB() != 0f) return Math.max(0f, LavaVisionHandler.getModifier(camera.getEntity()).getB() * 0.25f);
+        else return original;
     }
 
     @ModifyExpressionValue(method = "setupFog", at = @At(value = "CONSTANT", args = "floatValue=1.0F", ordinal = 0))
     private static float apoli$modifyLavaVisibilityMaxWithoutFireResistance(float original, Camera camera) { //s
-        return Math.max(0f, LavaVisionHandler.getModifier(camera.getEntity()).getA());
+        if(LavaVisionHandler.getModifier(camera.getEntity()).getA() != 0f) return Math.max(0f, LavaVisionHandler.getModifier(camera.getEntity()).getA());
+        else return original;
     }
 
     @ModifyExpressionValue(method = "setupFog", at = @At(value = "CONSTANT", args = "floatValue=0.0F", ordinal = 0))
     private static float apoli$modifyLavaVisibilityMinFireResistance(float original, Camera camera) { //v
-        return Math.max(0f, LavaVisionHandler.getModifier(camera.getEntity()).getB());
+        if(LavaVisionHandler.getModifier(camera.getEntity()).getB() != 0f) return Math.max(0f, LavaVisionHandler.getModifier(camera.getEntity()).getB());
+        else return original;
     }
 
     @ModifyExpressionValue(method = "setupFog", at = @At(value = "CONSTANT", args = "floatValue=5.0F", ordinal = 0))
     private static float apoli$modifyLavaVisibilityMaxWithFireResistance(float original, Camera camera) { //s
-        return Math.max(0f, LavaVisionHandler.getModifier(camera.getEntity()).getA());
+        if(LavaVisionHandler.getModifier(camera.getEntity()).getA() != 0f) return Math.max(0f, LavaVisionHandler.getModifier(camera.getEntity()).getA());
+        else return original;
     }
 }
 
