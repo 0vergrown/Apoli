@@ -1,13 +1,13 @@
 package dev.overgrown.apoli.client;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.JsonOps;
 import dev.overgrown.apoli.data.Key;
-import net.minecraft.client.KeyMapping;
-import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -43,7 +43,7 @@ public final class KeyPressWatcher {
         Set<String> next = new HashSet<>();
         for (String json : rawPowers.values()) {
             try {
-                collect(JsonParser.parseString(json), next);
+                collect(new Dynamic<>(JsonOps.INSTANCE, JsonParser.parseString(json)), next);
             } catch (RuntimeException ignored) {
             }
         }
@@ -72,27 +72,21 @@ public final class KeyPressWatcher {
         }
     }
 
-    private static void collect(JsonElement element, Set<String> out) {
-        if (element == null) return;
-        if (element.isJsonObject()) {
-            JsonObject object = element.getAsJsonObject();
-            JsonElement typeElement = object.get("type");
-            if (typeElement != null && typeElement.isJsonPrimitive()) {
-                String typeStr = typeElement.getAsString();
-                if (isKeyPressedType(typeStr)) {
-                    out.add(extractKey(object));
-                } else if (isKeySequenceType(typeStr)) {
-                    collectSequenceKeys(object, out);
+    private static <T> void collect(Dynamic<T> data, Set<String> out) {
+        Map<Dynamic<T>, Dynamic<T>> fields = data.getMapValues().result().orElse(null);
+        if (fields != null) {
+            String type = data.get("type").asString().result().orElse(null);
+            if (type != null) {
+                if (isKeyPressedType(type)) {
+                    out.add(extractKey(data));
+                } else if (isKeySequenceType(type)) {
+                    collectSequenceKeys(data, out);
                 }
             }
-            for (Map.Entry<String, JsonElement> entry : object.entrySet()) {
-                collect(entry.getValue(), out);
-            }
-        } else if (element.isJsonArray()) {
-            for (JsonElement child : element.getAsJsonArray()) {
-                collect(child, out);
-            }
+            for (Dynamic<T> value : fields.values()) collect(value, out);
+            return;
         }
+        data.asStreamOpt().result().ifPresent(stream -> stream.forEach(child -> collect(child, out)));
     }
 
     private static boolean isKeyPressedType(String type) {
@@ -107,27 +101,22 @@ public final class KeyPressWatcher {
         return path.equals("action_on_key_sequence");
     }
 
-    private static void collectSequenceKeys(JsonObject powerObject, Set<String> out) {
-        JsonElement keys = powerObject.get("keys");
-        if (keys == null || !keys.isJsonArray()) return;
-        for (JsonElement entry : keys.getAsJsonArray()) {
-            if (entry.isJsonPrimitive()) {
-                out.add(entry.getAsString());
-            } else if (entry.isJsonObject()) {
-                JsonElement key = entry.getAsJsonObject().get("key");
-                if (key != null && key.isJsonPrimitive()) out.add(key.getAsString());
+    private static <T> void collectSequenceKeys(Dynamic<T> power, Set<String> out) {
+        power.get("keys").asStreamOpt().result().ifPresent(stream -> stream.forEach(entry -> {
+            String direct = entry.asString().result().orElse(null);
+            if (direct != null) {
+                out.add(direct);
+                return;
             }
-        }
+            entry.get("key").asString().result().ifPresent(out::add);
+        }));
     }
 
-    private static String extractKey(JsonObject conditionObject) {
-        JsonElement keyElement = conditionObject.get("key");
-        if (keyElement == null) return Key.PRIMARY_ACTIVE;
-        if (keyElement.isJsonPrimitive()) return keyElement.getAsString();
-        if (keyElement.isJsonObject()) {
-            JsonElement inner = keyElement.getAsJsonObject().get("key");
-            if (inner != null && inner.isJsonPrimitive()) return inner.getAsString();
-        }
-        return Key.PRIMARY_ACTIVE;
+    private static <T> String extractKey(Dynamic<T> condition) {
+        Dynamic<T> key = condition.get("key").result().orElse(null);
+        if (key == null) return Key.PRIMARY_ACTIVE;
+        String direct = key.asString().result().orElse(null);
+        if (direct != null) return direct;
+        return key.get("key").asString().result().orElse(Key.PRIMARY_ACTIVE);
     }
 }

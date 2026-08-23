@@ -17,7 +17,7 @@ public final class AttackerDamageCondition implements ConditionType<DamageCtx, A
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            EntityCondition.CODEC.optionalFieldOf("entity_condition").forGetter(Cfg::entityCondition)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("entity_condition", EntityCondition.CODEC).forGetter(Cfg::entityCondition)
         ).apply(i, Cfg::new));
     }
 

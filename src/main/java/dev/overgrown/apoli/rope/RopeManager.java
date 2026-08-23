@@ -250,13 +250,13 @@ public final class RopeManager {
             case SPRING -> {
                 if (dist <= rope.length) return;
                 double excess = dist - rope.length;
-                e.setDeltaMovement(e.getDeltaMovement().add(dir.scale(-excess * p.stiffness() * share)));
+                e.setDeltaMovement(e.getDeltaMovement().add(limited(dir.scale(-excess * p.stiffness() * share))));
                 markMoved(e);
             }
             case RIGID -> {
                 double diff = dist - rope.length;
                 if (Math.abs(diff) < 1.0e-4) return;
-                e.setDeltaMovement(e.getDeltaMovement().add(dir.scale(-diff * p.stiffness() * share)));
+                e.setDeltaMovement(e.getDeltaMovement().add(limited(dir.scale(-diff * p.stiffness() * share))));
                 markMoved(e);
             }
             default -> {
@@ -273,10 +273,18 @@ public final class RopeManager {
                 }
                 e.setDeltaMovement(tangentialVel.add(radialVel));
                 double springScale = radial < 0 ? p.springScaling() : 1.0;
-                e.setDeltaMovement(e.getDeltaMovement().add(dir.scale(-excess * p.stiffness() * springScale * share)));
+                e.setDeltaMovement(e.getDeltaMovement().add(limited(dir.scale(-excess * p.stiffness() * springScale * share))));
                 markMoved(e);
             }
         }
+    }
+
+    private static final double MAX_CONSTRAINT_IMPULSE = 4.0;
+
+    private static Vec3 limited(Vec3 impulse) {
+        double lengthSq = impulse.lengthSqr();
+        if (lengthSq <= MAX_CONSTRAINT_IMPULSE * MAX_CONSTRAINT_IMPULSE) return impulse;
+        return impulse.scale(MAX_CONSTRAINT_IMPULSE / Math.sqrt(lengthSq));
     }
 
     private static void markMoved(LivingEntity e) {

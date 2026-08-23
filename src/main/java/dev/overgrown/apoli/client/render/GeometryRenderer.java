@@ -18,8 +18,16 @@ import java.util.List;
 public final class GeometryRenderer {
     private GeometryRenderer() {}
 
+    public static void resetAll(CustomModel model) {
+        CustomModel.Bone[] all = model.bones();
+        for (int i = 0; i < all.length; i++) {
+            all[i].reset();
+        }
+    }
+
     public static void syncPlayer(CustomModel custom, PlayerModel<AbstractClientPlayer> live,
                                   PlayerModel<AbstractClientPlayer> rest) {
+        resetAll(custom);
         syncBone(custom, ModelParts.HEAD, live.head, rest.head);
         syncBone(custom, ModelParts.HAT, live.hat, rest.hat);
         syncBone(custom, ModelParts.BODY, live.body, rest.body);

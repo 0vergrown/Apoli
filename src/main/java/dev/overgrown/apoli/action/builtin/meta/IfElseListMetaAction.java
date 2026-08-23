@@ -40,27 +40,12 @@ public final class IfElseListMetaAction<CTX, COND, ACTION> implements ActionType
     @Override
     public void run(Cfg<COND, ACTION> cfg, CTX ctx) {
         List<Branch<COND, ACTION>> branches = cfg.actions;
-        int size = branches.size();
-        if (size == 0) return;
-
-        if (size <= Long.SIZE) {
-            long matched = 0L;
-            for (int i = 0; i < size; i++) {
-                if (condTester.test(branches.get(i).condition, ctx)) matched |= 1L << i;
+        for (int i = 0, size = branches.size(); i < size; i++) {
+            Branch<COND, ACTION> branch = branches.get(i);
+            if (condTester.test(branch.condition, ctx)) {
+                actionRunner.accept(branch.action, ctx);
+                return;
             }
-            if (matched == 0L) return;
-            for (int i = 0; i < size; i++) {
-                if ((matched & (1L << i)) != 0L) actionRunner.accept(branches.get(i).action, ctx);
-            }
-            return;
-        }
-
-        boolean[] matched = new boolean[size];
-        for (int i = 0; i < size; i++) {
-            matched[i] = condTester.test(branches.get(i).condition, ctx);
-        }
-        for (int i = 0; i < size; i++) {
-            if (matched[i]) actionRunner.accept(branches.get(i).action, ctx);
         }
     }
 }

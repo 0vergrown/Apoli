@@ -38,7 +38,7 @@ public final class InventoryCondition implements ConditionType<EntityCtx, Invent
         return RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.list(InventoryType.CODEC).optionalFieldOf("inventory_types").forGetter(Cfg::inventoryTypes),
             ProcessMode.CODEC.optionalFieldOf("process_mode", ProcessMode.ITEMS).forGetter(Cfg::processMode),
-            ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Cfg::itemCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Cfg::itemCondition),
             Codec.list(ItemSlot.CODEC).optionalFieldOf("slots").forGetter(Cfg::slots),
             ItemSlot.CODEC.optionalFieldOf("slot").forGetter(Cfg::slot),
             IdCodecs.ID.optionalFieldOf("power").forGetter(Cfg::power),

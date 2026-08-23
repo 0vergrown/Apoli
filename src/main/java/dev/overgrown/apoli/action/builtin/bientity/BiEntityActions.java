@@ -2,6 +2,9 @@ package dev.overgrown.apoli.action.builtin.bientity;
 
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.action.ActionTypes;
+import dev.overgrown.apoli.compat.ModCompat;
+import dev.overgrown.apoli.compat.walkers.action.ShapeActions;
+import dev.overgrown.apoli.action.builtin.entity.AttachRopeAction;
 import dev.overgrown.apoli.alias.AliasingOptions;
 
 public final class BiEntityActions {
@@ -31,12 +34,27 @@ public final class BiEntityActions {
         );
         ActionTypes.BI_ENTITY.register(Apoli.id("disguise"), new DisguiseBiEntityAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("transfer"), new TransferAction());
-        ActionTypes.BI_ENTITY.register(Apoli.id("attach_rope"),
-            new dev.overgrown.apoli.action.builtin.entity.AttachRopeAction.BiEntity());
+        ActionTypes.BI_ENTITY.register(Apoli.id("execute_command"), new ExecuteCommandBiEntityAction());
+        ActionTypes.BI_ENTITY.register(Apoli.id("attach_rope"), new AttachRopeAction.BiEntity());
         ActionTypes.BI_ENTITY.register(
             Apoli.id("raycast"),
             new RaycastBiEntityAction(),
             AliasingOptions.builder().addTypeAlias(Apoli.id("raycast_between")).build()
         );
+
+        if (ModCompat.WALKERS) {
+            ActionTypes.BI_ENTITY.register(Apoli.id("switch_shape"), new ShapeActions.SwitchShapeBiEntity(),
+                dev.overgrown.apoli.alias.AliasingOptions.builder()
+                    .addTypeAlias(Apoli.id("change_shape"))
+                    .addTypeAlias(Apoli.id("morph"))
+                    .addTypeAlias("shappoli:switch_shape")
+                    .build());
+        }
+
+        ActionTypes.BI_ENTITY.register(Apoli.id("script"), new ScriptBiEntityAction());
+
+        ActionTypes.BI_ENTITY.register(Apoli.id("send_action"),
+            new dev.overgrown.apoli.action.builtin.meta.SendActionMeta.BiEntity(),
+            dev.overgrown.apoli.alias.AliasingOptions.builder().addTypeAlias("shappoli:send_action").build());
     }
 }

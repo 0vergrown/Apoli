@@ -29,6 +29,31 @@ public record RopeParams(
     Optional<Float> startLength
 ) {
 
+    public RopeParams {
+        minLength = Math.max(0f, minLength);
+        maxLength = Math.max(minLength, maxLength);
+        stiffness = clamped("stiffness", stiffness, 0f, 1f);
+        radialDamping = clamped("radial_damping", radialDamping, 0f, 1f);
+        springScaling = clamped("spring_scaling", springScaling, 0f, 1f);
+        swingBoost = clamped("swing_boost", swingBoost, 0f, 2f);
+        maxSwingSpeed = Math.max(0f, maxSwingSpeed);
+        controlAccel = Math.max(0f, controlAccel);
+        reelStep = Math.max(0f, reelStep);
+        slackPullRate = Math.max(0f, slackPullRate);
+        breakBeyond = Math.max(0f, breakBeyond);
+    }
+
+    private static float clamped(String field, float value, float min, float max) {
+        if (Float.isNaN(value)) return min;
+        if (value >= min && value <= max) return value;
+        float fixed = Mth.clamp(value, min, max);
+        dev.overgrown.apoli.Apoli.LOGGER.warn(
+            "[Apoli] Rope '{}' was {} — outside the stable range [{}, {}], so it was clamped to {}. "
+                + "Values beyond that range make the rope spring integrator diverge.",
+            field, value, min, max, fixed);
+        return fixed;
+    }
+
     public double initialLength(double endpointDistance) {
         double wanted = startLength.map(Float::doubleValue)
             .orElseGet(() -> controllable ? endpointDistance : maxLength);

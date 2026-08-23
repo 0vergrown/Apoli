@@ -72,8 +72,8 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            EntityAction.CODEC.optionalFieldOf("success_action").forGetter(Config::successAction),
-            EntityAction.CODEC.optionalFieldOf("fail_action").forGetter(Config::failAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("success_action", EntityAction.CODEC).forGetter(Config::successAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("fail_action", EntityAction.CODEC).forGetter(Config::failAction),
             Codec.INT.optionalFieldOf("cooldown", 0).forGetter(Config::cooldown),
             Codec.INT.optionalFieldOf("timeout", 20).forGetter(Config::timeout),
             HudRender.CODEC.optionalFieldOf("hud_render", HudRender.DONT_RENDER).forGetter(Config::hudRender),

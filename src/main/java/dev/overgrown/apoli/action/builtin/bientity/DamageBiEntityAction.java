@@ -56,7 +56,9 @@ public final class DamageBiEntityAction implements ActionType<BiEntityCtx, Damag
         if (holder.isEmpty()) return;
         DamageSource source = new DamageSource(holder.get(), ctx.actor());
 
-        float base = cfg.amount.isPresent() ? (float) cfg.amount.get().eval(target) : livingTarget.getMaxHealth();
+        float base = cfg.amount.isPresent()
+            ? (float) cfg.amount.get().eval(ctx.actor())
+            : livingTarget.getMaxHealth();
         List<AttributeModifier> mods = cfg.allModifiers();
         float finalAmount = mods.isEmpty() ? base : Math.max(0f, AttributeModifierHelper.apply(base, mods, livingTarget));
         if (finalAmount > 0f) target.hurt(source, finalAmount);

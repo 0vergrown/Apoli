@@ -27,7 +27,7 @@ public final class AreaOfEffectBlockMetaAction implements ActionType<BlockCtx, A
             Vector.SCALAR_OR_VECTOR.optionalFieldOf("radius", Vector.uniform(16.0f)).forGetter(Cfg::radius),
             Shape.CODEC.optionalFieldOf("shape", Shape.CUBE).forGetter(Cfg::shape),
             BlockAction.CODEC.fieldOf("block_action").forGetter(Cfg::blockAction),
-            BlockCondition.CODEC.optionalFieldOf("block_condition").forGetter(Cfg::blockCondition)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Cfg::blockCondition)
         ).apply(i, Cfg::new));
     }
 

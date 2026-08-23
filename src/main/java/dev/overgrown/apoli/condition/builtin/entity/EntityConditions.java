@@ -3,6 +3,7 @@ import dev.overgrown.apoli.compat.voicechat.VoiceDisabledCondition;
 import dev.overgrown.apoli.compat.voicechat.VoiceListenersCondition;
 import dev.overgrown.apoli.compat.voicechat.VoiceLoudnessCondition;
 import dev.overgrown.apoli.compat.voicechat.VoiceSpeakingCondition;
+import dev.overgrown.apoli.compat.voicechat.VoiceWhisperingCondition;
 
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.alias.AliasingOptions;
@@ -10,6 +11,7 @@ import dev.overgrown.apoli.compat.ModCompat;
 import dev.overgrown.apoli.compat.accessory.condition.entity.AccessoryEquippedCountCondition;
 import dev.overgrown.apoli.compat.accessory.condition.entity.AccessorySlotCountCondition;
 import dev.overgrown.apoli.compat.hardcorerevival.condition.KnockedOutCondition;
+import dev.overgrown.apoli.compat.walkers.condition.ShapeConditions;
 import dev.overgrown.apoli.condition.ConditionTypes;
 
 public final class EntityConditions {
@@ -25,6 +27,8 @@ public final class EntityConditions {
                 .build()
         );
         ConditionTypes.ENTITY.register(Apoli.id("entity_type"), new EntityTypeCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("has_command_tag"), new HasCommandTagCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("difficulty"), new DifficultyCondition());
         ConditionTypes.ENTITY.register(Apoli.id("invisible"), new InvisibleCondition());
         ConditionTypes.ENTITY.register(Apoli.id("player_model_type"), new PlayerModelTypeCondition());
         ConditionTypes.ENTITY.register(Apoli.id("sneaking"), new SneakingCondition());
@@ -71,6 +75,7 @@ public final class EntityConditions {
         ConditionTypes.ENTITY.register(Apoli.id("using_effective_tool"), SimpleFlagConditions.usingEffectiveTool());
         ConditionTypes.ENTITY.register(Apoli.id("air"), new AirCondition());
         ConditionTypes.ENTITY.register(Apoli.id("attribute"), new AttributeCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("damage_would_kill"), new DamageWouldKillCondition());
         ConditionTypes.ENTITY.register(Apoli.id("brightness"), new BrightnessCondition());
         ConditionTypes.ENTITY.register(Apoli.id("command"), new CommandCondition());
         ConditionTypes.ENTITY.register(Apoli.id("enchantment"), new EnchantmentCondition());
@@ -138,6 +143,7 @@ public final class EntityConditions {
         );
         ConditionTypes.ENTITY.register(Apoli.id("voice_loudness"), new VoiceLoudnessCondition());
         ConditionTypes.ENTITY.register(Apoli.id("voice_listeners"), new VoiceListenersCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("voice_whispering"), new VoiceWhisperingCondition());
 
         ConditionTypes.ENTITY.register(Apoli.id("attached_to_rope"), new AttachedToRopeCondition());
         ConditionTypes.ENTITY.register(Apoli.id("disguised"), new DisguisedCondition());
@@ -152,5 +158,26 @@ public final class EntityConditions {
         if (ModCompat.HARDCORE_REVIVAL) {
             ConditionTypes.ENTITY.register(Apoli.id("knocked_out"), new KnockedOutCondition());
         }
+
+        ConditionTypes.ENTITY.register(Apoli.id("script"), new ScriptCondition());
+
+        if (ModCompat.WALKERS) {
+            ConditionTypes.ENTITY.register(Apoli.id("can_use_shape_ability"), new ShapeConditions.CanUseShapeAbility());
+            ConditionTypes.ENTITY.register(Apoli.id("has_shape_ability"), new ShapeConditions.HasShapeAbility());
+            ConditionTypes.ENTITY.register(Apoli.id("shape_ability_cooldown"), new ShapeConditions.ShapeAbilityCooldown());
+            ConditionTypes.ENTITY.register(
+                Apoli.id("shape_condition"),
+                new ShapeConditions.Shape(),
+                dev.overgrown.apoli.alias.AliasingOptions.builder()
+                    .addTypeAlias(Apoli.id("shape"))
+                    .addTypeAlias("shappoli:shape_condition")
+                    .addTypeAlias("shappoli:shape")
+                    .build()
+            );
+        }
+
+        ConditionTypes.ENTITY.register(Apoli.id("send_condition"),
+            new dev.overgrown.apoli.condition.builtin.meta.SendConditionMeta.Entity(),
+            AliasingOptions.builder().addTypeAlias("shappoli:send_condition").build());
     }
 }

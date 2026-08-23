@@ -83,6 +83,10 @@ config="${mod_id}-sable.mixins.json"
 [[mixins]]
 config="${mod_id}-bettercombat.mixins.json"
 
+# WoodWalkers (Walkers) shape compat — gated by WalkersCompatMixinPlugin, inert without the mod.
+[[mixins]]
+config="${mod_id}-walkers.mixins.json"
+
 # The [[accessTransformers]] block allows you to declare where your AT file is.
 # If this block is omitted, a fallback attempt will be made to load an AT from META-INF/accesstransformer.cfg
 #[[accessTransformers]]
@@ -122,8 +126,8 @@ config="${mod_id}-bettercombat.mixins.json"
 [[dependencies.${mod_id}]]
     modId="origins"
     type="incompatible"
-    reason="Origins older than 1.9.3 was built against an older Apoli API. Update Origins."
-    versionRange="[0,1.11.2)"
+    reason="Origins older than 1.23.1 was built against an older Apoli API. Update Origins."
+    versionRange="[0,1.23.1)"
     ordering="NONE"
     side="BOTH"
 

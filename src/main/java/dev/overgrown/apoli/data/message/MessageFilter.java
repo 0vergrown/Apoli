@@ -114,8 +114,8 @@ public final class MessageFilter {
         Codec.BOOL.optionalFieldOf("case_insensitive", false).forGetter(f -> f.caseInsensitive),
         Codec.BOOL.optionalFieldOf("inverted", false).forGetter(f -> f.inverted),
         Codec.STRING.optionalFieldOf("replacement").forGetter(f -> f.replacement),
-        EntityAction.CODEC.optionalFieldOf("before_action").forGetter(f -> f.beforeAction),
-        EntityAction.CODEC.optionalFieldOf("after_action").forGetter(f -> f.afterAction),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("before_action", EntityAction.CODEC).forGetter(f -> f.beforeAction),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("after_action", EntityAction.CODEC).forGetter(f -> f.afterAction),
         Codec.BOOL.optionalFieldOf("prevent", false).forGetter(f -> f.prevent)
     ).apply(i, MessageFilter::new));
 

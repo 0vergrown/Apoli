@@ -46,6 +46,43 @@ public final class PowerResources {
         return invokeWrite(type, powerId, loaded.config(), holder, value);
     }
 
+    public static OptionalInt readAt(@Nullable PowerContainer holder, ResourceLocation powerId, int slot) {
+        if (holder == null || !holder.hasPower(powerId)) return OptionalInt.empty();
+        Power loaded = ApoliPowers.get(powerId);
+        if (loaded == null) return slot == 0 ? holder.getAuxInt(powerId) : OptionalInt.empty();
+        PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
+        if (type == null) return slot == 0 ? holder.getAuxInt(powerId) : OptionalInt.empty();
+        OptionalInt typed = invokeReadAt(type, powerId, loaded.config(), holder, slot);
+        if (typed.isPresent()) return typed;
+        return slot == 0 ? holder.getAuxInt(powerId) : OptionalInt.empty();
+    }
+
+    public static OptionalInt writeAt(@Nullable PowerContainer holder, ResourceLocation powerId, int slot, int value) {
+        if (holder == null || !holder.hasPower(powerId)) return OptionalInt.empty();
+        Power loaded = ApoliPowers.get(powerId);
+        if (loaded == null) return OptionalInt.empty();
+        PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
+        if (type == null) return OptionalInt.empty();
+        return invokeWriteAt(type, powerId, loaded.config(), holder, slot, value);
+    }
+
+    public static int size(@Nullable PowerContainer holder, ResourceLocation powerId) {
+        Power loaded = ApoliPowers.get(powerId);
+        if (loaded == null) return 0;
+        PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
+        if (type == null) return 0;
+        return invokeSize(type, powerId, loaded.config(), holder);
+    }
+
+    public static int indexOf(@Nullable PowerContainer holder, ResourceLocation powerId, int value) {
+        if (holder == null || !holder.hasPower(powerId)) return -1;
+        Power loaded = ApoliPowers.get(powerId);
+        if (loaded == null) return holder.getAuxIntOr(powerId, value + 1) == value ? 0 : -1;
+        PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
+        if (type == null) return -1;
+        return invokeIndexOf(type, powerId, loaded.config(), holder, value);
+    }
+
     public static OptionalInt readDeadline(PowerContainer holder, ResourceLocation powerId) {
         OptionalInt stored = holder.getAuxInt(powerId);
         if (stored.isEmpty()) return OptionalInt.of(0);
@@ -90,6 +127,30 @@ public final class PowerResources {
     private static OptionalInt invokeWrite(PowerType type, ResourceLocation powerId, Object cfg,
                                            PowerContainer holder, int value) {
         return type.writeResource(powerId, cfg, holder, value);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static OptionalInt invokeReadAt(PowerType type, ResourceLocation powerId, Object cfg,
+                                            PowerContainer holder, int slot) {
+        return type.readResourceAt(powerId, cfg, holder, slot);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static OptionalInt invokeWriteAt(PowerType type, ResourceLocation powerId, Object cfg,
+                                             PowerContainer holder, int slot, int value) {
+        return type.writeResourceAt(powerId, cfg, holder, slot, value);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static int invokeIndexOf(PowerType type, ResourceLocation powerId, Object cfg,
+                                     PowerContainer holder, int value) {
+        return type.resourceIndexOf(powerId, cfg, holder, value);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static int invokeSize(PowerType type, ResourceLocation powerId, Object cfg,
+                                  @Nullable PowerContainer holder) {
+        return type.resourceSize(powerId, cfg, holder);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

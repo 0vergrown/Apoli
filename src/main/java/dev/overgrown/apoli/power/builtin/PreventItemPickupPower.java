@@ -24,11 +24,11 @@ public final class PreventItemPickupPower extends PowerType<PreventItemPickupPow
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            BiEntityAction.CODEC.optionalFieldOf("bientity_action_thrower").forGetter(Config::bientityActionThrower),
-            BiEntityAction.CODEC.optionalFieldOf("bientity_action_item").forGetter(Config::bientityActionItem),
-            ItemAction.CODEC.optionalFieldOf("item_action").forGetter(Config::itemAction),
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Config::bientityCondition),
-            ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Config::itemCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action_thrower", BiEntityAction.CODEC).forGetter(Config::bientityActionThrower),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action_item", BiEntityAction.CODEC).forGetter(Config::bientityActionItem),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("item_action", ItemAction.CODEC).forGetter(Config::itemAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Config::itemCondition),
             Codec.INT.optionalFieldOf("priority", 0).forGetter(Config::priority)
         ).apply(i, Config::new));
     }

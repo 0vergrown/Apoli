@@ -37,7 +37,7 @@ public record RadialMenuEntry(
         IdCodecs.ID.optionalFieldOf("highlight_icon_texture").forGetter(RadialMenuEntry::highlightIcon),
         IdCodecs.ID.optionalFieldOf("highlight_button_texture").forGetter(RadialMenuEntry::highlightButtonTexture),
         EntityAction.CODEC.fieldOf("entity_action").forGetter(RadialMenuEntry::entityAction),
-        EntityCondition.CODEC.optionalFieldOf("condition").forGetter(RadialMenuEntry::condition),
+        dev.overgrown.apoli.codec.LoggedOptionalField.strict("condition", EntityCondition.CODEC).forGetter(RadialMenuEntry::condition),
         Codec.INT.optionalFieldOf("distance", -1).forGetter(RadialMenuEntry::distance),
         Codec.INT.optionalFieldOf("velocity", -1).forGetter(RadialMenuEntry::velocity),
         TextComponent.CODEC.optionalFieldOf("tooltip").forGetter(RadialMenuEntry::tooltip),

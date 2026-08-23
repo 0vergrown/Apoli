@@ -108,6 +108,41 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
 
     private record EntityHit(Entity target, Vec3 pos, double distSq) {}
 
+    private static final int SLOT_DISTANCE = dev.overgrown.apoli.data.expr.ExprContext.slot("distance");
+    private static final int SLOT_HIT_X = dev.overgrown.apoli.data.expr.ExprContext.slot("hit_x");
+    private static final int SLOT_HIT_Y = dev.overgrown.apoli.data.expr.ExprContext.slot("hit_y");
+    private static final int SLOT_HIT_Z = dev.overgrown.apoli.data.expr.ExprContext.slot("hit_z");
+    private static final int SLOT_COUNT = dev.overgrown.apoli.data.expr.ExprContext.slot("count");
+    private static final int SLOT_INDEX = dev.overgrown.apoli.data.expr.ExprContext.slot("index");
+
+    private static final class Scope implements AutoCloseable {
+        private final double distance;
+        private final double hitX;
+        private final double hitY;
+        private final double hitZ;
+        private final double count;
+        private final double index;
+
+        private Scope(Vec3 origin, Vec3 hit, int count, int index) {
+            this.distance = dev.overgrown.apoli.data.expr.ExprContext.push(SLOT_DISTANCE, origin.distanceTo(hit));
+            this.hitX = dev.overgrown.apoli.data.expr.ExprContext.push(SLOT_HIT_X, hit.x);
+            this.hitY = dev.overgrown.apoli.data.expr.ExprContext.push(SLOT_HIT_Y, hit.y);
+            this.hitZ = dev.overgrown.apoli.data.expr.ExprContext.push(SLOT_HIT_Z, hit.z);
+            this.count = dev.overgrown.apoli.data.expr.ExprContext.push(SLOT_COUNT, count);
+            this.index = dev.overgrown.apoli.data.expr.ExprContext.push(SLOT_INDEX, index);
+        }
+
+        @Override
+        public void close() {
+            dev.overgrown.apoli.data.expr.ExprContext.pop(SLOT_DISTANCE, distance);
+            dev.overgrown.apoli.data.expr.ExprContext.pop(SLOT_HIT_X, hitX);
+            dev.overgrown.apoli.data.expr.ExprContext.pop(SLOT_HIT_Y, hitY);
+            dev.overgrown.apoli.data.expr.ExprContext.pop(SLOT_HIT_Z, hitZ);
+            dev.overgrown.apoli.data.expr.ExprContext.pop(SLOT_COUNT, count);
+            dev.overgrown.apoli.data.expr.ExprContext.pop(SLOT_INDEX, index);
+        }
+    }
+
     private static final int MAX_CHAIN_DEPTH = 32;
     private static final int MAX_PIERCED_BLOCKS = 128;
 
@@ -137,13 +172,13 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
     ).apply(i, Aim::new));
 
     private static final MapCodec<Hooks> HOOKS = RecordCodecBuilder.mapCodec(i -> i.group(
-        BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Hooks::bientityCondition),
-        BlockCondition.CODEC.optionalFieldOf("block_condition").forGetter(Hooks::blockCondition),
-        BiEntityAction.CODEC.optionalFieldOf("bientity_action").forGetter(Hooks::bientityAction),
-        BlockAction.CODEC.optionalFieldOf("block_action").forGetter(Hooks::blockAction),
-        EntityAction.CODEC.optionalFieldOf("before_action").forGetter(Hooks::beforeAction),
-        EntityAction.CODEC.optionalFieldOf("hit_action").forGetter(Hooks::hitAction),
-        EntityAction.CODEC.optionalFieldOf("miss_action").forGetter(Hooks::missAction),
+        dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Hooks::bientityCondition),
+        dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Hooks::blockCondition),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Hooks::bientityAction),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("block_action", BlockAction.CODEC).forGetter(Hooks::blockAction),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("before_action", EntityAction.CODEC).forGetter(Hooks::beforeAction),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("hit_action", EntityAction.CODEC).forGetter(Hooks::hitAction),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("miss_action", EntityAction.CODEC).forGetter(Hooks::missAction),
         Codec.STRING.optionalFieldOf("command_at_hit").forGetter(Hooks::commandAtHit),
         Codec.FLOAT.optionalFieldOf("command_hit_offset").forGetter(Hooks::commandHitOffset),
         Codec.STRING.optionalFieldOf("command_along_ray").forGetter(Hooks::commandAlongRay),
@@ -222,7 +257,11 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
                     BlockState state = level.getBlockState(pos);
                     if (cfg.hooks.blockCondition.isEmpty()
                         || cfg.hooks.blockCondition.get().test(new BlockCtx(pos, state, level))) {
-                        cfg.hooks.blockAction.ifPresent(a -> a.run(new BlockCtx(pos, state, level)));
+                        if (cfg.hooks.blockAction.isPresent()) {
+                            try (Scope scope = new Scope(origin, hit.getLocation(), 1, guard)) {
+                                cfg.hooks.blockAction.get().run(new BlockCtx(pos, state, level));
+                            }
+                        }
                     }
 
                     double exitT = cellExitT(origin, dir, pos, blockDist);
@@ -277,10 +316,16 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
                 hits.add(new EntityHit(cand, hitPos, dSq));
             }
             hits.sort(Comparator.comparingDouble(EntityHit::distSq));
+            int hitIndex = 0;
             for (EntityHit hit : hits) {
                 if (cfg.hooks.bientityCondition.isPresent()
                     && !cfg.hooks.bientityCondition.get().test(new BiEntityCtx(source, hit.target(), level))) continue;
-                cfg.hooks.bientityAction.ifPresent(a -> a.run(new BiEntityCtx(source, hit.target(), level)));
+                if (cfg.hooks.bientityAction.isPresent()) {
+                    try (Scope scope = new Scope(origin, hit.pos(), hits.size(), hitIndex)) {
+                        cfg.hooks.bientityAction.get().run(new BiEntityCtx(source, hit.target(), level));
+                    }
+                }
+                hitIndex++;
                 if (!anyEntityHit) {
                     anyEntityHit = true;
                     nearestEntityHit = hit.pos();
@@ -306,12 +351,20 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
             BlockState state = level.getBlockState(pos);
             if (cfg.hooks.blockCondition.isEmpty()
                 || cfg.hooks.blockCondition.get().test(new BlockCtx(pos, state, level))) {
-                cfg.hooks.blockAction.ifPresent(a -> a.run(new BlockCtx(pos, state, level)));
+                if (cfg.hooks.blockAction.isPresent()) {
+                    try (Scope scope = new Scope(origin, blockHit.getLocation(), 1, 0)) {
+                        cfg.hooks.blockAction.get().run(new BlockCtx(pos, state, level));
+                    }
+                }
             }
         }
 
-        if (anyHit) cfg.hooks.hitAction.ifPresent(a -> a.run(ctx));
-        else cfg.hooks.missAction.ifPresent(a -> a.run(ctx));
+        if (cfg.hooks.hitAction.isPresent() || cfg.hooks.missAction.isPresent()) {
+            try (Scope scope = new Scope(origin, rayEnd, anyEntityHit ? 1 : 0, 0)) {
+                if (anyHit) cfg.hooks.hitAction.ifPresent(a -> a.run(ctx));
+                else cfg.hooks.missAction.ifPresent(a -> a.run(ctx));
+            }
+        }
 
         if (level instanceof ServerLevel serverLevel && cfg.params.particle.isPresent()) {
             ParticleOptions opts = cfg.params.particle.get().resolve(level);

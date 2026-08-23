@@ -13,7 +13,7 @@ public final class PreventElytraFlightPower extends PowerType<PreventElytraFligh
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction)
         ).apply(i, Config::new));
     }
 }

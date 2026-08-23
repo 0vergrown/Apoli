@@ -26,8 +26,8 @@ public final class ActionOnDeathPower extends PowerType<ActionOnDeathPower.Confi
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             BiEntityAction.CODEC.fieldOf("bientity_action").forGetter(Config::bientityAction),
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Config::bientityCondition),
-            DamageCondition.CODEC.optionalFieldOf("damage_condition").forGetter(Config::damageCondition)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("damage_condition", DamageCondition.CODEC).forGetter(Config::damageCondition)
         ).apply(i, Config::new));
     }
 

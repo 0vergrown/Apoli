@@ -44,13 +44,13 @@ public final class ModifyGrindstonePower extends PowerType<ModifyGrindstonePower
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             ResultType.CODEC.optionalFieldOf("result_type", ResultType.UNCHANGED).forGetter(Config::resultType),
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction),
-            BlockAction.CODEC.optionalFieldOf("block_action").forGetter(Config::blockAction),
-            ItemAction.CODEC.optionalFieldOf("item_action").forGetter(Config::itemAction),
-            ItemAction.CODEC.optionalFieldOf("item_action_after_grinding").forGetter(Config::itemActionAfterGrinding),
-            ItemCondition.CODEC.optionalFieldOf("top_condition").forGetter(Config::topCondition),
-            ItemCondition.CODEC.optionalFieldOf("bottom_condition").forGetter(Config::bottomCondition),
-            ItemCondition.CODEC.optionalFieldOf("output_condition").forGetter(Config::outputCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("block_action", BlockAction.CODEC).forGetter(Config::blockAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("item_action", ItemAction.CODEC).forGetter(Config::itemAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("item_action_after_grinding", ItemAction.CODEC).forGetter(Config::itemActionAfterGrinding),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("top_condition", ItemCondition.CODEC).forGetter(Config::topCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bottom_condition", ItemCondition.CODEC).forGetter(Config::bottomCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("output_condition", ItemCondition.CODEC).forGetter(Config::outputCondition),
             ItemStackData.CODEC.optionalFieldOf("result_stack").forGetter(Config::resultStack),
             AttributeModifier.CODEC.optionalFieldOf("xp_modifier").forGetter(Config::xpModifier)
         ).apply(i, Config::new));

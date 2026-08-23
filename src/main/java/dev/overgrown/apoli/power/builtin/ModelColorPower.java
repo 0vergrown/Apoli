@@ -43,7 +43,7 @@ public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
         Codec.FLOAT.optionalFieldOf("green").forGetter(pc -> Optional.of(pc.green())),
         Codec.FLOAT.optionalFieldOf("blue").forGetter(pc -> Optional.of(pc.blue())),
         Codec.FLOAT.optionalFieldOf("alpha", 1f).forGetter(PartColor::alpha),
-        EntityCondition.CODEC.optionalFieldOf("condition").forGetter(PartColor::condition)
+        dev.overgrown.apoli.codec.LoggedOptionalField.strict("condition", EntityCondition.CODEC).forGetter(PartColor::condition)
     ).apply(i, (part, r, g, b, alpha, condition) -> new PartColor(
         part, r.orElse(1f), g.orElse(1f), b.orElse(1f), alpha, explicitWhite(r, g, b), condition)));
 

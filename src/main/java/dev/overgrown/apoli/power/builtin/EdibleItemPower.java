@@ -58,10 +58,10 @@ public final class EdibleItemPower extends PowerType<EdibleItemPower.Config> {
     private static final ResourceLocation DEFAULT_EAT_SOUND = ResourceLocation.fromNamespaceAndPath("minecraft", "entity.generic.eat");
 
     private static final MapCodec<Config> INNER = RecordCodecBuilder.mapCodec(i -> i.group(
-        EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction),
-        ItemAction.CODEC.optionalFieldOf("item_action").forGetter(Config::itemAction),
-        ItemAction.CODEC.optionalFieldOf("result_item_action").forGetter(Config::resultItemAction),
-        ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Config::itemCondition),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("item_action", ItemAction.CODEC).forGetter(Config::itemAction),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("result_item_action", ItemAction.CODEC).forGetter(Config::resultItemAction),
+        dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Config::itemCondition),
         FoodComponent.CODEC.fieldOf("food_component").forGetter(Config::foodComponent),
         ItemStackData.CODEC.optionalFieldOf("result_stack").forGetter(Config::resultStack),
         ConsumeAnimation.CODEC.optionalFieldOf("consume_animation", ConsumeAnimation.EAT).forGetter(Config::consumeAnimation),

@@ -36,5 +36,7 @@ public final class BlockConditions {
             AliasingOptions.builder().addTypeAlias(Apoli.id("slipperness")).build()
         );
         ConditionTypes.BLOCK.register(Apoli.id("water_loggable"), new WaterLoggableBlockCondition());
+
+        ConditionTypes.BLOCK.register(Apoli.id("script"), new ScriptBlockCondition());
     }
 }

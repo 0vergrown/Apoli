@@ -35,7 +35,7 @@ public final class SpawnParticlesAction implements ActionType<EntityCtx, SpawnPa
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             ParticleEffect.CODEC.fieldOf("particle").forGetter(Cfg::particle),
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Cfg::bientityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Cfg::bientityCondition),
             Codec.INT.fieldOf("count").forGetter(Cfg::count),
             Codec.FLOAT.optionalFieldOf("speed", 0f).forGetter(Cfg::speed),
             Codec.BOOL.optionalFieldOf("force", false).forGetter(Cfg::force),

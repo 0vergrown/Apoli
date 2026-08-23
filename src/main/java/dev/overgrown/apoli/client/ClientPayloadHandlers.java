@@ -38,6 +38,17 @@ public final class ClientPayloadHandlers {
         DynamicKeyMappingManager.applyKeybinds(msg.keybinds());
     }
 
+    public static void onPowerInventory(dev.overgrown.apoli.network.payload.PowerInventoryS2C msg) {
+        dev.overgrown.apoli.client.ClientPowerState.applyPowerInventory(msg);
+    }
+
+    public static void onMountOffset(dev.overgrown.apoli.network.payload.MountOffsetS2C msg) {
+        net.minecraft.client.multiplayer.ClientLevel level = Minecraft.getInstance().level;
+        if (level == null) return;
+        dev.overgrown.apoli.mount.MountOffsets.put(level.getEntity(msg.passengerId()),
+            new dev.overgrown.apoli.mount.MountOffsets.Offset(msg.x(), msg.y(), msg.z(), msg.space()));
+    }
+
     public static void onApplyVelocity(ApplyVelocityS2C msg) {
         net.minecraft.client.multiplayer.ClientLevel level = Minecraft.getInstance().level;
         if (level == null) return;
@@ -63,6 +74,10 @@ public final class ClientPayloadHandlers {
 
     public static void onForceKey(dev.overgrown.apoli.network.payload.ForceKeyS2C msg) {
         ForcedKeys.force(msg.key(), msg.duration(), msg.release());
+    }
+
+    public static void onSyncShader(dev.overgrown.apoli.network.payload.SyncShaderS2C msg) {
+        ShaderPowerState.accept(msg.shader(), msg.toggleable());
     }
 
     public static void onSkillDefs(dev.overgrown.apoli.network.payload.SkillDefsSyncS2C msg) {

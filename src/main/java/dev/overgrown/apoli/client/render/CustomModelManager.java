@@ -1,6 +1,9 @@
 package dev.overgrown.apoli.client.render;
 
-import com.google.gson.JsonObject;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.JsonOps;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.client.model.BedrockModelParser;
 import dev.overgrown.apoli.client.model.CustomModel;
@@ -8,7 +11,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
-import net.minecraft.util.GsonHelper;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.InputStream;
@@ -44,7 +46,8 @@ public final class CustomModelManager implements ResourceManagerReloadListener {
                     continue;
                 }
                 try (InputStream stream = entry.getValue().open()) {
-                    JsonObject json = GsonHelper.parse(new InputStreamReader(stream));
+                    JsonElement raw = JsonParser.parseReader(new InputStreamReader(stream));
+                    Dynamic<JsonElement> json = new Dynamic<>(JsonOps.INSTANCE, raw);
                     MODELS.put(id, BedrockModelParser.parse(id, json));
                 } catch (Exception e) {
                     Apoli.LOGGER.error("[Apoli] Failed to load custom model {}: {}", id, e.getMessage());

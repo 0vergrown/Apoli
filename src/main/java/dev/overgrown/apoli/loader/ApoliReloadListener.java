@@ -2,16 +2,18 @@ package dev.overgrown.apoli.loader;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JsonOps;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.ApoliNetwork;
+import dev.overgrown.apoli.alias.AliasDefault;
 import dev.overgrown.apoli.alias.NamespaceAlias;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
+import dev.overgrown.apoli.power.LegacyPowerShapes;
 import dev.overgrown.apoli.power.PowerTypeRegistry;
 import dev.overgrown.apoli.power.builtin.MultiplePower;
 import net.minecraft.resources.ResourceLocation;
@@ -45,27 +47,25 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
 
     @Override
     protected void apply(Map<ResourceLocation, JsonElement> data, ResourceManager rm, ProfilerFiller profiler) {
-        Map<ResourceLocation, JsonElement> expanded = new LinkedHashMap<>(data.size());
+        Map<ResourceLocation, Dynamic<JsonElement>> expanded = new LinkedHashMap<>(data.size());
         for (Map.Entry<ResourceLocation, JsonElement> e : data.entrySet()) {
             ResourceLocation id = e.getKey();
             try {
-                expandMultiples(id, e.getValue(), expanded);
+                expandMultiples(id, new Dynamic<>(JsonOps.INSTANCE, e.getValue()), expanded);
             } catch (Exception ex) {
                 LOG.error("[Apoli] Failed to expand power {}: {}", id, ex.getMessage());
             }
         }
 
         Map<ResourceLocation, Power> loaded = new HashMap<>(expanded.size());
-        for (Map.Entry<ResourceLocation, JsonElement> e : expanded.entrySet()) {
+        for (Map.Entry<ResourceLocation, Dynamic<JsonElement>> e : expanded.entrySet()) {
             ResourceLocation id = e.getKey();
-            JsonElement json = IdWildcards.apply(e.getValue(), id);
-            json = applyAliasFieldRenames(json);
-            json = applyAliasDefaults(json);
+            Dynamic<JsonElement> power = prepare(e.getValue(), id);
             dev.overgrown.apoli.codec.LoggedOptionalField.setContext(id);
             try {
-                Power.CODEC.parse(JsonOps.INSTANCE, json)
+                Power.CODEC.parse(power)
                     .resultOrPartial(err -> LOG.error("Failed to parse power {}: {}", id, err))
-                    .ifPresent(power -> loaded.put(id, power));
+                    .ifPresent(parsed -> loaded.put(id, parsed));
             } finally {
                 dev.overgrown.apoli.codec.LoggedOptionalField.clearContext();
             }
@@ -84,21 +84,31 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
         }
     }
 
-    private static void expandMultiples(ResourceLocation id, JsonElement json, Map<ResourceLocation, JsonElement> out) {
-        if (!(json instanceof JsonObject obj) || !isMultiple(obj)) {
-            out.put(id, json);
+    public static <T> Dynamic<T> prepare(Dynamic<T> power, ResourceLocation id) {
+        Dynamic<T> out = IdWildcards.apply(power, id);
+        out = LegacyPowerShapes.apply(out);
+        out = applyAliasFieldRenames(out);
+        return applyAliasDefaults(out);
+    }
+
+    private static <T> void expandMultiples(ResourceLocation id, Dynamic<T> power,
+                                            Map<ResourceLocation, Dynamic<T>> out) {
+        Map<Dynamic<T>, Dynamic<T>> fields = power.getMapValues().result().orElse(null);
+        if (fields == null || !isMultiple(power)) {
+            out.put(id, power);
             return;
         }
         List<ResourceLocation> subIds = new ArrayList<>();
-        JsonObject superJson = new JsonObject();
-        for (Map.Entry<String, JsonElement> field : obj.entrySet()) {
-            String key = field.getKey();
-            JsonElement value = field.getValue();
+        Dynamic<T> superPower = power.emptyMap();
+        for (Map.Entry<Dynamic<T>, Dynamic<T>> field : fields.entrySet()) {
+            String key = field.getKey().asString().result().orElse(null);
+            if (key == null) continue;
+            Dynamic<T> value = field.getValue();
             if (MultiplePower.RESERVED_FIELDS.contains(key)) {
-                superJson.add(key, value);
+                superPower = superPower.set(key, value);
                 continue;
             }
-            if (!(value instanceof JsonObject subObj)) {
+            if (value.getMapValues().result().isEmpty()) {
                 continue;
             }
             ResourceLocation subId = subPowerId(id, key);
@@ -106,8 +116,8 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
                 LOG.error("[Apoli] Sub-power key '{}' on {} would produce an invalid identifier — skipping.", key, id);
                 continue;
             }
-            JsonObject substituted = (JsonObject) IdWildcards.apply(subObj.deepCopy(), id);
-            if (!substituted.has("type")) {
+            Dynamic<T> substituted = IdWildcards.apply(value, id);
+            if (substituted.get("type").result().isEmpty()) {
                 LOG.error("[Apoli] Sub-power '{}' of {} has no 'type' field — skipping. (If this was meant to be power data rather than a sub-power, it is not a recognized field of apoli:multiple.)", key, id);
                 continue;
             }
@@ -121,58 +131,56 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
             out.put(subId, substituted);
             subIds.add(subId);
         }
-        superJson.addProperty("type", MULTIPLE.toString());
-        JsonArray subPowers = new JsonArray();
-        for (ResourceLocation sub : subIds) subPowers.add(sub.toString());
-        superJson.add("sub_powers", subPowers);
-        out.put(id, superJson);
+        superPower = superPower.set("type", power.createString(MULTIPLE.toString()));
+        superPower = superPower.set("sub_powers",
+            power.createList(subIds.stream().map(sub -> power.createString(sub.toString()))));
+        out.put(id, superPower);
     }
 
-    private static JsonElement applyAliasFieldRenames(JsonElement json) {
-        if (!(json instanceof JsonObject obj)) return json;
-        JsonElement typeEl = obj.get("type");
-        if (typeEl == null || !typeEl.isJsonPrimitive()) return json;
-        ResourceLocation aliasId = ResourceLocation.tryParse(typeEl.getAsString());
-        if (aliasId == null) return json;
+    private static <T> Dynamic<T> applyAliasFieldRenames(Dynamic<T> power) {
+        ResourceLocation aliasId = declaredType(power);
+        if (aliasId == null) return power;
         Map<String, String> renames = PowerTypeRegistry.aliasFieldRenames(aliasId);
         if (renames.isEmpty() && NamespaceAlias.hasAlias(aliasId.getNamespace())) {
             renames = PowerTypeRegistry.aliasFieldRenames(NamespaceAlias.resolve(aliasId));
         }
-        if (renames.isEmpty()) return json;
+        if (renames.isEmpty()) return power;
+        Dynamic<T> out = power;
         for (Map.Entry<String, String> rename : renames.entrySet()) {
-            String oldName = rename.getKey();
-            String newName = rename.getValue();
-            if (obj.has(oldName) && !obj.has(newName)) {
-                obj.add(newName, obj.get(oldName));
-                obj.remove(oldName);
-            }
+            Dynamic<T> value = out.get(rename.getKey()).result().orElse(null);
+            if (value == null || out.get(rename.getValue()).result().isPresent()) continue;
+            out = out.remove(rename.getKey()).set(rename.getValue(), value);
         }
-        return obj;
+        return out;
     }
 
-    private static JsonElement applyAliasDefaults(JsonElement json) {
-        if (!(json instanceof JsonObject obj)) return json;
-        JsonElement typeEl = obj.get("type");
-        if (typeEl == null || !typeEl.isJsonPrimitive()) return json;
-        ResourceLocation aliasId = ResourceLocation.tryParse(typeEl.getAsString());
-        if (aliasId == null) return json;
-        JsonObject defaults = PowerTypeRegistry.aliasDefaults(aliasId);
-        if ((defaults == null || defaults.size() == 0) && NamespaceAlias.hasAlias(aliasId.getNamespace())) {
+    private static <T> Dynamic<T> applyAliasDefaults(Dynamic<T> power) {
+        ResourceLocation aliasId = declaredType(power);
+        if (aliasId == null) return power;
+        List<AliasDefault<?>> defaults = PowerTypeRegistry.aliasDefaults(aliasId);
+        if (defaults.isEmpty() && NamespaceAlias.hasAlias(aliasId.getNamespace())) {
             defaults = PowerTypeRegistry.aliasDefaults(NamespaceAlias.resolve(aliasId));
         }
-        if (defaults == null || defaults.size() == 0) return json;
-        for (Map.Entry<String, JsonElement> def : defaults.entrySet()) {
-            if (!obj.has(def.getKey())) obj.add(def.getKey(), def.getValue());
+        if (defaults.isEmpty()) return power;
+        DynamicOps<T> ops = power.getOps();
+        Dynamic<T> out = power;
+        for (AliasDefault<?> def : defaults) {
+            if (out.get(def.field()).result().isPresent()) continue;
+            T encoded = def.encode(ops).resultOrPartial(err ->
+                LOG.error("[Apoli] Could not build the default '{}' for {}: {}", def.field(), aliasId, err)).orElse(null);
+            if (encoded != null) out = out.set(def.field(), new Dynamic<>(ops, encoded));
         }
-        return obj;
+        return out;
     }
 
-    private static boolean isMultiple(JsonObject obj) {
-        JsonElement type = obj.get("type");
-        if (type == null || !type.isJsonPrimitive()) return false;
-        ResourceLocation parsed = ResourceLocation.tryParse(type.getAsString());
-        if (parsed == null) return false;
-        return MULTIPLE.equals(PowerTypeRegistry.resolveId(parsed));
+    private static <T> ResourceLocation declaredType(Dynamic<T> power) {
+        String declared = power.get("type").asString().result().orElse(null);
+        return declared == null ? null : ResourceLocation.tryParse(declared);
+    }
+
+    private static <T> boolean isMultiple(Dynamic<T> power) {
+        ResourceLocation declared = declaredType(power);
+        return declared != null && MULTIPLE.equals(PowerTypeRegistry.resolveId(declared));
     }
 
     private static ResourceLocation subPowerId(ResourceLocation superId, String key) {

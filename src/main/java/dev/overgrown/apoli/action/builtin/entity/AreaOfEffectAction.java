@@ -23,17 +23,22 @@ public final class AreaOfEffectAction implements ActionType<EntityCtx, AreaOfEff
     public record Cfg(
         Vector radius,
         Shape shape,
-        BiEntityAction bientityAction,
+        Optional<BiEntityAction> bientityAction,
         Optional<BiEntityCondition> bientityCondition,
-        boolean includeActor
+        boolean includeActor,
+        Optional<dev.overgrown.apoli.action.EntityAction> afterAction
     ) {}
+
+    private static final int SLOT_COUNT = dev.overgrown.apoli.data.expr.ExprContext.slot("count");
+    private static final int SLOT_INDEX = dev.overgrown.apoli.data.expr.ExprContext.slot("index");
 
     private static final MapCodec<Cfg> INNER = RecordCodecBuilder.mapCodec(i -> i.group(
         Vector.SCALAR_OR_VECTOR.optionalFieldOf("radius", Vector.uniform(16.0f)).forGetter(Cfg::radius),
         Shape.CODEC.optionalFieldOf("shape", Shape.CUBE).forGetter(Cfg::shape),
-        BiEntityAction.CODEC.fieldOf("bientity_action").forGetter(Cfg::bientityAction),
-        BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Cfg::bientityCondition),
-        Codec.BOOL.optionalFieldOf("include_actor", false).forGetter(Cfg::includeActor)
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Cfg::bientityAction),
+        dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Cfg::bientityCondition),
+        Codec.BOOL.optionalFieldOf("include_actor", false).forGetter(Cfg::includeActor),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("after_action", dev.overgrown.apoli.action.EntityAction.CODEC).forGetter(Cfg::afterAction)
     ).apply(i, Cfg::new));
 
     @Override
@@ -63,8 +68,28 @@ public final class AreaOfEffectAction implements ActionType<EntityCtx, AreaOfEff
                 }
                 return true;
             });
-        for (Entity target : nearby) {
-            cfg.bientityAction.run(BiEntityCtx.of(actor, target, actor.level()));
+        int count = nearby.size();
+        if (cfg.bientityAction.isPresent()) {
+            BiEntityAction action = cfg.bientityAction.get();
+            double previousCount = dev.overgrown.apoli.data.expr.ExprContext.push(SLOT_COUNT, count);
+            double previousIndex = dev.overgrown.apoli.data.expr.ExprContext.get(SLOT_INDEX);
+            try {
+                for (int i = 0; i < count; i++) {
+                    dev.overgrown.apoli.data.expr.ExprContext.push(SLOT_INDEX, i);
+                    action.run(BiEntityCtx.of(actor, nearby.get(i), actor.level()));
+                }
+            } finally {
+                dev.overgrown.apoli.data.expr.ExprContext.pop(SLOT_INDEX, previousIndex);
+                dev.overgrown.apoli.data.expr.ExprContext.pop(SLOT_COUNT, previousCount);
+            }
+        }
+        if (cfg.afterAction.isPresent()) {
+            double previousCount = dev.overgrown.apoli.data.expr.ExprContext.push(SLOT_COUNT, count);
+            try {
+                cfg.afterAction.get().run(ctx);
+            } finally {
+                dev.overgrown.apoli.data.expr.ExprContext.pop(SLOT_COUNT, previousCount);
+            }
         }
     }
 }

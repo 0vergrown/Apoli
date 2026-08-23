@@ -52,7 +52,7 @@ public final class AddVelocityAction implements ActionType<BiEntityCtx, AddVeloc
             case POSITION -> target.position().subtract(actor.position());
             case ROTATION -> actor.getLookAngle();
         };
-        Vec3 amount = new Vec3(cfg.x.eval(target), cfg.y.eval(target), cfg.z.eval(target));
+        Vec3 amount = new Vec3(cfg.x.eval(actor), cfg.y.eval(actor), cfg.z.eval(actor));
         Vec3 delta = Space.transformVectorToBase(forward, amount, actor.getYRot(), true);
         VelocityUpdater.apply(target, delta, cfg.set);
     }

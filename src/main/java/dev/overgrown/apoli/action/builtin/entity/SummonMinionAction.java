@@ -45,7 +45,7 @@ public final class SummonMinionAction implements ActionType<EntityCtx, SummonMin
             Codec.INT.optionalFieldOf("max_life_ticks", 1200).forGetter(Cfg::maxLifeTicks),
             IdCodecs.ID.optionalFieldOf("summon_id").forGetter(Cfg::summonId),
             IdCodecs.ID.listOf().optionalFieldOf("powers", List.of()).forGetter(Cfg::powers),
-            BiEntityAction.CODEC.optionalFieldOf("bientity_action").forGetter(Cfg::bientityAction)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Cfg::bientityAction)
         ).apply(i, Cfg::new));
     }
 

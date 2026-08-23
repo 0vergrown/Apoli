@@ -47,7 +47,7 @@ public final class DisableSlotPower extends PowerType<DisableSlotPower.Config> {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             ItemSlot.CODEC.optionalFieldOf("slot").forGetter(c -> Optional.empty()),
             ItemSlot.CODEC.listOf().optionalFieldOf("slots").forGetter(c -> Optional.of(c.slots())),
-            ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Config::itemCondition)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Config::itemCondition)
         ).apply(i, DisableSlotPower::build));
     }
 

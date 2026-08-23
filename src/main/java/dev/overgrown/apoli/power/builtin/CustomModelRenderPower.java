@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.data.EquipmentSlot;
+import dev.overgrown.apoli.data.ModelAnimation;
 import dev.overgrown.apoli.data.ModelParts;
 import dev.overgrown.apoli.data.RenderMode;
 import dev.overgrown.apoli.power.PowerLookup;
@@ -55,7 +56,8 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         float blue,
         float alpha,
         boolean showFirstPerson,
-        float scale
+        float scale,
+        Optional<ModelAnimation> animations
     ) {
         @Nullable
         public ResourceLocation wide() {
@@ -100,29 +102,70 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         float alpha,
         boolean showFirstPerson,
         float scale,
-        boolean renderAsOverlay
+        boolean renderAsOverlay,
+        Optional<ModelAnimation> animations
     ) {}
+
+    private record Base(
+        Mode mode,
+        Optional<ResourceLocation> wideTexture,
+        Optional<ResourceLocation> slimTexture,
+        Optional<ResourceLocation> model,
+        Optional<ResourceLocation> texture,
+        boolean renderAsOverlay,
+        boolean hideCape,
+        List<EquipmentSlot> hiddenSlots,
+        RenderMode renderType,
+        List<String> bodyParts,
+        float red,
+        float green,
+        float blue,
+        float alpha,
+        boolean showFirstPerson,
+        float scale
+    ) {}
+
+    private static final MapCodec<Base> BASE_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+        Mode.CODEC.optionalFieldOf("mode", Mode.TEXTURE).forGetter(Base::mode),
+        IdCodecs.ID.optionalFieldOf("wide_texture_location").forGetter(Base::wideTexture),
+        IdCodecs.ID.optionalFieldOf("slim_texture_location").forGetter(Base::slimTexture),
+        IdCodecs.ID.optionalFieldOf("model_location").forGetter(Base::model),
+        IdCodecs.ID.optionalFieldOf("texture_location").forGetter(Base::texture),
+        Codec.BOOL.optionalFieldOf("render_as_overlay", false).forGetter(Base::renderAsOverlay),
+        Codec.BOOL.optionalFieldOf("hide_cape", false).forGetter(Base::hideCape),
+        EquipmentSlot.CODEC.listOf().optionalFieldOf("hidden_slots", List.of()).forGetter(Base::hiddenSlots),
+        RenderMode.CODEC.optionalFieldOf("render_type", RenderMode.TRANSLUCENT).forGetter(Base::renderType),
+        ModelParts.PART_LIST_CODEC.optionalFieldOf("body_parts", List.of()).forGetter(Base::bodyParts),
+        Codec.FLOAT.optionalFieldOf("red", 1.0F).forGetter(Base::red),
+        Codec.FLOAT.optionalFieldOf("green", 1.0F).forGetter(Base::green),
+        Codec.FLOAT.optionalFieldOf("blue", 1.0F).forGetter(Base::blue),
+        Codec.FLOAT.optionalFieldOf("alpha", 1.0F).forGetter(Base::alpha),
+        Codec.BOOL.optionalFieldOf("show_first_person", false).forGetter(Base::showFirstPerson),
+        Codec.FLOAT.optionalFieldOf("scale", 1.0F).forGetter(Base::scale)
+    ).apply(instance, Base::new));
+
+    private static final MapCodec<Config> CONFIG_CODEC =
+        Codec.mapPair(BASE_CODEC, ModelAnimation.CODEC.optionalFieldOf("animations"))
+            .xmap(
+                pair -> merge(pair.getFirst(), pair.getSecond()),
+                config -> com.mojang.datafixers.util.Pair.of(split(config), config.animations())
+            );
+
+    private static Config merge(Base base, Optional<ModelAnimation> animations) {
+        return new Config(base.mode(), base.wideTexture(), base.slimTexture(), base.model(), base.texture(),
+            base.renderAsOverlay(), base.hideCape(), base.hiddenSlots(), base.renderType(), base.bodyParts(),
+            base.red(), base.green(), base.blue(), base.alpha(), base.showFirstPerson(), base.scale(), animations);
+    }
+
+    private static Base split(Config config) {
+        return new Base(config.mode(), config.wideTexture(), config.slimTexture(), config.model(), config.texture(),
+            config.renderAsOverlay(), config.hideCape(), config.hiddenSlots(), config.renderType(), config.bodyParts(),
+            config.red(), config.green(), config.blue(), config.alpha(), config.showFirstPerson(), config.scale());
+    }
 
     @Override
     public MapCodec<Config> configCodec() {
-        return RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Mode.CODEC.optionalFieldOf("mode", Mode.TEXTURE).forGetter(Config::mode),
-            IdCodecs.ID.optionalFieldOf("wide_texture_location").forGetter(Config::wideTexture),
-            IdCodecs.ID.optionalFieldOf("slim_texture_location").forGetter(Config::slimTexture),
-            IdCodecs.ID.optionalFieldOf("model_location").forGetter(Config::model),
-            IdCodecs.ID.optionalFieldOf("texture_location").forGetter(Config::texture),
-            Codec.BOOL.optionalFieldOf("render_as_overlay", false).forGetter(Config::renderAsOverlay),
-            Codec.BOOL.optionalFieldOf("hide_cape", false).forGetter(Config::hideCape),
-            EquipmentSlot.CODEC.listOf().optionalFieldOf("hidden_slots", List.of()).forGetter(Config::hiddenSlots),
-            RenderMode.CODEC.optionalFieldOf("render_type", RenderMode.TRANSLUCENT).forGetter(Config::renderType),
-            ModelParts.PART_LIST_CODEC.optionalFieldOf("body_parts", List.of()).forGetter(Config::bodyParts),
-            Codec.FLOAT.optionalFieldOf("red", 1.0F).forGetter(Config::red),
-            Codec.FLOAT.optionalFieldOf("green", 1.0F).forGetter(Config::green),
-            Codec.FLOAT.optionalFieldOf("blue", 1.0F).forGetter(Config::blue),
-            Codec.FLOAT.optionalFieldOf("alpha", 1.0F).forGetter(Config::alpha),
-            Codec.BOOL.optionalFieldOf("show_first_person", false).forGetter(Config::showFirstPerson),
-            Codec.FLOAT.optionalFieldOf("scale", 1.0F).forGetter(Config::scale)
-        ).apply(instance, Config::new));
+        return CONFIG_CODEC;
     }
 
     private static boolean hiddenByEquipment(LivingEntity entity, List<EquipmentSlot> slots) {
@@ -199,7 +242,8 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
                 return;
             }
             out.add(new GeometryRender(cfg.model().get(), cfg.texture().get(), cfg.renderType(), cfg.bodyParts(),
-                cfg.red(), cfg.green(), cfg.blue(), cfg.alpha(), cfg.showFirstPerson(), cfg.scale(), cfg.renderAsOverlay()));
+                cfg.red(), cfg.green(), cfg.blue(), cfg.alpha(), cfg.showFirstPerson(), cfg.scale(), cfg.renderAsOverlay(),
+                cfg.animations()));
         });
         return out;
     }

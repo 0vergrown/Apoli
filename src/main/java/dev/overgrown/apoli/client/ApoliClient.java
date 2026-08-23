@@ -84,6 +84,7 @@ public final class ApoliClient {
             ShaderPowerState.invalidate();
         });
         event.registerReloadListener(dev.overgrown.apoli.client.render.CustomModelManager.INSTANCE);
+        event.registerReloadListener(dev.overgrown.apoli.client.render.AnimationManager.INSTANCE);
     }
 
     @SubscribeEvent
@@ -93,6 +94,8 @@ public final class ApoliClient {
                 ClientPowerState.powersFor(entity.getId()).isEmpty() ? null : new ClientPowerContainer(entity));
             dev.overgrown.apoli.power.PowerResources.setClientCooldownLookup((owner, powerId) ->
                 owner == Minecraft.getInstance().player ? ClientPowerState.getCooldown(powerId) : 0);
+            dev.overgrown.apoli.power.builtin.InventoryPower.setClientLookup((holder, powerId) ->
+                holder == Minecraft.getInstance().player ? ClientPowerState.powerInventory(powerId) : null);
             HeldKeys.setClientLookup((entity, key) ->
                 entity == Minecraft.getInstance().player && KeyPressWatcher.isLocalHeld(key));
             KeyPressWatcher.setSender(keys -> PacketDistributor.sendToServer(new KeyHeldC2S(keys)));
@@ -113,7 +116,6 @@ public final class ApoliClient {
         public static void onClientTick(ClientTickEvent.Post event) {
             Minecraft mc = Minecraft.getInstance();
             CursorSpeedState.tick(mc);
-            ShaderPowerState.clientTick(mc);
             PhasingRenderState.clientTick(mc);
             RopeClientManager.tick();
             TextOverlayRenderer.tick();
@@ -143,6 +145,7 @@ public final class ApoliClient {
         public static void onDisconnect(ClientPlayerNetworkEvent.LoggingOut event) {
             DynamicKeyMappingManager.unregisterAll();
             ClientPowerState.clear();
+            dev.overgrown.apoli.mount.MountOffsets.clearAll();
             ShaderPowerState.clear();
             TextOverlayRenderer.clear();
             ClientLabelState.clear();

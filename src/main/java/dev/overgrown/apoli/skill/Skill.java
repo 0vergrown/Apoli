@@ -44,8 +44,8 @@ public record Skill(
             IconData.CODEC.optionalFieldOf("icon", IconData.grassBlock()).forGetter(Skill::icon),
             SkillFrame.CODEC.optionalFieldOf("frame", SkillFrame.TASK).forGetter(Skill::frame),
             SingleOrList.of(IdCodecs.ID).optionalFieldOf("powers", List.of()).forGetter(Skill::powers),
-            EntityCondition.CODEC.optionalFieldOf("condition").forGetter(Skill::condition),
-            EntityCondition.CODEC.optionalFieldOf("visibility_condition").forGetter(Skill::visibilityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("condition", EntityCondition.CODEC).forGetter(Skill::condition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("visibility_condition", EntityCondition.CODEC).forGetter(Skill::visibilityCondition),
             IdCodecs.ID.listOf().optionalFieldOf("excludes", List.of()).forGetter(Skill::excludes),
             Codec.INT.optionalFieldOf("cost", 0).forGetter(Skill::cost),
             Codec.INT.optionalFieldOf("order", 0).forGetter(Skill::order)

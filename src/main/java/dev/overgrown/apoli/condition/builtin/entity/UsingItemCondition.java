@@ -16,7 +16,7 @@ public final class UsingItemCondition implements ConditionType<EntityCtx, UsingI
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Cfg::itemCondition)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Cfg::itemCondition)
         ).apply(i, Cfg::new));
     }
 

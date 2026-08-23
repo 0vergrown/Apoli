@@ -33,5 +33,9 @@ public final class ModCompat {
 
     public static final boolean BETTER_COMBAT = ModList.get().isLoaded("bettercombat");
 
+    public static final boolean WALKERS = ModList.get().isLoaded("walkers");
+
+    public static final boolean KUBEJS = ModList.get().isLoaded("kubejs");
+
     public static final boolean PUFFISH_SKILLS = ModList.get().isLoaded("puffish_skills");
 }

@@ -1,54 +1,52 @@
 package dev.overgrown.apoli.data;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
 import com.mojang.brigadier.StringReader;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.Dynamic;
-import com.mojang.serialization.JsonOps;
 import net.minecraft.commands.arguments.ParticleArgument;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
-public record ParticleEffect(JsonElement raw) {
+public record ParticleEffect(Dynamic<?> raw) {
 
-    public static final ParticleEffect EMPTY = new ParticleEffect(new JsonPrimitive("minecraft:poof"));
+    public static final ParticleEffect EMPTY =
+        new ParticleEffect(new Dynamic<>(NbtOps.INSTANCE).createString("minecraft:poof"));
 
     public static final Codec<ParticleEffect> CODEC = Codec.PASSTHROUGH.xmap(
-        dynamic -> new ParticleEffect(dynamic.convert(JsonOps.INSTANCE).getValue()),
-        effect -> new Dynamic<>(JsonOps.INSTANCE, effect.raw)
+        ParticleEffect::new,
+        ParticleEffect::raw
     );
 
     public @Nullable ParticleOptions resolve(Level level) {
-        RegistryOps<JsonElement> ops = level.registryAccess().createSerializationContext(JsonOps.INSTANCE);
+        RegistryOps<Tag> ops = level.registryAccess().createSerializationContext(NbtOps.INSTANCE);
+        Dynamic<Tag> data = raw.convert(NbtOps.INSTANCE);
 
-        if (raw.isJsonPrimitive()) {
-            JsonObject obj = new JsonObject();
-            obj.add("type", raw);
-            return ParticleTypes.CODEC.parse(ops, obj).result().orElse(null);
+        String simple = data.asString().result().orElse(null);
+        if (simple != null) {
+            Dynamic<Tag> wrapped = data.emptyMap().set("type", data.createString(simple));
+            return ParticleTypes.CODEC.parse(ops, wrapped.getValue()).result().orElse(null);
         }
 
-        if (raw.isJsonObject()) {
-            JsonObject obj = raw.getAsJsonObject();
-            if (obj.has("params")) {
-                String type = obj.has("type") ? obj.get("type").getAsString() : "";
-                String params = obj.get("params").getAsString();
-                String command = params.isEmpty()
-                    ? type
-                    : type + (params.startsWith("{") ? params : "{" + params + "}");
-                try {
-                    return ParticleArgument.readParticle(new StringReader(command), level.registryAccess());
-                } catch (Exception ignored) {
-                    return null;
-                }
+        if (data.getMapValues().result().isEmpty()) return null;
+
+        String params = data.get("params").asString().result().orElse(null);
+        if (params != null) {
+            String type = data.get("type").asString().result().orElse("");
+            String command = params.isEmpty()
+                ? type
+                : type + (params.startsWith("{") ? params : "{" + params + "}");
+            try {
+                return ParticleArgument.readParticle(new StringReader(command), level.registryAccess());
+            } catch (Exception ignored) {
+                return null;
             }
-            return ParticleTypes.CODEC.parse(ops, obj).result().orElse(null);
         }
 
-        return null;
+        return ParticleTypes.CODEC.parse(ops, data.getValue()).result().orElse(null);
     }
 }

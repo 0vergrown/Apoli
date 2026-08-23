@@ -43,7 +43,7 @@ public final class ParticlePower extends PowerType<ParticlePower.Config> {
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             ParticleEffect.CODEC.fieldOf("particle").forGetter(Config::particle),
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Config::bientityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition),
             Codec.INT.optionalFieldOf("count", 1).forGetter(Config::count),
             Codec.FLOAT.optionalFieldOf("speed", 0f).forGetter(Config::speed),
             Codec.BOOL.optionalFieldOf("force", false).forGetter(Config::force),

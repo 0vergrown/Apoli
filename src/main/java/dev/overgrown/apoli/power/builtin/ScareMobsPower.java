@@ -45,7 +45,7 @@ public final class ScareMobsPower extends PowerType<ScareMobsPower.Config> {
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Config::bientityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition),
             Codec.DOUBLE.optionalFieldOf("radius", 6.0).forGetter(Config::radius),
             Codec.DOUBLE.optionalFieldOf("speed", 1.0).forGetter(Config::speed)
         ).apply(i, Config::new));

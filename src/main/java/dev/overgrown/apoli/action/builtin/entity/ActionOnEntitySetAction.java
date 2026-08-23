@@ -36,7 +36,7 @@ public final class ActionOnEntitySetAction implements ActionType<EntityCtx, Acti
         return RecordCodecBuilder.mapCodec(i -> i.group(
             IdCodecs.ID.fieldOf("set").forGetter(Cfg::set),
             BiEntityAction.CODEC.fieldOf("bientity_action").forGetter(Cfg::biEntityAction),
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Cfg::biEntityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Cfg::biEntityCondition),
             Codec.INT.optionalFieldOf("limit", 0).forGetter(Cfg::limit),
             Codec.BOOL.optionalFieldOf("reverse", false).forGetter(Cfg::reverse),
             SetIteration.CODEC.optionalFieldOf("iterate", SetIteration.MEMBERS).forGetter(Cfg::iterate)

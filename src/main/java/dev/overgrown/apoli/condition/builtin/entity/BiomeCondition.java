@@ -27,7 +27,7 @@ public final class BiomeCondition implements ConditionType<EntityCtx, BiomeCondi
         return RecordCodecBuilder.mapCodec(i -> i.group(
             IdCodecs.ID.optionalFieldOf("biome").forGetter(Cfg::biome),
             Codec.list(IdCodecs.ID).optionalFieldOf("biomes").forGetter(Cfg::biomes),
-            dev.overgrown.apoli.condition.BiomeCondition.CODEC.optionalFieldOf("condition").forGetter(Cfg::condition)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("condition", dev.overgrown.apoli.condition.BiomeCondition.CODEC).forGetter(Cfg::condition)
         ).apply(i, Cfg::new));
     }
 

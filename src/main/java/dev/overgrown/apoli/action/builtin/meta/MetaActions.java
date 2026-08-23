@@ -25,6 +25,7 @@ public final class MetaActions {
     private static final ResourceLocation LOOP = Apoli.id("loop");
     private static final ResourceLocation IF_ELSE = Apoli.id("if_else");
     private static final ResourceLocation IF_ELSE_LIST = Apoli.id("if_else_list");
+    private static final ResourceLocation IF_CASE = Apoli.id("if_case");
 
     private static AliasingOptions chanceAliases() {
         return AliasingOptions.builder().addTypeAlias(Apoli.id("chance")).build();
@@ -43,6 +44,8 @@ public final class MetaActions {
             EntityCondition::test, EntityAction::run));
         reg.register(IF_ELSE_LIST, new IfElseListMetaAction<>(EntityCondition.CODEC, EntityAction.CODEC,
             EntityCondition::test, EntityAction::run));
+        reg.register(IF_CASE, new IfCaseMetaAction<>(EntityCondition.CODEC, EntityAction.CODEC,
+            EntityCondition::test, EntityAction::run));
     }
 
     public static void registerBiEntity() {
@@ -57,6 +60,8 @@ public final class MetaActions {
         reg.register(IF_ELSE, new IfElseMetaAction<>(BiEntityCondition.CODEC, BiEntityAction.CODEC,
             BiEntityCondition::test, BiEntityAction::run));
         reg.register(IF_ELSE_LIST, new IfElseListMetaAction<>(BiEntityCondition.CODEC, BiEntityAction.CODEC,
+            BiEntityCondition::test, BiEntityAction::run));
+        reg.register(IF_CASE, new IfCaseMetaAction<>(BiEntityCondition.CODEC, BiEntityAction.CODEC,
             BiEntityCondition::test, BiEntityAction::run));
     }
 
@@ -73,6 +78,8 @@ public final class MetaActions {
             BlockCondition::test, BlockAction::run));
         reg.register(IF_ELSE_LIST, new IfElseListMetaAction<>(BlockCondition.CODEC, BlockAction.CODEC,
             BlockCondition::test, BlockAction::run));
+        reg.register(IF_CASE, new IfCaseMetaAction<>(BlockCondition.CODEC, BlockAction.CODEC,
+            BlockCondition::test, BlockAction::run));
     }
 
     public static void registerItem() {
@@ -87,6 +94,8 @@ public final class MetaActions {
         reg.register(IF_ELSE, new IfElseMetaAction<>(ItemCondition.CODEC, ItemAction.CODEC,
             ItemCondition::test, ItemAction::run));
         reg.register(IF_ELSE_LIST, new IfElseListMetaAction<>(ItemCondition.CODEC, ItemAction.CODEC,
+            ItemCondition::test, ItemAction::run));
+        reg.register(IF_CASE, new IfCaseMetaAction<>(ItemCondition.CODEC, ItemAction.CODEC,
             ItemCondition::test, ItemAction::run));
     }
 }

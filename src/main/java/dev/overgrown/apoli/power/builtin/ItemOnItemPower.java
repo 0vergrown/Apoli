@@ -47,14 +47,14 @@ public final class ItemOnItemPower extends PowerType<ItemOnItemPower.Config> {
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ItemCondition.CODEC.optionalFieldOf("using_item_condition").forGetter(Config::usingItemCondition),
-            ItemCondition.CODEC.optionalFieldOf("on_item_condition").forGetter(Config::onItemCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("using_item_condition", ItemCondition.CODEC).forGetter(Config::usingItemCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("on_item_condition", ItemCondition.CODEC).forGetter(Config::onItemCondition),
             ItemStackData.CODEC.optionalFieldOf("result").forGetter(Config::result),
             Codec.INT.optionalFieldOf("result_from_on_stack", 0).forGetter(Config::resultFromOnStack),
-            ItemAction.CODEC.optionalFieldOf("using_item_action").forGetter(Config::usingItemAction),
-            ItemAction.CODEC.optionalFieldOf("on_item_action").forGetter(Config::onItemAction),
-            ItemAction.CODEC.optionalFieldOf("result_item_action").forGetter(Config::resultItemAction),
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("using_item_action", ItemAction.CODEC).forGetter(Config::usingItemAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("on_item_action", ItemAction.CODEC).forGetter(Config::onItemAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("result_item_action", ItemAction.CODEC).forGetter(Config::resultItemAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction),
             ClickType.CODEC.optionalFieldOf("click_type", ClickType.SECONDARY).forGetter(Config::clickType)
         ).apply(i, Config::new));
     }

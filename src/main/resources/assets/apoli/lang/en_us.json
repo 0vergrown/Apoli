@@ -1,5 +1,7 @@
 {
     "key.categories.apoli": "Apoli",
+    "key.apoli.primary_active": "Active Power (Primary)",
+    "key.apoli.secondary_active": "Active Power (Secondary)",
     "key.apoli.skill_tree": "Open Skill Tree",
     "key.apoli.speech_to_action": "Speech to Action (push to talk)",
     "screen.apoli.radial_menu": "Radial Menu",

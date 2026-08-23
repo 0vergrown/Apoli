@@ -59,6 +59,15 @@ repositories {
         name = "Henkel"
         url = "https://maven.maxhenkel.de/repository/public"
     }
+    // KubeJS + Rhino (optional compile-time dependency for the apoli:script types and ApoliEvents).
+    maven {
+        name = "Saps"
+        url = "https://maven.saps.dev/releases"
+        content {
+            includeGroup "dev.latvian.mods"
+            includeGroup "dev.latvian.apps"
+        }
+    }
 }
 
 base {
@@ -192,6 +201,12 @@ dependencies {
     compileOnly "maven.modrinth:skills:${project.puffish_skills_version}"
 
     compileOnly "de.maxhenkel.voicechat:voicechat-api:${project.voicechat_api_version}"
+
+    // KubeJS — compiled against, never bundled and not a runtime dependency. The apoli:script types
+    // and the ApoliEvents script API are gated on KubeJS being present (ModCompat.KUBEJS), so Apoli
+    // runs fine without it and apoli:script simply logs that no backend is installed.
+    compileOnly "dev.latvian.mods:kubejs-neoforge:${project.kubejs_version}"
+    compileOnly "dev.latvian.mods:rhino:${project.rhino_version}"
 
     // Vosk offline speech. Bundled, but NOT via jarJar — see the voskRuntime configuration above.
     // VoskRuntime unpacks these to <gamedir>/apoli/runtime/ and loads them in an isolated class loader.

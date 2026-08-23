@@ -1,0 +1,75 @@
+package dev.overgrown.apoli.client.render;
+
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.JsonOps;
+import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.client.model.BedrockAnimation;
+import dev.overgrown.apoli.client.model.BedrockAnimationParser;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
+import org.jetbrains.annotations.Nullable;
+
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.Map;
+
+public final class AnimationManager implements ResourceManagerReloadListener {
+    public static final AnimationManager INSTANCE = new AnimationManager();
+
+    private static final String PREFIX = "animations";
+    private static final String[] SUFFIXES = {".animation.json", ".json"};
+    private static final Map<ResourceLocation, Map<String, BedrockAnimation>> FILES = new HashMap<>();
+
+    private AnimationManager() {}
+
+    @Override
+    public void onResourceManagerReload(ResourceManager manager) {
+        FILES.clear();
+        int loaded = 0;
+        Map<ResourceLocation, Resource> found = manager.listResources(
+            PREFIX, location -> location.getPath().endsWith(".json"));
+        for (Map.Entry<ResourceLocation, Resource> entry : found.entrySet()) {
+            ResourceLocation file = entry.getKey();
+            ResourceLocation id = strip(file);
+            if (id == null || FILES.containsKey(id)) continue;
+            try (InputStream stream = entry.getValue().open()) {
+                JsonElement raw = JsonParser.parseReader(new InputStreamReader(stream));
+                Map<String, BedrockAnimation> parsed =
+                    BedrockAnimationParser.parse(id, new Dynamic<>(JsonOps.INSTANCE, raw));
+                if (parsed.isEmpty()) continue;
+                FILES.put(id, parsed);
+                loaded += parsed.size();
+            } catch (Exception e) {
+                Apoli.LOGGER.error("[Apoli] Failed to load animation file {}: {}", id, e.getMessage());
+            }
+        }
+        Apoli.LOGGER.info("[Apoli] Loaded {} custom model animation(s) from {} file(s).", loaded, FILES.size());
+    }
+
+    @Nullable
+    private static ResourceLocation strip(ResourceLocation file) {
+        String path = file.getPath();
+        if (!path.startsWith(PREFIX + "/")) return null;
+        String trimmed = path.substring(PREFIX.length() + 1);
+        for (String suffix : SUFFIXES) {
+            if (trimmed.endsWith(suffix)) {
+                return ResourceLocation.fromNamespaceAndPath(file.getNamespace(),
+                    trimmed.substring(0, trimmed.length() - suffix.length()));
+            }
+        }
+        return null;
+    }
+
+    @Nullable
+    public static BedrockAnimation get(ResourceLocation file, @Nullable String name) {
+        Map<String, BedrockAnimation> animations = FILES.get(file);
+        if (animations == null || animations.isEmpty()) return null;
+        if (name == null) return animations.values().iterator().next();
+        return animations.get(name);
+    }
+}

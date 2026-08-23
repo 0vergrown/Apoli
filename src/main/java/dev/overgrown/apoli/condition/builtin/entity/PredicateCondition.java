@@ -17,6 +17,8 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
+import java.util.Optional;
+
 public final class PredicateCondition implements ConditionType<EntityCtx, PredicateCondition.Cfg> {
     public record Cfg(ResourceLocation predicate) {}
 
@@ -40,7 +42,7 @@ public final class PredicateCondition implements ConditionType<EntityCtx, Predic
             .withParameter(LootContextParams.THIS_ENTITY, ctx.raw())
             .withParameter(LootContextParams.ORIGIN, ctx.raw().position())
             .create(LootContextParamSets.SELECTOR);
-        LootContext lootCtx = new LootContext.Builder(params).create(null);
+        LootContext lootCtx = new LootContext.Builder(params).create(Optional.empty());
         return condition.test(lootCtx);
     }
 }

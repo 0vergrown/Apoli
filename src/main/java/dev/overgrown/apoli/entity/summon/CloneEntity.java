@@ -316,6 +316,12 @@ public class CloneEntity extends Monster implements OwnableEntity, CrossbowAttac
     }
 
     @Override
+    public void remove(RemovalReason reason) {
+        super.remove(reason);
+        Summons.onRemoved(this);
+    }
+
+    @Override
     public SoundSource getSoundSource() {
         return SoundSource.PLAYERS;
     }

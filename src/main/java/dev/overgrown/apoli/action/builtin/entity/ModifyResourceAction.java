@@ -23,12 +23,30 @@ import java.util.stream.Stream;
 
 public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyResourceAction.Cfg> {
 
-    public record Cfg(AttributeModifier modifier, ResourceLocation resource) {}
+    public record Cfg(
+        AttributeModifier modifier,
+        ResourceLocation resource,
+        Optional<Expression> position,
+        Optional<ResourceLocation> from,
+        Optional<Expression> fromPosition
+    ) {}
 
-    private static final MapCodec<Cfg> CANONICAL = RecordCodecBuilder.mapCodec(i -> i.group(
-        AttributeModifier.CODEC.fieldOf("modifier").forGetter(Cfg::modifier),
-        IdCodecs.ID.fieldOf("resource").forGetter(Cfg::resource)
-    ).apply(i, Cfg::new));
+    private static final MapCodec<Cfg> CANONICAL = dev.overgrown.apoli.alias.AliasingMapCodec.wrap(
+        RecordCodecBuilder.mapCodec(i -> i.group(
+            AttributeModifier.CODEC.optionalFieldOf("modifier",
+                new AttributeModifier(AttributeModifierOperation.SET_BASE, Expression.constant(0.0),
+                    Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty())).forGetter(Cfg::modifier),
+            IdCodecs.ID.fieldOf("resource").forGetter(Cfg::resource),
+            Expression.INT_OR_EXPR.optionalFieldOf("position").forGetter(Cfg::position),
+            IdCodecs.ID.optionalFieldOf("from").forGetter(Cfg::from),
+            Expression.INT_OR_EXPR.optionalFieldOf("from_position").forGetter(Cfg::fromPosition)
+        ).apply(i, Cfg::new)),
+        java.util.Map.of(
+            "index", "position",
+            "slot", "position",
+            "from_resource", "from",
+            "from_index", "from_position",
+            "from_slot", "from_position"));
 
     private static final MapCodec<Cfg> WITH_LEGACY = new MapCodec<>() {
         @Override
@@ -36,6 +54,9 @@ public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyR
             return Stream.of(
                 ops.createString("modifier"),
                 ops.createString("resource"),
+                ops.createString("position"),
+                ops.createString("from"),
+                ops.createString("from_position"),
                 ops.createString("change"),
                 ops.createString("operation")
             );
@@ -92,7 +113,11 @@ public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyR
                 Optional.empty(),
                 Optional.empty()
             );
-            return DataResult.success(new Cfg(synth, resourceR.result().get()));
+            DataResult<Optional<Expression>> positionR = Expression.INT_OR_EXPR
+                .optionalFieldOf("position").decode(ops, input);
+            Optional<Expression> position = positionR.result().orElse(Optional.empty());
+            return DataResult.success(new Cfg(synth, resourceR.result().get(), position,
+                Optional.empty(), Optional.empty()));
         }
 
         @Override
@@ -111,9 +136,63 @@ public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyR
         Entity entity = ctx.entity();
         PowerContainer container = PowerContainer.of(entity);
         if (container == null) return;
-        OptionalInt cur = PowerResources.read(container, cfg.resource);
+
+        if (cfg.from.isPresent()) {
+            copy(cfg, entity, container);
+            return;
+        }
+
+        int size = PowerResources.size(container, cfg.resource);
+        if (cfg.position.isEmpty() && size > 1) {
+            for (int slot = 0; slot < size; slot++) applyAt(cfg, entity, container, slot);
+            return;
+        }
+        if (cfg.position.isEmpty()) {
+            OptionalInt cur = PowerResources.read(container, cfg.resource);
+            if (cur.isEmpty()) return;
+            double next = cfg.modifier.applyToValue(cur.getAsInt(), entity, container);
+            PowerResources.write(container, cfg.resource, (int) Math.round(next));
+            return;
+        }
+        applyAt(cfg, entity, container, cfg.position.get().evalIntWith(entity, container, 0));
+    }
+
+    private static void applyAt(Cfg cfg, Entity entity, PowerContainer container, int slot) {
+        OptionalInt cur = PowerResources.readAt(container, cfg.resource, slot);
         if (cur.isEmpty()) return;
         double next = cfg.modifier.applyToValue(cur.getAsInt(), entity, container);
-        PowerResources.write(container, cfg.resource, (int) Math.round(next));
+        PowerResources.writeAt(container, cfg.resource, slot, (int) Math.round(next));
+    }
+
+    private static void copy(Cfg cfg, Entity entity, PowerContainer container) {
+        ResourceLocation source = cfg.from.get();
+        boolean wholeTable = cfg.position.isEmpty() && cfg.fromPosition.isEmpty();
+        if (wholeTable) {
+            int destination = Math.max(1, PowerResources.size(container, cfg.resource));
+            int available = Math.max(1, PowerResources.size(container, source));
+            int slots = Math.min(destination, available);
+            for (int slot = 0; slot < slots; slot++) {
+                OptionalInt value = PowerResources.readAt(container, source, slot);
+                if (value.isEmpty()) continue;
+                writeInto(cfg, entity, container, slot, value.getAsInt());
+            }
+            return;
+        }
+        int fromSlot = cfg.fromPosition.isPresent()
+            ? cfg.fromPosition.get().evalIntWith(entity, container, 0)
+            : 0;
+        OptionalInt value = PowerResources.readAt(container, source, fromSlot);
+        if (value.isEmpty()) return;
+        int toSlot = cfg.position.isPresent()
+            ? cfg.position.get().evalIntWith(entity, container, 0)
+            : fromSlot;
+        writeInto(cfg, entity, container, toSlot, value.getAsInt());
+    }
+
+    private static void writeInto(Cfg cfg, Entity entity, PowerContainer container, int slot, int incoming) {
+        OptionalInt cur = PowerResources.readAt(container, cfg.resource, slot);
+        if (cur.isEmpty()) return;
+        double next = cfg.modifier.operation().applySingle(cur.getAsInt(), incoming);
+        PowerResources.writeAt(container, cfg.resource, slot, (int) Math.round(next));
     }
 }

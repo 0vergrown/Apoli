@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.client.summon;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.overgrown.apoli.client.disguise.ClientDisguiseManager;
 import dev.overgrown.apoli.entity.summon.CloneEntity;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower;
 import net.minecraft.client.player.AbstractClientPlayer;
@@ -40,6 +41,8 @@ public class CloneRenderer extends HumanoidMobRenderer<CloneEntity, CloneModel> 
 
     @Override
     public ResourceLocation getTextureLocation(CloneEntity clone) {
+        PlayerSkin disguise = ClientDisguiseManager.playerSkin(clone.getId());
+        if (disguise != null) return disguise.texture();
         boolean slim = resolveSlim(clone);
         ResourceLocation custom = clone.getCustomTexture(slim);
         if (custom != null) return custom;
@@ -60,6 +63,8 @@ public class CloneRenderer extends HumanoidMobRenderer<CloneEntity, CloneModel> 
     }
 
     public static boolean resolveSlim(CloneEntity clone) {
+        PlayerSkin disguise = ClientDisguiseManager.playerSkin(clone.getId());
+        if (disguise != null) return disguise.model() == PlayerSkin.Model.SLIM;
         if (clone.getCustomTexture(false) != null) return clone.isSlim();
         if (clone.getOwner() instanceof AbstractClientPlayer player) {
             return player.getSkin().model() == PlayerSkin.Model.SLIM;

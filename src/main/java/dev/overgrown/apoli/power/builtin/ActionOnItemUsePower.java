@@ -40,9 +40,9 @@ public final class ActionOnItemUsePower extends PowerType<ActionOnItemUsePower.C
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction),
-            ItemAction.CODEC.optionalFieldOf("item_action").forGetter(Config::itemAction),
-            ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Config::itemCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("item_action", ItemAction.CODEC).forGetter(Config::itemAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Config::itemCondition),
             Trigger.CODEC.optionalFieldOf("trigger", Trigger.FINISH).forGetter(Config::trigger),
             Codec.INT.optionalFieldOf("priority", 0).forGetter(Config::priority)
         ).apply(i, Config::new));
