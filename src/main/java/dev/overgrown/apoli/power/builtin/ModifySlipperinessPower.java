@@ -19,7 +19,7 @@ public final class ModifySlipperinessPower extends PowerType<ModifySlipperinessP
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            BlockCondition.CODEC.optionalFieldOf("block_condition").forGetter(Config::blockCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Config::blockCondition),
             AttributeModifier.CODEC.optionalFieldOf("modifier").forGetter(Config::modifier),
             AttributeModifier.LIST_OR_SINGLE.optionalFieldOf("modifiers").forGetter(Config::modifiers)
         ).apply(i, Config::new));

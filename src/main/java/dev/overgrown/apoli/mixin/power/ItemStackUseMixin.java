@@ -32,7 +32,7 @@ public abstract class ItemStackUseMixin {
         ItemUseActionHandler.fire(level, player, self, apoli$useTrigger(self, player), ItemUseActionHandler.Phase.BEFORE);
         EdibleItemPower.Config edible = EdibleItemHandler.find(player, self);
         if (edible == null) return;
-        if (!EdibleItemHandler.canConsume(player, edible)) {
+        if (!EdibleItemHandler.canConsume(player, edible, self)) {
             cir.setReturnValue(InteractionResultHolder.fail(self));
             return;
         }
@@ -43,8 +43,9 @@ public abstract class ItemStackUseMixin {
 
     @Inject(method = "getUseDuration", at = @At("HEAD"), cancellable = true)
     private void apoli$edibleUseDuration(LivingEntity user, CallbackInfoReturnable<Integer> cir) {
-        EdibleItemPower.Config edible = EdibleItemHandler.find(user, (ItemStack) (Object) this);
-        if (edible != null) cir.setReturnValue(EdibleItemHandler.useDuration(user, edible));
+        ItemStack self = (ItemStack) (Object) this;
+        EdibleItemPower.Config edible = EdibleItemHandler.find(user, self);
+        if (edible != null) cir.setReturnValue(EdibleItemHandler.useDuration(user, edible, self));
     }
 
     @Inject(method = "getUseAnimation", at = @At("HEAD"), cancellable = true)

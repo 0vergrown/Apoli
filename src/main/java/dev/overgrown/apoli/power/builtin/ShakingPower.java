@@ -2,6 +2,7 @@ package dev.overgrown.apoli.power.builtin;
 
 import com.mojang.serialization.MapCodec;
 import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.shared.EmptyCfg;
@@ -17,6 +18,6 @@ public final class ShakingPower extends PowerType<EmptyCfg> {
     }
 
     public static boolean isShaking(LivingEntity entity) {
-        return PowerLookup.hasActive(entity, CANONICAL);
+        return ApoliPowers.anyOfType(CANONICAL) && PowerLookup.hasActive(entity, CANONICAL);
     }
 }

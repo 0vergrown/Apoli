@@ -43,7 +43,7 @@ public final class ActionOnSendingMessagePower extends PowerType<ActionOnSending
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             IdCodecs.ID.optionalFieldOf("message_type").forGetter(Config::messageType),
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction),
             MessageFilter.CODEC.optionalFieldOf("filter").forGetter(c -> Optional.<MessageFilter>empty()),
             MessageFilter.CODEC.listOf().optionalFieldOf("filters", List.of()).forGetter(Config::filters),
             Codec.INT.optionalFieldOf("priority", 0).forGetter(Config::priority)

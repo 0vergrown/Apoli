@@ -13,7 +13,7 @@ public final class PreventItemUsePower extends PowerType<PreventItemUsePower.Con
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Config::itemCondition)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Config::itemCondition)
         ).apply(i, Config::new));
     }
 }

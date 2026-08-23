@@ -1,7 +1,6 @@
 package dev.overgrown.apoli.recipe;
 
-import com.google.gson.JsonElement;
-import com.mojang.serialization.JsonOps;
+import com.mojang.serialization.Dynamic;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
@@ -29,7 +28,8 @@ public final class ApoliPowerRecipes {
 
     public static void inject(MinecraftServer server) {
         RECIPE_TO_POWER.clear();
-        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, server.registryAccess());
+        RegistryOps<net.minecraft.nbt.Tag> ops =
+            RegistryOps.create(net.minecraft.nbt.NbtOps.INSTANCE, server.registryAccess());
 
         List<RecipeHolder<?>> powerRecipes = new ArrayList<>();
         for (Map.Entry<ResourceLocation, Power> e : ApoliPowers.view().entrySet()) {
@@ -38,7 +38,8 @@ public final class ApoliPowerRecipes {
             if (!(power.config() instanceof RecipePower.Config cfg)) continue;
 
             ResourceLocation recipeId = cfg.recipeId() != null ? cfg.recipeId() : e.getKey();
-            Recipe<?> recipe = Recipe.CODEC.parse(ops, cfg.recipe())
+            Dynamic<net.minecraft.nbt.Tag> recipeData = cfg.recipe().convert(net.minecraft.nbt.NbtOps.INSTANCE);
+            Recipe<?> recipe = Recipe.CODEC.parse(ops, recipeData.getValue())
                 .resultOrPartial(err -> Apoli.LOGGER.warn("[Apoli] apoli:recipe power {} has an invalid recipe: {}", e.getKey(), err))
                 .orElse(null);
             if (recipe == null) continue;

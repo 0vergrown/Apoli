@@ -30,8 +30,8 @@ public final class ExplodeBiEntityAction implements ActionType<BiEntityCtx, Expl
             DestructionType.CODEC.optionalFieldOf("destruction_type", DestructionType.DESTROY).forGetter(Cfg::destructionType),
             Codec.BOOL.optionalFieldOf("create_fire", false).forGetter(Cfg::createFire),
             Codec.BOOL.optionalFieldOf("at_target", false).forGetter(Cfg::atTarget),
-            BlockCondition.CODEC.optionalFieldOf("indestructible").forGetter(Cfg::indestructible),
-            BlockCondition.CODEC.optionalFieldOf("destructible").forGetter(Cfg::destructible)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("indestructible", BlockCondition.CODEC).forGetter(Cfg::indestructible),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("destructible", BlockCondition.CODEC).forGetter(Cfg::destructible)
         ).apply(i, Cfg::new));
     }
 

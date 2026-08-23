@@ -34,10 +34,10 @@ public final class RestrictArmorPower extends PowerType<RestrictArmorPower.Confi
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ItemCondition.CODEC.optionalFieldOf("head").forGetter(Config::head),
-            ItemCondition.CODEC.optionalFieldOf("chest").forGetter(Config::chest),
-            ItemCondition.CODEC.optionalFieldOf("legs").forGetter(Config::legs),
-            ItemCondition.CODEC.optionalFieldOf("feet").forGetter(Config::feet)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("head", ItemCondition.CODEC).forGetter(Config::head),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("chest", ItemCondition.CODEC).forGetter(Config::chest),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("legs", ItemCondition.CODEC).forGetter(Config::legs),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("feet", ItemCondition.CODEC).forGetter(Config::feet)
         ).apply(i, Config::new));
     }
 

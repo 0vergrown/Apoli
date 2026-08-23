@@ -17,8 +17,8 @@ public final class PreventEntityRenderPower extends PowerType<PreventEntityRende
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            EntityCondition.CODEC.optionalFieldOf("entity_condition").forGetter(Config::entityCondition),
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Config::bientityCondition)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("entity_condition", EntityCondition.CODEC).forGetter(Config::entityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition)
         ).apply(i, Config::new));
     }
 }

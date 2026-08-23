@@ -1,10 +1,11 @@
 package dev.overgrown.apoli.power;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
+import com.mojang.serialization.Codec;
 import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.alias.AliasDefault;
 import dev.overgrown.apoli.alias.AliasingOptions;
 import dev.overgrown.apoli.compat.ModCompat;
+import dev.overgrown.apoli.compat.walkers.power.ShapePowers;
 import dev.overgrown.apoli.compat.accessory.power.ActionOnAccessoryChangePower;
 import dev.overgrown.apoli.compat.accessory.power.ModifyAccessorySlotsPower;
 import dev.overgrown.apoli.compat.accessory.power.PreventAccessoryEquipPower;
@@ -12,6 +13,7 @@ import dev.overgrown.apoli.compat.accessory.power.PreventAccessoryUnequipPower;
 import dev.overgrown.apoli.compat.hardcorerevival.power.ActionOnKnockoutPower;
 import dev.overgrown.apoli.compat.hardcorerevival.power.ActionOnRevivePower;
 import dev.overgrown.apoli.compat.icarus.WingsPower;
+import dev.overgrown.apoli.power.builtin.ModifyFoodPower;
 import dev.overgrown.apoli.power.builtin.ActionOnBlockBreakPower;
 import dev.overgrown.apoli.power.builtin.ActionOnCollisionPower;
 import dev.overgrown.apoli.power.builtin.ReplaceSoundEmissionPower;
@@ -32,6 +34,14 @@ import dev.overgrown.apoli.power.builtin.ActionOnWakeUpPower;
 import dev.overgrown.apoli.power.builtin.ActionOverTimePower;
 import dev.overgrown.apoli.power.builtin.ActionWhenHitPower;
 import dev.overgrown.apoli.power.builtin.AttributePower;
+import dev.overgrown.apoli.power.builtin.ReceiveActionPower;
+import dev.overgrown.apoli.power.builtin.ReceiveConditionPower;
+import dev.overgrown.apoli.power.builtin.ScriptPower;
+import dev.overgrown.apoli.power.builtin.FluidVisionPower;
+import dev.overgrown.apoli.power.builtin.ModifyAirSpeedPower;
+import dev.overgrown.apoli.power.builtin.ModifyCameraSubmersionPower;
+import dev.overgrown.apoli.power.builtin.ModifyStatusEffectPower;
+import dev.overgrown.apoli.power.builtin.NightVisionPower;
 import dev.overgrown.apoli.power.builtin.ClimbingPower;
 import dev.overgrown.apoli.power.builtin.CooldownPower;
 import dev.overgrown.apoli.power.builtin.CreativeFlightPower;
@@ -44,7 +54,6 @@ import dev.overgrown.apoli.power.builtin.EntityGlowPower;
 import dev.overgrown.apoli.power.builtin.FunctionPower;
 import dev.overgrown.apoli.power.builtin.ModifyTypeTagPower;
 import dev.overgrown.apoli.power.builtin.EntitySetPower;
-import dev.overgrown.apoli.power.builtin.ExhaustPower;
 import dev.overgrown.apoli.power.builtin.FireProjectilePower;
 import dev.overgrown.apoli.power.builtin.FreezePower;
 import dev.overgrown.apoli.power.builtin.GameEventListenerPower;
@@ -64,6 +73,7 @@ import dev.overgrown.apoli.power.builtin.ModelColorPower;
 import dev.overgrown.apoli.power.builtin.ModifyModelPartsPower;
 import dev.overgrown.apoli.power.builtin.ModifyBlockRenderPower;
 import dev.overgrown.apoli.power.builtin.ModifyCursorSpeedPower;
+import dev.overgrown.apoli.power.builtin.ModifyHearingRangePower;
 import dev.overgrown.apoli.power.builtin.ModifyBreakSpeedPower;
 import dev.overgrown.apoli.power.builtin.ModifyCraftingPower;
 import dev.overgrown.apoli.power.builtin.ModifyDamagePower;
@@ -123,6 +133,8 @@ import dev.overgrown.apoli.power.builtin.WalkOnFluidPower;
 
 
 public final class PowerTypes {
+
+    private static final AttributePower ATTRIBUTE = new AttributePower();
     public static final ActionOnKeyPressPower ACTION_ON_KEY_PRESS = new ActionOnKeyPressPower();
     public static final ActionOnUsePower ACTION_ON_USE = new ActionOnUsePower();
     public static final ActionOnHitPower ACTION_ON_HIT = new ActionOnHitPower();
@@ -132,8 +144,17 @@ public final class PowerTypes {
     private PowerTypes() {}
 
     public static void bootstrap() {
+        LegacyPowerShapes.registerBuiltin();
         PowerTypeRegistry.register(Apoli.id("creative_flight"), new CreativeFlightPower());
-        PowerTypeRegistry.register(Apoli.id("action_over_time"), new ActionOverTimePower());
+        PowerTypeRegistry.register(
+            Apoli.id("action_over_time"),
+            new ActionOverTimePower(),
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("damage_over_time"))
+                .addTypeAlias(Apoli.id("burn"))
+                .addTypeAlias(Apoli.id("exhaust"))
+                .build()
+        );
         PowerTypeRegistry.register(
             Apoli.id("action_on_key_press"),
             ACTION_ON_KEY_PRESS,
@@ -153,8 +174,11 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("cooldown"), new CooldownPower());
         PowerTypeRegistry.register(
             Apoli.id("attribute"),
-            new AttributePower(),
-            AliasingOptions.builder().addTypeAlias(Apoli.id("conditioned_attribute")).build()
+            ATTRIBUTE,
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("conditioned_attribute"))
+                .addTypeAlias(Apoli.id("modify_attribute"))
+                .build()
         );
         PowerTypeRegistry.register(
             Apoli.id("action_on_use"),
@@ -202,12 +226,31 @@ public final class PowerTypes {
         PowerTypeRegistry.registerAliasDefaults(Apoli.id("action_when_damage_taken"), entityActionTarget("self"));
         PowerTypeRegistry.registerAliasDefaults(Apoli.id("attacker_action_when_hit"), entityActionTarget("attacker"));
 
-        PowerTypeRegistry.register(Apoli.id("simple"), new SimplePower());
+        PowerTypeRegistry.register(
+            Apoli.id("simple"),
+            new SimplePower(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("dummy")).build()
+        );
         PowerTypeRegistry.register(Apoli.id("disable_regen"), new DisableRegenPower());
-        PowerTypeRegistry.register(Apoli.id("invulnerability"), new InvulnerabilityPower());
+        PowerTypeRegistry.register(
+            Apoli.id("invulnerability"),
+            new InvulnerabilityPower(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("fire_immunity")).build()
+        );
+        PowerTypeRegistry.registerAliasDefaults(Apoli.id("fire_immunity"), AliasDefault.of(
+            "damage_condition",
+            dev.overgrown.apoli.condition.DamageCondition.CODEC,
+            new dev.overgrown.apoli.condition.DamageCondition(
+                Apoli.id("in_tag"),
+                new dev.overgrown.apoli.condition.builtin.damage.InTagDamageCondition.Cfg(
+                    net.minecraft.tags.DamageTypeTags.IS_FIRE))));
         PowerTypeRegistry.register(Apoli.id("climbing"), new ClimbingPower());
         PowerTypeRegistry.register(Apoli.id("grounded"), new GroundedPower());
-        PowerTypeRegistry.register(Apoli.id("restrict_armor"), new RestrictArmorPower());
+        PowerTypeRegistry.register(
+            Apoli.id("restrict_armor"),
+            new RestrictArmorPower(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("conditioned_restrict_armor")).build()
+        );
         PowerTypeRegistry.register(
             Apoli.id("disable_slot"),
             new DisableSlotPower(),
@@ -302,7 +345,6 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("shaking"), new ShakingPower());
 
         PowerTypeRegistry.register(Apoli.id("effect_immunity"), new EffectImmunityPower());
-        PowerTypeRegistry.register(Apoli.id("exhaust"), new ExhaustPower());
         PowerTypeRegistry.register(
             Apoli.id("ignore_fluid"),
             new IgnoreFluidPower(),
@@ -318,6 +360,7 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("model_color"), new ModelColorPower());
         PowerTypeRegistry.register(Apoli.id("modify_model_parts"), new ModifyModelPartsPower());
         PowerTypeRegistry.register(Apoli.id("custom_model_render"), new CustomModelRenderPower());
+        PowerTypeRegistry.register(Apoli.id("modify_hearing_range"), new ModifyHearingRangePower());
         PowerTypeRegistry.register(Apoli.id("action_on_speak"), new ActionOnSpeakPower());
         PowerTypeRegistry.register(Apoli.id("action_on_reply"), new ActionOnReplyPower());
         PowerTypeRegistry.register(Apoli.id("action_on_sending_message"), new ActionOnSendingMessagePower());
@@ -341,6 +384,7 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("modify_grindstone"), new ModifyGrindstonePower());
         PowerTypeRegistry.register(Apoli.id("item_on_item"), new ItemOnItemPower());
         PowerTypeRegistry.register(Apoli.id("edible_item"), new EdibleItemPower());
+        PowerTypeRegistry.register(Apoli.id("modify_food"), new ModifyFoodPower());
 
         PowerTypeRegistry.register(Apoli.id("fire_projectile"), new FireProjectilePower());
         PowerTypeRegistry.register(Apoli.id("game_event_listener"), new GameEventListenerPower());
@@ -348,6 +392,30 @@ public final class PowerTypes {
         if (ModCompat.ICARUS) {
             PowerTypeRegistry.register(Apoli.id("wings"), new WingsPower());
         }
+
+        PowerTypeRegistry.register(Apoli.id("script"), new ScriptPower());
+        PowerTypeRegistry.register(Apoli.id("receive_action"), new ReceiveActionPower(),
+            AliasingOptions.builder().addTypeAlias("shappoli:receive_action").build());
+        PowerTypeRegistry.register(Apoli.id("receive_condition"), new ReceiveConditionPower(),
+            AliasingOptions.builder().addTypeAlias("shappoli:receive_condition").build());
+        PowerTypeRegistry.register(Apoli.id("modify_air_speed"), new ModifyAirSpeedPower());
+        PowerTypeRegistry.register(Apoli.id("modify_status_effect_amplifier"), new ModifyStatusEffectPower());
+        PowerTypeRegistry.register(Apoli.id("modify_status_effect_duration"), new ModifyStatusEffectPower());
+        PowerTypeRegistry.register(Apoli.id("night_vision"), new NightVisionPower(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("toggle_night_vision")).build());
+        PowerTypeRegistry.register(
+            Apoli.id("fluid_vision"),
+            new FluidVisionPower(),
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("lava_vision"))
+                .renameField("s", "start")
+                .renameField("v", "end")
+                .build()
+        );
+        PowerTypeRegistry.registerAliasDefaults(Apoli.id("lava_vision"), AliasDefault.of(
+            "fluid", com.mojang.serialization.Codec.STRING, "lava"));
+        PowerTypeRegistry.register(Apoli.id("modify_camera_submersion"), new ModifyCameraSubmersionPower(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("modify_camera_submersion_type")).build());
 
         if (ModCompat.anyAccessory()) {
             PowerTypeRegistry.register(Apoli.id("action_on_accessory_change"), new ActionOnAccessoryChangePower(),
@@ -363,27 +431,40 @@ public final class PowerTypes {
                     .build());
         }
 
+        if (ModCompat.WALKERS) {
+            PowerTypeRegistry.register(Apoli.id("action_on_shape_change"), new ShapePowers.ActionOnShapeChange(),
+                AliasingOptions.builder()
+                    .addTypeAlias(Apoli.id("action_on_morph"))
+                    .addTypeAlias("shappoli:action_on_shape_change")
+                    .addTypeAlias("shappoli:action_on_morph")
+                    .build());
+            PowerTypeRegistry.register(Apoli.id("action_on_shape_ability_use"), new ShapePowers.ActionOnShapeAbilityUse(),
+                AliasingOptions.builder().addTypeAlias("shappoli:action_on_shape_ability_use").build());
+            PowerTypeRegistry.register(Apoli.id("prevent_shape_change"), new ShapePowers.PreventShapeChange(),
+                AliasingOptions.builder()
+                    .addTypeAlias(Apoli.id("prevent_morph"))
+                    .addTypeAlias("shappoli:prevent_shape_change")
+                    .addTypeAlias("shappoli:prevent_morph")
+                    .build());
+            PowerTypeRegistry.register(Apoli.id("prevent_shape_ability_use"), new ShapePowers.PreventShapeAbilityUse(),
+                AliasingOptions.builder().addTypeAlias("shappoli:prevent_shape_ability_use").build());
+        }
+
         if (ModCompat.HARDCORE_REVIVAL) {
             PowerTypeRegistry.register(Apoli.id("action_on_knockout"), new ActionOnKnockoutPower());
             PowerTypeRegistry.register(Apoli.id("action_on_revive"), new ActionOnRevivePower());
         }
     }
 
-    private static JsonObject selfGlowTarget(boolean value) {
-        JsonObject obj = new JsonObject();
-        obj.add("self_glow_target", new JsonPrimitive(value));
-        return obj;
+    private static AliasDefault<Boolean> selfGlowTarget(boolean value) {
+        return AliasDefault.of("self_glow_target", Codec.BOOL, value);
     }
 
-    private static JsonObject targetUsed(boolean value) {
-        JsonObject obj = new JsonObject();
-        obj.add("target_used", new JsonPrimitive(value));
-        return obj;
+    private static AliasDefault<Boolean> targetUsed(boolean value) {
+        return AliasDefault.of("target_used", Codec.BOOL, value);
     }
 
-    private static JsonObject entityActionTarget(String side) {
-        JsonObject obj = new JsonObject();
-        obj.add("entity_action_target", new JsonPrimitive(side));
-        return obj;
+    private static AliasDefault<String> entityActionTarget(String side) {
+        return AliasDefault.of("entity_action_target", Codec.STRING, side);
     }
 }

@@ -1,7 +1,7 @@
 {
   "required": false,
   "package": "dev.overgrown.apoli.compat.icarus.mixin",
-  "compatibilityLevel": "JAVA_17",
+  "compatibilityLevel": "JAVA_21",
   "plugin": "dev.overgrown.apoli.compat.icarus.mixin.IcarusCompatMixinPlugin",
   "mixins": [
     "IcarusHelperMixin"

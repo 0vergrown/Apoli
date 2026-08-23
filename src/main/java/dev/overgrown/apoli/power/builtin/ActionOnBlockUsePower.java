@@ -32,15 +32,15 @@ public final class ActionOnBlockUsePower extends PowerType<ActionOnBlockUsePower
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction),
-            BlockAction.CODEC.optionalFieldOf("block_action").forGetter(Config::blockAction),
-            BlockCondition.CODEC.optionalFieldOf("block_condition").forGetter(Config::blockCondition),
-            ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Config::itemCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("block_action", BlockAction.CODEC).forGetter(Config::blockAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Config::blockCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Config::itemCondition),
             PreventBlockPlacePower.Dir.LIST_CODEC.optionalFieldOf("directions", PreventBlockPlacePower.Dir.ALL).forGetter(Config::directions),
             Hand.LIST_CODEC.optionalFieldOf("hands", Hand.BOTH).forGetter(Config::hands),
             ItemStackData.CODEC.optionalFieldOf("result_stack").forGetter(Config::resultStack),
-            ItemAction.CODEC.optionalFieldOf("held_item_action").forGetter(Config::heldItemAction),
-            ItemAction.CODEC.optionalFieldOf("result_item_action").forGetter(Config::resultItemAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("held_item_action", ItemAction.CODEC).forGetter(Config::heldItemAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("result_item_action", ItemAction.CODEC).forGetter(Config::resultItemAction),
             ActionResult.CODEC.optionalFieldOf("action_result", ActionResult.SUCCESS).forGetter(Config::actionResult)
         ).apply(i, Config::new));
     }

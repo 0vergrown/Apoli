@@ -3,6 +3,7 @@ package dev.overgrown.apoli.rope;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.overgrown.apoli.compat.sable.SableSubLevels;
 import dev.overgrown.apoli.data.Vector;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.Entity;
@@ -17,6 +18,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public record RopeEndpointSource(Type type, float distance, boolean entities, boolean blocks,
                                  Optional<Vector> position) {
@@ -68,13 +70,20 @@ public record RopeEndpointSource(Type type, float distance, boolean entities, bo
         Vec3 dir = actor.getViewVector(1f);
         Vec3 end = origin.add(dir.scale(distance));
 
-        BlockHitResult blockHit = null;
+        Vec3 blockHitPos = null;
+        UUID blockHitSubLevel = null;
         double blockDistSq = Double.POSITIVE_INFINITY;
         if (blocks) {
-            blockHit = level.clip(new ClipContext(origin, end,
+            BlockHitResult blockHit = level.clip(new ClipContext(origin, end,
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, actor));
-            if (blockHit.getType() == HitResult.Type.BLOCK) blockDistSq = origin.distanceToSqr(blockHit.getLocation());
-            else blockHit = null;
+            if (blockHit.getType() == HitResult.Type.BLOCK) {
+                blockHitPos = blockHit.getLocation();
+                blockHitSubLevel = SableSubLevels.subLevelAt(level, blockHitPos);
+                Vec3 worldPos = blockHitSubLevel == null
+                    ? blockHitPos
+                    : SableSubLevels.toWorld(level, blockHitSubLevel, blockHitPos);
+                blockDistSq = worldPos == null ? Double.POSITIVE_INFINITY : origin.distanceToSqr(worldPos);
+            }
         }
 
         if (entities) {
@@ -92,6 +101,9 @@ public record RopeEndpointSource(Type type, float distance, boolean entities, bo
             if (best != null) return new RopeAnchor.OfEntity(best.getId(), Vec3.ZERO);
         }
 
-        return blockHit != null ? new RopeAnchor.Position(blockHit.getLocation()) : null;
+        if (blockHitPos == null) return null;
+        return blockHitSubLevel == null
+            ? new RopeAnchor.Position(blockHitPos)
+            : new RopeAnchor.OfSubLevel(blockHitSubLevel, blockHitPos);
     }
 }

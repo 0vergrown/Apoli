@@ -23,8 +23,8 @@ public final class EntityGlowPower extends PowerType<EntityGlowPower.Config> {
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            EntityCondition.CODEC.optionalFieldOf("entity_condition").forGetter(Config::entityCondition),
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Config::bientityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("entity_condition", EntityCondition.CODEC).forGetter(Config::entityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition),
             Codec.BOOL.optionalFieldOf("use_teams", true).forGetter(Config::useTeams),
             Codec.FLOAT.optionalFieldOf("red", 1.0f).forGetter(Config::red),
             Codec.FLOAT.optionalFieldOf("green", 1.0f).forGetter(Config::green),

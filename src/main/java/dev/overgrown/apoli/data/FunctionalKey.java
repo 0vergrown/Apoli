@@ -11,7 +11,7 @@ public record FunctionalKey(Key key, Optional<EntityAction> action) {
 
     private static final Codec<FunctionalKey> RECORD_CODEC = RecordCodecBuilder.create(i -> i.group(
         Key.MAP_CODEC.forGetter(FunctionalKey::key),
-        EntityAction.CODEC.optionalFieldOf("action").forGetter(FunctionalKey::action)
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("action", EntityAction.CODEC).forGetter(FunctionalKey::action)
     ).apply(i, FunctionalKey::new));
 
     public static final Codec<FunctionalKey> CODEC = Codec.either(Codec.STRING, RECORD_CODEC).xmap(

@@ -24,12 +24,12 @@ public final class ModifyProjectileDamagePower extends PowerType<ModifyProjectil
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            DamageCondition.CODEC.optionalFieldOf("damage_condition").forGetter(Config::damageCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("damage_condition", DamageCondition.CODEC).forGetter(Config::damageCondition),
             AttributeModifier.CODEC.optionalFieldOf("modifier").forGetter(Config::modifier),
             AttributeModifier.LIST_OR_SINGLE.optionalFieldOf("modifiers").forGetter(Config::modifiers),
-            EntityCondition.CODEC.optionalFieldOf("target_condition").forGetter(Config::targetCondition),
-            EntityAction.CODEC.optionalFieldOf("self_action").forGetter(Config::selfAction),
-            EntityAction.CODEC.optionalFieldOf("target_action").forGetter(Config::targetAction)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("target_condition", EntityCondition.CODEC).forGetter(Config::targetCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("self_action", EntityAction.CODEC).forGetter(Config::selfAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("target_action", EntityAction.CODEC).forGetter(Config::targetAction)
         ).apply(i, Config::new));
     }
 }

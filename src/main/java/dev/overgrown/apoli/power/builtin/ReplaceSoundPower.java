@@ -20,7 +20,7 @@ public abstract class ReplaceSoundPower extends PowerType<ReplaceSoundPower.Conf
     private static final MapCodec<Config> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
         SoundReplacements.CODEC.fieldOf("sounds").forGetter(Config::sounds),
         Codec.BOOL.optionalFieldOf("replace", true).forGetter(Config::replace),
-        EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction),
         Codec.INT.optionalFieldOf("priority", 0).forGetter(Config::priority)
     ).apply(i, Config::new));
 

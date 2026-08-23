@@ -19,17 +19,20 @@ public final class ModifyBlockStuckSpeedHandler {
         if (container.powersOfType(ApoliIds.MODIFY_BLOCK_STUCK_SPEED).isEmpty()) return original;
 
         BlockCtx ctx = new BlockCtx(entity.blockPosition(), state, entity.level());
-        Vec3[] result = {original};
+        Vec3[] result = {null};
         PowerLookup.forEach(entity, ApoliIds.MODIFY_BLOCK_STUCK_SPEED,
             ModifyBlockStuckSpeedPower.Config.class, cfg -> {
                 if (cfg.blockCondition().isPresent() && !cfg.blockCondition().get().test(ctx)) return;
                 Vector m = cfg.multiplier();
-                result[0] = new Vec3(
-                    Math.max(result[0].x, m.x()),
-                    Math.max(result[0].y, m.y()),
-                    Math.max(result[0].z, m.z()));
+                Vec3 current = result[0];
+                result[0] = current == null
+                    ? new Vec3(m.x(), m.y(), m.z())
+                    : new Vec3(
+                        Math.max(current.x, m.x()),
+                        Math.max(current.y, m.y()),
+                        Math.max(current.z, m.z()));
             });
-        return result[0];
+        return result[0] == null ? original : result[0];
     }
 
     public static boolean fullyFree(Vec3 multiplier) {

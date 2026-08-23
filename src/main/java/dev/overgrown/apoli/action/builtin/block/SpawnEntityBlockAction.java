@@ -28,7 +28,7 @@ public final class SpawnEntityBlockAction implements ActionType<BlockCtx, SpawnE
         return RecordCodecBuilder.mapCodec(i -> i.group(
             IdCodecs.ID.fieldOf("entity_type").forGetter(Cfg::entityType),
             Nbt.CODEC.optionalFieldOf("tag").forGetter(Cfg::tag),
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Cfg::entityAction)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Cfg::entityAction)
         ).apply(i, Cfg::new));
     }
 

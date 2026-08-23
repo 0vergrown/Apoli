@@ -60,17 +60,17 @@ public final class PreventBlockPlacePower extends PowerType<PreventBlockPlacePow
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction),
-            ItemAction.CODEC.optionalFieldOf("held_item_action").forGetter(Config::heldItemAction),
-            BlockAction.CODEC.optionalFieldOf("place_to_action").forGetter(Config::placeToAction),
-            BlockAction.CODEC.optionalFieldOf("place_on_action").forGetter(Config::placeOnAction),
-            ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Config::itemCondition),
-            BlockCondition.CODEC.optionalFieldOf("place_to_condition").forGetter(Config::placeToCondition),
-            BlockCondition.CODEC.optionalFieldOf("place_on_condition").forGetter(Config::placeOnCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("held_item_action", ItemAction.CODEC).forGetter(Config::heldItemAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("place_to_action", BlockAction.CODEC).forGetter(Config::placeToAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("place_on_action", BlockAction.CODEC).forGetter(Config::placeOnAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Config::itemCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("place_to_condition", BlockCondition.CODEC).forGetter(Config::placeToCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("place_on_condition", BlockCondition.CODEC).forGetter(Config::placeOnCondition),
             Dir.LIST_CODEC.optionalFieldOf("directions", Dir.ALL).forGetter(Config::directions),
             Hand.LIST_CODEC.optionalFieldOf("hands", Hand.BOTH).forGetter(Config::hands),
             ItemStackData.CODEC.optionalFieldOf("result_stack").forGetter(Config::resultStack),
-            ItemAction.CODEC.optionalFieldOf("result_item_action").forGetter(Config::resultItemAction)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("result_item_action", ItemAction.CODEC).forGetter(Config::resultItemAction)
         ).apply(i, Config::new));
     }
 }

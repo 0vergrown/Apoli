@@ -23,7 +23,7 @@ public abstract class BasePreventAccessoryPower extends PowerType<BasePreventAcc
     protected static MapCodec<Config> baseCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             AccessorySlot.LIST.optionalFieldOf("slots", List.of()).forGetter(Config::slots),
-            ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Config::itemCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Config::itemCondition),
             Codec.BOOL.optionalFieldOf("allow_in_creative", true).forGetter(Config::allowInCreative)
         ).apply(i, Config::new));
     }

@@ -20,6 +20,7 @@ import dev.overgrown.apoli.network.payload.RopeSwingC2S;
 import dev.overgrown.apoli.network.payload.RopeVerletLengthS2C;
 import dev.overgrown.apoli.network.PowerSyncCache;
 import dev.overgrown.apoli.network.payload.SyncEntityPowersS2C;
+import dev.overgrown.apoli.network.payload.SyncResourceTablesS2C;
 import dev.overgrown.apoli.network.payload.SyncKeybindsS2C;
 import dev.overgrown.apoli.network.payload.SyncPowersChunkS2C;
 import dev.overgrown.apoli.network.payload.SyncPowersS2C;
@@ -40,6 +41,7 @@ public final class ApoliNetwork {
         PayloadTypeRegistry.playS2C().register(SyncPowersS2C.TYPE, SyncPowersS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SyncPowersChunkS2C.TYPE, SyncPowersChunkS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SyncEntityPowersS2C.TYPE, SyncEntityPowersS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncResourceTablesS2C.TYPE, SyncResourceTablesS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(PowerActivatedS2C.TYPE, PowerActivatedS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SyncKeybindsS2C.TYPE, SyncKeybindsS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(ApplyVelocityS2C.TYPE, ApplyVelocityS2C.STREAM_CODEC);
@@ -50,6 +52,8 @@ public final class ApoliNetwork {
             dev.overgrown.apoli.network.payload.LabelUpdateS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.ForceKeyS2C.TYPE,
             dev.overgrown.apoli.network.payload.ForceKeyS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.SyncShaderS2C.TYPE,
+            dev.overgrown.apoli.network.payload.SyncShaderS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SkillDefsSyncS2C.TYPE, SkillDefsSyncS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SkillStateSyncS2C.TYPE, SkillStateSyncS2C.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(BuySkillC2S.TYPE, BuySkillC2S.STREAM_CODEC);
@@ -68,6 +72,12 @@ public final class ApoliNetwork {
         PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.RadialMenuSelectC2S.TYPE,
             dev.overgrown.apoli.network.payload.RadialMenuSelectC2S.STREAM_CODEC);
 
+        PayloadTypeRegistry.playS2C().register(
+            dev.overgrown.apoli.network.payload.PowerInventoryS2C.TYPE,
+            dev.overgrown.apoli.network.payload.PowerInventoryS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(
+            dev.overgrown.apoli.network.payload.MountOffsetS2C.TYPE,
+            dev.overgrown.apoli.network.payload.MountOffsetS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(RopeCreateS2C.TYPE, RopeCreateS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(RopeDeleteS2C.TYPE, RopeDeleteS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(RopeVerletLengthS2C.TYPE, RopeVerletLengthS2C.STREAM_CODEC);
@@ -88,7 +98,32 @@ public final class ApoliNetwork {
     }
 
     public static void sendPowers(ServerPlayer recipient) {
-        if (connected(recipient)) PowerSyncCache.sendTo(recipient);
+        if (!connected(recipient)) return;
+        PowerSyncCache.sendTo(recipient);
+        dev.overgrown.apoli.power.builtin.InventoryPower.syncAll(recipient);
+        dev.overgrown.apoli.mount.MountOffsets.syncAll(recipient);
+    }
+
+    public static void sendPowerInventory(ServerPlayer recipient,
+                                         dev.overgrown.apoli.network.payload.PowerInventoryS2C payload) {
+        if (connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.PowerInventoryS2C.TYPE)) {
+            ServerPlayNetworking.send(recipient, payload);
+        }
+    }
+
+    public static void sendMountOffset(ServerPlayer recipient,
+                                      dev.overgrown.apoli.network.payload.MountOffsetS2C payload) {
+        if (connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.MountOffsetS2C.TYPE)) {
+            ServerPlayNetworking.send(recipient, payload);
+        }
+    }
+
+    public static void broadcastMountOffset(Entity passenger,
+                                            dev.overgrown.apoli.network.payload.MountOffsetS2C payload) {
+        for (ServerPlayer viewer : PlayerLookup.tracking(passenger)) sendMountOffset(viewer, payload);
+        if (passenger instanceof ServerPlayer self) sendMountOffset(self, payload);
     }
 
     public static boolean connected(ServerPlayer recipient) {
@@ -99,12 +134,25 @@ public final class ApoliNetwork {
         if (connected(recipient)) ServerPlayNetworking.send(recipient, payload);
     }
 
+    public static void sendResourceTables(ServerPlayer recipient, SyncResourceTablesS2C payload) {
+        if (connected(recipient) && ServerPlayNetworking.canSend(recipient, SyncResourceTablesS2C.TYPE)) {
+            ServerPlayNetworking.send(recipient, payload);
+        }
+    }
+
     public static void sendActivated(ServerPlayer recipient, PowerActivatedS2C payload) {
         if (connected(recipient)) ServerPlayNetworking.send(recipient, payload);
     }
 
     public static void sendKeybinds(ServerPlayer recipient, SyncKeybindsS2C payload) {
         if (connected(recipient)) ServerPlayNetworking.send(recipient, payload);
+    }
+
+    public static void sendShader(ServerPlayer recipient, dev.overgrown.apoli.network.payload.SyncShaderS2C payload) {
+        if (connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.SyncShaderS2C.TYPE)) {
+            ServerPlayNetworking.send(recipient, payload);
+        }
     }
 
     public static void sendApplyVelocityToTrackers(Entity entity, ApplyVelocityS2C payload) {

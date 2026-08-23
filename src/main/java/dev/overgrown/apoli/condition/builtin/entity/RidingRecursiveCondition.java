@@ -19,7 +19,7 @@ public final class RidingRecursiveCondition implements ConditionType<EntityCtx, 
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Cfg::bientityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Cfg::bientityCondition),
             Comparison.CODEC.optionalFieldOf("comparison", Comparison.GREATER_EQUAL).forGetter(Cfg::comparison),
             Codec.INT.optionalFieldOf("compare_to", 1).forGetter(Cfg::compareTo)
         ).apply(i, Cfg::new));

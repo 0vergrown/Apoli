@@ -13,8 +13,8 @@ public final class ActionOnSpeakPower extends PowerType<ActionOnSpeakPower.Confi
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::actionOnSpeak),
-            EntityAction.CODEC.optionalFieldOf("entity_action_stop").forGetter(Config::actionOnStopSpeaking)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::actionOnSpeak),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action_stop", EntityAction.CODEC).forGetter(Config::actionOnStopSpeaking)
         ).apply(i, Config::new));
     }
 }

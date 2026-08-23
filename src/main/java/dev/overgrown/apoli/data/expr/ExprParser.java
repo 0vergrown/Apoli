@@ -7,10 +7,11 @@ import java.util.Map;
 import java.util.function.DoubleBinaryOperator;
 import java.util.function.DoubleUnaryOperator;
 import java.util.function.Function;
+import net.minecraft.resources.ResourceLocation;
 
 public final class ExprParser {
 
-    public record Result(ExprNode root, boolean needsContainer) {}
+    public record Result(ExprNode root, boolean needsContainer, boolean needsPeer) {}
 
     private enum T {
         NUM,
@@ -19,6 +20,8 @@ public final class ExprParser {
         OP,
         LPAREN,
         RPAREN,
+        LBRACKET,
+        RBRACKET,
         COMMA,
         EOF
     }
@@ -30,6 +33,7 @@ public final class ExprParser {
     private int pos;
     private int depth;
     private boolean needsContainer;
+    private boolean needsPeer;
 
     private T tokType;
     private String tokText = "";
@@ -46,7 +50,7 @@ public final class ExprParser {
         p.advance();
         ExprNode root = p.parseExpression();
         p.expect(T.EOF, "end of expression");
-        return new Result(root, p.needsContainer);
+        return new Result(root, p.needsContainer, p.needsPeer);
     }
 
     private ExprNode parseExpression() throws ExprParseException {
@@ -187,6 +191,9 @@ public final class ExprParser {
                 if (tokType == T.LPAREN) {
                     return functionCall(name, at);
                 }
+                if (tokType == T.LBRACKET) {
+                    return indexedVariable(name, at);
+                }
                 return variable(name, at);
             }
             default -> throw new ExprParseException("unexpected token '" + tokText + "'", tokStart);
@@ -194,6 +201,8 @@ public final class ExprParser {
     }
 
     private ExprNode functionCall(String name, int at) throws ExprParseException {
+        IdFnBuilder idBuilder = ID_FUNCTIONS.get(name);
+        if (idBuilder != null) return idFunctionCall(name, at, idBuilder);
         advance();
         List<ExprNode> args = new ArrayList<>(4);
         if (tokType != T.RPAREN) {
@@ -210,6 +219,37 @@ public final class ExprParser {
         return fold(builder.build(args, name, at));
     }
 
+    private ExprNode idFunctionCall(String name, int at, IdFnBuilder builder) throws ExprParseException {
+        advance();
+        expect(T.IDENT, "an id like 'namespace:path'");
+        ResourceLocation id = ResourceLocation.tryParse(tokText);
+        if (id == null) throw new ExprParseException("'" + tokText + "' is not a valid id", tokStart);
+        advance();
+        List<ExprNode> args = new ArrayList<>(2);
+        while (tokType == T.COMMA) {
+            advance();
+            args.add(parseExpression());
+        }
+        expect(T.RPAREN, "')'");
+        advance();
+        ExprVars.ResolvedVar rv = builder.build(id, args, name, at);
+        needsContainer |= rv.needsContainer();
+        needsPeer |= rv.needsPeer();
+        return new ExprNodes.Var(rv.accessor());
+    }
+
+    @FunctionalInterface
+    public interface IdFnBuilder {
+        ExprVars.ResolvedVar build(ResourceLocation id, List<ExprNode> args, String name, int at)
+            throws ExprParseException;
+    }
+
+    private static final Map<String, IdFnBuilder> ID_FUNCTIONS = new HashMap<>();
+
+    public static void registerIdFunction(String name, IdFnBuilder builder) {
+        ID_FUNCTIONS.put(name, builder);
+    }
+
     private ExprNode variable(String name, int at) throws ExprParseException {
         switch (name) {
             case "pi" -> { return new ExprNodes.Const(Math.PI); }
@@ -219,6 +259,23 @@ public final class ExprParser {
         ExprVars.ResolvedVar rv = resolver.apply(name);
         if (rv == null) throw new ExprParseException("unknown variable '" + name + "'", at);
         needsContainer |= rv.needsContainer();
+        needsPeer |= rv.needsPeer();
+        return new ExprNodes.Var(rv.accessor());
+    }
+
+    private ExprNode indexedVariable(String name, int at) throws ExprParseException {
+        ResourceLocation id = name.indexOf(':') < 0 ? null : ResourceLocation.tryParse(name);
+        if (id == null) {
+            throw new ExprParseException("'" + name + "' is not a resource id like 'namespace:path', "
+                + "so it cannot be indexed with [...]", at);
+        }
+        advance();
+        ExprNode index = parseExpression();
+        expect(T.RBRACKET, "']'");
+        advance();
+        ExprVars.ResolvedVar rv = ExprVars.resolveIndexed(id, index);
+        needsContainer |= rv.needsContainer();
+        needsPeer |= rv.needsPeer();
         return new ExprNodes.Var(rv.accessor());
     }
 
@@ -394,7 +451,19 @@ public final class ExprParser {
             return;
         }
         if (c == '[') {
-            scanGenerator();
+            if (looksLikeGenerator()) {
+                scanGenerator();
+            } else {
+                tokType = T.LBRACKET;
+                tokText = "[";
+                pos++;
+            }
+            return;
+        }
+        if (c == ']') {
+            tokType = T.RBRACKET;
+            tokText = "]";
+            pos++;
             return;
         }
         switch (c) {
@@ -487,6 +556,18 @@ public final class ExprParser {
 
     private static boolean isResourcePathChar(char c) {
         return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' || c == '.' || c == '/' || c == '-';
+    }
+
+    private static final java.util.Set<String> GENERATOR_NAMES = java.util.Set.of(
+        "Uni", "Nor", "Int", "nat", "Nat",
+        "Int1", "Int2", "Int3", "Int4", "Int5", "Int6", "Int7", "Int8", "Int9",
+        "nat1", "nat2", "nat3", "nat4", "nat5", "nat6", "nat7", "nat8", "nat9",
+        "Nat1", "Nat2", "Nat3", "Nat4", "Nat5", "Nat6", "Nat7", "Nat8", "Nat9");
+
+    private boolean looksLikeGenerator() {
+        int end = src.indexOf(']', pos + 1);
+        if (end < 0 || end - pos - 1 > 4) return false;
+        return GENERATOR_NAMES.contains(src.substring(pos + 1, end));
     }
 
     private void scanGenerator() throws ExprParseException {

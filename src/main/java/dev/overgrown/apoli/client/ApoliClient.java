@@ -74,6 +74,9 @@ public final class ApoliClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SyncPowersChunkS2C.TYPE, (payload, context) ->
             context.client().execute(() -> ClientPowerState.applyPowersChunk(payload)));
 
+        ClientPlayNetworking.registerGlobalReceiver(
+            dev.overgrown.apoli.network.payload.SyncResourceTablesS2C.TYPE, (payload, context) ->
+                context.client().execute(() -> ClientPowerState.applyResourceTables(payload)));
         ClientPlayNetworking.registerGlobalReceiver(SyncEntityPowersS2C.TYPE, (payload, context) ->
             context.client().execute(() -> ClientPowerState.applyEntityPowersSync(payload)));
 
@@ -82,6 +85,22 @@ public final class ApoliClient implements ClientModInitializer {
 
         ClientPlayNetworking.registerGlobalReceiver(SyncKeybindsS2C.TYPE, (payload, context) ->
             context.client().execute(() -> DynamicKeyMappingManager.applyKeybinds(payload.keybinds())));
+
+        ClientPlayNetworking.registerGlobalReceiver(
+            dev.overgrown.apoli.network.payload.PowerInventoryS2C.TYPE, (payload, context) ->
+                context.client().execute(() -> ClientPowerState.applyPowerInventory(payload)));
+
+        dev.overgrown.apoli.power.builtin.InventoryPower.setClientLookup((holder, powerId) ->
+            holder == net.minecraft.client.Minecraft.getInstance().player
+                ? ClientPowerState.powerInventory(powerId)
+                : null);
+
+        ClientPlayNetworking.registerGlobalReceiver(
+            dev.overgrown.apoli.network.payload.MountOffsetS2C.TYPE, (payload, context) ->
+                context.client().execute(() -> dev.overgrown.apoli.mount.MountOffsets.put(
+                    context.client().level == null ? null : context.client().level.getEntity(payload.passengerId()),
+                    new dev.overgrown.apoli.mount.MountOffsets.Offset(
+                        payload.x(), payload.y(), payload.z(), payload.space()))));
 
         ClientPlayNetworking.registerGlobalReceiver(ApplyVelocityS2C.TYPE, (payload, context) ->
             context.client().execute(() -> {
@@ -107,6 +126,8 @@ public final class ApoliClient implements ClientModInitializer {
             context.client().execute(() -> ClientLabelState.apply(payload.entityId(), payload.texts())));
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.ForceKeyS2C.TYPE, (payload, context) ->
             context.client().execute(() -> ForcedKeys.force(payload.key(), payload.duration(), payload.release())));
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SyncShaderS2C.TYPE, (payload, context) ->
+            context.client().execute(() -> ShaderPowerState.accept(payload.shader(), payload.toggleable())));
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             ClientPlayNetworking.send(new dev.overgrown.apoli.network.payload.ProtocolVersionPayload(
@@ -142,6 +163,7 @@ public final class ApoliClient implements ClientModInitializer {
             mc.execute(() -> {
                 DynamicKeyMappingManager.unregisterAll();
                 ClientPowerState.clear();
+                dev.overgrown.apoli.mount.MountOffsets.clearAll();
                 ShaderPowerState.clear();
                 TextOverlayRenderer.clear();
                 ClientLabelState.clear();
@@ -173,6 +195,8 @@ public final class ApoliClient implements ClientModInitializer {
 
         net.fabricmc.fabric.api.resource.ResourceManagerHelper.get(net.minecraft.server.packs.PackType.CLIENT_RESOURCES)
             .registerReloadListener(dev.overgrown.apoli.client.render.CustomModelManager.INSTANCE);
+        net.fabricmc.fabric.api.resource.ResourceManagerHelper.get(net.minecraft.server.packs.PackType.CLIENT_RESOURCES)
+            .registerReloadListener(dev.overgrown.apoli.client.render.AnimationManager.INSTANCE);
 
         net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper.registerKeyBinding(SKILL_TREE_KEY);
         net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper.registerKeyBinding(SPEECH_KEY);
@@ -187,7 +211,6 @@ public final class ApoliClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             CursorSpeedState.tick(mc);
-            ShaderPowerState.clientTick(mc);
             if (mc.player != null && !mc.isPaused()) ApoliKeyHandler.onClientTick();
             PhasingRenderState.clientTick(mc);
             RopeClientManager.tick();

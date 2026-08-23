@@ -33,8 +33,8 @@ public final class SpawnEntityAction implements ActionType<EntityCtx, SpawnEntit
         return RecordCodecBuilder.mapCodec(i -> i.group(
             IdCodecs.ID.fieldOf("entity_type").forGetter(Cfg::entityType),
             Nbt.CODEC.optionalFieldOf("tag").forGetter(Cfg::tag),
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Cfg::entityAction),
-            BiEntityAction.CODEC.optionalFieldOf("bientity_action").forGetter(Cfg::bientityAction)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Cfg::entityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Cfg::bientityAction)
         ).apply(i, Cfg::new));
     }
 

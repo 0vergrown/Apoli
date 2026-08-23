@@ -1,7 +1,8 @@
 package dev.overgrown.apoli.client.speech;
 
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.JsonOps;
 import dev.overgrown.apoli.Apoli;
 import org.vosk.Model;
 import org.vosk.Recognizer;
@@ -307,8 +308,8 @@ public final class VoskTranscriber {
 
     private static String extract(String json, String field) {
         try {
-            JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
-            return obj.has(field) ? obj.get(field).getAsString() : null;
+            Dynamic<?> obj = new Dynamic<>(JsonOps.INSTANCE, JsonParser.parseString(json));
+            return obj.get(field).asString().result().orElse(null);
         } catch (Exception e) {
             return null;
         }

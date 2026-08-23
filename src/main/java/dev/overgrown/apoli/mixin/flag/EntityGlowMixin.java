@@ -52,13 +52,14 @@ public abstract class EntityGlowMixin {
     @Unique
     private static EntityGlowPower.Config apoli$find(Entity glowing, LocalPlayer viewer, boolean selfGlow) {
         Entity holder = selfGlow ? glowing : viewer;
+        Entity subject = selfGlow ? viewer : glowing;
         EntityGlowPower.Config[] match = {null};
         PowerLookup.forEach(holder, ApoliIds.ENTITY_GLOW, EntityGlowPower.Config.class, cfg -> {
             if (match[0] != null || cfg.selfGlowTarget() != selfGlow) return;
             if (cfg.entityCondition().isPresent()
-                && !cfg.entityCondition().get().test(new EntityCtx(glowing, glowing.level()))) return;
+                && !cfg.entityCondition().get().test(new EntityCtx(subject, subject.level()))) return;
             if (cfg.bientityCondition().isPresent()
-                && !cfg.bientityCondition().get().test(new BiEntityCtx(viewer, glowing, glowing.level()))) return;
+                && !cfg.bientityCondition().get().test(new BiEntityCtx(holder, subject, glowing.level()))) return;
             match[0] = cfg;
         });
         return match[0];

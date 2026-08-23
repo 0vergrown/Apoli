@@ -37,7 +37,7 @@ public record SkillTree(
             Codec.INT.optionalFieldOf("order", 0).forGetter(SkillTree::order),
             Codec.BOOL.optionalFieldOf("auto_grant", true).forGetter(SkillTree::autoGrant),
             Codec.BOOL.optionalFieldOf("refundable", true).forGetter(SkillTree::refundable),
-            EntityCondition.CODEC.optionalFieldOf("condition").forGetter(SkillTree::condition)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("condition", EntityCondition.CODEC).forGetter(SkillTree::condition)
         ).apply(i, (name, description, icon, frame, background, defaultPowers, order, autoGrant, refundable, condition) ->
             new SkillTree(id, name, description, icon, frame, background, List.copyOf(defaultPowers), order,
                 autoGrant, refundable, condition)));

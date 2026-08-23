@@ -41,11 +41,11 @@ public final class ActionOnCollisionPower extends PowerType<ActionOnCollisionPow
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            BiEntityAction.CODEC.optionalFieldOf("bientity_action").forGetter(Config::bientityAction),
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction),
-            EntityAction.CODEC.optionalFieldOf("target_action").forGetter(Config::targetAction),
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Config::bientityCondition),
-            EntityCondition.CODEC.optionalFieldOf("target_condition").forGetter(Config::targetCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Config::bientityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("target_action", EntityAction.CODEC).forGetter(Config::targetAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("target_condition", EntityCondition.CODEC).forGetter(Config::targetCondition),
             Codec.FLOAT.optionalFieldOf("radius", 0.0F).forGetter(Config::radius),
             Codec.INT.optionalFieldOf("cooldown", 0).forGetter(Config::cooldown),
             Codec.BOOL.optionalFieldOf("include_riding", false).forGetter(Config::includeRiding),

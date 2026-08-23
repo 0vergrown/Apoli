@@ -22,8 +22,8 @@ public final class ActionOnRevivePower extends PowerType<ActionOnRevivePower.Con
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction),
-            BiEntityAction.CODEC.optionalFieldOf("bientity_action").forGetter(Config::bientityAction)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Config::bientityAction)
         ).apply(i, Config::new));
     }
 

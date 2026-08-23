@@ -28,6 +28,12 @@ public final class AttributeModifierHelper {
         return ensureSorted(combined);
     }
 
+    public static AttributeModifier withAttribute(AttributeModifier modifier, net.minecraft.resources.ResourceLocation attribute) {
+        if (modifier.attribute().isPresent()) return modifier;
+        return new AttributeModifier(modifier.operation(), modifier.value(), java.util.Optional.of(attribute),
+            modifier.name(), modifier.resource(), modifier.nested());
+    }
+
     public static List<AttributeModifier> ensureSorted(List<AttributeModifier> mods) {
         int n = mods.size();
         if (n < 2) return mods;

@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.EntityAction;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
@@ -22,18 +23,22 @@ public final class ActionOverTimePower extends PowerType<ActionOverTimePower.Con
 
     public record Config(
         int interval,
+        Expression onsetDelay,
         Optional<EntityAction> entityAction,
         Optional<EntityAction> risingAction,
         Optional<EntityAction> fallingAction
     ) {}
 
+    private static final int TICK_MASK = 0x3FFFFFFF;
+
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.INT.optionalFieldOf("interval", 20).forGetter(Config::interval),
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction),
-            EntityAction.CODEC.optionalFieldOf("rising_action").forGetter(Config::risingAction),
-            EntityAction.CODEC.optionalFieldOf("falling_action").forGetter(Config::fallingAction)
+            Expression.INT_OR_EXPR.optionalFieldOf("onset_delay", Expression.constant(0)).forGetter(Config::onsetDelay),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("rising_action", EntityAction.CODEC).forGetter(Config::risingAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("falling_action", EntityAction.CODEC).forGetter(Config::fallingAction)
         ).apply(instance, Config::new));
     }
 
@@ -59,12 +64,13 @@ public final class ActionOverTimePower extends PowerType<ActionOverTimePower.Con
         if (active) {
             if (!wasActive) {
                 cfg.risingAction.ifPresent(a -> a.run(ctx));
-                setActiveFlag(holder, powerId, true);
+                markActivated(holder, powerId, level.getGameTime());
             }
+            if (!onsetElapsed(holder, powerId, cfg, owner, level.getGameTime())) return;
             cfg.entityAction.ifPresent(a -> a.run(ctx));
         } else if (wasActive) {
             cfg.fallingAction.ifPresent(a -> a.run(ctx));
-            setActiveFlag(holder, powerId, false);
+            clearActivated(holder, powerId);
         }
     }
 
@@ -75,7 +81,7 @@ public final class ActionOverTimePower extends PowerType<ActionOverTimePower.Con
             && holder.rawOwner().level() instanceof ServerLevel level) {
             cfg.fallingAction.ifPresent(a -> a.run(EntityCtx.of(holder.rawOwner(), level)));
         }
-        setActiveFlag(holder, powerId, false);
+        clearActivated(holder, powerId);
     }
 
     public static void resetEdges(Entity entity) {
@@ -93,12 +99,24 @@ public final class ActionOverTimePower extends PowerType<ActionOverTimePower.Con
         return loaded.condition().get().test(ctx);
     }
 
-    private static void setActiveFlag(PowerContainer holder, ResourceLocation powerId, boolean activeNow) {
+    private static void markActivated(PowerContainer holder, ResourceLocation powerId, long gameTime) {
         if (!(holder instanceof PowerContainerImpl impl)) return;
-        if (activeNow) {
-            impl.setAuxInt(powerId, 1);
-        } else {
-            impl.removeAux(powerId);
-        }
+        impl.setAuxInt(powerId, stamp(gameTime));
+    }
+
+    private static void clearActivated(PowerContainer holder, ResourceLocation powerId) {
+        if (holder instanceof PowerContainerImpl impl) impl.removeAux(powerId);
+    }
+
+    private static int stamp(long gameTime) {
+        return Math.max(1, (int) (gameTime & TICK_MASK));
+    }
+
+    private static boolean onsetElapsed(PowerContainer holder, ResourceLocation powerId, Config cfg,
+                                        Entity owner, long gameTime) {
+        int onset = cfg.onsetDelay.evalInt(owner);
+        if (onset <= 0) return true;
+        int since = stamp(gameTime) - holder.getAuxIntOr(powerId, 0);
+        return since < 0 || since >= onset;
     }
 }

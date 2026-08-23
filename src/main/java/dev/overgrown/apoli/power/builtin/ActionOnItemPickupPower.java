@@ -21,10 +21,10 @@ public final class ActionOnItemPickupPower extends PowerType<ActionOnItemPickupP
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            BiEntityAction.CODEC.optionalFieldOf("bientity_action").forGetter(Config::bientityAction),
-            ItemAction.CODEC.optionalFieldOf("item_action").forGetter(Config::itemAction),
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Config::bientityCondition),
-            ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Config::itemCondition)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Config::bientityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("item_action", ItemAction.CODEC).forGetter(Config::itemAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Config::itemCondition)
         ).apply(i, Config::new));
     }
 }

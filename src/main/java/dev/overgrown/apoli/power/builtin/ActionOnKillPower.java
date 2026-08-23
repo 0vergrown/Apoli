@@ -44,16 +44,16 @@ public final class ActionOnKillPower extends PowerType<ActionOnKillPower.Config>
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            BiEntityAction.CODEC.optionalFieldOf("bientity_action").forGetter(Config::bientityAction),
-            EntityAction.CODEC.optionalFieldOf("self_action").forGetter(Config::selfAction),
-            EntityAction.CODEC.optionalFieldOf("target_action").forGetter(Config::targetAction),
-            EntityAction.CODEC.optionalFieldOf("attacker_action").forGetter(Config::attackerAction),
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Config::bientityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("self_action", EntityAction.CODEC).forGetter(Config::selfAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("target_action", EntityAction.CODEC).forGetter(Config::targetAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("attacker_action", EntityAction.CODEC).forGetter(Config::attackerAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction),
             HitSide.CODEC.optionalFieldOf("entity_action_target", HitSide.SELF).forGetter(Config::entityActionTarget),
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Config::bientityCondition),
-            EntityCondition.CODEC.optionalFieldOf("target_condition").forGetter(Config::targetCondition),
-            EntityCondition.CODEC.optionalFieldOf("attacker_condition").forGetter(Config::attackerCondition),
-            DamageCondition.CODEC.optionalFieldOf("damage_condition").forGetter(Config::damageCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("target_condition", EntityCondition.CODEC).forGetter(Config::targetCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("attacker_condition", EntityCondition.CODEC).forGetter(Config::attackerCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("damage_condition", DamageCondition.CODEC).forGetter(Config::damageCondition),
             Codec.INT.optionalFieldOf("cooldown", 1).forGetter(Config::cooldown),
             HudRender.CODEC.optionalFieldOf("hud_render", HudRender.DONT_RENDER).forGetter(Config::hudRender)
         ).apply(i, Config::new));

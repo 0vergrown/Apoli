@@ -15,7 +15,7 @@ public final class ModifyBlockRenderPower extends PowerType<ModifyBlockRenderPow
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            BlockCondition.CODEC.optionalFieldOf("block_condition").forGetter(Config::blockCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Config::blockCondition),
             IdCodecs.ID.fieldOf("block").forGetter(Config::block)
         ).apply(i, Config::new));
     }

@@ -42,21 +42,33 @@ public final class ApoliResourceCommand {
             .then(Commands.argument("targets", EntityArgument.entities())
                 .then(Commands.argument("power", ResourceLocationArgument.id())
                     .suggests(RESOURCE_POWERS)
-                    .executes(ApoliResourceCommand::get))));
+                    .executes(ApoliResourceCommand::get)
+                    .then(Commands.argument("position", IntegerArgumentType.integer(0))
+                        .executes(ApoliResourceCommand::get)))));
+
+        root.then(Commands.literal("list")
+            .then(Commands.argument("targets", EntityArgument.entities())
+                .then(Commands.argument("power", ResourceLocationArgument.id())
+                    .suggests(RESOURCE_POWERS)
+                    .executes(ApoliResourceCommand::list))));
 
         root.then(Commands.literal("set")
             .then(Commands.argument("targets", EntityArgument.entities())
                 .then(Commands.argument("power", ResourceLocationArgument.id())
                     .suggests(RESOURCE_POWERS)
                     .then(Commands.argument("value", IntegerArgumentType.integer())
-                        .executes(ApoliResourceCommand::set)))));
+                        .executes(ApoliResourceCommand::set)
+                        .then(Commands.argument("position", IntegerArgumentType.integer(0))
+                            .executes(ApoliResourceCommand::set))))));
 
         root.then(Commands.literal("change")
             .then(Commands.argument("targets", EntityArgument.entities())
                 .then(Commands.argument("power", ResourceLocationArgument.id())
                     .suggests(RESOURCE_POWERS)
                     .then(Commands.argument("value", IntegerArgumentType.integer())
-                        .executes(ApoliResourceCommand::change)))));
+                        .executes(ApoliResourceCommand::change)
+                        .then(Commands.argument("position", IntegerArgumentType.integer(0))
+                            .executes(ApoliResourceCommand::change))))));
 
         root.then(Commands.literal("has")
             .then(Commands.argument("targets", EntityArgument.entities())
@@ -71,18 +83,58 @@ public final class ApoliResourceCommand {
             .redirect(node));
     }
 
+    private static int position(CommandContext<CommandSourceStack> ctx) {
+        try {
+            return IntegerArgumentType.getInteger(ctx, "position");
+        } catch (IllegalArgumentException absent) {
+            return -1;
+        }
+    }
+
+    private static int list(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ResourceLocation power = ResourceLocationArgument.getId(ctx, "power");
+        int reported = 0;
+        for (Entity e : EntityArgument.getEntities(ctx, "targets")) {
+            PowerContainer c = PowerContainer.of(e);
+            if (c == null) continue;
+            int size = Math.max(1, PowerResources.size(c, power));
+            StringBuilder line = new StringBuilder();
+            boolean any = false;
+            for (int slot = 0; slot < size; slot++) {
+                OptionalInt val = PowerResources.readAt(c, power, slot);
+                if (val.isEmpty()) continue;
+                if (any) line.append(", ");
+                line.append(slot).append(": ").append(val.getAsInt());
+                any = true;
+            }
+            if (!any) continue;
+            String body = line.toString();
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                e.getName().getString() + " — " + power + " [" + body + "]"), false);
+            reported++;
+        }
+        if (reported == 0) {
+            ctx.getSource().sendFailure(Component.literal("No target has a resource value for " + power));
+        }
+        return reported;
+    }
+
     private static int get(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ResourceLocation power = ResourceLocationArgument.getId(ctx, "power");
+        int position = position(ctx);
         OptionalInt first = OptionalInt.empty();
         int reported = 0;
         for (Entity e : EntityArgument.getEntities(ctx, "targets")) {
             PowerContainer c = PowerContainer.of(e);
             if (c == null) continue;
-            OptionalInt val = PowerResources.read(c, power);
+            OptionalInt val = position < 0
+                ? PowerResources.read(c, power)
+                : PowerResources.readAt(c, power, position);
             if (val.isEmpty()) continue;
             int v = val.getAsInt();
+            String at = position < 0 ? "" : "[" + position + "]";
             ctx.getSource().sendSuccess(() -> Component.literal(
-                e.getName().getString() + " — " + power + ": " + v), false);
+                e.getName().getString() + " — " + power + at + ": " + v), false);
             if (first.isEmpty()) first = OptionalInt.of(v);
             reported++;
         }
@@ -96,11 +148,14 @@ public final class ApoliResourceCommand {
     private static int set(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ResourceLocation power = ResourceLocationArgument.getId(ctx, "power");
         int value = IntegerArgumentType.getInteger(ctx, "value");
+        int position = position(ctx);
         int affected = 0;
         for (Entity e : EntityArgument.getEntities(ctx, "targets")) {
             PowerContainer c = PowerContainer.of(e);
             if (c == null) continue;
-            OptionalInt written = PowerResources.write(c, power, value);
+            OptionalInt written = position < 0
+                ? writeAll(c, power, value)
+                : PowerResources.writeAt(c, power, position, value);
             if (written.isEmpty()) continue;
             int w = written.getAsInt();
             ctx.getSource().sendSuccess(() -> Component.literal(
@@ -116,13 +171,18 @@ public final class ApoliResourceCommand {
     private static int change(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ResourceLocation power = ResourceLocationArgument.getId(ctx, "power");
         int delta = IntegerArgumentType.getInteger(ctx, "value");
+        int position = position(ctx);
         int affected = 0;
         for (Entity e : EntityArgument.getEntities(ctx, "targets")) {
             PowerContainer c = PowerContainer.of(e);
             if (c == null) continue;
-            OptionalInt cur = PowerResources.read(c, power);
+            OptionalInt cur = position < 0
+                ? PowerResources.read(c, power)
+                : PowerResources.readAt(c, power, position);
             if (cur.isEmpty()) continue;
-            OptionalInt written = PowerResources.write(c, power, cur.getAsInt() + delta);
+            OptionalInt written = position < 0
+                ? PowerResources.write(c, power, cur.getAsInt() + delta)
+                : PowerResources.writeAt(c, power, position, cur.getAsInt() + delta);
             if (written.isEmpty()) continue;
             int w = written.getAsInt();
             ctx.getSource().sendSuccess(() -> Component.literal(
@@ -151,6 +211,17 @@ public final class ApoliResourceCommand {
             ctx.getSource().sendSuccess(() -> Component.literal("No target holds the resource power " + power), false);
         }
         return count;
+    }
+
+    private static OptionalInt writeAll(PowerContainer container, ResourceLocation power, int value) {
+        int size = PowerResources.size(container, power);
+        if (size <= 1) return PowerResources.write(container, power, value);
+        OptionalInt last = OptionalInt.empty();
+        for (int slot = 0; slot < size; slot++) {
+            OptionalInt written = PowerResources.writeAt(container, power, slot, value);
+            if (written.isPresent()) last = written;
+        }
+        return last;
     }
 
     private static List<ResourceLocation> heldResourcePowers(CommandContext<CommandSourceStack> ctx) {

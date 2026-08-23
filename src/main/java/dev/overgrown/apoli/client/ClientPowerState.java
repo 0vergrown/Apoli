@@ -92,12 +92,38 @@ public final class ClientPowerState {
         ENTITY_POWERS.remove(entityId);
         ENTITY_AUX.remove(entityId);
         ENTITY_SUPPRESSED.remove(entityId);
+        ENTITY_TABLES.remove(entityId);
+    }
+
+    private static final Map<Integer, Map<ResourceLocation, int[]>> ENTITY_TABLES = new ConcurrentHashMap<>();
+
+    public static void applyResourceTables(dev.overgrown.apoli.network.payload.SyncResourceTablesS2C payload) {
+        if (payload.tables().isEmpty()) ENTITY_TABLES.remove(payload.entityId());
+        else ENTITY_TABLES.put(payload.entityId(), Map.copyOf(payload.tables()));
+    }
+
+    public static Map<ResourceLocation, int[]> tablesFor(int entityId) {
+        return ENTITY_TABLES.getOrDefault(entityId, Map.of());
+    }
+
+    private static final Map<ResourceLocation, net.minecraft.nbt.CompoundTag> LOCAL_POWER_INVENTORIES =
+        new ConcurrentHashMap<>();
+
+    public static void applyPowerInventory(dev.overgrown.apoli.network.payload.PowerInventoryS2C payload) {
+        if (payload.contents() == null) LOCAL_POWER_INVENTORIES.remove(payload.powerId());
+        else LOCAL_POWER_INVENTORIES.put(payload.powerId(), payload.contents());
+    }
+
+    public static net.minecraft.nbt.CompoundTag powerInventory(ResourceLocation powerId) {
+        return LOCAL_POWER_INVENTORIES.get(powerId);
     }
 
     public static void clear() {
+        LOCAL_POWER_INVENTORIES.clear();
         ENTITY_POWERS.clear();
         ENTITY_AUX.clear();
         ENTITY_SUPPRESSED.clear();
+        ENTITY_TABLES.clear();
         COOLDOWNS.clear();
     }
 

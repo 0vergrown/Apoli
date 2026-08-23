@@ -3,6 +3,8 @@ package dev.overgrown.apoli.data;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.world.entity.Entity;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -46,19 +48,23 @@ public final class ModelPartTransformation {
         );
     }
 
-    public record Keyframe(float time, float value, Optional<Easing> easing) {
+    public record Keyframe(float time, Expression value, Optional<Easing> easing) {
         public static final Codec<Keyframe> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.FLOAT.fieldOf("time").forGetter(Keyframe::time),
-            Codec.FLOAT.fieldOf("value").forGetter(Keyframe::value),
+            Expression.FLOAT_OR_EXPR.fieldOf("value").forGetter(Keyframe::value),
             Easing.CODEC.optionalFieldOf("easing").forGetter(Keyframe::easing)
         ).apply(instance, Keyframe::new));
+
+        public float valueFor(@Nullable Entity entity) {
+            return (float) value.eval(entity);
+        }
     }
 
     private final String part;
     private final String normalizedPart;
     private final Type type;
-    private final Optional<Float> rawValue;
-    private final float value;
+    private final Optional<Expression> rawValue;
+    private final Expression value;
     private final boolean overrideAnimation;
     private final List<Keyframe> keyframes;
     private final boolean loop;
@@ -69,14 +75,14 @@ public final class ModelPartTransformation {
     private final float timelineStart;
     private final float timelineEnd;
 
-    public ModelPartTransformation(String part, Type type, Optional<Float> value, boolean overrideAnimation,
+    public ModelPartTransformation(String part, Type type, Optional<Expression> value, boolean overrideAnimation,
                                    List<Keyframe> keyframes, boolean loop, float duration,
                                    Optional<Float> fadeOutDuration, Easing easing) {
         this.part = part;
         this.normalizedPart = ModelParts.normalize(part);
         this.type = type;
         this.rawValue = value;
-        this.value = value.orElse(0.0F);
+        this.value = value.orElse(Expression.constant(0.0));
         this.overrideAnimation = overrideAnimation;
         this.keyframes = sortByTime(keyframes);
         this.loop = loop;
@@ -107,12 +113,16 @@ public final class ModelPartTransformation {
         return type;
     }
 
-    public Optional<Float> rawValue() {
+    public Optional<Expression> rawValue() {
         return rawValue;
     }
 
-    public float value() {
+    public Expression value() {
         return value;
+    }
+
+    public float valueFor(@Nullable Entity entity) {
+        return (float) value.eval(entity);
     }
 
     public boolean overrideAnimation() {
@@ -143,19 +153,19 @@ public final class ModelPartTransformation {
         return easing;
     }
 
-    public float sample(float elapsed) {
+    public float sample(float elapsed, @Nullable Entity entity) {
         List<Keyframe> frames = keyframes;
         int size = frames.size();
-        if (size == 0) return value;
-        if (size == 1) return frames.get(0).value();
+        if (size == 0) return valueFor(entity);
+        if (size == 1) return frames.get(0).valueFor(entity);
 
         float t = elapsed;
         float span = timelineEnd - timelineStart;
         if (loop && span > 0.0F) {
             t = timelineStart + (((t - timelineStart) % span) + span) % span;
         }
-        if (t <= timelineStart) return frames.get(0).value();
-        if (t >= timelineEnd) return frames.get(size - 1).value();
+        if (t <= timelineStart) return frames.get(0).valueFor(entity);
+        if (t >= timelineEnd) return frames.get(size - 1).valueFor(entity);
 
         int index = 1;
         while (index < size - 1 && frames.get(index).time() <= t) index++;
@@ -165,16 +175,18 @@ public final class ModelPartTransformation {
         float segment = to.time() - from.time();
         float local = segment <= 0.0F ? 1.0F : (t - from.time()) / segment;
         Easing curve = to.easing().orElse(easing);
+        float fromValue = from.valueFor(entity);
+        float toValue = to.valueFor(entity);
         if (curve == Easing.CATMULLROM) {
-            return catmullRom(valueAt(index - 2), from.value(), to.value(), valueAt(index + 1), local);
+            return catmullRom(valueAt(index - 2, entity), fromValue, toValue, valueAt(index + 1, entity), local);
         }
-        return from.value() + (to.value() - from.value()) * curve.apply(local);
+        return fromValue + (toValue - fromValue) * curve.apply(local);
     }
 
-    private float valueAt(int index) {
+    private float valueAt(int index, @Nullable Entity entity) {
         int size = keyframes.size();
         int clamped = loop ? ((index % size) + size) % size : Math.max(0, Math.min(size - 1, index));
-        return keyframes.get(clamped).value();
+        return keyframes.get(clamped).valueFor(entity);
     }
 
     private static float catmullRom(float p0, float p1, float p2, float p3, float t) {
@@ -199,7 +211,7 @@ public final class ModelPartTransformation {
     public static final Codec<ModelPartTransformation> CODEC = RecordCodecBuilder.<ModelPartTransformation>create(instance -> instance.group(
         Codec.STRING.fieldOf("model_part").forGetter(ModelPartTransformation::part),
         Type.CODEC.fieldOf("type").forGetter(ModelPartTransformation::type),
-        Codec.FLOAT.optionalFieldOf("value").forGetter(ModelPartTransformation::rawValue),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("value").forGetter(ModelPartTransformation::rawValue),
         Codec.BOOL.optionalFieldOf("override_animation", false).forGetter(ModelPartTransformation::overrideAnimation),
         Keyframe.CODEC.listOf().optionalFieldOf("keyframes", List.of()).forGetter(ModelPartTransformation::keyframes),
         Codec.BOOL.optionalFieldOf("loop", false).forGetter(ModelPartTransformation::loop),

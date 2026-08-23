@@ -36,8 +36,8 @@ public final class EntitySetPower extends PowerType<EntitySetPower.Cfg> {
     @Override
     public MapCodec<Cfg> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            BiEntityAction.CODEC.optionalFieldOf("action_on_add").forGetter(Cfg::actionOnAdd),
-            BiEntityAction.CODEC.optionalFieldOf("action_on_remove").forGetter(Cfg::actionOnRemove)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("action_on_add", BiEntityAction.CODEC).forGetter(Cfg::actionOnAdd),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("action_on_remove", BiEntityAction.CODEC).forGetter(Cfg::actionOnRemove)
         ).apply(i, Cfg::new));
     }
 

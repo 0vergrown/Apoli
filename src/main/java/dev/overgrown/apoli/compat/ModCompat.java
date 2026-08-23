@@ -33,6 +33,8 @@ public final class ModCompat {
 
     public static final boolean BETTER_COMBAT = FabricLoader.getInstance().isModLoaded("bettercombat");
 
+    public static final boolean WALKERS = FabricLoader.getInstance().isModLoaded("walkers");
+
     public static final boolean PUFFISH_SKILLS = FabricLoader.getInstance().isModLoaded("puffish_skills");
 
     public static final boolean PUFFISH_SKILLS_ORIGINS = FabricLoader.getInstance().isModLoaded("puffish_skills_origins");

@@ -21,9 +21,9 @@ public final class ActionOnBlockBreakPower extends PowerType<ActionOnBlockBreakP
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction),
-            BlockAction.CODEC.optionalFieldOf("block_action").forGetter(Config::blockAction),
-            BlockCondition.CODEC.optionalFieldOf("block_condition").forGetter(Config::blockCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("block_action", BlockAction.CODEC).forGetter(Config::blockAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Config::blockCondition),
             Codec.BOOL.optionalFieldOf("only_when_harvested", true).forGetter(Config::onlyWhenHarvested)
         ).apply(i, Config::new));
     }

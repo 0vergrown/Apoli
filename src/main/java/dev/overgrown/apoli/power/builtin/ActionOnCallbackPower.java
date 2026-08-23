@@ -36,12 +36,12 @@ public final class ActionOnCallbackPower extends PowerType<ActionOnCallbackPower
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            EntityAction.CODEC.optionalFieldOf("entity_action_gained").forGetter(Config::entityActionGained),
-            EntityAction.CODEC.optionalFieldOf("entity_action_lost").forGetter(Config::entityActionLost),
-            EntityAction.CODEC.optionalFieldOf("entity_action_added").forGetter(Config::entityActionAdded),
-            EntityAction.CODEC.optionalFieldOf("entity_action_removed").forGetter(Config::entityActionRemoved),
-            EntityAction.CODEC.optionalFieldOf("entity_action_respawned").forGetter(Config::entityActionRespawned),
-            EntityAction.CODEC.optionalFieldOf("entity_action_chosen").forGetter(Config::entityActionChosen),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action_gained", EntityAction.CODEC).forGetter(Config::entityActionGained),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action_lost", EntityAction.CODEC).forGetter(Config::entityActionLost),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action_added", EntityAction.CODEC).forGetter(Config::entityActionAdded),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action_removed", EntityAction.CODEC).forGetter(Config::entityActionRemoved),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action_respawned", EntityAction.CODEC).forGetter(Config::entityActionRespawned),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action_chosen", EntityAction.CODEC).forGetter(Config::entityActionChosen),
             Codec.BOOL.optionalFieldOf("execute_chosen_when_orb", true).forGetter(Config::executeChosenWhenOrb)
         ).apply(i, Config::new));
     }

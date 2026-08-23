@@ -34,11 +34,11 @@ public final class ActionOnAccessoryChangePower extends PowerType<ActionOnAccess
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            EntityAction.CODEC.optionalFieldOf("entity_action_on_equip").forGetter(Config::entityActionOnEquip),
-            ItemAction.CODEC.optionalFieldOf("item_action_on_equip").forGetter(Config::itemActionOnEquip),
-            EntityAction.CODEC.optionalFieldOf("entity_action_on_unequip").forGetter(Config::entityActionOnUnequip),
-            ItemAction.CODEC.optionalFieldOf("item_action_on_unequip").forGetter(Config::itemActionOnUnequip),
-            ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Config::itemCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action_on_equip", EntityAction.CODEC).forGetter(Config::entityActionOnEquip),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("item_action_on_equip", ItemAction.CODEC).forGetter(Config::itemActionOnEquip),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action_on_unequip", EntityAction.CODEC).forGetter(Config::entityActionOnUnequip),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("item_action_on_unequip", ItemAction.CODEC).forGetter(Config::itemActionOnUnequip),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Config::itemCondition),
             AccessorySlot.LIST.optionalFieldOf("slots", List.of()).forGetter(Config::slots)
         ).apply(i, Config::new));
     }

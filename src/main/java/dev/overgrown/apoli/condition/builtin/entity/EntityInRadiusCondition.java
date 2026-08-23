@@ -18,16 +18,16 @@ import java.util.Optional;
 
 public final class EntityInRadiusCondition implements ConditionType<EntityCtx, EntityInRadiusCondition.Cfg> {
     public record Cfg(Optional<BiEntityCondition> bientityCondition, float radius, Shape shape,
-                      Comparison comparison, int compareTo) {}
+                      Comparison comparison, dev.overgrown.apoli.data.Expression compareTo) {}
 
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Cfg::bientityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Cfg::bientityCondition),
             Codec.FLOAT.fieldOf("radius").forGetter(Cfg::radius),
             Shape.CODEC.optionalFieldOf("shape", Shape.CUBE).forGetter(Cfg::shape),
             Comparison.CODEC.optionalFieldOf("comparison", Comparison.GREATER_EQUAL).forGetter(Cfg::comparison),
-            Codec.INT.optionalFieldOf("compare_to", 1).forGetter(Cfg::compareTo)
+            dev.overgrown.apoli.data.Expression.INT_OR_EXPR.optionalFieldOf("compare_to", dev.overgrown.apoli.data.Expression.constant(1)).forGetter(Cfg::compareTo)
         ).apply(i, Cfg::new));
     }
 
@@ -40,6 +40,7 @@ public final class EntityInRadiusCondition implements ConditionType<EntityCtx, E
                             self.getX() + r, self.getY() + r, self.getZ() + r);
         List<Entity> nearby = ctx.level().getEntities(self, box);
         boolean filtered = cfg.bientityCondition.isPresent();
+        int threshold = cfg.compareTo.evalInt(self);
 
         int count = 0;
         for (Entity candidate : nearby) {
@@ -49,8 +50,8 @@ public final class EntityInRadiusCondition implements ConditionType<EntityCtx, E
                 if (!cfg.bientityCondition.get().test(new BiEntityCtx(self, candidate, ctx.level()))) continue;
             }
             count++;
-            if (count > cfg.compareTo) break;
+            if (count > threshold) break;
         }
-        return cfg.comparison.compare(count, cfg.compareTo);
+        return cfg.comparison.compare(count, threshold);
     }
 }

@@ -20,7 +20,7 @@ public final class InvisibilityPower extends PowerType<InvisibilityPower.Config>
         return RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.BOOL.optionalFieldOf("render_armor", false).forGetter(Config::renderArmor),
             Codec.BOOL.optionalFieldOf("render_outline", false).forGetter(Config::renderOutline),
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Config::bientityCondition)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition)
         ).apply(i, Config::new));
     }
 }

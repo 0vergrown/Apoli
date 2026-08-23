@@ -21,7 +21,7 @@ public final class ModifyJumpPower extends PowerType<ModifyJumpPower.Config> {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             AttributeModifier.CODEC.optionalFieldOf("modifier").forGetter(Config::modifier),
             AttributeModifier.LIST_OR_SINGLE.optionalFieldOf("modifiers").forGetter(Config::modifiers),
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction)
         ).apply(i, Config::new));
     }
 }

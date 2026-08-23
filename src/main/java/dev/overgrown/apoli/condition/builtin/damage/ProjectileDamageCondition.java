@@ -23,7 +23,7 @@ public final class ProjectileDamageCondition implements ConditionType<DamageCtx,
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             IdCodecs.ID.optionalFieldOf("projectile").forGetter(Cfg::projectile),
-            EntityCondition.CODEC.optionalFieldOf("projectile_condition").forGetter(Cfg::projectileCondition)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("projectile_condition", EntityCondition.CODEC).forGetter(Cfg::projectileCondition)
         ).apply(i, Cfg::new));
     }
 

@@ -43,15 +43,15 @@ public final class ModifyDamagePower extends PowerType<ModifyDamagePower.Config>
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            BiEntityAction.CODEC.optionalFieldOf("bientity_action").forGetter(Config::bientityAction),
-            EntityAction.CODEC.optionalFieldOf("self_action").forGetter(Config::selfAction),
-            EntityAction.CODEC.optionalFieldOf("target_action").forGetter(Config::targetAction),
-            EntityAction.CODEC.optionalFieldOf("attacker_action").forGetter(Config::attackerAction),
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Config::bientityCondition),
-            EntityCondition.CODEC.optionalFieldOf("target_condition").forGetter(Config::targetCondition),
-            EntityCondition.CODEC.optionalFieldOf("apply_armor_condition").forGetter(Config::applyArmorCondition),
-            EntityCondition.CODEC.optionalFieldOf("damage_armor_condition").forGetter(Config::damageArmorCondition),
-            DamageCondition.CODEC.optionalFieldOf("damage_condition").forGetter(Config::damageCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Config::bientityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("self_action", EntityAction.CODEC).forGetter(Config::selfAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("target_action", EntityAction.CODEC).forGetter(Config::targetAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("attacker_action", EntityAction.CODEC).forGetter(Config::attackerAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("target_condition", EntityCondition.CODEC).forGetter(Config::targetCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("apply_armor_condition", EntityCondition.CODEC).forGetter(Config::applyArmorCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("damage_armor_condition", EntityCondition.CODEC).forGetter(Config::damageArmorCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("damage_condition", DamageCondition.CODEC).forGetter(Config::damageCondition),
             AttributeModifier.CODEC.optionalFieldOf("modifier").forGetter(Config::modifier),
             AttributeModifier.LIST_OR_SINGLE.optionalFieldOf("modifiers").forGetter(Config::modifiers),
             Codec.BOOL.optionalFieldOf("target_used", false).forGetter(Config::targetUsed)

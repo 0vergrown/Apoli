@@ -7,7 +7,9 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -85,13 +87,41 @@ public class MinionEntity extends Mob implements OwnableEntity, Temporary {
                 this.discard();
                 return;
             }
-            this.setYRot(owner.getYHeadRot());
-            this.setYHeadRot(owner.getYHeadRot());
-            this.setXRot(owner.getXRot());
+            this.aimAt(owner.getYHeadRot(), owner.getXRot());
             Vector3f offset = this.getFollowOffset();
             offset.rotateY(-owner.getYHeadRot() * Mth.DEG_TO_RAD);
             this.setPos(owner.getX() + offset.x, owner.getY() + offset.y, owner.getZ() + offset.z);
         }
+    }
+
+    public void aimAt(float yaw, float pitch) {
+        this.setYRot(yaw);
+        this.setYHeadRot(yaw);
+        this.setXRot(pitch);
+        this.yBodyRot = yaw;
+    }
+
+    @Override
+    protected float tickHeadTurn(float movementYaw, float animStep) {
+        this.yBodyRot = this.yHeadRot;
+        this.setYRot(this.yHeadRot);
+        return animStep;
+    }
+
+    @Override
+    public int getMaxHeadYRot() {
+        return 180;
+    }
+
+    @Override
+    public int getMaxHeadXRot() {
+        return 90;
+    }
+
+    @Override
+    public boolean isInvulnerableTo(DamageSource source) {
+        if (this.isInvulnerable() && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) return true;
+        return super.isInvulnerableTo(source);
     }
 
     @Override
@@ -197,6 +227,12 @@ public class MinionEntity extends Mob implements OwnableEntity, Temporary {
     @Override
     public boolean canUsePortal(boolean allowVehicles) {
         return false;
+    }
+
+    @Override
+    public void remove(RemovalReason reason) {
+        super.remove(reason);
+        Summons.onRemoved(this);
     }
 
     @Override

@@ -1,103 +1,97 @@
 package dev.overgrown.apoli.power.builtin;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.JsonOps;
+import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import dev.overgrown.apoli.data.EquipmentSlot;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EquipmentSlot;
 import org.jetbrains.annotations.Nullable;
 
-public final class RecipePower extends PowerType<RecipePower.Config> {
-    public record Config(JsonObject recipe, ResourceLocation recipeId) {}
+import java.util.ArrayList;
+import java.util.List;
 
-    private static final Codec<JsonObject> JSON_OBJECT_CODEC = Codec.PASSTHROUGH.xmap(
-        dyn -> {
-            JsonElement el = dyn.convert(JsonOps.INSTANCE).getValue();
-            return el.isJsonObject() ? el.getAsJsonObject() : new JsonObject();
-        },
-        obj -> new com.mojang.serialization.Dynamic<>(JsonOps.INSTANCE, obj)
-    );
+public final class RecipePower extends PowerType<RecipePower.Config> {
+    public record Config(Dynamic<?> recipe, @Nullable ResourceLocation recipeId) {}
 
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            JSON_OBJECT_CODEC.fieldOf("recipe").forGetter(Config::recipe)
-        ).apply(i, json -> new Config(embedResultPowers(json), extractId(json))));
+            Codec.PASSTHROUGH.fieldOf("recipe").forGetter(Config::recipe)
+        ).apply(i, recipe -> new Config(embedResultPowers(recipe), extractId(recipe))));
     }
 
-    private static @Nullable ResourceLocation extractId(JsonObject recipe) {
-        if (recipe == null || !recipe.has("id")) return null;
-        try {
-            return ResourceLocation.parse(recipe.get("id").getAsString());
-        } catch (Exception ignored) {
-            return null;
-        }
+    private static @Nullable ResourceLocation extractId(Dynamic<?> recipe) {
+        return recipe.get("id").asString().result().map(ResourceLocation::tryParse).orElse(null);
     }
 
-    static JsonObject embedResultPowers(JsonObject recipe) {
-        if (recipe == null || !recipe.has("result") || !recipe.get("result").isJsonObject()) return recipe;
-        JsonObject result = recipe.getAsJsonObject("result");
+    static <T> Dynamic<T> embedResultPowers(Dynamic<T> recipe) {
+        Dynamic<T> result = recipe.get("result").result().orElse(null);
+        if (result == null || result.getMapValues().result().isEmpty()) return recipe;
 
-        JsonArray entries = new JsonArray();
-        if (result.has("power")) addEntries(entries, result.get("power"));
-        if (result.has("powers") && result.get("powers").isJsonArray()) {
-            for (JsonElement el : result.getAsJsonArray("powers")) addEntries(entries, el);
-        }
+        List<Dynamic<T>> entries = new ArrayList<>();
+        result.get("power").result().ifPresent(value -> addEntries(entries, value));
+        result.get("powers").asStreamOpt().result()
+            .ifPresent(stream -> stream.forEach(value -> addEntries(entries, value)));
         if (entries.isEmpty()) return recipe;
 
-        JsonObject components = result.has("components") && result.get("components").isJsonObject()
-            ? result.getAsJsonObject("components") : new JsonObject();
-        JsonObject customData = components.has("minecraft:custom_data") && components.get("minecraft:custom_data").isJsonObject()
-            ? components.getAsJsonObject("minecraft:custom_data") : new JsonObject();
-        JsonArray powers = customData.has("Powers") && customData.get("Powers").isJsonArray()
-            ? customData.getAsJsonArray("Powers") : new JsonArray();
+        Dynamic<T> components = result.get("components").result()
+            .filter(c -> c.getMapValues().result().isPresent())
+            .orElseGet(result::emptyMap);
+        Dynamic<T> customData = components.get("minecraft:custom_data").result()
+            .filter(c -> c.getMapValues().result().isPresent())
+            .orElseGet(result::emptyMap);
+
+        List<Dynamic<T>> powers = new ArrayList<>();
+        customData.get("Powers").asStreamOpt().result().ifPresent(stream -> stream.forEach(powers::add));
         powers.addAll(entries);
-        customData.add("Powers", powers);
-        components.add("minecraft:custom_data", customData);
-        result.add("components", components);
-        result.remove("power");
-        result.remove("powers");
-        return recipe;
+
+        customData = customData.set("Powers", result.createList(powers.stream()));
+        components = components.set("minecraft:custom_data", customData);
+
+        Dynamic<T> updated = result
+            .set("components", components)
+            .remove("power")
+            .remove("powers");
+        return recipe.set("result", updated);
     }
 
-    private static void addEntries(JsonArray out, JsonElement value) {
-        if (value.isJsonPrimitive()) {
+    private static <T> void addEntries(List<Dynamic<T>> out, Dynamic<T> value) {
+        String simple = value.asString().result().orElse(null);
+        if (simple != null) {
             for (EquipmentSlot slot : EquipmentSlot.values()) {
-                out.add(entry(value.getAsString(), slot.getSerializedName(), false, false));
+                out.add(entry(value, simple, slot.getSerializedName(), false, false));
             }
             return;
         }
-        if (!value.isJsonObject()) return;
-        JsonObject o = value.getAsJsonObject();
-        if (!o.has("power")) return;
-        String id = o.get("power").getAsString();
-        boolean hidden = o.has("hidden") && o.get("hidden").getAsBoolean();
-        boolean negative = o.has("negative") && o.get("negative").getAsBoolean();
-        if (o.has("slot")) {
-            JsonElement sl = o.get("slot");
-            if (sl.isJsonArray()) {
-                for (JsonElement s : sl.getAsJsonArray()) out.add(entry(id, s.getAsString(), hidden, negative));
-            } else {
-                out.add(entry(id, sl.getAsString(), hidden, negative));
-            }
-        } else {
+        String id = value.get("power").asString().result().orElse(null);
+        if (id == null) return;
+        boolean hidden = value.get("hidden").asBoolean(false);
+        boolean negative = value.get("negative").asBoolean(false);
+
+        Dynamic<T> slots = value.get("slot").result().orElse(null);
+        if (slots == null) {
             for (EquipmentSlot slot : EquipmentSlot.values()) {
-                out.add(entry(id, slot.getSerializedName(), hidden, negative));
+                out.add(entry(value, id, slot.getSerializedName(), hidden, negative));
             }
+            return;
         }
+        var stream = slots.asStreamOpt().result().orElse(null);
+        if (stream != null) {
+            stream.forEach(s -> s.asString().result()
+                .ifPresent(name -> out.add(entry(value, id, name, hidden, negative))));
+            return;
+        }
+        slots.asString().result().ifPresent(name -> out.add(entry(value, id, name, hidden, negative)));
     }
 
-    private static JsonObject entry(String id, String slot, boolean hidden, boolean negative) {
-        JsonObject e = new JsonObject();
-        e.addProperty("Id", id);
-        e.addProperty("Slot", slot);
-        if (hidden) e.addProperty("Hidden", true);
-        if (negative) e.addProperty("Negative", true);
+    private static <T> Dynamic<T> entry(Dynamic<T> ctx, String id, String slot, boolean hidden, boolean negative) {
+        Dynamic<T> e = ctx.emptyMap()
+            .set("Id", ctx.createString(id))
+            .set("Slot", ctx.createString(slot));
+        if (hidden) e = e.set("Hidden", ctx.createBoolean(true));
+        if (negative) e = e.set("Negative", ctx.createBoolean(true));
         return e;
     }
 }

@@ -1,6 +1,5 @@
 package dev.overgrown.apoli.power.builtin;
 
-import com.mojang.datafixers.util.Pair;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.condition.context.ItemCtx;
 import dev.overgrown.apoli.data.AttributeModifier;
@@ -68,14 +67,15 @@ public final class EdibleItemHandler {
         return null;
     }
 
-    public static boolean canConsume(Player player, EdibleItemPower.Config cfg) {
-        return player.canEat(cfg.foodComponent().alwaysEdible());
+    public static boolean canConsume(Player player, EdibleItemPower.Config cfg, ItemStack stack) {
+        return player.canEat(cfg.foodComponent().alwaysEdible() || ModifyFoodHandler.alwaysEdible(player, stack));
     }
 
-    public static int useDuration(LivingEntity entity, EdibleItemPower.Config cfg) {
-        double ticks = cfg.foodComponent().snack() ? 16.0 : 32.0;
+    public static int useDuration(LivingEntity entity, EdibleItemPower.Config cfg, ItemStack stack) {
+        double ticks = cfg.foodComponent().eatDurationTicks();
+        ticks = ModifyFoodHandler.eatTicks(entity, stack, ticks);
         if (cfg.consumingTimeModifier().isEmpty() && cfg.consumingTimeModifiers().isEmpty()) {
-            return (int) ticks;
+            return Math.max(1, (int) Math.round(ticks));
         }
         PowerContainer container = PowerContainer.of(entity);
         if (cfg.consumingTimeModifier().isPresent()) {
@@ -103,8 +103,9 @@ public final class EdibleItemHandler {
 
         playConsumeSound(level, entity, cfg);
 
+        FoodProperties properties = ModifyFoodHandler.modify(entity, stack, food.build(entity));
+
         if (entity instanceof Player player) {
-            FoodProperties properties = food.build(entity);
             player.getFoodData().eat(properties);
             player.awardStat(Stats.ITEM_USED.get(stack.getItem()));
             if (player instanceof ServerPlayer serverPlayer) {
@@ -113,15 +114,16 @@ public final class EdibleItemHandler {
         }
 
         if (server) {
-            List<Pair<MobEffectInstance, Float>> effects = food.allEffectsWithProbability(entity);
+            List<FoodProperties.PossibleEffect> effects = properties.effects();
             for (int i = 0; i < effects.size(); i++) {
-                Pair<MobEffectInstance, Float> effect = effects.get(i);
-                if (level.getRandom().nextFloat() < effect.getSecond()) {
-                    entity.addEffect(new MobEffectInstance(effect.getFirst()));
+                FoodProperties.PossibleEffect effect = effects.get(i);
+                if (level.getRandom().nextFloat() < effect.probability()) {
+                    entity.addEffect(new MobEffectInstance(effect.effect()));
                 }
             }
             cfg.itemAction().ifPresent(action -> action.run(new ItemCtx(stack, level, entity)));
             cfg.entityAction().ifPresent(action -> action.run(EntityCtx.of(entity, level)));
+            ModifyFoodHandler.afterEat(entity, stack);
         }
 
         stack.consume(1, entity);
