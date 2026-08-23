@@ -1,0 +1,1 @@
+dev.overgrown.apoli.compat.kubejs.ApoliKubeJSPlugin

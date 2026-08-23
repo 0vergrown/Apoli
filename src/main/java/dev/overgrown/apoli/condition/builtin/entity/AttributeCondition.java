@@ -27,7 +27,7 @@ public final class AttributeCondition implements ConditionType<EntityCtx, Attrib
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        Attribute attr = BuiltInRegistries.ATTRIBUTE.get(cfg.attribute);
+        Attribute attr = dev.overgrown.apoli.attribute.ApoliAttributes.get(cfg.attribute);
         if (attr == null) return false;
         LivingEntity living = ctx.living();
         if (living == null) return false;

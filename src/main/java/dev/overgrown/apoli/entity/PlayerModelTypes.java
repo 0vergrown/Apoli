@@ -1,8 +1,8 @@
 package dev.overgrown.apoli.entity;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.JsonOps;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import dev.overgrown.apoli.data.PlayerModelType;
@@ -62,16 +62,12 @@ public final class PlayerModelTypes {
             if (encoded == null || encoded.isEmpty()) continue;
             try {
                 String json = new String(Base64.getDecoder().decode(encoded), StandardCharsets.UTF_8);
-                JsonElement root = JsonParser.parseString(json);
-                if (!root.isJsonObject()) continue;
-                JsonElement textures = root.getAsJsonObject().get("textures");
-                if (textures == null || !textures.isJsonObject()) continue;
-                JsonElement skin = textures.getAsJsonObject().get("SKIN");
-                if (skin == null || !skin.isJsonObject()) continue;
-                JsonElement metadata = skin.getAsJsonObject().get("metadata");
-                if (metadata == null || !metadata.isJsonObject()) return PlayerModelType.WIDE;
-                JsonElement model = metadata.getAsJsonObject().get("model");
-                return model != null && "slim".equalsIgnoreCase(model.getAsString())
+                Dynamic<?> root = new Dynamic<>(JsonOps.INSTANCE, JsonParser.parseString(json));
+                Dynamic<?> skin = root.get("textures").get("SKIN").result().orElse(null);
+                if (skin == null) continue;
+                if (skin.get("metadata").result().isEmpty()) return PlayerModelType.WIDE;
+                return skin.get("metadata").get("model").asString().result()
+                    .filter("slim"::equalsIgnoreCase).isPresent()
                     ? PlayerModelType.SLIM
                     : PlayerModelType.WIDE;
             } catch (Exception ignored) {

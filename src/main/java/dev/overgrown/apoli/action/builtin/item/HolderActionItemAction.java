@@ -16,8 +16,8 @@ public final class HolderActionItemAction implements ActionType<ItemCtx, HolderA
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            EntityAction.CODEC.optionalFieldOf("action").forGetter(Cfg::action),
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Cfg::entityAction)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("action", EntityAction.CODEC).forGetter(Cfg::action),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Cfg::entityAction)
         ).apply(i, Cfg::new));
     }
 

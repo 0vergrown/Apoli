@@ -21,8 +21,15 @@ public record AttributeModifier(
     Optional<ResourceLocation> attribute,
     Optional<String> name,
     Optional<ResourceLocation> resource,
-    Optional<AttributeModifier> nested
+    Optional<AttributeModifier> nested,
+    Optional<Expression> position
 ) {
+    public AttributeModifier(AttributeModifierOperation operation, Expression value,
+                             Optional<ResourceLocation> attribute, Optional<String> name,
+                             Optional<ResourceLocation> resource, Optional<AttributeModifier> nested) {
+        this(operation, value, attribute, name, resource, nested, Optional.empty());
+    }
+
     public static final Codec<AttributeModifier> CODEC;
 
     static {
@@ -34,9 +41,11 @@ public record AttributeModifier(
             IdCodecs.ID.optionalFieldOf("attribute").forGetter(AttributeModifier::attribute),
             Codec.STRING.optionalFieldOf("name").forGetter(AttributeModifier::name),
             IdCodecs.ID.optionalFieldOf("resource").forGetter(AttributeModifier::resource),
-            new LazyCodec<AttributeModifier>(() -> ref[0]).optionalFieldOf("modifier").forGetter(AttributeModifier::nested)
+            new LazyCodec<AttributeModifier>(() -> ref[0]).optionalFieldOf("modifier").forGetter(AttributeModifier::nested),
+            Expression.INT_OR_EXPR.optionalFieldOf("position").forGetter(AttributeModifier::position)
         ).apply(i, AttributeModifier::new));
-        Codec<AttributeModifier> built = AliasingMapCodec.wrap(rawMap, Map.of("amount", "value")).codec();
+        Codec<AttributeModifier> built = AliasingMapCodec.wrap(rawMap,
+            Map.of("amount", "value", "index", "position", "slot", "position")).codec();
         ref[0] = built;
         CODEC = built;
     }
@@ -52,14 +61,21 @@ public record AttributeModifier(
 
     public boolean needsContainer() {
         return resource.isPresent()
+            || position.isPresent()
             || value.needsContainer()
             || (nested.isPresent() && nested.get().needsContainer());
     }
 
     public double resolveInput(@Nullable Entity entity, @Nullable PowerContainer container, double contextValue) {
-        double base = resource.isPresent()
-            ? ExprVars.readResource(container, resource.get())
-            : value.evalWith(entity, container, contextValue);
+        double base;
+        if (resource.isPresent()) {
+            base = position.isPresent()
+                ? ExprVars.readResourceAt(container, resource.get(),
+                    position.get().evalIntWith(entity, container, contextValue))
+                : ExprVars.readResource(container, resource.get());
+        } else {
+            base = value.evalWith(entity, container, contextValue);
+        }
         if (nested.isPresent()) {
             double nestedInput = nested.get().resolveInput(entity, container, contextValue);
             return nested.get().operation.applySingle(base, nestedInput);

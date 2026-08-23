@@ -38,4 +38,21 @@ public abstract class PowerType<C> {
     public OptionalInt resourceBound(ResourceLocation powerId, C cfg, PowerContainer holder, boolean max) {
         return OptionalInt.empty();
     }
+
+    public int resourceSize(ResourceLocation powerId, C cfg, PowerContainer holder) {
+        return 0;
+    }
+
+    public OptionalInt readResourceAt(ResourceLocation powerId, C cfg, PowerContainer holder, int slot) {
+        return slot == 0 ? readResource(powerId, cfg, holder) : OptionalInt.empty();
+    }
+
+    public OptionalInt writeResourceAt(ResourceLocation powerId, C cfg, PowerContainer holder, int slot, int value) {
+        return slot == 0 ? writeResource(powerId, cfg, holder, value) : OptionalInt.empty();
+    }
+
+    public int resourceIndexOf(ResourceLocation powerId, C cfg, PowerContainer holder, int value) {
+        OptionalInt only = readResource(powerId, cfg, holder);
+        return only.isPresent() && only.getAsInt() == value ? 0 : -1;
+    }
 }

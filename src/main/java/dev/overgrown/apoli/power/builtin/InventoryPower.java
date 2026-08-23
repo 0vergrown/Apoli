@@ -44,7 +44,7 @@ public final class InventoryPower extends PowerType<InventoryPower.Config> {
             TextComponent.CODEC.optionalFieldOf("title", DEFAULT_TITLE).forGetter(Config::title),
             ContainerType.CODEC.optionalFieldOf("container_type", ContainerType.DROPPER).forGetter(Config::containerType),
             Codec.BOOL.optionalFieldOf("drop_on_death", false).forGetter(Config::dropOnDeath),
-            ItemCondition.CODEC.optionalFieldOf("drop_on_death_filter").forGetter(Config::dropOnDeathFilter),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("drop_on_death_filter", ItemCondition.CODEC).forGetter(Config::dropOnDeathFilter),
             Codec.BOOL.optionalFieldOf("recoverable", true).forGetter(Config::recoverable),
             Key.CODEC.optionalFieldOf("key", Key.DEFAULT_PRIMARY).forGetter(Config::key)
         ).apply(i, Config::new));
@@ -117,8 +117,36 @@ public final class InventoryPower extends PowerType<InventoryPower.Config> {
         if (changed) container.setAuxNbt(powerId, save(inv));
     }
 
+    public static void syncAll(ServerPlayer player) {
+        if (!(PowerContainer.of(player) instanceof PowerContainerImpl impl)) return;
+        for (ResourceLocation powerId : impl.allPowers()) {
+            CompoundTag stored = impl.getAuxNbt(powerId);
+            if (stored == null) continue;
+            Power loaded = ApoliPowers.get(powerId);
+            if (loaded == null || !(loaded.config() instanceof Config)) continue;
+            dev.overgrown.apoli.ApoliNetwork.sendPowerInventory(player,
+                new dev.overgrown.apoli.network.payload.PowerInventoryS2C(powerId, stored));
+        }
+    }
+
+    private static java.util.function.BiFunction<LivingEntity, ResourceLocation, CompoundTag> CLIENT_LOOKUP =
+        (holder, powerId) -> null;
+
+    public static void setClientLookup(java.util.function.BiFunction<LivingEntity, ResourceLocation, CompoundTag> lookup) {
+        CLIENT_LOOKUP = lookup;
+    }
+
+    private static SimpleContainer clientContainer(LivingEntity holder, ResourceLocation powerId) {
+        if (!holder.level().isClientSide()) return null;
+        Power loaded = ApoliPowers.get(powerId);
+        if (loaded == null || !(loaded.config() instanceof Config cfg)) return null;
+        CompoundTag stored = CLIENT_LOOKUP.apply(holder, powerId);
+        if (stored == null) return null;
+        return load(stored, cfg.containerType().slots());
+    }
+
     public static SimpleContainer openContainer(LivingEntity holder, ResourceLocation powerId) {
-        if (holder.level().isClientSide()) return null;
+        if (holder.level().isClientSide()) return clientContainer(holder, powerId);
         if (!(PowerContainer.of(holder) instanceof PowerContainerImpl impl)) return null;
         Power loaded = ApoliPowers.get(powerId);
         if (loaded == null || !(loaded.config() instanceof Config cfg)) return null;

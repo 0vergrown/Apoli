@@ -18,7 +18,7 @@ public final class BlockCollisionCondition implements ConditionType<EntityCtx, B
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            BlockCondition.CODEC.optionalFieldOf("block_condition").forGetter(Cfg::blockCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Cfg::blockCondition),
             Codec.FLOAT.optionalFieldOf("offset_x", 0f).forGetter(Cfg::offsetX),
             Codec.FLOAT.optionalFieldOf("offset_y", 0f).forGetter(Cfg::offsetY),
             Codec.FLOAT.optionalFieldOf("offset_z", 0f).forGetter(Cfg::offsetZ)

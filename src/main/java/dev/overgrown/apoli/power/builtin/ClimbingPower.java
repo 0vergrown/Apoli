@@ -15,7 +15,7 @@ public final class ClimbingPower extends PowerType<ClimbingPower.Config> {
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.BOOL.optionalFieldOf("allow_holding", true).forGetter(Config::allowHolding),
-            EntityCondition.CODEC.optionalFieldOf("hold_condition").forGetter(Config::holdCondition)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("hold_condition", EntityCondition.CODEC).forGetter(Config::holdCondition)
         ).apply(i, Config::new));
     }
 }

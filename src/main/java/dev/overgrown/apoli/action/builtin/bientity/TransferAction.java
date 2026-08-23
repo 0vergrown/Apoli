@@ -58,8 +58,8 @@ public final class TransferAction implements ActionType<BiEntityCtx, TransferAct
             IdCodecs.ID.listOf().optionalFieldOf("sources").forGetter(Cfg::sources),
             IdCodecs.ID.optionalFieldOf("new_source", DEFAULT_SOURCE).forGetter(Cfg::newSource),
             Codec.BOOL.optionalFieldOf("preserve_source", false).forGetter(Cfg::preserveSource),
-            EntityAction.CODEC.optionalFieldOf("actor_action").forGetter(Cfg::actorAction),
-            EntityAction.CODEC.optionalFieldOf("target_action").forGetter(Cfg::targetAction)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("actor_action", EntityAction.CODEC).forGetter(Cfg::actorAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("target_action", EntityAction.CODEC).forGetter(Cfg::targetAction)
         ).apply(i, Cfg::new));
     }
 

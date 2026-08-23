@@ -1,7 +1,7 @@
 {
   "required": false,
   "package": "dev.overgrown.apoli.compat.bettercombat.mixin",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_17",
   "plugin": "dev.overgrown.apoli.compat.bettercombat.mixin.BetterCombatCompatMixinPlugin",
   "client": [
     "MinecraftHitResultGuardMixin"

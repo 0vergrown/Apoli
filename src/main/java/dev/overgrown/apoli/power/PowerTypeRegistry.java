@@ -1,6 +1,6 @@
 package dev.overgrown.apoli.power;
 
-import com.google.gson.JsonObject;
+import dev.overgrown.apoli.alias.AliasDefault;
 import dev.overgrown.apoli.alias.AliasRegistry;
 import dev.overgrown.apoli.alias.AliasingMapCodec;
 import dev.overgrown.apoli.alias.AliasingOptions;
@@ -9,29 +9,27 @@ import dev.overgrown.apoli.condition.context.EntityCtx;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 
 public final class PowerTypeRegistry {
     private static final Map<ResourceLocation, PowerType<?>> BY_ID = new HashMap<>();
     private static final AliasRegistry ALIASES = new AliasRegistry();
-    private static final Map<ResourceLocation, JsonObject> ALIAS_DEFAULTS = new HashMap<>();
+    private static final Map<ResourceLocation, List<AliasDefault<?>>> ALIAS_DEFAULTS = new HashMap<>();
     private static final Map<ResourceLocation, Map<String, String>> ALIAS_FIELD_RENAMES = new HashMap<>();
 
     private PowerTypeRegistry() {}
 
-    public static void registerAliasDefaults(ResourceLocation aliasId, JsonObject defaults) {
-        ALIAS_DEFAULTS.merge(aliasId, defaults, (a, b) -> {
-            JsonObject merged = new JsonObject();
-            a.entrySet().forEach(e -> merged.add(e.getKey(), e.getValue()));
-            b.entrySet().forEach(e -> merged.add(e.getKey(), e.getValue()));
-            return merged;
-        });
+    public static void registerAliasDefaults(ResourceLocation aliasId, AliasDefault<?>... defaults) {
+        ALIAS_DEFAULTS.computeIfAbsent(aliasId, k -> new ArrayList<>(defaults.length))
+            .addAll(List.of(defaults));
     }
 
-    public static @Nullable JsonObject aliasDefaults(ResourceLocation aliasId) {
-        return ALIAS_DEFAULTS.get(aliasId);
+    public static List<AliasDefault<?>> aliasDefaults(ResourceLocation aliasId) {
+        return ALIAS_DEFAULTS.getOrDefault(aliasId, List.of());
     }
 
     public static void registerAliasFieldRenames(ResourceLocation aliasId, Map<String, String> oldToNew) {

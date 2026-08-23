@@ -16,6 +16,7 @@ public final class BiEntityConditions {
             AliasingOptions.builder().addTypeAlias(Apoli.id("allied")).build()
         );
         ConditionTypes.BI_ENTITY.register(Apoli.id("can_see"), new CanSeeCondition());
+        ConditionTypes.BI_ENTITY.register(Apoli.id("damage_would_kill"), new DamageWouldKillBiEntityCondition());
         ConditionTypes.BI_ENTITY.register(Apoli.id("actor_condition"), new ActorCondition());
         ConditionTypes.BI_ENTITY.register(Apoli.id("target_condition"), new TargetCondition());
         ConditionTypes.BI_ENTITY.register(Apoli.id("both"), new BothCondition());
@@ -36,5 +37,10 @@ public final class BiEntityConditions {
         ConditionTypes.BI_ENTITY.register(Apoli.id("invert"), new InvertBiEntityCondition());
         ConditionTypes.BI_ENTITY.register(Apoli.id("disguised"), new DisguisedBiCondition());
         ConditionTypes.BI_ENTITY.register(Apoli.id("roped_together"), new RopedTogetherCondition());
+
+        ConditionTypes.BI_ENTITY.register(Apoli.id("script"), new ScriptBiEntityCondition());
+        ConditionTypes.BI_ENTITY.register(Apoli.id("send_condition"),
+            new dev.overgrown.apoli.condition.builtin.meta.SendConditionMeta.BiEntity(),
+            dev.overgrown.apoli.alias.AliasingOptions.builder().addTypeAlias("shappoli:send_condition").build());
     }
 }

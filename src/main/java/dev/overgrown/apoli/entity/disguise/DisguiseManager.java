@@ -89,14 +89,24 @@ public final class DisguiseManager {
 
     public static boolean isDisguised(@Nullable Entity entity) {
         if (entity == null) return false;
-        if (entity.level().isClientSide) return clientView != null && clientView.isDisguised(entity.getId());
-        return DISGUISES.containsKey(entity.getUUID());
+        if (entity.level().isClientSide) {
+            if (clientView != null && clientView.isDisguised(entity.getId())) return true;
+        } else if (DISGUISES.containsKey(entity.getUUID())) {
+            return true;
+        }
+        return dev.overgrown.apoli.compat.walkers.WalkersBridge.currentShape(entity) != null;
     }
 
     public static boolean isDisguisedAs(@Nullable Entity actor, @Nullable Entity target) {
         if (actor == null || target == null) return false;
-        if (actor.level().isClientSide) return clientView != null && clientView.isDisguisedAs(actor.getId(), target);
-        return matches(DISGUISES.get(actor.getUUID()), target);
+        if (actor.level().isClientSide) {
+            if (clientView != null && clientView.isDisguisedAs(actor.getId(), target)) return true;
+        } else if (matches(DISGUISES.get(actor.getUUID()), target)) {
+            return true;
+        }
+        net.minecraft.world.entity.LivingEntity shape =
+            dev.overgrown.apoli.compat.walkers.WalkersBridge.currentShape(actor);
+        return shape != null && shape.getType() == target.getType();
     }
 
     public static boolean matches(@Nullable DisguiseData data, Entity target) {

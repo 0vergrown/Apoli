@@ -68,14 +68,15 @@ public final class EdibleItemHandler {
         return null;
     }
 
-    public static boolean canConsume(Player player, EdibleItemPower.Config cfg) {
-        return player.canEat(cfg.foodComponent().alwaysEdible());
+    public static boolean canConsume(Player player, EdibleItemPower.Config cfg, ItemStack stack) {
+        return player.canEat(cfg.foodComponent().alwaysEdible() || ModifyFoodHandler.alwaysEdible(player, stack));
     }
 
-    public static int useDuration(LivingEntity entity, EdibleItemPower.Config cfg) {
-        double ticks = cfg.foodComponent().snack() ? 16.0 : 32.0;
+    public static int useDuration(LivingEntity entity, EdibleItemPower.Config cfg, ItemStack stack) {
+        double ticks = cfg.foodComponent().eatDurationTicks();
+        ticks = ModifyFoodHandler.eatTicks(entity, stack, ticks);
         if (cfg.consumingTimeModifier().isEmpty() && cfg.consumingTimeModifiers().isEmpty()) {
-            return (int) ticks;
+            return Math.max(1, (int) Math.round(ticks));
         }
         PowerContainer container = PowerContainer.of(entity);
         if (cfg.consumingTimeModifier().isPresent()) {
@@ -109,8 +110,11 @@ public final class EdibleItemHandler {
 
         playConsumeSound(level, entity, cfg);
 
+        ModifyFoodHandler.Values modified = ModifyFoodHandler.values(entity, stack, food.hunger(), food.saturation());
+
         if (entity instanceof Player player) {
-            player.getFoodData().eat(food.hunger(), food.saturation());
+            if (modified != null) player.getFoodData().eat(modified.nutrition(), modified.saturation());
+            else player.getFoodData().eat(food.hunger(), food.saturation());
             player.awardStat(Stats.ITEM_USED.get(stack.getItem()));
             if (player instanceof ServerPlayer serverPlayer) {
                 CriteriaTriggers.CONSUME_ITEM.trigger(serverPlayer, stack);
@@ -118,7 +122,9 @@ public final class EdibleItemHandler {
         }
 
         if (server) {
-            List<Pair<MobEffectInstance, Float>> effects = food.allEffectsWithProbability(entity);
+            List<Pair<MobEffectInstance, Float>> effects = modified != null && modified.preventEffects()
+                ? List.of()
+                : food.allEffectsWithProbability(entity);
             for (int i = 0; i < effects.size(); i++) {
                 Pair<MobEffectInstance, Float> effect = effects.get(i);
                 if (level.getRandom().nextFloat() < effect.getSecond()) {
@@ -127,6 +133,7 @@ public final class EdibleItemHandler {
             }
             cfg.itemAction().ifPresent(action -> action.run(new ItemCtx(stack, level, entity)));
             cfg.entityAction().ifPresent(action -> action.run(EntityCtx.of(entity, level)));
+            ModifyFoodHandler.afterEat(entity, stack);
         }
 
         if (!(entity instanceof Player player) || !player.getAbilities().instabuild) {
@@ -164,7 +171,7 @@ public final class EdibleItemHandler {
         Slot slot = ACTIVE_SLOT.get();
         slot.item = stack.getItem();
         slot.config = cfg;
-        slot.duration = useDuration(entity, cfg);
+        slot.duration = useDuration(entity, cfg, stack);
     }
 
     private static void disarm(ItemStack stack) {

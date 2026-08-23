@@ -28,8 +28,8 @@ public final class SelectorAction implements ActionType<EntityCtx, SelectorActio
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.fieldOf("selector").forGetter(Cfg::selector),
-            BiEntityAction.CODEC.optionalFieldOf("bientity_action").forGetter(Cfg::bientityAction),
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Cfg::bientityCondition)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Cfg::bientityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Cfg::bientityCondition)
         ).apply(i, Cfg::new));
     }
 

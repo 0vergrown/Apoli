@@ -24,7 +24,7 @@ public final class GiveAction implements ActionType<EntityCtx, GiveAction.Cfg> {
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             ItemStackData.CODEC.fieldOf("stack").forGetter(Cfg::stack),
-            ItemAction.CODEC.optionalFieldOf("item_action").forGetter(Cfg::itemAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("item_action", ItemAction.CODEC).forGetter(Cfg::itemAction),
             EquipmentSlot.CODEC.optionalFieldOf("preferred_slot").forGetter(Cfg::preferredSlot)
         ).apply(i, Cfg::new));
     }

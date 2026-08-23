@@ -67,6 +67,7 @@ public class CustomModelRenderLayer extends RenderLayer<AbstractClientPlayer, Pl
                 continue;
             }
             GeometryRenderer.syncPlayer(custom, model, rest);
+            AnimationPlayer.apply(player, render, custom, partialTick);
             GeometryRenderer.applyVisibility(custom, render.bodyParts());
             GeometryRenderer.draw(render, custom, pose, buffers, light);
         }

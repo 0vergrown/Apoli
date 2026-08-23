@@ -29,7 +29,7 @@ public final class ActionOnSpeechPower extends PowerType<ActionOnSpeechPower.Con
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction),
             Codec.STRING.optionalFieldOf("message").forGetter(Config::message),
             Codec.STRING.listOf().optionalFieldOf("messages", List.of()).forGetter(Config::messages),
             Codec.STRING.xmap(s -> Pattern.compile(dev.overgrown.apoli.data.message.TranslationKeyResolver.expandPattern(s)), Pattern::pattern).optionalFieldOf("regex").forGetter(Config::regex),

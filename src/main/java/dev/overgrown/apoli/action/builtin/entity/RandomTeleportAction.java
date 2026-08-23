@@ -41,12 +41,12 @@ public final class RandomTeleportAction implements ActionType<EntityCtx, RandomT
             Codec.FLOAT.optionalFieldOf("area_height", 8.0f).forGetter(Cfg::areaHeight),
             Heightmap.CODEC.optionalFieldOf("heightmap").forGetter(Cfg::heightmap),
             Codec.INT.optionalFieldOf("attempts").forGetter(Cfg::attempts),
-            BlockCondition.CODEC.optionalFieldOf("landing_block_condition").forGetter(Cfg::landingBlockCondition),
-            EntityCondition.CODEC.optionalFieldOf("landing_condition").forGetter(Cfg::landingCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("landing_block_condition", BlockCondition.CODEC).forGetter(Cfg::landingBlockCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("landing_condition", EntityCondition.CODEC).forGetter(Cfg::landingCondition),
             Vector.CODEC.optionalFieldOf("landing_offset", Vector.ZERO).forGetter(Cfg::landingOffset),
             Codec.BOOL.optionalFieldOf("loaded_chunks_only", true).forGetter(Cfg::loadedChunksOnly),
-            EntityAction.CODEC.optionalFieldOf("success_action").forGetter(Cfg::successAction),
-            EntityAction.CODEC.optionalFieldOf("fail_action").forGetter(Cfg::failAction)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("success_action", EntityAction.CODEC).forGetter(Cfg::successAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("fail_action", EntityAction.CODEC).forGetter(Cfg::failAction)
         ).apply(i, Cfg::new));
     }
 

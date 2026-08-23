@@ -32,9 +32,9 @@ public final class ModifyAccessoryAction implements ActionType<EntityCtx, Modify
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             AccessorySlot.LIST.optionalFieldOf("slots", List.of()).forGetter(Cfg::slots),
-            ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Cfg::itemCondition),
-            ItemAction.CODEC.optionalFieldOf("item_action").forGetter(Cfg::itemAction),
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Cfg::entityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Cfg::itemCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("item_action", ItemAction.CODEC).forGetter(Cfg::itemAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Cfg::entityAction),
             Codec.INT.optionalFieldOf("limit", 0).forGetter(Cfg::limit),
             Codec.BOOL.optionalFieldOf("unequip", false).forGetter(Cfg::unequip)
         ).apply(i, Cfg::new));

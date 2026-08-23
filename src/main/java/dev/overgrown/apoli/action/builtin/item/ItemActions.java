@@ -18,5 +18,10 @@ public final class ItemActions {
         ActionTypes.ITEM.register(Apoli.id("merge_nbt"), new MergeNbtItemAction());
         ActionTypes.ITEM.register(Apoli.id("modify"), new ModifyItemAction());
         ActionTypes.ITEM.register(Apoli.id("remove_enchantment"), new RemoveEnchantmentItemAction());
+
+        ActionTypes.ITEM.register(Apoli.id("script"), new ScriptItemAction());
+        ActionTypes.ITEM.register(Apoli.id("send_action"),
+            new dev.overgrown.apoli.action.builtin.meta.SendActionMeta.Item(),
+            dev.overgrown.apoli.alias.AliasingOptions.builder().addTypeAlias("shappoli:send_action").build());
     }
 }

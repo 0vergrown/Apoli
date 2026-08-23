@@ -41,8 +41,8 @@ public final class DisguiseAsAction implements ActionType<EntityCtx, DisguiseAsA
             Nbt.CODEC.optionalFieldOf("nbt").forGetter(Cfg::nbt),
             Codec.BOOL.optionalFieldOf("overwrite", true).forGetter(Cfg::overwrite),
             Codec.BOOL.optionalFieldOf("change_name", true).forGetter(Cfg::changeName),
-            EntityAction.CODEC.optionalFieldOf("before_action").forGetter(Cfg::beforeAction),
-            EntityAction.CODEC.optionalFieldOf("after_action").forGetter(Cfg::afterAction)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("before_action", EntityAction.CODEC).forGetter(Cfg::beforeAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("after_action", EntityAction.CODEC).forGetter(Cfg::afterAction)
         ).apply(i, Cfg::new));
     }
 

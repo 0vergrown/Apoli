@@ -28,11 +28,11 @@ public final class ModifyCraftingPower extends PowerType<ModifyCraftingPower.Con
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             IdCodecs.ID.optionalFieldOf("recipe").forGetter(Config::recipe),
-            ItemAction.CODEC.optionalFieldOf("item_action").forGetter(Config::itemAction),
-            ItemAction.CODEC.optionalFieldOf("item_action_after_crafting").forGetter(Config::itemActionAfterCrafting),
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction),
-            BlockAction.CODEC.optionalFieldOf("block_action").forGetter(Config::blockAction),
-            ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Config::itemCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("item_action", ItemAction.CODEC).forGetter(Config::itemAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("item_action_after_crafting", ItemAction.CODEC).forGetter(Config::itemActionAfterCrafting),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("block_action", BlockAction.CODEC).forGetter(Config::blockAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Config::itemCondition),
             ItemStackData.CODEC.optionalFieldOf("result").forGetter(Config::result)
         ).apply(i, Config::new));
     }

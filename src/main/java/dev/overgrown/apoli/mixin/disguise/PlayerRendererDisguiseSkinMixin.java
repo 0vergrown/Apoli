@@ -40,11 +40,7 @@ public abstract class PlayerRendererDisguiseSkinMixin {
 
     @Unique
     private ResourceLocation apoli$disguiseSkinOf(AbstractClientPlayer player) {
-        DisguiseData data = ClientDisguiseManager.get(player.getId());
-        if (data == null || !data.isPlayerDisguise() || data.playerUuid().isEmpty()) return null;
-        ClientPacketListener connection = Minecraft.getInstance().getConnection();
-        if (connection == null) return null;
-        PlayerInfo info = connection.getPlayerInfo(data.playerUuid().get());
+        net.minecraft.client.multiplayer.PlayerInfo info = ClientDisguiseManager.playerInfo(player.getId());
         return info == null ? null : info.getSkinLocation();
     }
 }

@@ -71,10 +71,10 @@ public final class ModifyLabelRenderPower extends PowerType<ModifyLabelRenderPow
             LabelMode.CODEC.optionalFieldOf("render_mode", LabelMode.DEFAULT).forGetter(Config::renderMode),
             Codec.INT.optionalFieldOf("tick_rate", 20).forGetter(Config::tickRate),
             Codec.INT.optionalFieldOf("priority", 0).forGetter(Config::priority),
-            EntityCondition.CODEC.optionalFieldOf("entity_condition").forGetter(Config::entityCondition),
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Config::bientityCondition),
-            EntityAction.CODEC.optionalFieldOf("before_parse_action").forGetter(Config::beforeParseAction),
-            EntityAction.CODEC.optionalFieldOf("after_parse_action").forGetter(Config::afterParseAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("entity_condition", EntityCondition.CODEC).forGetter(Config::entityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("before_parse_action", EntityAction.CODEC).forGetter(Config::beforeParseAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("after_parse_action", EntityAction.CODEC).forGetter(Config::afterParseAction),
             Codec.BOOL.optionalFieldOf("override_chat_name", false).forGetter(Config::overrideChatName),
             Codec.BOOL.optionalFieldOf("override_tab_name", false).forGetter(Config::overrideTabName)
         ).apply(i, Config::new));

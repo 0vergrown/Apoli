@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.overgrown.apoli.client.model.CustomModel;
+import dev.overgrown.apoli.client.render.AnimationPlayer;
 import dev.overgrown.apoli.client.render.CustomModelManager;
 import dev.overgrown.apoli.client.render.CustomModelRenderLayer;
 import dev.overgrown.apoli.client.render.GeometryRenderer;
@@ -17,6 +18,7 @@ import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.GeometryRender;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.ResolvedLayer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.AbstractClientPlayer;
@@ -134,6 +136,7 @@ public abstract class PlayerRendererCustomModelMixin extends LivingEntityRendere
                 continue;
             }
             GeometryRenderer.syncPlayer(custom, model, rest);
+            AnimationPlayer.apply(player, render, custom, Minecraft.getInstance().getFrameTime());
             GeometryRenderer.applyVisibility(custom, render.bodyParts());
             GeometryRenderer.drawSlot(render, custom, slot, alphaScale, pose, buffers, light);
         }

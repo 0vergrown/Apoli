@@ -52,7 +52,7 @@ public final class ModelPartAnimator {
                 continue;
             }
             slot.weight = weight;
-            slot.value = slot.transformation.sample((float) (now - slot.startedAt));
+            slot.value = slot.transformation.sample((float) (now - slot.startedAt), entity);
         }
         if (slots.isEmpty() && state.poseMask == 0 && !ModifyModelPartsPower.has(entity)) STATES.remove(entity);
         return slots;

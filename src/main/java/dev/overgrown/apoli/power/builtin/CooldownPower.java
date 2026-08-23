@@ -14,19 +14,20 @@ import java.util.OptionalInt;
 public final class CooldownPower extends ResourcePower {
 
     private static final MapCodec<Cfg> CFG_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-        Expression.INT_OR_EXPR.fieldOf("cooldown").forGetter(Cfg::max),
+        Expression.INT_OR_EXPR.fieldOf("cooldown").forGetter(cfg -> cfg.max().orElse(Expression.constant(0))),
         HudRender.CODEC.optionalFieldOf("hud_render", HudRender.DONT_RENDER).forGetter(Cfg::hudRender),
         Codec.BOOL.optionalFieldOf("persistent", true).forGetter(Cfg::persistent)
     ).apply(i, (cooldown, hud, persistent) -> new Cfg(
-        Expression.constant(0),
-        cooldown,
+        Optional.of(Expression.constant(0)),
+        Optional.of(cooldown),
         Optional.of(Expression.constant(0)),
         hud,
         true,
         false,
         Optional.empty(),
         Optional.empty(),
-        persistent
+        persistent,
+        1
     )));
 
     @Override

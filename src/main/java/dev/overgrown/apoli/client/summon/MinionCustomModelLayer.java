@@ -2,6 +2,7 @@ package dev.overgrown.apoli.client.summon;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.overgrown.apoli.client.model.CustomModel;
+import dev.overgrown.apoli.client.render.AnimationPlayer;
 import dev.overgrown.apoli.client.render.CustomModelManager;
 import dev.overgrown.apoli.client.render.GeometryRenderer;
 import dev.overgrown.apoli.entity.summon.MinionEntity;
@@ -36,9 +37,11 @@ public class MinionCustomModelLayer extends RenderLayer<MinionEntity, MinionMode
             if (custom == null) {
                 continue;
             }
+            GeometryRenderer.resetAll(custom);
             for (String name : MinionModel.BONES) {
                 GeometryRenderer.syncBone(custom, name, model.bone(name), rest.bone(name));
             }
+            AnimationPlayer.apply(minion, render, custom, partialTick);
             GeometryRenderer.applyVisibility(custom, render.bodyParts());
             GeometryRenderer.draw(render, custom, pose, buffers, light);
         }

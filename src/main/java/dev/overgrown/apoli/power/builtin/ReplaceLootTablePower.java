@@ -52,9 +52,9 @@ public final class ReplaceLootTablePower extends PowerType<ReplaceLootTablePower
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.unboundedMap(Codec.STRING, IdCodecs.ID).fieldOf("replace").forGetter(Config::replace),
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Config::bientityCondition),
-            BlockCondition.CODEC.optionalFieldOf("block_condition").forGetter(Config::blockCondition),
-            ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Config::itemCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Config::blockCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Config::itemCondition),
             Codec.INT.optionalFieldOf("priority", 0).forGetter(Config::priority)
         ).apply(i, Config::new));
     }

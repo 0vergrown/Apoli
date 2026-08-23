@@ -1,14 +1,11 @@
 package dev.overgrown.apoli.client.model;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import com.mojang.serialization.Dynamic;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.data.ModelParts;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.GsonHelper;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
@@ -28,20 +25,18 @@ public final class BedrockModelParser {
 
     private BedrockModelParser() {}
 
-    public static CustomModel parse(ResourceLocation id, JsonObject json) {
-        JsonArray geometry = GsonHelper.getAsJsonArray(json, "minecraft:geometry");
-        if (geometry.isEmpty()) {
-            throw new IllegalArgumentException("minecraft:geometry is empty");
-        }
-        JsonObject geo = GsonHelper.convertToJsonObject(geometry.get(0), "minecraft:geometry[0]");
-        JsonObject description = GsonHelper.getAsJsonObject(geo, "description", new JsonObject());
-        int texWidth = GsonHelper.getAsInt(description, "texture_width", 64);
-        int texHeight = GsonHelper.getAsInt(description, "texture_height", 64);
+    public static <T> CustomModel parse(ResourceLocation id, Dynamic<T> json) {
+        Dynamic<T> geo = json.get("minecraft:geometry").asStreamOpt().result()
+            .flatMap(stream -> stream.findFirst())
+            .orElseThrow(() -> new IllegalArgumentException("minecraft:geometry is empty"));
+        Dynamic<T> description = geo.get("description").result().orElseGet(geo::emptyMap);
+        int texWidth = description.get("texture_width").asInt(64);
+        int texHeight = description.get("texture_height").asInt(64);
 
         List<Bone> ordered = new ArrayList<>();
         Map<String, Bone> byName = new LinkedHashMap<>();
-        for (JsonElement element : GsonHelper.getAsJsonArray(geo, "bones", new JsonArray())) {
-            Bone bone = parseBone(GsonHelper.convertToJsonObject(element, "bone"), id);
+        for (Dynamic<T> element : geo.get("bones").asList(java.util.function.Function.identity())) {
+            Bone bone = parseBone(element, id);
             if (byName.putIfAbsent(bone.name, bone) == null) {
                 ordered.add(bone);
             } else {
@@ -175,25 +170,26 @@ public final class BedrockModelParser {
         return name + "_" + suffix;
     }
 
-    private static Bone parseBone(JsonObject json, ResourceLocation id) {
+    private static <T> Bone parseBone(Dynamic<T> json, ResourceLocation id) {
         Bone bone = new Bone();
-        bone.name = GsonHelper.getAsString(json, "name");
+        bone.name = json.get("name").asString().result()
+            .orElseThrow(() -> new IllegalArgumentException("a bone is missing its 'name'"));
         bone.slot = ModelParts.slot(ModelParts.normalize(bone.name));
-        bone.parent = GsonHelper.getAsString(json, "parent", null);
+        bone.parent = json.get("parent").asString().result().orElse(null);
         bone.pivot = vector(json, "pivot");
         Vector3f rotation = vector(json, "rotation");
         bone.rotX = rotation.x * DEG_TO_RAD;
         bone.rotY = rotation.y * DEG_TO_RAD;
         bone.rotZ = rotation.z * DEG_TO_RAD;
-        boolean mirror = GsonHelper.getAsBoolean(json, "mirror", false);
-        float inflate = GsonHelper.getAsFloat(json, "inflate", 0.0F);
-        for (JsonElement element : GsonHelper.getAsJsonArray(json, "cubes", new JsonArray())) {
-            bone.cubes.add(parseCube(GsonHelper.convertToJsonObject(element, "cube"), mirror, inflate, id, bone.name));
+        boolean mirror = json.get("mirror").asBoolean(false);
+        float inflate = json.get("inflate").asNumber().result().map(Number::floatValue).orElse(0.0F);
+        for (Dynamic<T> element : json.get("cubes").asList(java.util.function.Function.identity())) {
+            bone.cubes.add(parseCube(element, mirror, inflate, id, bone.name));
         }
         return bone;
     }
 
-    private static Cube parseCube(JsonObject json, boolean boneMirror, float boneInflate, ResourceLocation id, String boneName) {
+    private static <T> Cube parseCube(Dynamic<T> json, boolean boneMirror, float boneInflate, ResourceLocation id, String boneName) {
         Cube cube = new Cube();
         cube.origin = vector(json, "origin");
         cube.size = vector(json, "size");
@@ -202,53 +198,64 @@ public final class BedrockModelParser {
         cube.rotX = rotation.x * DEG_TO_RAD;
         cube.rotY = rotation.y * DEG_TO_RAD;
         cube.rotZ = rotation.z * DEG_TO_RAD;
-        cube.inflate = GsonHelper.getAsFloat(json, "inflate", boneInflate);
-        cube.mirror = GsonHelper.getAsBoolean(json, "mirror", boneMirror);
-        JsonElement uv = json.get("uv");
-        if (uv != null && uv.isJsonArray()) {
-            JsonArray array = uv.getAsJsonArray();
-            cube.u = array.size() > 0 ? array.get(0).getAsFloat() : 0.0F;
-            cube.v = array.size() > 1 ? array.get(1).getAsFloat() : 0.0F;
-        } else if (uv != null && uv.isJsonObject()) {
-            cube.faces = parseFaces(uv.getAsJsonObject(), cube.size, id, boneName);
+        cube.inflate = json.get("inflate").asNumber().result().map(Number::floatValue).orElse(boneInflate);
+        cube.mirror = json.get("mirror").asBoolean(boneMirror);
+        Dynamic<T> uv = json.get("uv").result().orElse(null);
+        if (uv != null) {
+            List<Float> array = numbers(uv);
+            if (!array.isEmpty()) {
+                cube.u = array.size() > 0 ? array.get(0) : 0.0F;
+                cube.v = array.size() > 1 ? array.get(1) : 0.0F;
+            } else if (uv.getMapValues().result().isPresent()) {
+                cube.faces = parseFaces(uv, cube.size, id, boneName);
+            }
         }
         return cube;
     }
 
-    private static Map<Direction, float[]> parseFaces(JsonObject json, Vector3f size, ResourceLocation id, String boneName) {
+    private static <T> Map<Direction, float[]> parseFaces(Dynamic<T> json, Vector3f size, ResourceLocation id, String boneName) {
         Map<Direction, float[]> faces = new EnumMap<>(Direction.class);
-        for (Map.Entry<String, JsonElement> entry : json.entrySet()) {
-            Direction bedrock = Direction.byName(entry.getKey());
-            if (bedrock == null || !entry.getValue().isJsonObject()) {
+        Map<Dynamic<T>, Dynamic<T>> entries = json.getMapValues().result().orElse(Map.of());
+        for (Map.Entry<Dynamic<T>, Dynamic<T>> entry : entries.entrySet()) {
+            String name = entry.getKey().asString().result().orElse(null);
+            if (name == null) continue;
+            Direction bedrock = Direction.byName(name);
+            Dynamic<T> face = entry.getValue();
+            if (bedrock == null || face.getMapValues().result().isEmpty()) {
                 continue;
             }
-            JsonObject face = entry.getValue().getAsJsonObject();
-            if (!face.has("uv")) {
+            List<Float> offset = numbers(face.get("uv").result().orElse(null));
+            if (offset.isEmpty()) {
                 continue;
             }
-            if (face.has("uv_rotation")) {
-                Apoli.LOGGER.warn("[Apoli] Custom model {} bone '{}' uses uv_rotation on the {} face; rotated face UVs are not supported and will render unrotated.", id, boneName, entry.getKey());
+            if (face.get("uv_rotation").result().isPresent()) {
+                Apoli.LOGGER.warn("[Apoli] Custom model {} bone '{}' uses uv_rotation on the {} face; rotated face UVs are not supported and will render unrotated.", id, boneName, name);
             }
-            JsonArray offset = GsonHelper.getAsJsonArray(face, "uv");
             Direction java = bedrock.getAxis() == Direction.Axis.Z ? bedrock : bedrock.getOpposite();
             float[] uv = new float[]{
-                offset.size() > 0 ? offset.get(0).getAsFloat() : 0.0F,
-                offset.size() > 1 ? offset.get(1).getAsFloat() : 0.0F,
+                offset.size() > 0 ? offset.get(0) : 0.0F,
+                offset.size() > 1 ? offset.get(1) : 0.0F,
                 naturalWidth(java, size),
                 naturalHeight(java, size)
             };
-            if (face.has("uv_size")) {
-                JsonArray extent = GsonHelper.getAsJsonArray(face, "uv_size");
-                if (extent.size() > 0) {
-                    uv[2] = extent.get(0).getAsFloat();
-                }
-                if (extent.size() > 1) {
-                    uv[3] = extent.get(1).getAsFloat();
-                }
+            List<Float> extent = numbers(face.get("uv_size").result().orElse(null));
+            if (extent.size() > 0) {
+                uv[2] = extent.get(0);
+            }
+            if (extent.size() > 1) {
+                uv[3] = extent.get(1);
             }
             faces.put(java, uv);
         }
         return faces;
+    }
+
+    private static <T> List<Float> numbers(Dynamic<T> data) {
+        if (data == null) return List.of();
+        return data.asStreamOpt().result()
+            .map(stream -> stream.map(element -> element.asNumber().result().map(Number::floatValue).orElse(0.0F))
+                .toList())
+            .orElse(List.of());
     }
 
     private static float naturalWidth(Direction face, Vector3f size) {
@@ -259,19 +266,11 @@ public final class BedrockModelParser {
         return face.getAxis() == Direction.Axis.Y ? size.z : size.y;
     }
 
-    private static Vector3f vector(JsonObject json, String key) {
+    private static <T> Vector3f vector(Dynamic<T> json, String key) {
         Vector3f out = new Vector3f();
-        if (json.has(key) && json.get(key).isJsonArray()) {
-            JsonArray array = json.getAsJsonArray(key);
-            if (array.size() > 0) {
-                out.x = array.get(0).getAsFloat();
-            }
-            if (array.size() > 1) {
-                out.y = array.get(1).getAsFloat();
-            }
-            if (array.size() > 2) {
-                out.z = array.get(2).getAsFloat();
-            }
+        List<Float> array = numbers(json.get(key).result().orElse(null));
+        if (array.size() > 0) {
+            out.x = array.get(0);
         }
         return out;
     }

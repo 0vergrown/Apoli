@@ -27,7 +27,7 @@ public final class TextAction implements ActionType<EntityCtx, TextAction.Cfg> {
 
     private static final Codec<Segment> SEGMENT_CODEC = RecordCodecBuilder.create(i -> i.group(
         TextComponent.CODEC.fieldOf("text").forGetter(Segment::text),
-        EntityCondition.CODEC.optionalFieldOf("condition").forGetter(Segment::condition)
+        dev.overgrown.apoli.codec.LoggedOptionalField.strict("condition", EntityCondition.CODEC).forGetter(Segment::condition)
     ).apply(i, Segment::new));
 
     private static final Codec<List<Segment>> TEXT_CODEC = Codec.either(

@@ -3,10 +3,8 @@ package dev.overgrown.apoli.condition.builtin.entity;
 import com.mojang.serialization.MapCodec;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
-import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.shared.EmptyCfg;
-import dev.overgrown.apoli.power.ApoliIds;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.TamableAnimal;
@@ -43,7 +41,7 @@ public final class SimpleFlagConditions {
     }
 
     public static ConditionType<EntityCtx, EmptyCfg> daytime() {
-        return new FlagCondition(e -> e.level().isDay());
+        return new FlagCondition(e -> syncedSky(e.level()).isDay());
     }
 
     public static ConditionType<EntityCtx, EmptyCfg> exists() {
@@ -56,16 +54,34 @@ public final class SimpleFlagConditions {
 
     public static ConditionType<EntityCtx, EmptyCfg> exposedToSun() {
         return new FlagCondition(e -> {
-            if (!e.level().canSeeSky(e.blockPosition())) return false;
-            return e.level().getBrightness(net.minecraft.world.level.LightLayer.SKY, e.blockPosition()) > 0;
+            net.minecraft.world.level.Level level = syncedSky(e.level());
+            if (!level.isDay()) return false;
+            net.minecraft.core.BlockPos pos =
+                net.minecraft.core.BlockPos.containing(e.getX(), e.getEyeY(), e.getZ());
+            if (!level.canSeeSky(pos)) return false;
+            if (level.isRainingAt(pos)) return false;
+            return e.getLightLevelDependentMagicValue() > 0.5f;
         });
+    }
+
+    private static long clientSkyTick = Long.MIN_VALUE;
+
+    private static net.minecraft.world.level.Level syncedSky(net.minecraft.world.level.Level level) {
+        if (level.isClientSide()) {
+            long now = level.getGameTime();
+            if (now != clientSkyTick) {
+                clientSkyTick = now;
+                level.updateSkyBrightness();
+            }
+        }
+        return level;
     }
     public static ConditionType<EntityCtx, EmptyCfg> fallFlying() {
         return new FlagCondition(e -> e instanceof LivingEntity le && le.isFallFlying());
     }
 
     public static ConditionType<EntityCtx, EmptyCfg> glowing() {
-        return new FlagCondition(e -> e.isCurrentlyGlowing() || PowerLookup.hasActive(e, ApoliIds.ENTITY_GLOW));
+        return new FlagCondition(Entity::isCurrentlyGlowing);
     }
 
     public static ConditionType<EntityCtx, EmptyCfg> inRain() {

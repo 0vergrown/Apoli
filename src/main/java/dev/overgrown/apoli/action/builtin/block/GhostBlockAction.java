@@ -32,8 +32,8 @@ public final class GhostBlockAction implements ActionType<BlockCtx, GhostBlockAc
         IdCodecs.ID.fieldOf("block").forGetter(Cfg::block),
         Nbt.CODEC.optionalFieldOf("nbt").forGetter(Cfg::nbt),
         Codec.INT.optionalFieldOf("duration", 20).forGetter(Cfg::duration),
-        BlockAction.CODEC.optionalFieldOf("block_action").forGetter(Cfg::blockAction),
-        BlockAction.CODEC.optionalFieldOf("end_action").forGetter(Cfg::endAction)
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("block_action", BlockAction.CODEC).forGetter(Cfg::blockAction),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("end_action", BlockAction.CODEC).forGetter(Cfg::endAction)
     ).apply(i, Cfg::new));
 
     @Override

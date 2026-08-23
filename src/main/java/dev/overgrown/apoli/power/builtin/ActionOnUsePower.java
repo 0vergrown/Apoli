@@ -39,11 +39,11 @@ public final class ActionOnUsePower extends PowerType<ActionOnUsePower.Config> {
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            BiEntityAction.CODEC.optionalFieldOf("bientity_action").forGetter(Config::bientityAction),
-            ItemAction.CODEC.optionalFieldOf("held_item_action").forGetter(Config::heldItemAction),
-            ItemAction.CODEC.optionalFieldOf("result_item_action").forGetter(Config::resultItemAction),
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Config::bientityCondition),
-            ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Config::itemCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Config::bientityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("held_item_action", ItemAction.CODEC).forGetter(Config::heldItemAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("result_item_action", ItemAction.CODEC).forGetter(Config::resultItemAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Config::itemCondition),
             Hand.LIST_CODEC.optionalFieldOf("hands", Hand.BOTH).forGetter(Config::hands),
             ItemStackData.CODEC.optionalFieldOf("result_stack").forGetter(Config::resultStack),
             ActionResult.CODEC.optionalFieldOf("action_result", ActionResult.SUCCESS).forGetter(Config::actionResult),

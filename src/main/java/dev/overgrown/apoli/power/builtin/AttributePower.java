@@ -100,7 +100,7 @@ public final class AttributePower extends PowerType<AttributePower.Cfg> {
                             AttributeModifier modifier, boolean updateHealth) {
         Optional<ResourceLocation> attrId = modifier.attribute();
         if (attrId.isEmpty()) return;
-        Attribute attr = BuiltInRegistries.ATTRIBUTE.get(attrId.get());
+        Attribute attr = dev.overgrown.apoli.attribute.ApoliAttributes.get(attrId.get());
         if (attr == null) return;
         AttributeInstance instance = entity.getAttribute(attr);
         if (instance == null) return;
@@ -171,7 +171,7 @@ public final class AttributePower extends PowerType<AttributePower.Cfg> {
     private void removeOne(LivingEntity entity, ResourceLocation powerId, int idx, AttributeModifier modifier, boolean updateHealth) {
         Optional<ResourceLocation> attrId = modifier.attribute();
         if (attrId.isEmpty()) return;
-        Attribute attr = BuiltInRegistries.ATTRIBUTE.get(attrId.get());
+        Attribute attr = dev.overgrown.apoli.attribute.ApoliAttributes.get(attrId.get());
         if (attr == null) return;
         AttributeInstance instance = entity.getAttribute(attr);
         if (instance == null) return;

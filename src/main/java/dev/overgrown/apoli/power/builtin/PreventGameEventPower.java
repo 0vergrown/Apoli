@@ -30,7 +30,7 @@ public final class PreventGameEventPower extends PowerType<PreventGameEventPower
             IdOrTag.codec(Registries.GAME_EVENT).optionalFieldOf("event").forGetter(Config::event),
             IdOrTag.codec(Registries.GAME_EVENT).listOf().optionalFieldOf("events").forGetter(Config::events),
             IdCodecs.TAG.optionalFieldOf("tag").forGetter(Config::tag),
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction)
         ).apply(i, Config::new));
     }
 

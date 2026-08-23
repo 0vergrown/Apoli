@@ -3,6 +3,8 @@ package dev.overgrown.apoli.entity.summon;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.PowerContainerAttachment;
 import dev.overgrown.apoli.power.PowerContainer;
+import dev.overgrown.apoli.entity.disguise.DisguiseManager;
+import dev.overgrown.apoli.keybind.HeldKeys;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 
@@ -21,4 +23,11 @@ public final class Summons {
             holder.addPower(power, POWER_SOURCE);
         }
     }
+
+    public static void onRemoved(Entity summon) {
+        if (summon.level().isClientSide) return;
+        DisguiseManager.remove(summon);
+        HeldKeys.clearServer(summon.getUUID());
+    }
+
 }

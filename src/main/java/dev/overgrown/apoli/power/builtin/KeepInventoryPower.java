@@ -26,7 +26,7 @@ public final class KeepInventoryPower extends PowerType<KeepInventoryPower.Confi
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Config::itemCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Config::itemCondition),
             Codec.list(Codec.INT).optionalFieldOf("slots").forGetter(Config::slots)
         ).apply(i, Config::new));
     }

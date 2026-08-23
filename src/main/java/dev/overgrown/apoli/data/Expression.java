@@ -45,11 +45,13 @@ public final class Expression {
     private final boolean isConst;
     private final double constVal;
     private final boolean needsContainer;
+    private final boolean needsPeer;
 
-    private Expression(String source, ExprNode root, boolean needsContainer) {
+    private Expression(String source, ExprNode root, boolean needsContainer, boolean needsPeer) {
         this.source = source;
         this.root = root;
         this.needsContainer = needsContainer;
+        this.needsPeer = needsPeer;
         if (root instanceof ExprNodes.Const c) {
             this.isConst = true;
             this.constVal = c.v();
@@ -65,7 +67,7 @@ public final class Expression {
         }
         try {
             ExprParser.Result result = ExprParser.parse(src, ExprVars::resolve);
-            return new Expression(src, result.root(), result.needsContainer());
+            return new Expression(src, result.root(), result.needsContainer(), result.needsPeer());
         } catch (ExprParseException e) {
             throw new IllegalArgumentException("Invalid expression \"" + src + "\": " + e.getMessage());
         }
@@ -81,7 +83,7 @@ public final class Expression {
 
     public static Expression constant(double value) {
         String repr = value == (long) value ? Long.toString((long) value) : Double.toString(value);
-        return new Expression(repr, new ExprNodes.Const(value), false);
+        return new Expression(repr, new ExprNodes.Const(value), false, false);
     }
 
     public String source() {
@@ -94,6 +96,10 @@ public final class Expression {
 
     public boolean needsContainer() {
         return needsContainer;
+    }
+
+    public boolean needsPeer() {
+        return needsPeer;
     }
 
     public double eval(@Nullable Entity entity) {
@@ -110,6 +116,7 @@ public final class Expression {
         if (isConst) return sanitize(constVal);
         return evalFull(entity, container, null, value);
     }
+
 
     public double eval(@Nullable Level level) {
         if (isConst) return sanitize(constVal);

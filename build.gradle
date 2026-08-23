@@ -52,6 +52,21 @@ repositories {
 		name = "Henkel"
 		url = "https://maven.maxhenkel.de/repository/public"
 	}
+	// KubeJS + Rhino (optional compile-time dependency for the apoli:script types and ApoliEvents).
+	maven {
+		name = "Saps"
+		url = "https://maven.saps.dev/releases"
+		content {
+			includeGroup "dev.latvian.mods"
+			includeGroup "dev.latvian.apps"
+		}
+	}
+	// Rhino for 1.20.1 is only published on LatvianModder's own maven, not on Saps.
+	maven {
+		name = "LatvianDev"
+		url = "https://maven.latvian.dev/releases"
+		content { includeGroup "dev.latvian.mods" }
+	}
 }
 
 dependencies {
@@ -117,6 +132,16 @@ dependencies {
 	// action_on_speak/reply. The compat plugin is only discovered when SVC is installed (fabric.mod.json
 	// "voicechat" entrypoint), so Apoli runs fine without it.
 	compileOnly "de.maxhenkel.voicechat:voicechat-api:${project.voicechat_api_version}"
+
+	// KubeJS — compiled against, never bundled and not a runtime dependency. The apoli:script types
+	// and the ApoliEvents script API are gated on KubeJS being present (ModCompat.KUBEJS), so Apoli
+	// runs fine without it and apoli:script simply logs that no backend is installed.
+	modCompileOnly("dev.latvian.mods:kubejs-fabric:${project.kubejs_version}") {
+		transitive = false
+	}
+	modCompileOnly("dev.latvian.mods:rhino-fabric:${project.rhino_version}") {
+		transitive = false
+	}
 
 	// Vosk offline speech — the fallback transcriber for browsers without the Web Speech API. JiJ-bundled
 	// via include so it ships with the mod; the user supplies a model at <gamedir>/apoli/vosk-model.

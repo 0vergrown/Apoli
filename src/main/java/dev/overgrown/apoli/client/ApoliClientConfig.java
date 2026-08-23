@@ -1,7 +1,11 @@
 package dev.overgrown.apoli.client;
 
-import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.JsonOps;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.Apoli;
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -9,7 +13,26 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public final class ApoliClientConfig {
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final com.google.gson.Gson PRINTER = new GsonBuilder().setPrettyPrinting().create();
+
+    private static final Codec<ApoliClientConfig> CODEC = RecordCodecBuilder.create(i -> i.group(
+        Codec.BOOL.optionalFieldOf("speechToAction", false).forGetter(c -> c.speechToAction),
+        Codec.BOOL.optionalFieldOf("speechPushToTalk", true).forGetter(c -> c.speechPushToTalk),
+        Codec.BOOL.optionalFieldOf("speechEcho", false).forGetter(c -> c.speechEcho),
+        Codec.STRING.optionalFieldOf("speechInputDevice", "").forGetter(c -> c.speechInputDevice),
+        Codec.BOOL.optionalFieldOf("speechInstant", true).forGetter(c -> c.speechInstant),
+        Codec.STRING.optionalFieldOf("speechSource", "auto").forGetter(ApoliClientConfig::speechSource)
+    ).apply(i, (toAction, pushToTalk, echo, device, instant, source) -> {
+        ApoliClientConfig config = new ApoliClientConfig();
+        config.speechToAction = toAction;
+        config.speechPushToTalk = pushToTalk;
+        config.speechEcho = echo;
+        config.speechInputDevice = device;
+        config.speechInstant = instant;
+        config.speechSource = source;
+        return config;
+    }));
+
     private static ApoliClientConfig instance;
 
     private boolean speechToAction = false;
@@ -60,17 +83,17 @@ public final class ApoliClientConfig {
         return speechToAction;
     }
 
+    public void setSpeechToAction(boolean value) {
+        speechToAction = value;
+        save();
+    }
+
     public boolean speechPushToTalk() {
         return speechPushToTalk;
     }
 
     public void setSpeechPushToTalk(boolean value) {
         speechPushToTalk = value;
-        save();
-    }
-
-    public void setSpeechToAction(boolean value) {
-        speechToAction = value;
         save();
     }
 
@@ -87,15 +110,16 @@ public final class ApoliClientConfig {
 
     private static ApoliClientConfig load() {
         Path path = path();
-        try {
-            if (Files.exists(path)) {
-                ApoliClientConfig loaded = GSON.fromJson(Files.readString(path), ApoliClientConfig.class);
-                if (loaded != null) {
-                    return loaded;
-                }
+        if (Files.exists(path)) {
+            try {
+                JsonElement json = JsonParser.parseString(Files.readString(path));
+                ApoliClientConfig loaded = CODEC.parse(JsonOps.INSTANCE, json)
+                    .resultOrPartial(err -> Apoli.LOGGER.warn("[Apoli] apoli-client.json: {}", err))
+                    .orElse(null);
+                if (loaded != null) return loaded;
+            } catch (Exception e) {
+                Apoli.LOGGER.warn("[Apoli] Could not read apoli-client.json; using defaults", e);
             }
-        } catch (Exception e) {
-            Apoli.LOGGER.warn("[Apoli] Failed to read apoli-client.json, using defaults", e);
         }
         ApoliClientConfig fresh = new ApoliClientConfig();
         fresh.save();
@@ -104,9 +128,14 @@ public final class ApoliClientConfig {
 
     private void save() {
         try {
-            Files.writeString(path(), GSON.toJson(this));
+            Path path = path();
+            Files.createDirectories(path.getParent());
+            JsonElement json = CODEC.encodeStart(JsonOps.INSTANCE, this)
+                .resultOrPartial(err -> Apoli.LOGGER.warn("[Apoli] apoli-client.json: {}", err))
+                .orElse(null);
+            if (json != null) Files.writeString(path, PRINTER.toJson(json));
         } catch (Exception e) {
-            Apoli.LOGGER.warn("[Apoli] Failed to write apoli-client.json", e);
+            Apoli.LOGGER.warn("[Apoli] Could not write apoli-client.json", e);
         }
     }
 }

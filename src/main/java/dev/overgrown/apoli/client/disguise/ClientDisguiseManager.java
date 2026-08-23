@@ -4,6 +4,8 @@ import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.entity.disguise.DisguiseData;
 import dev.overgrown.apoli.entity.disguise.DisguiseManager;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionHand;
@@ -71,6 +73,15 @@ public final class ClientDisguiseManager {
     @Nullable
     public static DisguiseData get(int netId) {
         return DISGUISES.get(netId);
+    }
+
+    @Nullable
+    public static PlayerInfo playerInfo(int netId) {
+        DisguiseData data = DISGUISES.get(netId);
+        if (data == null || !data.isPlayerDisguise() || data.playerUuid().isEmpty()) return null;
+        ClientPacketListener connection = Minecraft.getInstance().getConnection();
+        if (connection == null) return null;
+        return connection.getPlayerInfo(data.playerUuid().get());
     }
 
     public static void tick(Minecraft mc) {

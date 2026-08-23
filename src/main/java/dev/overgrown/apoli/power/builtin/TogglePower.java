@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Key;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
@@ -12,7 +13,9 @@ import dev.overgrown.apoli.power.PowerContainerImpl;
 import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.power.PowerTypeRegistry;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 
 import java.util.OptionalInt;
 
@@ -41,6 +44,19 @@ public final class TogglePower extends PowerType<TogglePower.Config> {
     public void onRemoved(ResourceLocation powerId, Config cfg, PowerContainer holder, ResourceLocation source) {
         if (!(holder instanceof PowerContainerImpl impl)) return;
         if (!holder.hasPower(powerId)) impl.removeAux(powerId);
+    }
+
+    @Override
+    public void tick(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+        if (cfg.retainState) return;
+        if (!(holder instanceof PowerContainerImpl impl)) return;
+        if (impl.getAuxIntOr(powerId, 0) == 0) return;
+        LivingEntity owner = holder.owner();
+        if (owner == null || !(owner.level() instanceof ServerLevel level)) return;
+        Power loaded = ApoliPowers.get(powerId);
+        if (loaded == null || loaded.condition().isEmpty()) return;
+        if (loaded.condition().get().test(new EntityCtx(owner, level))) return;
+        impl.setAuxInt(powerId, 0);
     }
 
     public static void toggle(PowerContainer holder, ResourceLocation powerId) {

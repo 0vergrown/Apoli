@@ -32,7 +32,7 @@ public final class TooltipPower extends PowerType<TooltipPower.Config> {
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(Config::itemCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Config::itemCondition),
             TextComponent.CODEC.optionalFieldOf("text").forGetter(Config::text),
             Codec.list(TextComponent.CODEC).optionalFieldOf("texts").forGetter(Config::texts),
             Codec.INT.optionalFieldOf("order", 0).forGetter(Config::order)

@@ -49,9 +49,9 @@ public final class RelativeAction implements ActionType<EntityCtx, RelativeActio
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             Target.CODEC.optionalFieldOf("target", defaultTarget).forGetter(Cfg::target),
-            EntityAction.CODEC.optionalFieldOf("action").forGetter(Cfg::action),
-            BiEntityAction.CODEC.optionalFieldOf("bientity_action").forGetter(Cfg::bientityAction),
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Cfg::bientityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("action", EntityAction.CODEC).forGetter(Cfg::action),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Cfg::bientityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Cfg::bientityCondition),
             Codec.BOOL.optionalFieldOf("recursive", false).forGetter(Cfg::recursive)
         ).apply(i, Cfg::new));
     }

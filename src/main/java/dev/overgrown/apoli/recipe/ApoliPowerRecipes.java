@@ -38,7 +38,7 @@ public final class ApoliPowerRecipes {
             ResourceLocation recipeId = cfg.recipeId() != null ? cfg.recipeId() : e.getKey();
             Recipe<?> recipe;
             try {
-                recipe = RecipeManager.fromJson(recipeId, cfg.recipe());
+                recipe = RecipeManager.fromJson(recipeId, cfg.recipeAsJson());
             } catch (Exception ex) {
                 Apoli.LOGGER.warn("[Apoli] apoli:recipe power {} has an invalid recipe: {}", e.getKey(), ex.getMessage());
                 continue;

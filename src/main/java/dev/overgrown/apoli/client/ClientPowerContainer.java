@@ -96,6 +96,11 @@ public final class ClientPowerContainer implements PowerContainer {
     }
 
     @Override
+    public int @org.jetbrains.annotations.Nullable [] getAuxInts(ResourceLocation powerId) {
+        return ClientPowerState.tablesFor(entity.getId()).get(powerId);
+    }
+
+    @Override
     public boolean suppressPower(ResourceLocation power, ResourceLocation source) {
         return false;
     }

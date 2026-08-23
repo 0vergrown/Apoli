@@ -16,7 +16,7 @@ public final class OnBlockCondition implements ConditionType<EntityCtx, OnBlockC
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            BlockCondition.CODEC.optionalFieldOf("block_condition").forGetter(Cfg::blockCondition)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Cfg::blockCondition)
         ).apply(i, Cfg::new));
     }
 

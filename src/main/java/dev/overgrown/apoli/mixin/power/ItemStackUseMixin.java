@@ -32,7 +32,7 @@ public abstract class ItemStackUseMixin {
         ItemUseActionHandler.fire(level, player, self, apoli$useTrigger(self), ItemUseActionHandler.Phase.BEFORE);
         EdibleItemPower.Config edible = EdibleItemHandler.find(player, self);
         if (edible == null) return;
-        if (!EdibleItemHandler.canConsume(player, edible)) {
+        if (!EdibleItemHandler.canConsume(player, edible, self)) {
             cir.setReturnValue(InteractionResultHolder.fail(self));
             return;
         }

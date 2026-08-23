@@ -40,10 +40,10 @@ public final class PhasingPower extends PowerType<PhasingPower.Config> {
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.BOOL.optionalFieldOf("blacklist", false).forGetter(Config::blacklist),
-            BlockCondition.CODEC.optionalFieldOf("block_condition").forGetter(Config::blockCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Config::blockCondition),
             RenderType.CODEC.optionalFieldOf("render_type", RenderType.BLINDNESS).forGetter(Config::renderType),
             Codec.FLOAT.optionalFieldOf("view_distance", 10.0f).forGetter(Config::viewDistance),
-            EntityCondition.CODEC.optionalFieldOf("phase_down_condition").forGetter(Config::phaseDownCondition)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("phase_down_condition", EntityCondition.CODEC).forGetter(Config::phaseDownCondition)
         ).apply(i, Config::new));
     }
 

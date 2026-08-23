@@ -26,8 +26,8 @@ public final class ExplodeBlockAction implements ActionType<BlockCtx, ExplodeBlo
         return RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.FLOAT.fieldOf("power").forGetter(Cfg::power),
             DestructionType.CODEC.optionalFieldOf("destruction_type", DestructionType.BREAK).forGetter(Cfg::destructionType),
-            BlockCondition.CODEC.optionalFieldOf("indestructible").forGetter(Cfg::indestructible),
-            BlockCondition.CODEC.optionalFieldOf("destructible").forGetter(Cfg::destructible),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("indestructible", BlockCondition.CODEC).forGetter(Cfg::indestructible),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("destructible", BlockCondition.CODEC).forGetter(Cfg::destructible),
             Codec.BOOL.optionalFieldOf("create_fire", false).forGetter(Cfg::createFire)
         ).apply(i, Cfg::new));
     }

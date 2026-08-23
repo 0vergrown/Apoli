@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "package": "dev.overgrown.apoli.compat.walkers.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "plugin": "dev.overgrown.apoli.compat.walkers.mixin.WalkersCompatMixinPlugin",
+  "mixins": [
+    "PlayerAbilitiesMixin",
+    "PlayerShapeMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

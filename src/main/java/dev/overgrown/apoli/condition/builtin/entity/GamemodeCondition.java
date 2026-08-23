@@ -7,6 +7,7 @@ import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
 
 public final class GamemodeCondition implements ConditionType<EntityCtx, GamemodeCondition.Cfg> {
@@ -35,7 +36,13 @@ public final class GamemodeCondition implements ConditionType<EntityCtx, Gamemod
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        return ctx.entity() instanceof ServerPlayer player
-            && player.gameMode.getGameModeForPlayer() == cfg.gamemode.vanilla();
+        return ctx.entity() instanceof Player player && gameTypeOf(player) == cfg.gamemode.vanilla();
+    }
+
+    private static GameType gameTypeOf(Player player) {
+        if (player instanceof ServerPlayer server) return server.gameMode.getGameModeForPlayer();
+        if (player.isSpectator()) return GameType.SPECTATOR;
+        if (player.isCreative()) return GameType.CREATIVE;
+        return player.getAbilities().mayBuild ? GameType.SURVIVAL : GameType.ADVENTURE;
     }
 }

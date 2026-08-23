@@ -30,7 +30,40 @@ public final class ApoliNetwork {
     }
 
     public static void sendPowers(ServerPlayer recipient) {
-        if (connected(recipient)) dev.overgrown.apoli.network.PowerSyncCache.sendTo(recipient);
+        if (!connected(recipient)) return;
+        dev.overgrown.apoli.network.PowerSyncCache.sendTo(recipient);
+        dev.overgrown.apoli.power.builtin.InventoryPower.syncAll(recipient);
+        dev.overgrown.apoli.mount.MountOffsets.syncAll(recipient);
+    }
+
+    public static void sendPowerInventory(ServerPlayer recipient,
+                                          dev.overgrown.apoli.network.payload.PowerInventoryS2C payload) {
+        if (connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.PowerInventoryS2C.CHANNEL)) {
+            send(recipient, dev.overgrown.apoli.network.payload.PowerInventoryS2C.CHANNEL, payload::write);
+        }
+    }
+
+    public static void sendMountOffset(ServerPlayer recipient,
+                                       dev.overgrown.apoli.network.payload.MountOffsetS2C payload) {
+        if (connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.MountOffsetS2C.CHANNEL)) {
+            send(recipient, dev.overgrown.apoli.network.payload.MountOffsetS2C.CHANNEL, payload::write);
+        }
+    }
+
+    public static void broadcastMountOffset(Entity passenger,
+                                            dev.overgrown.apoli.network.payload.MountOffsetS2C payload) {
+        for (ServerPlayer viewer : PlayerLookup.tracking(passenger)) sendMountOffset(viewer, payload);
+        if (passenger instanceof ServerPlayer self) sendMountOffset(self, payload);
+    }
+
+    public static void sendResourceTables(ServerPlayer recipient,
+                                          dev.overgrown.apoli.network.payload.SyncResourceTablesS2C payload) {
+        if (connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.SyncResourceTablesS2C.CHANNEL)) {
+            send(recipient, dev.overgrown.apoli.network.payload.SyncResourceTablesS2C.CHANNEL, payload::write);
+        }
     }
 
     public static void sendEntityPowers(ServerPlayer recipient, SyncEntityPowersS2C payload) {
@@ -76,6 +109,12 @@ public final class ApoliNetwork {
     public static void sendForceKey(ServerPlayer recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C payload) {
         if (connected(recipient) && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C.CHANNEL)) {
             send(recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C.CHANNEL, payload::write);
+        }
+    }
+
+    public static void sendShader(ServerPlayer recipient, dev.overgrown.apoli.network.payload.SyncShaderS2C payload) {
+        if (connected(recipient) && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.SyncShaderS2C.CHANNEL)) {
+            send(recipient, dev.overgrown.apoli.network.payload.SyncShaderS2C.CHANNEL, payload::write);
         }
     }
 

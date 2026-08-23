@@ -17,6 +17,12 @@ public final class ApoliIds {
     public static final ResourceLocation PREVENT_SLEEP = Apoli.id("prevent_sleep");
     public static final ResourceLocation WALK_ON_FLUID = Apoli.id("walk_on_fluid");
     public static final ResourceLocation MODIFY_FALLING = Apoli.id("modify_falling");
+    public static final ResourceLocation MODIFY_AIR_SPEED = Apoli.id("modify_air_speed");
+    public static final ResourceLocation MODIFY_STATUS_EFFECT_AMPLIFIER = Apoli.id("modify_status_effect_amplifier");
+    public static final ResourceLocation MODIFY_STATUS_EFFECT_DURATION = Apoli.id("modify_status_effect_duration");
+    public static final ResourceLocation NIGHT_VISION = Apoli.id("night_vision");
+    public static final ResourceLocation FLUID_VISION = Apoli.id("fluid_vision");
+    public static final ResourceLocation MODIFY_CAMERA_SUBMERSION = Apoli.id("modify_camera_submersion");
     public static final ResourceLocation MODIFY_VELOCITY = Apoli.id("modify_velocity");
     public static final ResourceLocation MODIFY_EXHAUSTION = Apoli.id("modify_exhaustion");
     public static final ResourceLocation MODIFY_DAMAGE = Apoli.id("modify_damage");
@@ -43,6 +49,7 @@ public final class ApoliIds {
     public static final ResourceLocation MODIFY_BREAK_SPEED = Apoli.id("modify_break_speed");
     public static final ResourceLocation MODIFY_JUMP = Apoli.id("modify_jump");
     public static final ResourceLocation MODIFY_BLOCK_STUCK_SPEED = Apoli.id("modify_block_stuck_speed");
+    public static final ResourceLocation MODIFY_HEALING = Apoli.id("modify_healing");
     public static final ResourceLocation SCARE_MOBS = Apoli.id("scare_mobs");
     public static final ResourceLocation MODIFY_SWIM_SPEED = Apoli.id("modify_swim_speed");
     public static final ResourceLocation WATER_BREATHING = Apoli.id("water_breathing");
@@ -51,6 +58,7 @@ public final class ApoliIds {
     public static final ResourceLocation ACTION_ON_WAKE_UP = Apoli.id("action_on_wake_up");
     public static final ResourceLocation MODIFY_BLOCK_RENDER = Apoli.id("modify_block_render");
     public static final ResourceLocation EDIBLE_ITEM = Apoli.id("edible_item");
+    public static final ResourceLocation MODIFY_FOOD = Apoli.id("modify_food");
     public static final ResourceLocation MODIFY_TYPE_TAG = Apoli.id("modify_type_tag");
     public static final ResourceLocation MODIFY_PLAYER_SPAWN = Apoli.id("modify_player_spawn");
     public static final ResourceLocation PREVENT_ITEM_USE = Apoli.id("prevent_item_use");

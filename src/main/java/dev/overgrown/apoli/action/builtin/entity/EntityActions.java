@@ -2,6 +2,7 @@ package dev.overgrown.apoli.action.builtin.entity;
 
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.action.ActionTypes;
+import dev.overgrown.apoli.compat.walkers.action.ShapeActions;
 import dev.overgrown.apoli.alias.AliasingOptions;
 import dev.overgrown.apoli.compat.ModCompat;
 import dev.overgrown.apoli.compat.accessory.action.ModifyAccessoryAction;
@@ -160,6 +161,39 @@ public final class EntityActions {
         if (ModCompat.HARDCORE_REVIVAL) {
             ActionTypes.ENTITY.register(Apoli.id("knock_out"), new KnockOutAction());
             ActionTypes.ENTITY.register(Apoli.id("revive"), new ReviveAction());
+        }
+
+        ActionTypes.ENTITY.register(Apoli.id("script"), new ScriptAction());
+        ActionTypes.ENTITY.register(Apoli.id("self_bientity_action"), new SelfBiEntityAction(),
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("self_bientity"))
+                .addTypeAlias(Apoli.id("bientity_action"))
+                .addTypeAlias("shappoli:self_bientity_action")
+                .addTypeAlias("shappoli:self_bientity")
+                .build());
+        ActionTypes.ENTITY.register(Apoli.id("send_action"),
+            new dev.overgrown.apoli.action.builtin.meta.SendActionMeta.Entity(),
+            AliasingOptions.builder().addTypeAlias("shappoli:send_action").build());
+
+        if (ModCompat.WALKERS) {
+            ActionTypes.ENTITY.register(Apoli.id("change_shape_ability_cooldown"), new ShapeActions.ChangeShapeAbilityCooldown(),
+                AliasingOptions.builder().addTypeAlias("shappoli:change_shape_ability_cooldown").build());
+            ActionTypes.ENTITY.register(Apoli.id("shape_action"), new ShapeActions.ShapeAction(),
+                AliasingOptions.builder()
+                    .addTypeAlias(Apoli.id("action_on_shape"))
+                    .addTypeAlias("shappoli:shape_action")
+                    .addTypeAlias("shappoli:action_on_shape")
+                    .build());
+            ActionTypes.ENTITY.register(Apoli.id("switch_shape"), new ShapeActions.SwitchShape(),
+                AliasingOptions.builder()
+                    .addTypeAlias(Apoli.id("change_shape"))
+                    .addTypeAlias(Apoli.id("morph"))
+                    .addTypeAlias("shappoli:switch_shape")
+                    .addTypeAlias("shappoli:change_shape")
+                    .addTypeAlias("shappoli:morph")
+                    .build());
+            ActionTypes.ENTITY.register(Apoli.id("use_shape_ability"), new ShapeActions.UseShapeAbility(),
+                AliasingOptions.builder().addTypeAlias("shappoli:use_shape_ability").build());
         }
     }
 }

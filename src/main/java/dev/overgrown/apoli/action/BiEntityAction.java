@@ -3,6 +3,8 @@ package dev.overgrown.apoli.action;
 import com.mojang.serialization.Codec;
 import dev.overgrown.apoli.codec.DispatchedTypeCodec;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
+import dev.overgrown.apoli.data.expr.ExprPeer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.resources.ResourceLocation;
 
 public record BiEntityAction(ResourceLocation typeId, Object config) {
@@ -16,7 +18,17 @@ public record BiEntityAction(ResourceLocation typeId, Object config) {
         if (ctx.actor() == null && ctx.target() == null) return;
         @SuppressWarnings({"unchecked", "rawtypes"})
         ActionType raw = type;
-        raw.run(config, ctx);
+        Entity[] frame = ExprPeer.frame();
+        Entity previousActor = frame[ExprPeer.ACTOR];
+        Entity previousTarget = frame[ExprPeer.TARGET];
+        frame[ExprPeer.ACTOR] = ctx.actor();
+        frame[ExprPeer.TARGET] = ctx.target();
+        try {
+            raw.run(config, ctx);
+        } finally {
+            frame[ExprPeer.ACTOR] = previousActor;
+            frame[ExprPeer.TARGET] = previousTarget;
+        }
     }
 
     public static final Codec<BiEntityAction> CODEC = DispatchedTypeCodec.create(

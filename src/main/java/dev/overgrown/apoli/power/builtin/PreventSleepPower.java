@@ -21,7 +21,7 @@ public final class PreventSleepPower extends PowerType<PreventSleepPower.Config>
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            BlockCondition.CODEC.optionalFieldOf("block_condition").forGetter(Config::blockCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Config::blockCondition),
             TextComponent.CODEC.optionalFieldOf("message", Component.translatable("text.apoli.cannot_sleep")).forGetter(Config::message),
             Codec.BOOL.optionalFieldOf("set_spawn_point", false).forGetter(Config::setSpawnPoint),
             Codec.INT.optionalFieldOf("priority", 0).forGetter(Config::priority)

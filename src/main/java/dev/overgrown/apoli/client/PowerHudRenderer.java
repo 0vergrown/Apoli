@@ -100,16 +100,21 @@ public final class PowerHudRenderer {
         if (value.isEmpty()) return;
         int current = value.getAsInt();
 
-        float fill;
-        if (type instanceof ResourcePower && !(type instanceof CooldownPower) && config instanceof ResourcePower.Cfg cfg) {
-            fill = resourceFill(player, container, powerId, cfg);
-        } else {
-            if (current <= 0) return;
-            fill = cooldownProgress(current, PowerResources.bound(container, powerId, true).orElse(0));
-        }
-
         HudRender.Entry entry = hud.selectEntry(ctx);
         if (entry == null) return;
+
+        float fill;
+        if (type instanceof ResourcePower && !(type instanceof CooldownPower) && config instanceof ResourcePower.Cfg cfg) {
+            fill = resourceFill(player, container, powerId, cfg, entry);
+            if (fill < 0.0F) return;
+        } else {
+            if (current <= 0) return;
+            int bound = entry.max().isPresent()
+                ? entry.max().get().evalIntWith(player, container, current)
+                : PowerResources.bound(container, powerId, true).orElse(0);
+            fill = cooldownProgress(current, bound);
+        }
+
         RENDERABLES.add(new Renderable(entry, fill, entry.order().orElse(0)));
     }
 
@@ -131,12 +136,25 @@ public final class PowerHudRenderer {
         return 1.0F - (remaining / (float) max);
     }
 
-    private static float resourceFill(LocalPlayer player, @Nullable PowerContainer container, ResourceLocation powerId, ResourcePower.Cfg cfg) {
+    private static final java.util.Set<ResourceLocation> UNSCALED = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    private static float resourceFill(LocalPlayer player, @Nullable PowerContainer container,
+                                      ResourceLocation powerId, ResourcePower.Cfg cfg, HudRender.Entry entry) {
         OptionalInt cur = ClientPowerState.getAuxInt(powerId);
         if (cur.isEmpty()) return 0.0F;
         int value = cur.getAsInt();
-        int min = cfg.min().evalIntWith(player, container, value);
-        int max = cfg.max().evalIntWith(player, container, value);
+        dev.overgrown.apoli.data.Expression scale = entry.max().or(cfg::max).orElse(null);
+        if (scale == null) {
+            if (UNSCALED.add(powerId)) {
+                dev.overgrown.apoli.Apoli.LOGGER.warn(
+                    "[Apoli] {} asks for a HUD bar but has no 'max', so there is no value that would fill it. "
+                    + "Give the resource a 'max', or give its 'hud_render' one, or set 'should_render' to false.",
+                    powerId);
+            }
+            return -1.0F;
+        }
+        int max = scale.evalIntWith(player, container, value);
+        int min = cfg.min().isPresent() ? cfg.min().get().evalIntWith(player, container, value) : 0;
         if (max == min) return value >= max ? 1.0F : 0.0F;
         return Mth.clamp((value - min) / (float) (max - min), 0.0F, 1.0F);
     }

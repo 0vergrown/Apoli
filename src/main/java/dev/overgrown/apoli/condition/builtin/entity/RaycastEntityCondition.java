@@ -51,10 +51,10 @@ public final class RaycastEntityCondition implements ConditionType<EntityCtx, Ra
             FluidHandling.CODEC.optionalFieldOf("fluid_handling", FluidHandling.ANY).forGetter(Cfg::fluidHandling),
             Space.CODEC.optionalFieldOf("space", Space.WORLD).forGetter(Cfg::space),
             Vector.CODEC.optionalFieldOf("direction").forGetter(Cfg::direction),
-            BiEntityCondition.CODEC.optionalFieldOf("match_bientity_condition").forGetter(Cfg::matchBientityCondition),
-            BiEntityCondition.CODEC.optionalFieldOf("hit_bientity_condition").forGetter(Cfg::hitBientityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("match_bientity_condition", BiEntityCondition.CODEC).forGetter(Cfg::matchBientityCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("hit_bientity_condition", BiEntityCondition.CODEC).forGetter(Cfg::hitBientityCondition),
             Codec.FLOAT.optionalFieldOf("entity_distance").forGetter(Cfg::entityDistance),
-            BlockCondition.CODEC.optionalFieldOf("block_condition").forGetter(Cfg::blockCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Cfg::blockCondition),
             Codec.FLOAT.optionalFieldOf("block_distance").forGetter(Cfg::blockDistance)
         ).apply(i, Cfg::new));
     }

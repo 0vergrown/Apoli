@@ -14,8 +14,8 @@ public final class PreventDeathPower extends PowerType<PreventDeathPower.Config>
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            DamageCondition.CODEC.optionalFieldOf("damage_condition").forGetter(Config::damageCondition),
-            EntityAction.CODEC.optionalFieldOf("entity_action").forGetter(Config::entityAction)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("damage_condition", DamageCondition.CODEC).forGetter(Config::damageCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction)
         ).apply(i, Config::new));
     }
 }

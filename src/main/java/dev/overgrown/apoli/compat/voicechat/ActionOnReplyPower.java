@@ -14,7 +14,7 @@ public final class ActionOnReplyPower extends PowerType<ActionOnReplyPower.Confi
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            BiEntityAction.CODEC.optionalFieldOf("bientity_action").forGetter(Config::bientityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Config::bientityAction),
             Codec.INT.optionalFieldOf("window", 60).forGetter(Config::window),
             Codec.DOUBLE.optionalFieldOf("range", 16.0).forGetter(Config::range)
         ).apply(i, Config::new));

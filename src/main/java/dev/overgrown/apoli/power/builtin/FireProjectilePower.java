@@ -90,18 +90,18 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
     ).apply(i, Params::new));
 
     private static final MapCodec<Hooks> HOOKS = RecordCodecBuilder.mapCodec(i -> i.group(
-        EntityAction.CODEC.optionalFieldOf("entity_action_before_firing").forGetter(Hooks::entityActionBeforeFiring),
-        BiEntityAction.CODEC.optionalFieldOf("bientity_action_after_firing").forGetter(Hooks::bientityActionAfterFiring),
-        BlockAction.CODEC.optionalFieldOf("block_action_on_hit").forGetter(Hooks::blockActionOnHit),
-        BiEntityAction.CODEC.optionalFieldOf("bientity_action_on_miss").forGetter(Hooks::bientityActionOnMiss),
-        BiEntityAction.CODEC.optionalFieldOf("bientity_action_on_hit").forGetter(Hooks::bientityActionOnHit),
-        BiEntityAction.CODEC.optionalFieldOf("owner_target_bientity_action_on_hit").forGetter(Hooks::ownerTargetBientityActionOnHit),
-        BiEntityAction.CODEC.optionalFieldOf("tick_bientity_action").forGetter(Hooks::tickBientityAction),
-        BlockCondition.CODEC.optionalFieldOf("block_condition").forGetter(Hooks::blockCondition),
-        BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(Hooks::bientityCondition),
-        BiEntityCondition.CODEC.optionalFieldOf("owner_bientity_condition").forGetter(Hooks::ownerBientityCondition),
-        EntityAction.CODEC.optionalFieldOf("projectile_action").forGetter(Hooks::projectileAction),
-        EntityAction.CODEC.optionalFieldOf("shooter_action").forGetter(Hooks::shooterAction)
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action_before_firing", EntityAction.CODEC).forGetter(Hooks::entityActionBeforeFiring),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action_after_firing", BiEntityAction.CODEC).forGetter(Hooks::bientityActionAfterFiring),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("block_action_on_hit", BlockAction.CODEC).forGetter(Hooks::blockActionOnHit),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action_on_miss", BiEntityAction.CODEC).forGetter(Hooks::bientityActionOnMiss),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action_on_hit", BiEntityAction.CODEC).forGetter(Hooks::bientityActionOnHit),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("owner_target_bientity_action_on_hit", BiEntityAction.CODEC).forGetter(Hooks::ownerTargetBientityActionOnHit),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("tick_bientity_action", BiEntityAction.CODEC).forGetter(Hooks::tickBientityAction),
+        dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Hooks::blockCondition),
+        dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Hooks::bientityCondition),
+        dev.overgrown.apoli.codec.LoggedOptionalField.strict("owner_bientity_condition", BiEntityCondition.CODEC).forGetter(Hooks::ownerBientityCondition),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("projectile_action", EntityAction.CODEC).forGetter(Hooks::projectileAction),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("shooter_action", EntityAction.CODEC).forGetter(Hooks::shooterAction)
     ).apply(i, Hooks::new));
 
     public static final MapCodec<Config> CONFIG_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

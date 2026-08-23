@@ -94,6 +94,10 @@ public interface PowerContainer {
         return v.isPresent() ? v.getAsInt() : fallback;
     }
 
+    default int @Nullable [] getAuxInts(ResourceLocation powerId) {
+        return null;
+    }
+
     static @Nullable PowerContainer of(Entity entity) {
         return PowerContainerAttachment.get(entity);
     }
