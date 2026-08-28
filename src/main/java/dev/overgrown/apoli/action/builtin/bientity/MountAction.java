@@ -9,13 +9,14 @@ import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.data.Space;
 import dev.overgrown.apoli.mount.MountOffsets;
+import dev.overgrown.apoli.mount.MountRotation;
 import dev.overgrown.apoli.network.payload.MountOffsetS2C;
 import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
 public final class MountAction implements ActionType<BiEntityCtx, MountAction.Cfg> {
-    public record Cfg(Expression x, Expression y, Expression z, Space space, boolean force) {}
+    public record Cfg(Expression x, Expression y, Expression z, Space space, MountRotation rotation, boolean force) {}
 
     private static final Expression ZERO = Expression.constant(0.0);
 
@@ -26,6 +27,7 @@ public final class MountAction implements ActionType<BiEntityCtx, MountAction.Cf
             Expression.DOUBLE_OR_EXPR.optionalFieldOf("y", ZERO).forGetter(Cfg::y),
             Expression.DOUBLE_OR_EXPR.optionalFieldOf("z", ZERO).forGetter(Cfg::z),
             Space.CODEC.optionalFieldOf("space", Space.WORLD).forGetter(Cfg::space),
+            MountRotation.CODEC.optionalFieldOf("rotation", MountRotation.HEAD).forGetter(Cfg::rotation),
             Codec.BOOL.optionalFieldOf("force", true).forGetter(Cfg::force)
         ).apply(i, Cfg::new));
     }
@@ -39,7 +41,7 @@ public final class MountAction implements ActionType<BiEntityCtx, MountAction.Cf
         if (target.level().isClientSide()) return;
 
         MountOffsets.Offset offset = new MountOffsets.Offset(
-            cfg.x.eval(actor), cfg.y.eval(actor), cfg.z.eval(actor), cfg.space);
+            cfg.x.eval(actor), cfg.y.eval(actor), cfg.z.eval(actor), cfg.space, cfg.rotation);
         MountOffsets.put(actor, offset);
 
         ClientboundSetPassengersPacket packet = new ClientboundSetPassengersPacket(target);
@@ -50,6 +52,6 @@ public final class MountAction implements ActionType<BiEntityCtx, MountAction.Cf
             player.connection.send(packet);
         }
         ApoliNetwork.broadcastMountOffset(actor, new MountOffsetS2C(
-            actor.getId(), offset.x(), offset.y(), offset.z(), offset.space()));
+            actor.getId(), offset.x(), offset.y(), offset.z(), offset.space(), offset.rotation()));
     }
 }

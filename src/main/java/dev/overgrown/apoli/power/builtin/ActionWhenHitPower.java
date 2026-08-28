@@ -15,6 +15,7 @@ import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerContainerImpl;
 import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.data.Expression;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Optional;
@@ -32,7 +33,7 @@ public final class ActionWhenHitPower extends PowerType<ActionWhenHitPower.Confi
         Optional<EntityCondition> targetCondition,
         Optional<EntityCondition> attackerCondition,
         Optional<DamageCondition> damageCondition,
-        int cooldown,
+        Expression cooldown,
         HudRender hudRender
     ) {}
 
@@ -49,7 +50,7 @@ public final class ActionWhenHitPower extends PowerType<ActionWhenHitPower.Confi
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("target_condition", EntityCondition.CODEC).forGetter(Config::targetCondition),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("attacker_condition", EntityCondition.CODEC).forGetter(Config::attackerCondition),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("damage_condition", DamageCondition.CODEC).forGetter(Config::damageCondition),
-            Codec.INT.optionalFieldOf("cooldown", 1).forGetter(Config::cooldown),
+            Expression.INT_OR_EXPR.optionalFieldOf("cooldown", Expression.constant(1)).forGetter(Config::cooldown),
             HudRender.CODEC.optionalFieldOf("hud_render", HudRender.DONT_RENDER).forGetter(Config::hudRender)
         ).apply(i, Config::new));
     }
@@ -79,12 +80,12 @@ public final class ActionWhenHitPower extends PowerType<ActionWhenHitPower.Confi
 
     @Override
     public OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
-        return PowerResources.writeDeadline(holder, powerId, value, cfg.cooldown());
+        return PowerResources.writeDeadline(holder, powerId, value, PowerResources.cooldownTicks(cfg.cooldown(), holder));
     }
 
     @Override
     public OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
-        return OptionalInt.of(max ? Math.max(cfg.cooldown(), 0) : 0);
+        return OptionalInt.of(max ? Math.max(PowerResources.cooldownTicks(cfg.cooldown(), holder), 0) : 0);
     }
 
 }

@@ -53,6 +53,7 @@ public final class EntityConditions {
         ConditionTypes.ENTITY.register(Apoli.id("living"), new LivingCondition());
         ConditionTypes.ENTITY.register(Apoli.id("passenger"), new PassengerCondition());
         ConditionTypes.ENTITY.register(Apoli.id("riding"), new RidingCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("owner"), new OwnerCondition());
         ConditionTypes.ENTITY.register(Apoli.id("equipped_item"), new EquippedItemCondition());
         ConditionTypes.ENTITY.register(Apoli.id("climbing"), SimpleFlagConditions.climbing());
         ConditionTypes.ENTITY.register(Apoli.id("collided_horizontally"), SimpleFlagConditions.collidedHoriz());

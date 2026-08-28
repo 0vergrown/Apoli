@@ -14,7 +14,9 @@ public abstract class EntityPassengerOffsetMixin {
     @Inject(method = "positionRider(Lnet/minecraft/world/entity/Entity;)V", at = @At("TAIL"))
     private void apoli$mountOffset(Entity passenger, CallbackInfo ci) {
         if (MountOffsets.get(passenger.getId()) == null) return;
-        Vec3 delta = MountOffsets.resolve((Entity) (Object) this, passenger);
+        Entity self = (Entity) (Object) this;
+        if (!self.hasPassenger(passenger)) return;
+        Vec3 delta = MountOffsets.resolve(self, passenger);
         if (delta.x == 0.0 && delta.y == 0.0 && delta.z == 0.0) return;
         passenger.setPos(passenger.getX() + delta.x, passenger.getY() + delta.y, passenger.getZ() + delta.z);
     }

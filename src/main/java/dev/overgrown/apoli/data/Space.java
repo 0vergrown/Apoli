@@ -35,7 +35,7 @@ public enum Space implements StringRepresentable {
             case WORLD -> { return input; }
             case LOCAL -> { forward = entity.getLookAngle(); normalize = false; }
             case LOCAL_HORIZONTAL -> { forward = horizontal(entity.getLookAngle()); normalize = false; }
-            case LOCAL_HORIZONTAL_NORMALIZED -> { forward = horizontal(entity.getLookAngle()); normalize = true; }
+            case LOCAL_HORIZONTAL_NORMALIZED -> { return rotateByYaw(input, entity.getYRot()); }
             case VELOCITY -> { forward = entity.getDeltaMovement(); normalize = false; }
             case VELOCITY_NORMALIZED -> { forward = entity.getDeltaMovement(); normalize = true; }
             case VELOCITY_HORIZONTAL -> { forward = horizontal(entity.getDeltaMovement()); normalize = false; }
@@ -43,6 +43,17 @@ public enum Space implements StringRepresentable {
             default -> { return input; }
         }
         return transformVectorToBase(forward, input, entity.getYRot(), normalize);
+    }
+
+    public boolean isLocal() {
+        return this == LOCAL || this == LOCAL_HORIZONTAL || this == LOCAL_HORIZONTAL_NORMALIZED;
+    }
+
+    public static Vec3 rotateByYaw(Vec3 input, float yaw) {
+        double radians = yaw * (Math.PI / 180.0);
+        double sin = Math.sin(radians);
+        double cos = Math.cos(radians);
+        return new Vec3(input.x * cos - input.z * sin, input.y, input.x * sin + input.z * cos);
     }
 
     private static Vec3 horizontal(Vec3 v) {

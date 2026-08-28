@@ -50,6 +50,10 @@ public final class ApoliClient implements ClientModInitializer {
             dev.overgrown.apoli.entity.ApoliEntities.CUSTOM_PROJECTILE,
             dev.overgrown.apoli.client.CustomProjectileRenderer::new);
 
+        net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry.getInstance().register(
+            dev.overgrown.apoli.particle.ApoliParticles.CUSTOM,
+            new dev.overgrown.apoli.client.particle.CustomParticle.Provider());
+
         net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry.registerModelLayer(
             dev.overgrown.apoli.client.summon.SummonModelLayers.MINION,
             dev.overgrown.apoli.client.summon.MinionModel::createBodyLayer);
@@ -110,6 +114,13 @@ public final class ApoliClient implements ClientModInitializer {
             mc.execute(() -> ClientPowerState.applyEntityPowersSync(payload));
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(
+            dev.overgrown.apoli.network.payload.SyncAuxIntsS2C.CHANNEL, (mc, handler, buf, sender) -> {
+                dev.overgrown.apoli.network.payload.SyncAuxIntsS2C aux =
+                    dev.overgrown.apoli.network.payload.SyncAuxIntsS2C.read(buf);
+                mc.execute(() -> ClientPowerState.applyAuxInts(aux));
+            });
+
         ClientPlayNetworking.registerGlobalReceiver(PowerActivatedS2C.CHANNEL, (mc, handler, buf, sender) -> {
             PowerActivatedS2C payload = PowerActivatedS2C.read(buf);
             mc.execute(() -> ClientPowerState.setCooldown(payload.power(), payload.cooldown()));
@@ -131,12 +142,9 @@ public final class ApoliClient implements ClientModInitializer {
             dev.overgrown.apoli.network.payload.MountOffsetS2C.CHANNEL, (mc, handler, buf, sender) -> {
                 dev.overgrown.apoli.network.payload.MountOffsetS2C payload =
                     dev.overgrown.apoli.network.payload.MountOffsetS2C.read(buf);
-                mc.execute(() -> {
-                    if (mc.level == null) return;
-                    dev.overgrown.apoli.mount.MountOffsets.put(mc.level.getEntity(payload.passengerId()),
-                        new dev.overgrown.apoli.mount.MountOffsets.Offset(
-                            payload.x(), payload.y(), payload.z(), payload.space()));
-                });
+                mc.execute(() -> dev.overgrown.apoli.mount.MountOffsets.put(payload.passengerId(),
+                    new dev.overgrown.apoli.mount.MountOffsets.Offset(
+                        payload.x(), payload.y(), payload.z(), payload.space(), payload.rotation())));
             });
 
         dev.overgrown.apoli.power.builtin.InventoryPower.setClientLookup((holder, powerId) ->

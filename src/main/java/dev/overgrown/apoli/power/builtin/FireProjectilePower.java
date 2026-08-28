@@ -19,6 +19,7 @@ import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.codec.IdCodecs;
+import dev.overgrown.apoli.data.Expression;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -43,7 +44,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
     public record Params(
         Optional<ResourceLocation> entityType,
         Optional<ResourceLocation> textureLocation,
-        int cooldown,
+        Expression cooldown,
         Optional<HudRender> hudRender,
         int count,
         int interval,
@@ -75,7 +76,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
     private static final MapCodec<Params> PARAMS = RecordCodecBuilder.mapCodec(i -> i.group(
         IdCodecs.ID.optionalFieldOf("entity_type").forGetter(Params::entityType),
         IdCodecs.ID.optionalFieldOf("texture_location").forGetter(Params::textureLocation),
-        Codec.INT.optionalFieldOf("cooldown", 1).forGetter(Params::cooldown),
+        Expression.INT_OR_EXPR.optionalFieldOf("cooldown", Expression.constant(1)).forGetter(Params::cooldown),
         HudRender.CODEC.optionalFieldOf("hud_render").forGetter(Params::hudRender),
         Codec.INT.optionalFieldOf("count", 1).forGetter(Params::count),
         Codec.INT.optionalFieldOf("interval", 0).forGetter(Params::interval),
@@ -141,7 +142,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         if (st.cooldown > 0 || st.firing) return false;
 
         Params p = cfg.params();
-        st.cooldown = Math.max(1, p.cooldown());
+        st.cooldown = Math.max(1, PowerResources.cooldownTicks(p.cooldown(), holder));
         if (p.startDelay() <= 0 && p.interval() <= 0) {
             fireBurst(owner, level, cfg);
         } else {
@@ -167,7 +168,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
     public OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
         Entity owner = holder.rawOwner();
         if (owner.level().isClientSide()) return OptionalInt.empty();
-        int clamped = Math.max(0, Math.min(value, Math.max(cfg.params().cooldown(), 0)));
+        int clamped = Math.max(0, Math.min(value, Math.max(PowerResources.cooldownTicks(cfg.params().cooldown(), holder), 0)));
         states.computeIfAbsent(new StateKey(owner.getUUID(), powerId), x -> new FireState()).cooldown = clamped;
         if (owner instanceof net.minecraft.server.level.ServerPlayer player) {
             dev.overgrown.apoli.ApoliNetwork.sendActivated(player,
@@ -178,7 +179,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
 
     @Override
     public OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
-        return OptionalInt.of(max ? Math.max(cfg.params().cooldown(), 0) : 0);
+        return OptionalInt.of(max ? Math.max(PowerResources.cooldownTicks(cfg.params().cooldown(), holder), 0) : 0);
     }
 
     @Override
