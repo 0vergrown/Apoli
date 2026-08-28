@@ -35,6 +35,7 @@ import dev.overgrown.apoli.power.builtin.FireProjectilePower;
 import dev.overgrown.apoli.power.builtin.InventoryPower;
 import dev.overgrown.apoli.power.builtin.ActionOnUseHandler;
 import dev.overgrown.apoli.power.builtin.TogglePower;
+import dev.overgrown.apoli.power.PowerResources;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.EntityElytraEvents;
@@ -92,6 +93,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.compat.hardcorerevival.HardcoreRevivalCompat.init();
         }
         dev.overgrown.apoli.entity.ApoliEntities.register();
+        dev.overgrown.apoli.particle.ApoliParticles.register();
         dev.overgrown.apoli.item.ApoliLootFunctions.register();
 
         java.util.Objects.requireNonNull(PowerContainerAttachment.TYPE);
@@ -172,6 +174,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.command.ApoliSkillTreeCommand.register(dispatcher);
             dev.overgrown.apoli.command.ApoliDisguiseCommand.register(dispatcher);
             dev.overgrown.apoli.command.ApoliCloneCommand.register(dispatcher);
+            dev.overgrown.apoli.command.ApoliMountCommand.register(dispatcher);
             if (dev.overgrown.apoli.compat.ModCompat.anyAccessory()) {
                 dev.overgrown.apoli.compat.accessory.command.AccessoryCommand.register(dispatcher);
             }
@@ -384,6 +387,7 @@ public final class Apoli implements ModInitializer {
                 ApoliNetwork.sendLabel(player, new dev.overgrown.apoli.network.payload.LabelUpdateS2C(
                     trackedEntity.getId(), labels));
             }
+            dev.overgrown.apoli.mount.MountOffsets.syncTo(player, trackedEntity);
         });
         net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             dev.overgrown.apoli.entity.disguise.DisguiseManager.onPlayerLeave(handler.player.getUUID());
@@ -412,13 +416,15 @@ public final class Apoli implements ModInitializer {
             impl.tickActive();
             if (impl.isStructureDirty()) {
                 syncEntityToTrackers(entity, impl);
-                impl.clearStructureDirty();
-            }
-            if (impl.isDirty()) {
                 if (entity instanceof ServerPlayer sp) {
-                    ApoliNetwork.sendEntityPowers(sp, new SyncEntityPowersS2C(
-                        sp.getId(), impl.snapshot(), impl.auxIntSnapshot(), impl.suppressedPowers()));
+                    ApoliNetwork.sendEntityPowers(sp, fullPayload(sp, impl));
+                    dev.overgrown.apoli.network.payload.SyncResourceTablesS2C tables = tablePayload(sp, impl);
+                    if (tables != null) ApoliNetwork.sendResourceTables(sp, tables);
                 }
+                impl.clearStructureDirty();
+                impl.clearDirty();
+            } else if (impl.isDirty()) {
+                broadcastAuxState(entity, impl);
                 impl.clearDirty();
             }
             if (impl.isEmpty()) PoweredEntities.unregister(entity);
@@ -428,8 +434,37 @@ public final class Apoli implements ModInitializer {
         dev.overgrown.apoli.power.builtin.EntitySetPower.flushPendingRemovals();
     }
 
+    private static SyncEntityPowersS2C fullPayload(Entity entity, PowerContainerImpl impl) {
+        return new SyncEntityPowersS2C(entity.getId(), impl.snapshot(), impl.auxIntSnapshot(), impl.suppressedPowers());
+    }
+
+    private static void broadcastAuxState(Entity entity, PowerContainerImpl impl) {
+        dev.overgrown.apoli.network.payload.SyncAuxIntsS2C aux =
+            new dev.overgrown.apoli.network.payload.SyncAuxIntsS2C(entity.getId(), impl.auxIntSnapshot());
+        dev.overgrown.apoli.network.payload.SyncResourceTablesS2C tables = tablePayload(entity, impl);
+        SyncEntityPowersS2C fallback = null;
+        if (entity instanceof ServerPlayer self) {
+            if (ApoliNetwork.canSendAuxInts(self)) {
+                ApoliNetwork.sendAuxInts(self, aux);
+            } else {
+                fallback = fullPayload(entity, impl);
+                ApoliNetwork.sendEntityPowers(self, fallback);
+            }
+            if (tables != null) ApoliNetwork.sendResourceTables(self, tables);
+        }
+        for (ServerPlayer viewer : PlayerLookup.tracking(entity)) {
+            if (ApoliNetwork.canSendAuxInts(viewer)) {
+                ApoliNetwork.sendAuxInts(viewer, aux);
+            } else {
+                if (fallback == null) fallback = fullPayload(entity, impl);
+                ApoliNetwork.sendEntityPowers(viewer, fallback);
+            }
+            if (tables != null) ApoliNetwork.sendResourceTables(viewer, tables);
+        }
+    }
+
     private static void syncEntityToTrackers(Entity entity, PowerContainerImpl impl) {
-        SyncEntityPowersS2C payload = new SyncEntityPowersS2C(entity.getId(), impl.snapshot(), impl.auxIntSnapshot(), impl.suppressedPowers());
+        SyncEntityPowersS2C payload = fullPayload(entity, impl);
         dev.overgrown.apoli.network.payload.SyncResourceTablesS2C tables = tablePayload(entity, impl);
         for (ServerPlayer viewer : PlayerLookup.tracking(entity)) {
             ApoliNetwork.sendEntityPowers(viewer, payload);
@@ -487,12 +522,12 @@ public final class Apoli implements ModInitializer {
         if (type instanceof ActionOnKeyPressPower active
             && loaded.config() instanceof ActionOnKeyPressPower.Config cfg) {
             if (active.tryActivate(payload.power(), cfg, c)) {
-                ApoliNetwork.sendActivated(player, new PowerActivatedS2C(payload.power(), cfg.cooldown()));
+                ApoliNetwork.sendActivated(player, new PowerActivatedS2C(payload.power(), PowerResources.cooldownTicks(cfg.cooldown(), c)));
             }
         } else if (type instanceof FireProjectilePower fpp
             && loaded.config() instanceof FireProjectilePower.Config cfg) {
             if (fpp.tryActivate(payload.power(), cfg, c)) {
-                ApoliNetwork.sendActivated(player, new PowerActivatedS2C(payload.power(), cfg.params().cooldown()));
+                ApoliNetwork.sendActivated(player, new PowerActivatedS2C(payload.power(), PowerResources.cooldownTicks(cfg.params().cooldown(), c)));
             }
         } else if (type instanceof InventoryPower inv
             && loaded.config() instanceof InventoryPower.Config cfg

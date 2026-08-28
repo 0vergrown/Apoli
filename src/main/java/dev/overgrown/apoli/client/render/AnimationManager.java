@@ -16,7 +16,9 @@ import org.jetbrains.annotations.Nullable;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public final class AnimationManager implements SimpleSynchronousResourceReloadListener {
     public static final AnimationManager INSTANCE = new AnimationManager();
@@ -24,6 +26,7 @@ public final class AnimationManager implements SimpleSynchronousResourceReloadLi
     private static final String PREFIX = "animations";
     private static final String[] SUFFIXES = {".animation.json", ".json"};
     private static final Map<ResourceLocation, Map<String, BedrockAnimation>> FILES = new HashMap<>();
+    private static final Map<ResourceLocation, Set<String>> WARNED = new HashMap<>();
 
     private AnimationManager() {}
 
@@ -35,6 +38,8 @@ public final class AnimationManager implements SimpleSynchronousResourceReloadLi
     @Override
     public void onResourceManagerReload(ResourceManager manager) {
         FILES.clear();
+        WARNED.clear();
+        AnimationPlayer.clearWarnings();
         int loaded = 0;
         Map<ResourceLocation, Resource> found = manager.listResources(
             PREFIX, location -> location.getPath().endsWith(".json"));
@@ -73,8 +78,27 @@ public final class AnimationManager implements SimpleSynchronousResourceReloadLi
     @Nullable
     public static BedrockAnimation get(ResourceLocation file, @Nullable String name) {
         Map<String, BedrockAnimation> animations = FILES.get(file);
-        if (animations == null || animations.isEmpty()) return null;
+        if (animations == null || animations.isEmpty()) {
+            warnMissing(file, name, null);
+            return null;
+        }
         if (name == null) return animations.values().iterator().next();
-        return animations.get(name);
+        BedrockAnimation found = animations.get(name);
+        if (found == null) warnMissing(file, name, animations);
+        return found;
+    }
+
+    private static void warnMissing(ResourceLocation file, @Nullable String name,
+                                    @Nullable Map<String, BedrockAnimation> available) {
+        Set<String> seen = WARNED.computeIfAbsent(file, key -> new HashSet<>(2));
+        if (!seen.add(name == null ? "" : name)) return;
+        if (available == null) {
+            Apoli.LOGGER.warn("[Apoli] No animation file '{}' is loaded, so nothing will play. "
+                + "It is expected at assets/{}/animations/{}.animation.json inside an enabled resource pack.",
+                file, file.getNamespace(), file.getPath());
+            return;
+        }
+        Apoli.LOGGER.warn("[Apoli] Animation file '{}' has no clip called '{}', so nothing will play. It contains: {}",
+            file, name, available.keySet());
     }
 }

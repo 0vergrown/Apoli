@@ -36,6 +36,10 @@ public final class ApoliClient implements ClientModInitializer {
             dev.overgrown.apoli.entity.ApoliEntities.CUSTOM_PROJECTILE,
             dev.overgrown.apoli.client.CustomProjectileRenderer::new);
 
+        net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry.getInstance().register(
+            dev.overgrown.apoli.particle.ApoliParticles.CUSTOM,
+            new dev.overgrown.apoli.client.particle.CustomParticle.Provider());
+
         net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry.registerModelLayer(
             dev.overgrown.apoli.client.summon.SummonModelLayers.MINION,
             dev.overgrown.apoli.client.summon.MinionModel::createBodyLayer);
@@ -80,6 +84,10 @@ public final class ApoliClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(SyncEntityPowersS2C.TYPE, (payload, context) ->
             context.client().execute(() -> ClientPowerState.applyEntityPowersSync(payload)));
 
+        ClientPlayNetworking.registerGlobalReceiver(
+            dev.overgrown.apoli.network.payload.SyncAuxIntsS2C.TYPE, (payload, context) ->
+                context.client().execute(() -> ClientPowerState.applyAuxInts(payload)));
+
         ClientPlayNetworking.registerGlobalReceiver(PowerActivatedS2C.TYPE, (payload, context) ->
             context.client().execute(() -> ClientPowerState.setCooldown(payload.power(), payload.cooldown())));
 
@@ -98,9 +106,9 @@ public final class ApoliClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(
             dev.overgrown.apoli.network.payload.MountOffsetS2C.TYPE, (payload, context) ->
                 context.client().execute(() -> dev.overgrown.apoli.mount.MountOffsets.put(
-                    context.client().level == null ? null : context.client().level.getEntity(payload.passengerId()),
+                    payload.passengerId(),
                     new dev.overgrown.apoli.mount.MountOffsets.Offset(
-                        payload.x(), payload.y(), payload.z(), payload.space()))));
+                        payload.x(), payload.y(), payload.z(), payload.space(), payload.rotation()))));
 
         ClientPlayNetworking.registerGlobalReceiver(ApplyVelocityS2C.TYPE, (payload, context) ->
             context.client().execute(() -> {

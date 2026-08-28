@@ -12,6 +12,7 @@ import dev.overgrown.apoli.network.payload.PowerActivatedS2C;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.data.Expression;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,13 +27,13 @@ import java.util.UUID;
 public final class ActionOnKeyPressPower extends PowerType<ActionOnKeyPressPower.Config> {
     private final Map<CooldownKey, Integer> cooldowns = new HashMap<>();
 
-    public record Config(EntityAction entityAction, int cooldown, HudRender hudRender, Key key) {}
+    public record Config(EntityAction entityAction, Expression cooldown, HudRender hudRender, Key key) {}
 
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             EntityAction.CODEC.fieldOf("entity_action").forGetter(Config::entityAction),
-            Codec.INT.optionalFieldOf("cooldown", 1).forGetter(Config::cooldown),
+            Expression.INT_OR_EXPR.optionalFieldOf("cooldown", Expression.constant(1)).forGetter(Config::cooldown),
             HudRender.CODEC.optionalFieldOf("hud_render", HudRender.DONT_RENDER).forGetter(Config::hudRender),
             Key.CODEC.optionalFieldOf("key", Key.DEFAULT_PRIMARY).forGetter(Config::key)
         ).apply(i, Config::new));
@@ -60,7 +61,8 @@ public final class ActionOnKeyPressPower extends PowerType<ActionOnKeyPressPower
         CooldownKey key = new CooldownKey(owner.getUUID(), powerId);
         if (cooldowns.getOrDefault(key, 0) > 0) return false;
         cfg.entityAction.run(new EntityCtx(owner, level));
-        if (cfg.cooldown > 0) cooldowns.put(key, cfg.cooldown);
+        int ticks = PowerResources.cooldownTicks(cfg.cooldown, holder);
+        if (ticks > 0) cooldowns.put(key, ticks);
         return true;
     }
 
@@ -81,7 +83,7 @@ public final class ActionOnKeyPressPower extends PowerType<ActionOnKeyPressPower
     public OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
         Entity owner = holder.rawOwner();
         if (owner.level().isClientSide()) return OptionalInt.empty();
-        int clamped = Math.max(0, Math.min(value, Math.max(cfg.cooldown, 0)));
+        int clamped = Math.max(0, Math.min(value, Math.max(PowerResources.cooldownTicks(cfg.cooldown, holder), 0)));
         CooldownKey key = new CooldownKey(owner.getUUID(), powerId);
         if (clamped <= 0) cooldowns.remove(key);
         else cooldowns.put(key, clamped);
@@ -93,7 +95,7 @@ public final class ActionOnKeyPressPower extends PowerType<ActionOnKeyPressPower
 
     @Override
     public OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
-        return OptionalInt.of(max ? Math.max(cfg.cooldown, 0) : 0);
+        return OptionalInt.of(max ? Math.max(PowerResources.cooldownTicks(cfg.cooldown, holder), 0) : 0);
     }
 
     private record CooldownKey(UUID entity, ResourceLocation powerId) {}

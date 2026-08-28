@@ -88,6 +88,11 @@ public final class ClientPowerState {
         ENTITY_SUPPRESSED.put(payload.entityId(), Set.copyOf(payload.suppressed()));
     }
 
+    public static void applyAuxInts(dev.overgrown.apoli.network.payload.SyncAuxIntsS2C payload) {
+        if (!ENTITY_POWERS.containsKey(payload.entityId())) return;
+        ENTITY_AUX.put(payload.entityId(), Map.copyOf(payload.auxInt()));
+    }
+
     public static void removeEntity(int entityId) {
         ENTITY_POWERS.remove(entityId);
         ENTITY_AUX.remove(entityId);

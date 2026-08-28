@@ -20,6 +20,7 @@ import dev.overgrown.apoli.network.payload.RopeSwingC2S;
 import dev.overgrown.apoli.network.payload.RopeVerletLengthS2C;
 import dev.overgrown.apoli.network.PowerSyncCache;
 import dev.overgrown.apoli.network.payload.SyncEntityPowersS2C;
+import dev.overgrown.apoli.network.payload.SyncAuxIntsS2C;
 import dev.overgrown.apoli.network.payload.SyncResourceTablesS2C;
 import dev.overgrown.apoli.network.payload.SyncKeybindsS2C;
 import dev.overgrown.apoli.network.payload.SyncPowersChunkS2C;
@@ -42,6 +43,7 @@ public final class ApoliNetwork {
         PayloadTypeRegistry.playS2C().register(SyncPowersChunkS2C.TYPE, SyncPowersChunkS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SyncEntityPowersS2C.TYPE, SyncEntityPowersS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SyncResourceTablesS2C.TYPE, SyncResourceTablesS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncAuxIntsS2C.TYPE, SyncAuxIntsS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(PowerActivatedS2C.TYPE, PowerActivatedS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SyncKeybindsS2C.TYPE, SyncKeybindsS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(ApplyVelocityS2C.TYPE, ApplyVelocityS2C.STREAM_CODEC);
@@ -138,6 +140,14 @@ public final class ApoliNetwork {
         if (connected(recipient) && ServerPlayNetworking.canSend(recipient, SyncResourceTablesS2C.TYPE)) {
             ServerPlayNetworking.send(recipient, payload);
         }
+    }
+
+    public static boolean canSendAuxInts(ServerPlayer recipient) {
+        return connected(recipient) && ServerPlayNetworking.canSend(recipient, SyncAuxIntsS2C.TYPE);
+    }
+
+    public static void sendAuxInts(ServerPlayer recipient, SyncAuxIntsS2C payload) {
+        ServerPlayNetworking.send(recipient, payload);
     }
 
     public static void sendActivated(ServerPlayer recipient, PowerActivatedS2C payload) {

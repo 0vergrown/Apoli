@@ -72,12 +72,15 @@ public final class ModelPartTransformation {
     private final Optional<Float> rawFadeOutDuration;
     private final float fadeOutDuration;
     private final Easing easing;
+    private final Optional<List<Perspective>> perspectives;
+    private final int perspectiveMask;
     private final float timelineStart;
     private final float timelineEnd;
 
     public ModelPartTransformation(String part, Type type, Optional<Expression> value, boolean overrideAnimation,
                                    List<Keyframe> keyframes, boolean loop, float duration,
-                                   Optional<Float> fadeOutDuration, Easing easing) {
+                                   Optional<Float> fadeOutDuration, Easing easing,
+                                   Optional<List<Perspective>> perspectives) {
         this.part = part;
         this.normalizedPart = ModelParts.normalize(part);
         this.type = type;
@@ -90,6 +93,8 @@ public final class ModelPartTransformation {
         this.rawFadeOutDuration = fadeOutDuration;
         this.fadeOutDuration = fadeOutDuration.orElse(duration);
         this.easing = easing;
+        this.perspectives = perspectives;
+        this.perspectiveMask = perspectives.map(Perspective::maskOf).orElse(Perspective.MASK_INHERIT);
         this.timelineStart = this.keyframes.isEmpty() ? 0.0F : this.keyframes.get(0).time();
         this.timelineEnd = this.keyframes.isEmpty() ? 0.0F : this.keyframes.get(this.keyframes.size() - 1).time();
     }
@@ -151,6 +156,14 @@ public final class ModelPartTransformation {
 
     public Easing easing() {
         return easing;
+    }
+
+    public Optional<List<Perspective>> perspectives() {
+        return perspectives;
+    }
+
+    public int perspectiveMask() {
+        return perspectiveMask;
     }
 
     public float sample(float elapsed, @Nullable Entity entity) {
@@ -217,6 +230,7 @@ public final class ModelPartTransformation {
         Codec.BOOL.optionalFieldOf("loop", false).forGetter(ModelPartTransformation::loop),
         Codec.FLOAT.optionalFieldOf("duration", 0.0F).forGetter(ModelPartTransformation::duration),
         Codec.FLOAT.optionalFieldOf("fade_out_duration").forGetter(ModelPartTransformation::rawFadeOutDuration),
-        Easing.CODEC.optionalFieldOf("easing", Easing.LINEAR).forGetter(ModelPartTransformation::easing)
+        Easing.CODEC.optionalFieldOf("easing", Easing.LINEAR).forGetter(ModelPartTransformation::easing),
+        Perspective.LIST_CODEC.optionalFieldOf("perspectives").forGetter(ModelPartTransformation::perspectives)
     ).apply(instance, ModelPartTransformation::new)).comapFlatMap(ModelPartTransformation::validate, Function.identity());
 }

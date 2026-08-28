@@ -13,11 +13,19 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(EntityRenderer.class)
 @Environment(EnvType.CLIENT)
 public abstract class EntityRendererDisguiseNameMixin<T extends Entity> {
+
+    @Inject(method = "renderNameTag", at = @At("HEAD"), cancellable = true)
+    private void apoli$hideDisguiseName(T entity, Component name, PoseStack pose,
+                                        MultiBufferSource buffers, int light, float partialTick, CallbackInfo ci) {
+        if (ClientDisguiseManager.hidesName(entity)) ci.cancel();
+    }
 
     @ModifyVariable(method = "renderNameTag", at = @At("HEAD"), argsOnly = true)
     private Component apoli$disguiseName(Component original, T entity, Component name, PoseStack pose,

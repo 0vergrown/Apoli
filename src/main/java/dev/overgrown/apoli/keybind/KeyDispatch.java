@@ -15,6 +15,7 @@ import dev.overgrown.apoli.power.builtin.ActionOnKeyPressPower;
 import dev.overgrown.apoli.power.builtin.FireProjectilePower;
 import dev.overgrown.apoli.power.builtin.InventoryPower;
 import dev.overgrown.apoli.power.builtin.TogglePower;
+import dev.overgrown.apoli.power.PowerResources;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -51,14 +52,14 @@ public final class KeyDispatch {
                 if (!c.key().key().equals(key)) continue;
                 if (active.tryActivate(id, c, container)) {
                     fired++;
-                    if (player != null) ApoliNetwork.sendActivated(player, new PowerActivatedS2C(id, c.cooldown()));
+                    if (player != null) ApoliNetwork.sendActivated(player, new PowerActivatedS2C(id, PowerResources.cooldownTicks(c.cooldown(), container)));
                 }
             } else if (type instanceof FireProjectilePower fire && cfg instanceof FireProjectilePower.Config c) {
                 if (c.params().key().map(Key::key).filter(key::equals).isEmpty()) continue;
                 if (fire.tryActivate(id, c, container)) {
                     fired++;
                     if (player != null) {
-                        ApoliNetwork.sendActivated(player, new PowerActivatedS2C(id, c.params().cooldown()));
+                        ApoliNetwork.sendActivated(player, new PowerActivatedS2C(id, PowerResources.cooldownTicks(c.params().cooldown(), container)));
                     }
                 }
             } else if (type instanceof TogglePower && cfg instanceof TogglePower.Config c) {
