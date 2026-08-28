@@ -14,6 +14,7 @@ import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerContainerImpl;
 import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.codec.IdCodecs;
+import dev.overgrown.apoli.data.Expression;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
@@ -59,7 +60,7 @@ public final class GameEventListenerPower extends PowerType<GameEventListenerPow
         Optional<BiEntityCondition> bientityCondition,
         Optional<BlockAction> blockAction,
         Optional<BlockCondition> blockCondition,
-        int cooldown,
+        Expression cooldown,
         HudRender hudRender,
         Optional<ResourceLocation> event,
         Optional<List<ResourceLocation>> events,
@@ -78,7 +79,7 @@ public final class GameEventListenerPower extends PowerType<GameEventListenerPow
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition),
             dev.overgrown.apoli.codec.LoggedOptionalField.of("block_action", BlockAction.CODEC).forGetter(Config::blockAction),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Config::blockCondition),
-            Codec.INT.optionalFieldOf("cooldown", 1).forGetter(Config::cooldown),
+            Expression.INT_OR_EXPR.optionalFieldOf("cooldown", Expression.constant(1)).forGetter(Config::cooldown),
             HudRender.CODEC.optionalFieldOf("hud_render", HudRender.DONT_RENDER).forGetter(Config::hudRender),
             IdCodecs.ID.optionalFieldOf("event").forGetter(Config::event),
             Codec.list(IdCodecs.ID).optionalFieldOf("events").forGetter(Config::events),
@@ -124,12 +125,12 @@ public final class GameEventListenerPower extends PowerType<GameEventListenerPow
 
     @Override
     public java.util.OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
-        return dev.overgrown.apoli.power.PowerResources.writeDeadline(holder, powerId, value, cfg.cooldown());
+        return dev.overgrown.apoli.power.PowerResources.writeDeadline(holder, powerId, value, dev.overgrown.apoli.power.PowerResources.cooldownTicks(cfg.cooldown(), holder));
     }
 
     @Override
     public java.util.OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
-        return java.util.OptionalInt.of(max ? Math.max(cfg.cooldown(), 0) : 0);
+        return java.util.OptionalInt.of(max ? Math.max(dev.overgrown.apoli.power.PowerResources.cooldownTicks(cfg.cooldown(), holder), 0) : 0);
     }
 
     @Override
@@ -265,7 +266,7 @@ public final class GameEventListenerPower extends PowerType<GameEventListenerPow
         private void setCooldown(ServerLevel level) {
             PowerContainer container = PowerContainer.of(entity);
             if (container instanceof PowerContainerImpl impl) {
-                impl.setAuxInt(powerId, (int) (level.getGameTime() + cfg.cooldown()));
+                impl.setAuxInt(powerId, (int) (level.getGameTime() + dev.overgrown.apoli.power.PowerResources.cooldownTicks(cfg.cooldown(), impl)));
             }
         }
 

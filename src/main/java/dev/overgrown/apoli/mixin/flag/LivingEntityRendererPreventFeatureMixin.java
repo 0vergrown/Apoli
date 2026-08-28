@@ -4,11 +4,14 @@ import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.overgrown.apoli.client.disguise.ClientDisguiseManager;
 import dev.overgrown.apoli.client.render.FeatureRenderers;
+import dev.overgrown.apoli.power.builtin.InvisibilityPower;
 import dev.overgrown.apoli.power.builtin.PreventFeatureRenderPower;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -29,6 +32,11 @@ public abstract class LivingEntityRendererPreventFeatureMixin {
         Entity source = rendered instanceof LivingEntity living
             ? ClientDisguiseManager.powerSource(living)
             : rendered;
+        if (layer instanceof HumanoidArmorLayer<?, ?, ?>
+            && InvisibilityPower.hidesArmor(source)
+            && rendered.isInvisibleTo(Minecraft.getInstance().player)) {
+            return false;
+        }
         return !PreventFeatureRenderPower.prevents(source, FeatureRenderers.keysFor(layer.getClass()));
     }
 }

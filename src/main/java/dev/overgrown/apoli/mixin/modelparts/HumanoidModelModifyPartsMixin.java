@@ -2,6 +2,7 @@ package dev.overgrown.apoli.mixin.modelparts;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import dev.overgrown.apoli.client.render.HandRenderPass;
 import dev.overgrown.apoli.client.render.ModelPartAnimator;
 import dev.overgrown.apoli.client.render.ModelPartLookup;
 import dev.overgrown.apoli.data.ModelPartTransformation;
@@ -77,9 +78,11 @@ public abstract class HumanoidModelModifyPartsMixin {
         List<ModelPartAnimator.Slot> slots = ModelPartAnimator.update(entity);
         if (!slots.isEmpty()) {
             HumanoidModel<?> model = (HumanoidModel<?>) (Object) this;
+            boolean handPass = HandRenderPass.active();
             for (int s = 0; s < slots.size(); s++) {
                 ModelPartAnimator.Slot slot = slots.get(s);
                 if (slot.weight() <= 0.0F) continue;
+                if (!slot.rendersIn(handPass)) continue;
                 apoli$scratch.clear();
                 ModelPartLookup.resolveInto(model, slot.transformation().normalizedPart(), apoli$scratch);
                 for (int p = 0; p < apoli$scratch.size(); p++) {

@@ -39,6 +39,7 @@ public final class PowerContainerImpl implements PowerContainer {
     private @Nullable Set<ResourceLocation> effectiveSuppressed;
     private Set<ResourceLocation> notifiedSuppressed = Set.of();
     private int cacheGeneration = -1;
+    private int reconciledGeneration = -1;
 
     private record TickEntry(ResourceLocation powerId, Power power, PowerType<?> type) {}
 
@@ -527,6 +528,11 @@ public final class PowerContainerImpl implements PowerContainer {
 
     public void tickActive() {
         if (owner == null || !(owner.level() instanceof ServerLevel level)) return;
+        int generation = ApoliPowers.generation();
+        if (reconciledGeneration != generation) {
+            reconciledGeneration = generation;
+            dev.overgrown.apoli.power.builtin.MultiplePower.reconcile(this);
+        }
         List<TickEntry> entries = tickEntries();
         if (entries.isEmpty()) return;
         EntityCtx ctx = EntityCtx.of(owner, level);

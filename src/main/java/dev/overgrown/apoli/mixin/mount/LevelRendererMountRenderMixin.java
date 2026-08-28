@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.mixin.mount;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.overgrown.apoli.mount.MountOffsets;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -30,8 +31,9 @@ public abstract class LevelRendererMountRenderMixin {
         double vz = Mth.lerp(partialTick, vehicle.zOld, vehicle.getZ());
         Vec3 attach = vehicle.getPassengerRidingPosition(entity).subtract(vehicle.position());
         Vec3 riderVehicle = entity.getVehicleAttachmentPoint(vehicle);
-        args.set(1, vx + attach.x - riderVehicle.x - camX);
-        args.set(2, vy + attach.y - riderVehicle.y - camY);
-        args.set(3, vz + attach.z - riderVehicle.z - camZ);
+        Vec3 offset = MountOffsets.resolve(vehicle, entity, partialTick);
+        args.set(1, vx + attach.x - riderVehicle.x + offset.x - camX);
+        args.set(2, vy + attach.y - riderVehicle.y + offset.y - camY);
+        args.set(3, vz + attach.z - riderVehicle.z + offset.z - camZ);
     }
 }

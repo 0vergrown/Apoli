@@ -28,8 +28,12 @@ public final class BedrockAnimation {
         return this.bones;
     }
 
-    public float timeFor(float elapsed, @Nullable Boolean loopOverride) {
-        Loop mode = loopOverride == null ? this.loop : (loopOverride ? Loop.LOOP : Loop.ONCE);
+    public float timeFor(float elapsed, @Nullable dev.overgrown.apoli.data.ModelAnimation.LoopMode override) {
+        Loop mode = override == null ? this.loop : switch (override) {
+            case LOOP -> Loop.LOOP;
+            case HOLD -> Loop.HOLD;
+            case ONCE -> Loop.ONCE;
+        };
         if (this.length <= 0.0F) return 0.0F;
         return switch (mode) {
             case LOOP -> elapsed % this.length;
@@ -56,11 +60,20 @@ public final class BedrockAnimation {
         private final float[] times;
         private final float[] pre;
         private final float[] post;
+        @Nullable private final byte[] easing;
+        @Nullable private final float[] easingArg;
 
         public Track(float[] times, float[] pre, float[] post) {
+            this(times, pre, post, null, null);
+        }
+
+        public Track(float[] times, float[] pre, float[] post,
+                     @Nullable byte[] easing, @Nullable float[] easingArg) {
             this.times = times;
             this.pre = pre;
             this.post = post;
+            this.easing = easing;
+            this.easingArg = easingArg;
         }
 
         public float end() {
@@ -85,9 +98,33 @@ public final class BedrockAnimation {
             float delta = span <= 0.0F ? 0.0F : (time - this.times[index]) / span;
             int from = index * 3;
             int to = (index + 1) * 3;
+            if (this.easing == null) {
+                lerp(from, to, delta, out);
+                return;
+            }
+            BedrockEasing mode = BedrockEasing.byIndex(this.easing[index + 1]);
+            if (mode == BedrockEasing.CATMULLROM) {
+                int before = index > 0 ? (index - 1) * 3 : from;
+                int after = index + 2 <= last ? (index + 2) * 3 : to;
+                for (int axis = 0; axis < 3; axis++) {
+                    out[axis] = spline(delta, this.post[before + axis], this.post[from + axis],
+                        this.pre[to + axis], this.pre[after + axis]);
+                }
+                return;
+            }
+            lerp(from, to, mode.ease(delta, this.easingArg[index + 1]), out);
+        }
+
+        private void lerp(int from, int to, float delta, float[] out) {
             out[0] = this.post[from] + (this.pre[to] - this.post[from]) * delta;
             out[1] = this.post[from + 1] + (this.pre[to + 1] - this.post[from + 1]) * delta;
             out[2] = this.post[from + 2] + (this.pre[to + 2] - this.post[from + 2]) * delta;
+        }
+
+        private static float spline(float delta, float p0, float p1, float p2, float p3) {
+            return 0.5F * (2.0F * p1 + (p2 - p0) * delta
+                + (2.0F * p0 - 5.0F * p1 + 4.0F * p2 - p3) * delta * delta
+                + (3.0F * p1 - p0 - 3.0F * p2 + p3) * delta * delta * delta);
         }
 
         private static void copy(float[] source, int keyframe, float[] out) {

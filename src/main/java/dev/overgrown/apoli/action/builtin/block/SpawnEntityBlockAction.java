@@ -14,7 +14,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.phys.Vec3;
 
@@ -50,8 +49,8 @@ public final class SpawnEntityBlockAction implements ActionType<BlockCtx, SpawnE
                 MobSpawnType.MOB_SUMMONED, null);
         }
         serverLevel.addFreshEntity(entity);
-        if (cfg.entityAction.isPresent() && entity instanceof LivingEntity living) {
-            cfg.entityAction.get().run(new EntityCtx(living, serverLevel));
+        if (cfg.entityAction.isPresent()) {
+            cfg.entityAction.get().run(new EntityCtx(entity, serverLevel));
         }
     }
 }

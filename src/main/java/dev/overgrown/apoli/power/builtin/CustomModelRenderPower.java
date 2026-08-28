@@ -11,6 +11,7 @@ import dev.overgrown.apoli.data.RenderMode;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.codec.IdCodecs;
+import dev.overgrown.apoli.codec.LoggedOptionalField;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.LivingEntity;
@@ -145,7 +146,7 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
     ).apply(instance, Base::new));
 
     private static final MapCodec<Config> CONFIG_CODEC =
-        Codec.mapPair(BASE_CODEC, ModelAnimation.CODEC.optionalFieldOf("animations"))
+        Codec.mapPair(BASE_CODEC, LoggedOptionalField.of("animations", ModelAnimation.CODEC))
             .xmap(
                 pair -> merge(pair.getFirst(), pair.getSecond()),
                 config -> com.mojang.datafixers.util.Pair.of(split(config), config.animations())

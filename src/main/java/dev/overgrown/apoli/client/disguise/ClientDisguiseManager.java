@@ -1,8 +1,10 @@
 package dev.overgrown.apoli.client.disguise;
 
+import com.mojang.authlib.GameProfile;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.entity.disguise.DisguiseData;
 import dev.overgrown.apoli.entity.disguise.DisguiseManager;
+import dev.overgrown.apoli.mixin.disguise.WalkAnimationStateAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
@@ -12,7 +14,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.WalkAnimationState;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -20,12 +25,18 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class ClientDisguiseManager {
     private ClientDisguiseManager() {}
 
     private static final byte ATTACK_EVENT = 4;
+    private static final String FALLBACK_NAME = "Player";
+    private static final EquipmentSlot[] MIRRORED_SLOTS = {
+        EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND,
+        EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
+    };
 
     private static final Map<Integer, DisguiseData> DISGUISES = new ConcurrentHashMap<>();
     private static final Map<Integer, Entity> DUMMIES = new ConcurrentHashMap<>();
@@ -50,10 +61,9 @@ public final class ClientDisguiseManager {
 
     public static void apply(int netId, DisguiseData data) {
         DISGUISES.put(netId, data);
-        if (data.isPlayerDisguise()) {
-            DUMMIES.remove(netId);
-            UNTICKABLE.remove(netId);
-        } else {
+        DUMMIES.remove(netId);
+        UNTICKABLE.remove(netId);
+        if (!data.isPlayerDisguise()) {
             createDummy(netId, data);
         }
     }
@@ -100,7 +110,7 @@ public final class ClientDisguiseManager {
             Map.Entry<Integer, Entity> entry = it.next();
             Integer netId = entry.getKey();
             DisguiseData data = DISGUISES.get(netId);
-            if (data == null || data.isPlayerDisguise()) {
+            if (data == null) {
                 it.remove();
                 UNTICKABLE.remove(netId);
                 continue;
@@ -116,14 +126,17 @@ public final class ClientDisguiseManager {
 
             mirrorPose(actor, dummy);
             mirrorState(actor, dummy);
-            if (!(dummy instanceof LivingEntity) || UNTICKABLE.contains(netId)) continue;
-            try {
-                dummy.tick();
-            } catch (Throwable t) {
-                UNTICKABLE.add(netId);
-                Apoli.LOGGER.warn("[Apoli] Disguise dummy {} threw while ticking; its animations are disabled", data.entityTypeId(), t);
+            if (!(dummy instanceof LivingEntity)) continue;
+            if (!UNTICKABLE.contains(netId)) {
+                try {
+                    dummy.tick();
+                } catch (Throwable t) {
+                    UNTICKABLE.add(netId);
+                    Apoli.LOGGER.warn("[Apoli] Disguise dummy {} threw while ticking; its animations are disabled", data.entityTypeId(), t);
+                }
+                if (dummy.isRemoved()) UNTICKABLE.add(netId);
             }
-            if (dummy.isRemoved()) UNTICKABLE.add(netId);
+            mirrorAnimation(actor, dummy);
         }
     }
 
@@ -160,14 +173,20 @@ public final class ClientDisguiseManager {
     @Nullable
     public static Entity syncedDummy(int netId, Entity actor) {
         Entity dummy = DUMMIES.get(netId);
+        boolean created = false;
         if (dummy == null || dummy.level() != actor.level()) {
             DisguiseData data = DISGUISES.get(netId);
-            if (data == null || data.isPlayerDisguise()) return null;
+            if (data == null || (data.isPlayerDisguise() && actor instanceof Player)) return null;
             dummy = createDummy(netId, data);
             if (dummy == null) return null;
             mirrorState(actor, dummy);
+            created = true;
         }
         mirrorPose(actor, dummy);
+        if (created) {
+            mirrorAnimation(actor, dummy);
+            if (dummy instanceof DisguisePlayerDummy playerDummy) playerDummy.snapCloak();
+        }
         return dummy;
     }
 
@@ -180,6 +199,13 @@ public final class ClientDisguiseManager {
 
     public static void endDisguiseRender(@Nullable Entity previous) {
         renderActor = previous;
+    }
+
+    public static boolean hidesName(Entity rendered) {
+        Entity actor = renderActor;
+        if (actor == null || rendered.getId() != dummyId(actor.getId())) return false;
+        DisguiseData data = DISGUISES.get(actor.getId());
+        return data != null && data.name().isPresent() && data.name().get().isEmpty();
     }
 
     public static Entity powerSource(Entity rendered) {
@@ -216,28 +242,38 @@ public final class ClientDisguiseManager {
         }
     }
 
+    private static void mirrorAnimation(Entity actor, Entity dummy) {
+        if (!(dummy instanceof Player dummyPlayer) || !(actor instanceof LivingEntity actorLiving)) return;
+        WalkAnimationState source = actorLiving.walkAnimation;
+        WalkAnimationState target = dummyPlayer.walkAnimation;
+        ((WalkAnimationStateAccessor) target).apoli$setSpeedOld(((WalkAnimationStateAccessor) source).apoli$getSpeedOld());
+        target.setSpeed(source.speed());
+        ((WalkAnimationStateAccessor) target).apoli$setPosition(source.position());
+        dummyPlayer.oAttackAnim = actorLiving.oAttackAnim;
+        dummyPlayer.attackAnim = actorLiving.attackAnim;
+    }
+
     private static void mirrorState(Entity actor, Entity dummy) {
         dummy.setDeltaMovement(Vec3.ZERO);
         dummy.setOnGround(actor.onGround());
         dummy.setPose(actor.getPose());
         dummy.setSprinting(actor.isSprinting());
         dummy.setShiftKeyDown(actor.isShiftKeyDown());
+        if (dummy instanceof Player dummyPlayer && actor instanceof LivingEntity actorLiving) {
+            for (int i = 0; i < MIRRORED_SLOTS.length; i++) {
+                EquipmentSlot slot = MIRRORED_SLOTS[i];
+                dummyPlayer.setItemSlot(slot, actorLiving.getItemBySlot(slot));
+            }
+        }
     }
 
     @Nullable
     private static Entity createDummy(int netId, DisguiseData data) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return null;
-        EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(data.entityTypeId());
-        if (type == null) return null;
         try {
-            Entity dummy = type.create(mc.level);
+            Entity dummy = data.isPlayerDisguise() ? createPlayerDummy(mc, data) : createEntityDummy(mc, data);
             if (dummy == null) return null;
-            data.nbt().ifPresent(nbt -> {
-                CompoundTag merged = dummy.saveWithoutId(new CompoundTag());
-                merged.merge(nbt);
-                dummy.load(merged);
-            });
             dummy.setId(dummyId(netId));
             dummy.setSilent(true);
             dummy.setNoGravity(true);
@@ -248,5 +284,31 @@ public final class ClientDisguiseManager {
         } catch (Exception ignored) {
             return null;
         }
+    }
+
+    @Nullable
+    private static Entity createEntityDummy(Minecraft mc, DisguiseData data) {
+        EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(data.entityTypeId());
+        if (type == null) return null;
+        Entity dummy = type.create(mc.level);
+        if (dummy == null) return null;
+        data.nbt().ifPresent(nbt -> {
+            CompoundTag merged = dummy.saveWithoutId(new CompoundTag());
+            merged.merge(nbt);
+            dummy.load(merged);
+        });
+        return dummy;
+    }
+
+    @Nullable
+    private static Entity createPlayerDummy(Minecraft mc, DisguiseData data) {
+        UUID uuid = data.playerUuid().orElse(null);
+        if (uuid == null) return null;
+        ClientPacketListener connection = mc.getConnection();
+        PlayerInfo info = connection == null ? null : connection.getPlayerInfo(uuid);
+        GameProfile profile = info != null
+            ? info.getProfile()
+            : new GameProfile(uuid, data.name().filter(name -> !name.isEmpty()).orElse(FALLBACK_NAME));
+        return new DisguisePlayerDummy(mc.level, profile);
     }
 }

@@ -30,7 +30,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public final class ApoliNetwork {
 
-    private static final String PROTOCOL_VERSION = "8";
+    private static final String PROTOCOL_VERSION = "9";
 
     private ApoliNetwork() {}
 
@@ -42,6 +42,8 @@ public final class ApoliNetwork {
         registrar.playToClient(SyncEntityPowersS2C.TYPE, SyncEntityPowersS2C.STREAM_CODEC, ApoliNetwork::onSyncEntityPowers);
         registrar.playToClient(dev.overgrown.apoli.network.payload.SyncResourceTablesS2C.TYPE,
             dev.overgrown.apoli.network.payload.SyncResourceTablesS2C.STREAM_CODEC, ApoliNetwork::onSyncResourceTables);
+        registrar.playToClient(dev.overgrown.apoli.network.payload.SyncAuxIntsS2C.TYPE,
+            dev.overgrown.apoli.network.payload.SyncAuxIntsS2C.STREAM_CODEC, ApoliNetwork::onSyncAuxInts);
         registrar.playToClient(PowerActivatedS2C.TYPE, PowerActivatedS2C.STREAM_CODEC, ApoliNetwork::onPowerActivated);
         registrar.playToClient(SyncKeybindsS2C.TYPE, SyncKeybindsS2C.STREAM_CODEC, ApoliNetwork::onSyncKeybinds);
         registrar.playToClient(ApplyVelocityS2C.TYPE, ApplyVelocityS2C.STREAM_CODEC, ApoliNetwork::onApplyVelocity);
@@ -102,6 +104,11 @@ public final class ApoliNetwork {
     private static void onSyncResourceTables(dev.overgrown.apoli.network.payload.SyncResourceTablesS2C payload,
                                              IPayloadContext ctx) {
         ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPowerState.applyResourceTables(payload));
+    }
+
+    private static void onSyncAuxInts(dev.overgrown.apoli.network.payload.SyncAuxIntsS2C payload,
+                                      IPayloadContext ctx) {
+        ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPowerState.applyAuxInts(payload));
     }
 
     private static void onPowerActivated(PowerActivatedS2C payload, IPayloadContext ctx) {
@@ -245,6 +252,11 @@ public final class ApoliNetwork {
 
     public static void sendResourceTablesToTrackersAndSelf(Entity entity,
                                                            dev.overgrown.apoli.network.payload.SyncResourceTablesS2C payload) {
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(entity, payload);
+    }
+
+    public static void sendAuxIntsToTrackersAndSelf(Entity entity,
+                                                    dev.overgrown.apoli.network.payload.SyncAuxIntsS2C payload) {
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(entity, payload);
     }
 

@@ -126,8 +126,8 @@ config="${mod_id}-walkers.mixins.json"
 [[dependencies.${mod_id}]]
     modId="origins"
     type="incompatible"
-    reason="Origins older than 1.23.1 was built against an older Apoli API. Update Origins."
-    versionRange="[0,1.23.1)"
+    reason="Origins older than 1.24.0 was built against an older Apoli API. Update Origins."
+    versionRange="[0,1.24.0)"
     ordering="NONE"
     side="BOTH"
 

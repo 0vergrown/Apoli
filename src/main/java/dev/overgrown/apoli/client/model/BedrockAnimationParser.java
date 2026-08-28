@@ -15,6 +15,7 @@ public final class BedrockAnimationParser {
 
     private static final float[] ZERO = {0.0F, 0.0F, 0.0F};
     private static final float[] ONE = {1.0F, 1.0F, 1.0F};
+    private static final String VECTOR = "vector";
 
     private BedrockAnimationParser() {}
 
@@ -100,8 +101,9 @@ public final class BedrockAnimationParser {
             } catch (NumberFormatException e) {
                 continue;
             }
-            keyframes.add(new Keyframe(time, keyframe(entry.getValue(), fallback, true),
-                keyframe(entry.getValue(), fallback, false)));
+            Dynamic<T> value = entry.getValue();
+            keyframes.add(new Keyframe(time, keyframe(value, fallback, true), keyframe(value, fallback, false),
+                easingOf(value), easingArgOf(value)));
         }
         if (keyframes.isEmpty()) return null;
         keyframes.sort((a, b) -> Float.compare(a.time, b.time));
@@ -110,13 +112,38 @@ public final class BedrockAnimationParser {
         float[] times = new float[count];
         float[] pre = new float[count * 3];
         float[] post = new float[count * 3];
+        byte[] easing = new byte[count];
+        float[] easingArg = new float[count];
+        boolean shaped = false;
         for (int i = 0; i < count; i++) {
             Keyframe frame = keyframes.get(i);
             times[i] = frame.time;
             System.arraycopy(frame.pre, 0, pre, i * 3, 3);
             System.arraycopy(frame.post, 0, post, i * 3, 3);
+            easing[i] = (byte) frame.easing.ordinal();
+            easingArg[i] = frame.arg;
+            if (i > 0 && frame.easing != BedrockEasing.LINEAR && frame.easing != BedrockEasing.NONE) {
+                shaped = true;
+            }
         }
-        return new BedrockAnimation.Track(times, pre, post);
+        return shaped
+            ? new BedrockAnimation.Track(times, pre, post, easing, easingArg)
+            : new BedrockAnimation.Track(times, pre, post);
+    }
+
+    private static <T> BedrockEasing easingOf(Dynamic<T> json) {
+        String name = json.get("easing").asString().result().orElse(null);
+        if (name == null) name = json.get("lerp_mode").asString().result().orElse(null);
+        return name == null ? BedrockEasing.LINEAR : BedrockEasing.byName(name);
+    }
+
+    private static <T> float easingArgOf(Dynamic<T> json) {
+        Dynamic<T> args = json.get("easingArgs").result().orElse(null);
+        if (args == null) return Float.NaN;
+        return args.asStreamOpt().result()
+            .flatMap(stream -> stream.findFirst())
+            .map(BedrockAnimationParser::number)
+            .orElse(Float.NaN);
     }
 
     private static <T> float[] keyframe(Dynamic<T> json, float[] fallback, boolean pre) {
@@ -147,7 +174,8 @@ public final class BedrockAnimationParser {
             float uniform = json.asNumber().result().get().floatValue();
             return new float[]{uniform, uniform, uniform};
         }
-        return null;
+        Dynamic<T> wrapped = json.get(VECTOR).result().orElse(null);
+        return wrapped == null ? null : readVector(wrapped, fallback);
     }
 
     private static <T> float number(Dynamic<T> json) {
@@ -162,5 +190,5 @@ public final class BedrockAnimationParser {
         });
     }
 
-    private record Keyframe(float time, float[] pre, float[] post) {}
+    private record Keyframe(float time, float[] pre, float[] post, BedrockEasing easing, float arg) {}
 }

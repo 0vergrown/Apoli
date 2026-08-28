@@ -51,6 +51,7 @@ import net.neoforged.neoforge.server.permission.events.PermissionGatherEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
 import dev.overgrown.apoli.power.builtin.EffectImmunityPower;
+import dev.overgrown.apoli.power.PowerResources;
 import net.neoforged.neoforge.event.entity.living.LivingConversionEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
@@ -93,6 +94,7 @@ public final class Apoli {
         PowerContainerAttachment.register(modBus);
         dev.overgrown.apoli.skill.SkillDataAttachment.register(modBus);
         dev.overgrown.apoli.entity.ApoliEntities.register(modBus);
+        dev.overgrown.apoli.particle.ApoliParticles.register(modBus);
         modBus.addListener(dev.overgrown.apoli.entity.ApoliEntities::registerAttributes);
         modBus.addListener(ApoliNetwork::register);
         modBus.addListener(dev.overgrown.apoli.item.ApoliLootFunctions::register);
@@ -127,6 +129,7 @@ public final class Apoli {
         dev.overgrown.apoli.command.ApoliSkillTreeCommand.register(event.getDispatcher());
         dev.overgrown.apoli.command.ApoliDisguiseCommand.register(event.getDispatcher());
         dev.overgrown.apoli.command.ApoliCloneCommand.register(event.getDispatcher());
+        dev.overgrown.apoli.command.ApoliMountCommand.register(event.getDispatcher());
         if (dev.overgrown.apoli.compat.ModCompat.anyAccessory()) {
             dev.overgrown.apoli.compat.accessory.command.AccessoryCommand.register(event.getDispatcher());
         }
@@ -398,6 +401,7 @@ public final class Apoli {
             ApoliNetwork.sendLabel(viewer, new dev.overgrown.apoli.network.payload.LabelUpdateS2C(
                 target.getId(), labels));
         }
+        dev.overgrown.apoli.mount.MountOffsets.syncTo(viewer, target);
     }
 
     @SubscribeEvent
@@ -414,15 +418,15 @@ public final class Apoli {
             if (!(c instanceof PowerContainerImpl impl)) return;
             impl.tickActive();
             if (impl.isStructureDirty()) {
-                ApoliNetwork.sendEntityPowersToTrackers(entity, new SyncEntityPowersS2C(
+                ApoliNetwork.sendEntityPowersToTrackersAndSelf(entity, new SyncEntityPowersS2C(
                     entity.getId(), impl.snapshot(), impl.auxIntSnapshot(), impl.suppressedPowers()));
+                dev.overgrown.apoli.network.payload.SyncResourceTablesS2C tables = tablePayload(entity, impl);
+                if (tables != null) ApoliNetwork.sendResourceTablesToTrackersAndSelf(entity, tables);
                 impl.clearStructureDirty();
-            }
-            if (impl.isDirty()) {
-                if (entity instanceof ServerPlayer sp) {
-                    ApoliNetwork.sendEntityPowers(sp, new SyncEntityPowersS2C(
-                        sp.getId(), impl.snapshot(), impl.auxIntSnapshot(), impl.suppressedPowers()));
-                }
+                impl.clearDirty();
+            } else if (impl.isDirty()) {
+                ApoliNetwork.sendAuxIntsToTrackersAndSelf(entity,
+                    new dev.overgrown.apoli.network.payload.SyncAuxIntsS2C(entity.getId(), impl.auxIntSnapshot()));
                 dev.overgrown.apoli.network.payload.SyncResourceTablesS2C tables = tablePayload(entity, impl);
                 if (tables != null) ApoliNetwork.sendResourceTablesToTrackersAndSelf(entity, tables);
                 impl.clearDirty();
@@ -483,12 +487,12 @@ public final class Apoli {
         if (type instanceof ActionOnKeyPressPower active
             && loaded.config() instanceof ActionOnKeyPressPower.Config cfg) {
             if (active.tryActivate(payload.power(), cfg, c)) {
-                ApoliNetwork.sendActivated(player, new PowerActivatedS2C(payload.power(), cfg.cooldown()));
+                ApoliNetwork.sendActivated(player, new PowerActivatedS2C(payload.power(), PowerResources.cooldownTicks(cfg.cooldown(), c)));
             }
         } else if (type instanceof FireProjectilePower fpp
             && loaded.config() instanceof FireProjectilePower.Config cfg) {
             if (fpp.tryActivate(payload.power(), cfg, c)) {
-                ApoliNetwork.sendActivated(player, new PowerActivatedS2C(payload.power(), cfg.params().cooldown()));
+                ApoliNetwork.sendActivated(player, new PowerActivatedS2C(payload.power(), PowerResources.cooldownTicks(cfg.params().cooldown(), c)));
             }
         } else if (type instanceof InventoryPower inv
             && loaded.config() instanceof InventoryPower.Config cfg

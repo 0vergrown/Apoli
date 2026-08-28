@@ -66,6 +66,12 @@ public final class ApoliClient {
     }
 
     @SubscribeEvent
+    public static void onRegisterParticleProviders(net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent event) {
+        event.registerSpecial(dev.overgrown.apoli.particle.ApoliParticles.CUSTOM.get(),
+            new dev.overgrown.apoli.client.particle.CustomParticle.Provider());
+    }
+
+    @SubscribeEvent
     public static void onRegisterLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
         event.registerLayerDefinition(dev.overgrown.apoli.client.summon.SummonModelLayers.MINION,
             dev.overgrown.apoli.client.summon.MinionModel::createBodyLayer);

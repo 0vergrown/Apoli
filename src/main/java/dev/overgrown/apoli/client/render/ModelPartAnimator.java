@@ -86,6 +86,7 @@ public final class ModelPartAnimator {
 
     public static final class Slot {
         private final ModelPartTransformation transformation;
+        private int perspectiveMask;
         private boolean seen;
         private boolean active;
         private double since;
@@ -109,6 +110,10 @@ public final class ModelPartAnimator {
         public float value() {
             return value;
         }
+
+        public boolean rendersIn(boolean firstPerson) {
+            return dev.overgrown.apoli.data.Perspective.masked(perspectiveMask, firstPerson);
+        }
     }
 
     private static final class State implements Consumer<ModifyModelPartsPower.Config> {
@@ -121,14 +126,17 @@ public final class ModelPartAnimator {
         public void accept(ModifyModelPartsPower.Config config) {
             poseMask |= config.overridePoseMask();
             List<ModelPartTransformation> transformations = config.transformations();
-            for (int i = 0; i < transformations.size(); i++) mark(transformations.get(i));
+            for (int i = 0; i < transformations.size(); i++) mark(transformations.get(i), config.perspectiveMask());
         }
 
-        private void mark(ModelPartTransformation transformation) {
+        private void mark(ModelPartTransformation transformation, int inheritedMask) {
+            int mask = transformation.perspectiveMask();
+            if (mask == dev.overgrown.apoli.data.Perspective.MASK_INHERIT) mask = inheritedMask;
             for (int i = 0; i < slots.size(); i++) {
                 Slot slot = slots.get(i);
                 if (slot.transformation == transformation) {
                     slot.seen = true;
+                    slot.perspectiveMask = mask;
                     if (!slot.active) {
                         slot.active = true;
                         slot.since = now;
@@ -139,6 +147,7 @@ public final class ModelPartAnimator {
                 }
             }
             Slot slot = new Slot(transformation);
+            slot.perspectiveMask = mask;
             slot.seen = true;
             slot.active = true;
             slot.since = now;

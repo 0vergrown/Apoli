@@ -43,10 +43,8 @@ public final class ClientPayloadHandlers {
     }
 
     public static void onMountOffset(dev.overgrown.apoli.network.payload.MountOffsetS2C msg) {
-        net.minecraft.client.multiplayer.ClientLevel level = Minecraft.getInstance().level;
-        if (level == null) return;
-        dev.overgrown.apoli.mount.MountOffsets.put(level.getEntity(msg.passengerId()),
-            new dev.overgrown.apoli.mount.MountOffsets.Offset(msg.x(), msg.y(), msg.z(), msg.space()));
+        dev.overgrown.apoli.mount.MountOffsets.put(msg.passengerId(),
+            new dev.overgrown.apoli.mount.MountOffsets.Offset(msg.x(), msg.y(), msg.z(), msg.space(), msg.rotation()));
     }
 
     public static void onApplyVelocity(ApplyVelocityS2C msg) {
