@@ -3,6 +3,8 @@
   "package": "dev.overgrown.apoli.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "block.BeehiveBlockEntityMixin",
+    "block.BeehiveBlockMixin",
     "block.BlockBehaviourBreakSpeedMixin",
     "block.BlockItemPlaceMixin",
     "block.BlockStateBaseSelectionMixin",
