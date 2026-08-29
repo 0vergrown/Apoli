@@ -14,7 +14,6 @@ import java.util.Optional;
 public class PreventBeeAngerPower extends PowerType<PreventBeeAngerPower.Config> {
     public record Config(
             Optional<BlockCondition> blockCondition,
-            Optional<BlockAction> blockAction,
             Optional<BiEntityCondition> biEntityCondition,
             Optional<BiEntityAction> biEntityAction
     ) {}
@@ -23,7 +22,6 @@ public class PreventBeeAngerPower extends PowerType<PreventBeeAngerPower.Config>
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec( i -> i.group (
                 LoggedOptionalField.of("block_condition", BlockCondition.CODEC).forGetter(Config::blockCondition),
-                LoggedOptionalField.of("block_action", BlockAction.CODEC).forGetter(Config::blockAction),
                 LoggedOptionalField.of("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::biEntityCondition),
                 LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Config::biEntityAction)
         ).apply(i, Config::new));
