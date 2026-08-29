@@ -25,21 +25,13 @@ public class BeehiveBlockMixin {
         List<Boolean> anger = new ArrayList<>();
 
         PowerLookup.forEach(livingEntity, Apoli.id("prevent_bee_anger"), PreventBeeAngerPower.Config.class, config -> {
-
-           BiEntityCtx bi = BiEntityCtx.of(instance, livingEntity, level);
+           BiEntityCtx bi = BiEntityCtx.of(livingEntity, instance, level);
            BlockCtx block = new BlockCtx(blockPos, level.getBlockState(blockPos), level);
 
             if ((config.biEntityCondition().isEmpty() || config.biEntityCondition().get().test(bi))
                     && (config.blockCondition().isEmpty() || config.blockCondition().get().test(block))) {
 
                 anger.add(false);
-
-                if (config.biEntityAction().isPresent()) {
-                    config.biEntityAction().get().run(bi);
-                }
-                if (config.blockAction().isPresent()) {
-                    config.blockAction().get().run(block);
-                }
            }
        });
 
