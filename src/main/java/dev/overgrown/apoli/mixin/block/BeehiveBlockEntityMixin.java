@@ -27,7 +27,7 @@ public class BeehiveBlockEntityMixin {
 
         PowerLookup.forEach(livingEntity, Apoli.id("prevent_bee_anger"), PreventBeeAngerPower.Config.class, config -> {
 
-            BiEntityCtx bi = BiEntityCtx.of(instance, livingEntity, player.level());
+            BiEntityCtx bi = BiEntityCtx.of(livingEntity, instance, player.level());
             BlockCtx block = new BlockCtx(((BlockEntity) (Object) this).getBlockPos(), blockState, player.level());
 
             if ((config.biEntityCondition().isEmpty() || config.biEntityCondition().get().test(bi))
@@ -37,9 +37,6 @@ public class BeehiveBlockEntityMixin {
 
                 if (config.biEntityAction().isPresent()) {
                     config.biEntityAction().get().run(bi);
-                }
-                if (config.blockAction().isPresent()) {
-                    config.blockAction().get().run(block);
                 }
             }
         });
