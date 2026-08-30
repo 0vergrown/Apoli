@@ -198,6 +198,11 @@ dependencies {
     // Pufferfish's Skills (compile-only, optional at runtime) — the skill-tree compat registers the
     // apoli:power / apoli:modify_resource rewards and lets apoli:grant_skill_tree unlock a Skills
     // category. Gated by ModCompat.PUFFISH_SKILLS, so Apoli runs fine without it.
+    // Sodium (compile-only, optional at runtime) — Sodium meshes chunks from its own LevelSlice
+    // instead of vanilla RenderChunkRegion, so apoli:modify_block_render needs a second hook there.
+    // Gated by SodiumCompatMixinPlugin, so Apoli runs fine without it.
+    compileOnly "maven.modrinth:sodium:${project.sodium_version}"
+
     compileOnly "maven.modrinth:skills:${project.puffish_skills_version}"
 
     compileOnly "de.maxhenkel.voicechat:voicechat-api:${project.voicechat_api_version}"

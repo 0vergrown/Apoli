@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "package": "dev.overgrown.apoli.compat.sodium.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "dev.overgrown.apoli.compat.sodium.mixin.SodiumCompatMixinPlugin",
+  "mixins": [],
+  "client": [
+    "LevelSliceBlockRenderMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

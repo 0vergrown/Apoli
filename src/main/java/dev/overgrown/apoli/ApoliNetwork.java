@@ -30,7 +30,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public final class ApoliNetwork {
 
-    private static final String PROTOCOL_VERSION = "9";
+    private static final String PROTOCOL_VERSION = "10";
 
     private ApoliNetwork() {}
 
@@ -70,10 +70,16 @@ public final class ApoliNetwork {
         registrar.playToServer(PowerActivationC2S.TYPE, PowerActivationC2S.STREAM_CODEC, ApoliNetwork::onPowerActivation);
         registrar.playToServer(PowerToggleC2S.TYPE, PowerToggleC2S.STREAM_CODEC, ApoliNetwork::onPowerToggle);
         registrar.playToServer(KeyHeldC2S.TYPE, KeyHeldC2S.STREAM_CODEC, ApoliNetwork::onKeyHeld);
+        registrar.playToServer(dev.overgrown.apoli.network.payload.ScrollWheelC2S.TYPE,
+            dev.overgrown.apoli.network.payload.ScrollWheelC2S.STREAM_CODEC, ApoliNetwork::onScrollWheel);
         registrar.playToServer(
             dev.overgrown.apoli.network.payload.PlayerModelTypeC2S.TYPE,
             dev.overgrown.apoli.network.payload.PlayerModelTypeC2S.STREAM_CODEC,
             ApoliNetwork::onPlayerModelType);
+        registrar.playToServer(
+            dev.overgrown.apoli.network.payload.CameraPerspectiveC2S.TYPE,
+            dev.overgrown.apoli.network.payload.CameraPerspectiveC2S.STREAM_CODEC,
+            ApoliNetwork::onCameraPerspective);
         registrar.playToServer(dev.overgrown.apoli.network.payload.SpeechTriggerC2S.TYPE,
             dev.overgrown.apoli.network.payload.SpeechTriggerC2S.STREAM_CODEC, ApoliNetwork::onSpeechTrigger);
 
@@ -153,6 +159,23 @@ public final class ApoliNetwork {
         dev.overgrown.apoli.network.payload.PlayerModelTypeC2S payload, IPayloadContext ctx) {
         ctx.enqueueWork(() -> dev.overgrown.apoli.entity.PlayerModelTypes.set(
             ctx.player().getUUID(), payload.modelType()));
+    }
+
+    private static void onCameraPerspective(
+        dev.overgrown.apoli.network.payload.CameraPerspectiveC2S payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> dev.overgrown.apoli.entity.CameraPerspectives.set(
+            ctx.player().getUUID(), payload.firstPerson()));
+    }
+
+    private static void onScrollWheel(dev.overgrown.apoli.network.payload.ScrollWheelC2S payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> {
+            if (ctx.player() instanceof ServerPlayer sp) {
+                dev.overgrown.apoli.power.builtin.ActionOnScrollWheelPower.scroll(sp,
+                    payload.up() ? dev.overgrown.apoli.data.ScrollDirection.UP
+                        : dev.overgrown.apoli.data.ScrollDirection.DOWN,
+                    payload.notches());
+            }
+        });
     }
 
     private static void onKeyHeld(KeyHeldC2S payload, IPayloadContext ctx) {

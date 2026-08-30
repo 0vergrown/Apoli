@@ -88,6 +88,8 @@ public final class ApoliClient {
         event.registerReloadListener((net.minecraft.server.packs.resources.ResourceManagerReloadListener) manager -> {
             dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.onResourcesReloaded();
             ShaderPowerState.invalidate();
+            dev.overgrown.apoli.client.particle.ParticleSheet.clearCache();
+            dev.overgrown.apoli.client.particle.ParticleTextures.clearCache();
         });
         event.registerReloadListener(dev.overgrown.apoli.client.render.CustomModelManager.INSTANCE);
         event.registerReloadListener(dev.overgrown.apoli.client.render.AnimationManager.INSTANCE);
@@ -96,8 +98,7 @@ public final class ApoliClient {
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
-            PowerContainerAttachment.setClientLookup(entity ->
-                ClientPowerState.powersFor(entity.getId()).isEmpty() ? null : new ClientPowerContainer(entity));
+            PowerContainerAttachment.setClientLookup(ClientPowerState::containerFor);
             dev.overgrown.apoli.power.PowerResources.setClientCooldownLookup((owner, powerId) ->
                 owner == Minecraft.getInstance().player ? ClientPowerState.getCooldown(powerId) : 0);
             dev.overgrown.apoli.power.builtin.InventoryPower.setClientLookup((holder, powerId) ->
@@ -122,6 +123,8 @@ public final class ApoliClient {
         public static void onClientTick(ClientTickEvent.Post event) {
             Minecraft mc = Minecraft.getInstance();
             CursorSpeedState.tick(mc);
+            dev.overgrown.apoli.client.render.ClientRenderFlags.clientTick(mc);
+            dev.overgrown.apoli.client.render.BlockRenderRules.clientTick(mc);
             PhasingRenderState.clientTick(mc);
             RopeClientManager.tick();
             TextOverlayRenderer.tick();
@@ -131,6 +134,7 @@ public final class ApoliClient {
                 dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.tick(mc);
             }
             PlayerModelTypeReporter.tick(mc);
+            CameraPerspectiveReporter.tick(mc);
             if (mc.player == null || mc.isPaused()) {
                 ForcedKeys.tick();
                 return;
@@ -153,6 +157,8 @@ public final class ApoliClient {
             ClientPowerState.clear();
             dev.overgrown.apoli.mount.MountOffsets.clearAll();
             ShaderPowerState.clear();
+            dev.overgrown.apoli.client.render.BlockRenderRules.clear();
+            dev.overgrown.apoli.client.render.ClientRenderFlags.clear();
             TextOverlayRenderer.clear();
             ClientLabelState.clear();
             RopeClientManager.clear();
@@ -163,6 +169,13 @@ public final class ApoliClient {
             dev.overgrown.apoli.client.skill.ClientSkillState.clear();
             dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.clear();
             dev.overgrown.apoli.client.speech.SpeechClient.onLeave();
+        }
+
+        @SubscribeEvent
+        public static void onEntityLeaveLevel(net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent event) {
+            if (!event.getLevel().isClientSide()) return;
+            ClientPowerState.removeEntity(event.getEntity().getId());
+            ClientLabelState.removeEntity(event.getEntity().getId());
         }
 
         @SubscribeEvent

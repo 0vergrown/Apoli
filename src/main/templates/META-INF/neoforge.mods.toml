@@ -87,6 +87,12 @@ config="${mod_id}-bettercombat.mixins.json"
 [[mixins]]
 config="${mod_id}-walkers.mixins.json"
 
+# Optional Sodium compatibility — Sodium meshes chunks from its own LevelSlice instead of vanilla
+# RenderChunkRegion, so apoli:modify_block_render needs a second hook there. Gated by
+# SodiumCompatMixinPlugin, inert without the mod.
+[[mixins]]
+config="${mod_id}-sodium.mixins.json"
+
 # The [[accessTransformers]] block allows you to declare where your AT file is.
 # If this block is omitted, a fallback attempt will be made to load an AT from META-INF/accesstransformer.cfg
 #[[accessTransformers]]
@@ -126,8 +132,8 @@ config="${mod_id}-walkers.mixins.json"
 [[dependencies.${mod_id}]]
     modId="origins"
     type="incompatible"
-    reason="Origins older than 1.24.0 was built against an older Apoli API. Update Origins."
-    versionRange="[0,1.24.0)"
+    reason="Origins older than 1.25.2 was built against an older Apoli API. Update Origins."
+    versionRange="[0,1.25.2)"
     ordering="NONE"
     side="BOTH"
 

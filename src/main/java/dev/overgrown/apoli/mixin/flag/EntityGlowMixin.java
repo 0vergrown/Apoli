@@ -1,17 +1,18 @@
 package dev.overgrown.apoli.mixin.flag;
 
 import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.client.render.ClientRenderFlags;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.builtin.EntityGlowPower;
 import dev.overgrown.apoli.power.ApoliIds;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -46,7 +47,8 @@ public abstract class EntityGlowMixin {
         if (viewer == null) return null;
         EntityGlowPower.Config cfg = apoli$find(self, viewer, true);
         if (cfg != null) return cfg;
-        return self == viewer ? null : apoli$find(self, viewer, false);
+        if (self == viewer || !ClientRenderFlags.has(ClientRenderFlags.ENTITY_GLOW)) return null;
+        return apoli$find(self, viewer, false);
     }
 
     @Unique

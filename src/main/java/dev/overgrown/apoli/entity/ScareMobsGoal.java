@@ -2,14 +2,13 @@ package dev.overgrown.apoli.entity;
 
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.power.ApoliIds;
-import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.builtin.ScareMobsPower;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
-import net.minecraft.world.phys.AABB;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,12 +17,10 @@ import java.util.List;
 
 public final class ScareMobsGoal extends Goal {
 
-    private static final double SEARCH_RANGE = 16.0;
-
     private final PathfinderMob mob;
     private @Nullable LivingEntity scary;
     private double speed;
-    private @Nullable Vec3 fleeTarget;
+    private @Nullable Path fleePath;
 
     public ScareMobsGoal(PathfinderMob mob) {
         this.mob = mob;
@@ -32,11 +29,15 @@ public final class ScareMobsGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (!ScareMobsPower.anyHolders()) return false;
-        this.scary = findScary();
+        List<LivingEntity> holders = ScareMobsPower.holders(this.mob.level());
+        if (holders.isEmpty()) return false;
+        this.scary = findScary(holders);
         if (this.scary == null) return false;
-        this.fleeTarget = DefaultRandomPos.getPosAway(this.mob, 16, 7, this.scary.position());
-        return this.fleeTarget != null;
+        Vec3 away = DefaultRandomPos.getPosAway(this.mob, 16, 7, this.scary.position());
+        if (away == null) return false;
+        if (this.scary.distanceToSqr(away.x, away.y, away.z) < this.scary.distanceToSqr(this.mob)) return false;
+        this.fleePath = this.mob.getNavigation().createPath(away.x, away.y, away.z, 0);
+        return this.fleePath != null;
     }
 
     @Override
@@ -46,25 +47,21 @@ public final class ScareMobsGoal extends Goal {
 
     @Override
     public void start() {
-        if (this.fleeTarget != null) {
-            this.mob.getNavigation().moveTo(this.fleeTarget.x, this.fleeTarget.y, this.fleeTarget.z, this.speed);
-        }
+        this.mob.getNavigation().moveTo(this.fleePath, this.speed);
     }
 
     @Override
     public void stop() {
         this.scary = null;
-        this.fleeTarget = null;
+        this.fleePath = null;
     }
 
-    private @Nullable LivingEntity findScary() {
-        AABB box = this.mob.getBoundingBox().inflate(SEARCH_RANGE, SEARCH_RANGE / 2.0, SEARCH_RANGE);
-        List<LivingEntity> candidates = this.mob.level().getEntitiesOfClass(LivingEntity.class, box,
-            candidate -> candidate != this.mob && candidate.isAlive() && hasScarePower(candidate));
+    private @Nullable LivingEntity findScary(List<LivingEntity> holders) {
         LivingEntity best = null;
         double bestDistance = Double.MAX_VALUE;
-        for (int i = 0; i < candidates.size(); i++) {
-            LivingEntity candidate = candidates.get(i);
+        for (int i = 0; i < holders.size(); i++) {
+            LivingEntity candidate = holders.get(i);
+            if (candidate == this.mob || candidate.level() != this.mob.level()) continue;
             double distance = candidate.distanceToSqr(this.mob);
             if (distance >= bestDistance) continue;
             double appliedSpeed = scareSpeed(candidate, distance);
@@ -74,12 +71,6 @@ public final class ScareMobsGoal extends Goal {
             this.speed = appliedSpeed;
         }
         return best;
-    }
-
-    private static boolean hasScarePower(LivingEntity candidate) {
-        PowerContainer container = PowerContainer.of(candidate);
-        return container != null && !container.isEmpty()
-            && !container.powersOfType(ApoliIds.SCARE_MOBS).isEmpty();
     }
 
     private double scareSpeed(LivingEntity candidate, double distanceSqr) {

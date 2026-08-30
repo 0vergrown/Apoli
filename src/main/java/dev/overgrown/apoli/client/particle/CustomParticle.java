@@ -19,17 +19,21 @@ public class CustomParticle extends SingleQuadParticle {
 
     private final CustomParticleOptions options;
     private final ParticleRenderType renderType;
+    private final ParticleSheet sheet;
+    private final boolean loopFrames;
     private final float startSize;
     private final float endSize;
     private final float rollStep;
-    private final int frames;
-    private final int frameTime;
+    private int cell;
 
     protected CustomParticle(ClientLevel level, CustomParticleOptions options,
                              double x, double y, double z, double xd, double yd, double zd) {
         super(level, x, y, z);
         this.options = options;
-        this.renderType = ApoliParticleRenderTypes.of(options.texture(), options.blend());
+        net.minecraft.resources.ResourceLocation texture = ParticleTextures.resolve(options.texture());
+        this.renderType = ApoliParticleRenderTypes.of(texture, options.blend());
+        this.sheet = ParticleSheet.of(texture, options.frameLayout(), options.frames(), options.frameTime());
+        this.loopFrames = options.loopFrames().orElseGet(this.sheet::loopsByDefault);
         this.lifetime = Math.max(1, options.lifetime() + (options.lifetimeVariation() > 0
             ? this.random.nextInt(options.lifetimeVariation() + 1) : 0));
         this.gravity = options.gravity();
@@ -38,15 +42,18 @@ public class CustomParticle extends SingleQuadParticle {
         this.xd = xd;
         this.yd = yd;
         this.zd = zd;
-        this.startSize = options.size();
-        this.endSize = options.endSizeOr();
+        float variation = options.sizeVariation() > 0
+            ? this.random.nextFloat() * options.sizeVariation() : 0.0F;
+        this.startSize = options.size() + variation;
+        this.endSize = options.size() > 0
+            ? options.endSizeOr() * (this.startSize / options.size())
+            : options.endSizeOr() + variation;
         this.quadSize = this.startSize;
         this.setSize(this.startSize, this.startSize);
         this.roll = options.roll() * Mth.DEG_TO_RAD;
         this.oRoll = this.roll;
         this.rollStep = options.rollSpeed() * Mth.DEG_TO_RAD;
-        this.frames = Math.max(1, options.frames());
-        this.frameTime = Math.max(0, options.frameTime());
+        this.cell = this.sheet.cellAt(0, this.lifetime, this.loopFrames);
         tint(0.0F);
     }
 
@@ -56,6 +63,7 @@ public class CustomParticle extends SingleQuadParticle {
         super.tick();
         if (this.removed) return;
         this.roll += this.rollStep;
+        if (this.sheet.animated()) this.cell = this.sheet.cellAt(this.age, this.lifetime, this.loopFrames);
         tint((float) this.age / (float) this.lifetime);
     }
 
@@ -93,31 +101,22 @@ public class CustomParticle extends SingleQuadParticle {
 
     @Override
     protected float getU0() {
-        return 0.0F;
+        return this.sheet.u0(this.cell);
     }
 
     @Override
     protected float getU1() {
-        return 1.0F;
+        return this.sheet.u1(this.cell);
     }
 
     @Override
     protected float getV0() {
-        return frame() / (float) this.frames;
+        return this.sheet.v0(this.cell);
     }
 
     @Override
     protected float getV1() {
-        return (frame() + 1) / (float) this.frames;
-    }
-
-    private int frame() {
-        if (this.frames <= 1) return 0;
-        int index = this.frameTime > 0
-            ? this.age / this.frameTime
-            : (int) ((long) this.age * this.frames / this.lifetime);
-        if (this.options.loopFrames()) return ((index % this.frames) + this.frames) % this.frames;
-        return Mth.clamp(index, 0, this.frames - 1);
+        return this.sheet.v1(this.cell);
     }
 
     @OnlyIn(Dist.CLIENT)

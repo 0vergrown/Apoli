@@ -130,6 +130,7 @@ public final class Apoli {
         dev.overgrown.apoli.command.ApoliDisguiseCommand.register(event.getDispatcher());
         dev.overgrown.apoli.command.ApoliCloneCommand.register(event.getDispatcher());
         dev.overgrown.apoli.command.ApoliMountCommand.register(event.getDispatcher());
+        dev.overgrown.apoli.command.ApoliKeyCommand.register(event.getDispatcher());
         if (dev.overgrown.apoli.compat.ModCompat.anyAccessory()) {
             dev.overgrown.apoli.compat.accessory.command.AccessoryCommand.register(event.getDispatcher());
         }
@@ -329,6 +330,7 @@ public final class Apoli {
             }
         }
         dev.overgrown.apoli.entity.GrabManager.release(event.getEntity().getUUID());
+        dev.overgrown.apoli.entity.CameraPerspectives.remove(event.getEntity().getUUID());
         dev.overgrown.apoli.radial.RadialMenuManager.forget(event.getEntity().getUUID());
         dev.overgrown.apoli.power.builtin.ShaderPower.forget(event.getEntity().getUUID());
         dev.overgrown.apoli.entity.disguise.DisguiseManager.onPlayerLeave(event.getEntity().getUUID());
@@ -345,6 +347,10 @@ public final class Apoli {
         if (event.getEntity() instanceof ServerPlayer sp) {
             dev.overgrown.apoli.power.builtin.ActionOverTimePower.resetEdges(sp);
             resumePowers(sp);
+            dev.overgrown.apoli.power.PowerLookup.forEach(sp,
+                dev.overgrown.apoli.power.ApoliIds.STARTING_EQUIPMENT,
+                dev.overgrown.apoli.power.builtin.StartingEquipmentPower.Config.class,
+                cfg -> dev.overgrown.apoli.power.builtin.StartingEquipmentPower.onRespawn(sp, cfg));
             ActionOnCallbackPower.fireRespawn(sp);
         }
     }
@@ -413,10 +419,12 @@ public final class Apoli {
         dev.overgrown.apoli.rope.RopeManager.tick(event.getServer());
         dev.overgrown.apoli.entity.GrabManager.tick(event.getServer());
         dev.overgrown.apoli.entity.ProjectileTickManager.tick(event.getServer());
+        boolean forcedKeys = dev.overgrown.apoli.keybind.HeldKeys.anyForced();
         PoweredEntities.forEach(entity -> {
             PowerContainer c = PowerContainer.of(entity);
             if (!(c instanceof PowerContainerImpl impl)) return;
             impl.tickActive();
+            if (forcedKeys) dev.overgrown.apoli.keybind.KeyDispatch.tickForcedNonPlayer(entity);
             if (impl.isStructureDirty()) {
                 ApoliNetwork.sendEntityPowersToTrackersAndSelf(entity, new SyncEntityPowersS2C(
                     entity.getId(), impl.snapshot(), impl.auxIntSnapshot(), impl.suppressedPowers()));

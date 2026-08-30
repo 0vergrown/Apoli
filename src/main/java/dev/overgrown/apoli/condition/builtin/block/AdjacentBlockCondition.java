@@ -11,14 +11,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 
 public final class AdjacentBlockCondition implements ConditionType<BlockCtx, AdjacentBlockCondition.Cfg> {
-    public record Cfg(BlockCondition adjacentCondition, Comparison comparison, float compareTo) {}
+    public record Cfg(BlockCondition adjacentCondition, Comparison comparison, int compareTo) {}
 
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             BlockCondition.CODEC.fieldOf("adjacent_condition").forGetter(Cfg::adjacentCondition),
             Comparison.CODEC.fieldOf("comparison").forGetter(Cfg::comparison),
-            Codec.FLOAT.fieldOf("compare_to").forGetter(Cfg::compareTo)
+            Codec.INT.fieldOf("compare_to").forGetter(Cfg::compareTo)
         ).apply(i, Cfg::new));
     }
 

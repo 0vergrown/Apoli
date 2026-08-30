@@ -12,9 +12,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
+import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
@@ -32,11 +34,17 @@ public abstract class LivingEntityRendererPreventFeatureMixin {
         Entity source = rendered instanceof LivingEntity living
             ? ClientDisguiseManager.powerSource(living)
             : rendered;
+        Player viewer = Minecraft.getInstance().player;
         if (layer instanceof HumanoidArmorLayer<?, ?, ?>
             && InvisibilityPower.hidesArmor(source)
-            && rendered.isInvisibleTo(Minecraft.getInstance().player)) {
+            && rendered.isInvisibleTo(viewer)) {
             return false;
         }
-        return !PreventFeatureRenderPower.prevents(source, FeatureRenderers.keysFor(layer.getClass()));
+        if (layer instanceof ItemInHandLayer<?, ?>
+            && InvisibilityPower.hidesHeldItems(source)
+            && rendered.isInvisibleTo(viewer)) {
+            return false;
+        }
+        return !PreventFeatureRenderPower.prevents(source, FeatureRenderers.keysFor(layer.getClass()), viewer);
     }
 }
