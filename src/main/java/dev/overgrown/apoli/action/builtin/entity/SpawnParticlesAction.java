@@ -56,11 +56,18 @@ public final class SpawnParticlesAction implements ActionType<EntityCtx, SpawnPa
         double x = e.getX() + cfg.offsetX;
         double y = e.getY() + cfg.offsetY;
         double z = e.getZ() + cfg.offsetZ;
-        for (ServerPlayer player : level.players()) {
+        net.minecraft.network.protocol.Packet<?> packet = null;
+        java.util.List<ServerPlayer> players = level.players();
+        for (int i = 0; i < players.size(); i++) {
+            ServerPlayer player = players.get(i);
+            if (!dev.overgrown.apoli.data.ParticleBroadcast.inRange(player, cfg.force, x, y, z)) continue;
             if (cfg.bientityCondition.isPresent()
                 && !cfg.bientityCondition.get().test(BiEntityCtx.of(e, player, level))) continue;
-            level.sendParticles(player, opts, cfg.force,
-                x, y, z, cfg.count, cfg.spread.x(), cfg.spread.y(), cfg.spread.z(), cfg.speed);
+            if (packet == null) {
+                packet = dev.overgrown.apoli.data.ParticleBroadcast.packet(opts, cfg.force, x, y, z,
+                    cfg.count, cfg.spread.x(), cfg.spread.y(), cfg.spread.z(), cfg.speed);
+            }
+            dev.overgrown.apoli.data.ParticleBroadcast.send(level, player, packet);
         }
     }
 }

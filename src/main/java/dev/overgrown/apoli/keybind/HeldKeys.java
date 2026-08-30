@@ -65,6 +65,16 @@ public final class HeldKeys {
         if (keys.isEmpty()) FORCED.remove(entity);
     }
 
+    public static Set<String> forcedKeys(UUID entity) {
+        if (FORCED.isEmpty()) return Set.of();
+        Map<String, Integer> keys = FORCED.get(entity);
+        return keys == null || keys.isEmpty() ? Set.of() : keys.keySet();
+    }
+
+    public static boolean anyForced() {
+        return !FORCED.isEmpty();
+    }
+
     public static boolean forcedHeld(UUID entity, String key) {
         Map<String, Integer> keys = FORCED.get(entity);
         return keys != null && keys.containsKey(key);

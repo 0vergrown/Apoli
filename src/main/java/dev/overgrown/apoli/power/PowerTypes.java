@@ -53,6 +53,11 @@ public final class PowerTypes {
             new ActionOnKeySequencePower(),
             AliasingOptions.builder().addTypeAlias("sync:action_on_key_sequence").build()
         );
+        PowerTypeRegistry.register(
+            Apoli.id("action_on_scroll_wheel"),
+            new ActionOnScrollWheelPower(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("action_on_scroll")).build()
+        );
         PowerTypeRegistry.register(Apoli.id("entity_set"), new EntitySetPower());
         PowerTypeRegistry.register(Apoli.id("modify_type_tag"), new ModifyTypeTagPower(),
             AliasingOptions.builder().addTypeAlias(Apoli.id("entity_group")).build());

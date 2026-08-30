@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.mixin.flag;
 
 import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.client.render.ClientRenderFlags;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.power.PowerLookup;
@@ -46,7 +47,8 @@ public abstract class EntityGlowMixin {
         if (viewer == null) return null;
         EntityGlowPower.Config cfg = apoli$find(self, viewer, true);
         if (cfg != null) return cfg;
-        return self == viewer ? null : apoli$find(self, viewer, false);
+        if (self == viewer || !ClientRenderFlags.has(ClientRenderFlags.ENTITY_GLOW)) return null;
+        return apoli$find(self, viewer, false);
     }
 
     @Unique

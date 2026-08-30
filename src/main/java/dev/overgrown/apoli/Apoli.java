@@ -175,6 +175,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.command.ApoliDisguiseCommand.register(dispatcher);
             dev.overgrown.apoli.command.ApoliCloneCommand.register(dispatcher);
             dev.overgrown.apoli.command.ApoliMountCommand.register(dispatcher);
+            dev.overgrown.apoli.command.ApoliKeyCommand.register(dispatcher);
             if (dev.overgrown.apoli.compat.ModCompat.anyAccessory()) {
                 dev.overgrown.apoli.compat.accessory.command.AccessoryCommand.register(dispatcher);
             }
@@ -224,9 +225,23 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.network.payload.PlayerModelTypeC2S.TYPE, (payload, context) ->
                 context.player().server.execute(() -> dev.overgrown.apoli.entity.PlayerModelTypes.set(
                     context.player().getUUID(), payload.modelType())));
+        ServerPlayNetworking.registerGlobalReceiver(
+            dev.overgrown.apoli.network.payload.CameraPerspectiveC2S.TYPE, (payload, context) ->
+                context.player().server.execute(() -> dev.overgrown.apoli.entity.CameraPerspectives.set(
+                    context.player().getUUID(), payload.firstPerson())));
         ServerPlayNetworking.registerGlobalReceiver(KeyHeldC2S.TYPE, (payload, context) ->
             context.player().server.execute(() ->
                 HeldKeys.setServerHeld(context.player().getUUID(), payload.keys())));
+
+        ServerPlayNetworking.registerGlobalReceiver(
+            dev.overgrown.apoli.network.payload.ScrollWheelC2S.TYPE, (payload, context) -> {
+                ServerPlayer scroller = context.player();
+                context.server().execute(() -> dev.overgrown.apoli.power.builtin.ActionOnScrollWheelPower.scroll(
+                    scroller,
+                    payload.up() ? dev.overgrown.apoli.data.ScrollDirection.UP
+                        : dev.overgrown.apoli.data.ScrollDirection.DOWN,
+                    payload.notches()));
+            });
 
         ServerPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SpeechTriggerC2S.TYPE, (payload, context) -> {
             ServerPlayer sender = context.player();
@@ -246,6 +261,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.radial.RadialMenuManager.forget(handler.player.getUUID());
             dev.overgrown.apoli.power.builtin.ShaderPower.forget(handler.player.getUUID());
             dev.overgrown.apoli.entity.GrabManager.release(handler.player.getUUID());
+            dev.overgrown.apoli.entity.CameraPerspectives.remove(handler.player.getUUID());
         });
 
         ServerPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.ProtocolVersionPayload.TYPE, (payload, context) ->
@@ -342,6 +358,10 @@ public final class Apoli implements ModInitializer {
             PoweredEntities.unregister(oldPlayer);
             dev.overgrown.apoli.power.builtin.ActionOverTimePower.resetEdges(newPlayer);
             resumePowers(newPlayer);
+            dev.overgrown.apoli.power.PowerLookup.forEach(newPlayer,
+                dev.overgrown.apoli.power.ApoliIds.STARTING_EQUIPMENT,
+                dev.overgrown.apoli.power.builtin.StartingEquipmentPower.Config.class,
+                cfg -> dev.overgrown.apoli.power.builtin.StartingEquipmentPower.onRespawn(newPlayer, cfg));
             ActionOnCallbackPower.fireRespawn(newPlayer);
         });
 
@@ -410,10 +430,12 @@ public final class Apoli implements ModInitializer {
         dev.overgrown.apoli.rope.RopeManager.tick(server);
         dev.overgrown.apoli.entity.GrabManager.tick(server);
         dev.overgrown.apoli.entity.ProjectileTickManager.tick(server);
+        boolean forcedKeys = dev.overgrown.apoli.keybind.HeldKeys.anyForced();
         PoweredEntities.forEach(entity -> {
             PowerContainer c = PowerContainer.of(entity);
             if (!(c instanceof PowerContainerImpl impl)) return;
             impl.tickActive();
+            if (forcedKeys) dev.overgrown.apoli.keybind.KeyDispatch.tickForcedNonPlayer(entity);
             if (impl.isStructureDirty()) {
                 syncEntityToTrackers(entity, impl);
                 if (entity instanceof ServerPlayer sp) {

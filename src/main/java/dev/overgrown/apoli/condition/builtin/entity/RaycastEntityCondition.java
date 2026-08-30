@@ -89,9 +89,16 @@ public final class RaycastEntityCondition implements ConditionType<EntityCtx, Ra
             List<Entity> cands = level.getEntities(source, box, e ->
                 e != source && e.isPickable());
             for (Entity cand : cands) {
-                Optional<Vec3> inter = cand.getBoundingBox().clip(origin, endE);
-                if (inter.isEmpty()) continue;
-                if (blockHit != null && origin.distanceToSqr(inter.get()) > origin.distanceToSqr(blockHit.getLocation())) continue;
+                AABB targetBox = cand.getBoundingBox();
+                Vec3 hitPos;
+                if (targetBox.contains(origin)) {
+                    hitPos = origin;
+                } else {
+                    Optional<Vec3> inter = targetBox.clip(origin, endE);
+                    if (inter.isEmpty()) continue;
+                    hitPos = inter.get();
+                }
+                if (blockHit != null && origin.distanceToSqr(hitPos) > origin.distanceToSqr(blockHit.getLocation())) continue;
                 BiEntityCtx bctx = new BiEntityCtx(source, cand, level);
                 if (cfg.matchBientityCondition.isPresent() && !cfg.matchBientityCondition.get().test(bctx)) continue;
                 if (cfg.hitBientityCondition.isPresent() && !cfg.hitBientityCondition.get().test(bctx)) continue;

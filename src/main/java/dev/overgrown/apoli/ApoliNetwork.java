@@ -64,9 +64,14 @@ public final class ApoliNetwork {
         PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.RequestSkillStateC2S.TYPE, dev.overgrown.apoli.network.payload.RequestSkillStateC2S.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.RefundSkillC2S.TYPE, dev.overgrown.apoli.network.payload.RefundSkillC2S.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(KeyHeldC2S.TYPE, KeyHeldC2S.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.ScrollWheelC2S.TYPE,
+            dev.overgrown.apoli.network.payload.ScrollWheelC2S.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(
             dev.overgrown.apoli.network.payload.PlayerModelTypeC2S.TYPE,
             dev.overgrown.apoli.network.payload.PlayerModelTypeC2S.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(
+            dev.overgrown.apoli.network.payload.CameraPerspectiveC2S.TYPE,
+            dev.overgrown.apoli.network.payload.CameraPerspectiveC2S.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.SpeechTriggerC2S.TYPE, dev.overgrown.apoli.network.payload.SpeechTriggerC2S.STREAM_CODEC);
 
         PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.TYPE,
