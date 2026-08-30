@@ -72,10 +72,12 @@ public final class ApoliClient implements ClientModInitializer {
             dev.overgrown.apoli.entity.ApoliEntities.CLONE,
             dev.overgrown.apoli.client.summon.CloneRenderer::new);
 
-        PowerContainerAttachment.setClientLookup(entity ->
-            dev.overgrown.apoli.client.ClientPowerState.powersFor(entity.getId()).isEmpty()
-                ? null
-                : new ClientPowerContainer(entity));
+        PowerContainerAttachment.setClientLookup(dev.overgrown.apoli.client.ClientPowerState::containerFor);
+
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents.ENTITY_UNLOAD.register((entity, level) -> {
+            dev.overgrown.apoli.client.ClientPowerState.removeEntity(entity.getId());
+            dev.overgrown.apoli.client.ClientLabelState.removeEntity(entity.getId());
+        });
 
         dev.overgrown.apoli.power.PowerResources.setClientCooldownLookup((owner, powerId) ->
             owner == Minecraft.getInstance().player
@@ -248,6 +250,8 @@ public final class ApoliClient implements ClientModInitializer {
                 ClientPowerState.clear();
                 dev.overgrown.apoli.mount.MountOffsets.clearAll();
                 dev.overgrown.apoli.client.ShaderPowerState.clear();
+                dev.overgrown.apoli.client.render.BlockRenderRules.clear();
+                dev.overgrown.apoli.client.render.ClientRenderFlags.clear();
                 dev.overgrown.apoli.client.TextOverlayRenderer.clear();
                 dev.overgrown.apoli.client.ClientLabelState.clear();
                 RopeClientManager.clear();
@@ -272,6 +276,8 @@ public final class ApoliClient implements ClientModInitializer {
                 public void onResourceManagerReload(net.minecraft.server.packs.resources.ResourceManager manager) {
                     dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.onResourcesReloaded();
                     dev.overgrown.apoli.client.ShaderPowerState.invalidate();
+                    dev.overgrown.apoli.client.particle.ParticleSheet.clearCache();
+                    dev.overgrown.apoli.client.particle.ParticleTextures.clearCache();
                 }
             });
 
@@ -289,6 +295,8 @@ public final class ApoliClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             dev.overgrown.apoli.client.CursorSpeedState.tick(mc);
+            dev.overgrown.apoli.client.render.ClientRenderFlags.clientTick(mc);
+            dev.overgrown.apoli.client.render.BlockRenderRules.clientTick(mc);
             if (mc.player != null && !mc.isPaused()) {
                 ApoliKeyHandler.onClientTick();
                 while (SKILL_TREE_KEY.consumeClick()) {
@@ -309,6 +317,7 @@ public final class ApoliClient implements ClientModInitializer {
                 dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.tick(mc);
             }
             dev.overgrown.apoli.client.PlayerModelTypeReporter.tick(mc);
+            dev.overgrown.apoli.client.CameraPerspectiveReporter.tick(mc);
             dev.overgrown.apoli.client.ForcedKeys.tick();
         });
 

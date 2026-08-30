@@ -98,6 +98,20 @@ public final class ClientPowerState {
         ENTITY_AUX.remove(entityId);
         ENTITY_SUPPRESSED.remove(entityId);
         ENTITY_TABLES.remove(entityId);
+        CONTAINERS.remove(entityId);
+    }
+
+    private static final Map<Integer, ClientPowerContainer> CONTAINERS = new ConcurrentHashMap<>();
+
+    public static @org.jetbrains.annotations.Nullable ClientPowerContainer containerFor(
+            net.minecraft.world.entity.Entity entity) {
+        int id = entity.getId();
+        if (powersFor(id).isEmpty()) return null;
+        ClientPowerContainer cached = CONTAINERS.get(id);
+        if (cached != null && cached.rawOwner() == entity) return cached;
+        ClientPowerContainer created = new ClientPowerContainer(entity);
+        CONTAINERS.put(id, created);
+        return created;
     }
 
     private static final Map<Integer, Map<ResourceLocation, int[]>> ENTITY_TABLES = new ConcurrentHashMap<>();
@@ -129,6 +143,7 @@ public final class ClientPowerState {
         ENTITY_AUX.clear();
         ENTITY_SUPPRESSED.clear();
         ENTITY_TABLES.clear();
+        CONTAINERS.clear();
         COOLDOWNS.clear();
     }
 

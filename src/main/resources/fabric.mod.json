@@ -44,7 +44,8 @@
     "apoli-skinlayers.mixins.json",
     "apoli-ears.mixins.json",
     "apoli-bettercombat.mixins.json",
-    "apoli-walkers.mixins.json"
+    "apoli-walkers.mixins.json",
+    "apoli-sodium.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.19.3",
@@ -53,6 +54,6 @@
     "fabric-api": "*"
   },
   "breaks": {
-    "origins": "<1.24.0"
+    "origins": "<1.25.2"
   }
 }

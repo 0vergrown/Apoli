@@ -12,7 +12,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
-public record ParticleEffect(Dynamic<?> raw) {
+public final class ParticleEffect {
 
     public static final ParticleEffect EMPTY =
         new ParticleEffect(new Dynamic<>(JsonOps.INSTANCE).createString("minecraft:poof"));
@@ -22,7 +22,28 @@ public record ParticleEffect(Dynamic<?> raw) {
         ParticleEffect::raw
     );
 
+    private record Resolved(@Nullable ParticleOptions options) {}
+
+    private final Dynamic<?> raw;
+    private volatile @Nullable Resolved resolved;
+
+    public ParticleEffect(Dynamic<?> raw) {
+        this.raw = raw;
+    }
+
+    public Dynamic<?> raw() {
+        return this.raw;
+    }
+
     public @Nullable ParticleOptions resolve(net.minecraft.world.level.Level level) {
+        Resolved hit = this.resolved;
+        if (hit != null) return hit.options();
+        ParticleOptions built = parse();
+        this.resolved = new Resolved(built);
+        return built;
+    }
+
+    private @Nullable ParticleOptions parse() {
         Dynamic<JsonElement> data = raw.convert(JsonOps.INSTANCE);
 
         String simple = data.asString().result().orElse(null);
@@ -53,5 +74,20 @@ public record ParticleEffect(Dynamic<?> raw) {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        return this == other || (other instanceof ParticleEffect effect && this.raw.equals(effect.raw));
+    }
+
+    @Override
+    public int hashCode() {
+        return this.raw.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "ParticleEffect[" + this.raw + "]";
     }
 }

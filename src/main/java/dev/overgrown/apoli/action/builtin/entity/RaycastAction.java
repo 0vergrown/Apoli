@@ -307,10 +307,15 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
                     dSq = dist * dist;
                 } else {
                     AABB targetBox = maxRadius > 0 ? cand.getBoundingBox().inflate(rx, ry, rz) : cand.getBoundingBox();
-                    Optional<Vec3> inter = targetBox.clip(origin, endE);
-                    if (inter.isEmpty()) continue;
-                    hitPos = inter.get();
-                    dSq = origin.distanceToSqr(hitPos);
+                    if (targetBox.contains(origin)) {
+                        hitPos = origin;
+                        dSq = 0.0;
+                    } else {
+                        Optional<Vec3> inter = targetBox.clip(origin, endE);
+                        if (inter.isEmpty()) continue;
+                        hitPos = inter.get();
+                        dSq = origin.distanceToSqr(hitPos);
+                    }
                 }
                 if (!pierceBlocks && dSq > blockHitDistSq) continue;
                 hits.add(new EntityHit(cand, hitPos, dSq));

@@ -1,13 +1,20 @@
 package dev.overgrown.apoli.client;
 
+import dev.overgrown.apoli.power.ApoliPowers;
+import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
+import dev.overgrown.apoli.power.PowerTypeRegistry;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.OptionalInt;
 import java.util.Set;
 
@@ -15,8 +22,32 @@ import java.util.Set;
 public final class ClientPowerContainer implements PowerContainer {
     private final Entity entity;
 
+    private Map<ResourceLocation, Set<ResourceLocation>> indexedFrom;
+    private Map<ResourceLocation, List<ResourceLocation>> typeIndex;
+    private int indexedGeneration = -1;
+
     public ClientPowerContainer(Entity entity) {
         this.entity = entity;
+    }
+
+    @Override
+    public List<ResourceLocation> powersOfType(ResourceLocation canonicalTypeId) {
+        Map<ResourceLocation, Set<ResourceLocation>> powers = ClientPowerState.powersFor(entity.getId());
+        int generation = ApoliPowers.generation();
+        if (this.typeIndex == null || this.indexedFrom != powers || this.indexedGeneration != generation) {
+            Map<ResourceLocation, List<ResourceLocation>> index = new HashMap<>();
+            for (ResourceLocation powerId : powers.keySet()) {
+                Power power = ApoliPowers.get(powerId);
+                if (power == null) continue;
+                index.computeIfAbsent(PowerTypeRegistry.resolveId(power.typeId()), key -> new ArrayList<>(2))
+                    .add(powerId);
+            }
+            this.typeIndex = index;
+            this.indexedFrom = powers;
+            this.indexedGeneration = generation;
+        }
+        List<ResourceLocation> found = this.typeIndex.get(canonicalTypeId);
+        return found == null ? List.of() : found;
     }
 
     @Override

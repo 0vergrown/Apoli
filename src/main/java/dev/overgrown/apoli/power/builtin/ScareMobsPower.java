@@ -4,42 +4,44 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.BiEntityCondition;
+import dev.overgrown.apoli.power.ApoliIds;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerType;
-import net.minecraft.resources.ResourceLocation;
+import dev.overgrown.apoli.power.PoweredEntities;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.Level;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 public final class ScareMobsPower extends PowerType<ScareMobsPower.Config> {
     public record Config(Optional<BiEntityCondition> bientityCondition, double radius, double speed) {}
 
-    private static final Set<UUID> HOLDERS = ConcurrentHashMap.newKeySet();
+    private static final List<LivingEntity> FOUND = new ArrayList<>(4);
+    private static long scannedTick = Long.MIN_VALUE;
 
-    public static boolean anyHolders() {
-        return !HOLDERS.isEmpty();
+    public static List<LivingEntity> holders(Level level) {
+        long now = level.getGameTime();
+        if (now == scannedTick) return FOUND;
+        scannedTick = now;
+        FOUND.clear();
+        PoweredEntities.forEach(ScareMobsPower::collect);
+        return FOUND;
     }
 
-    @Override
-    public void onAdded(ResourceLocation powerId, Config cfg, PowerContainer holder, ResourceLocation source) {
-        Entity owner = holder.rawOwner();
-        if (owner != null) HOLDERS.add(owner.getUUID());
-    }
-
-    @Override
-    public void onRemoved(ResourceLocation powerId, Config cfg, PowerContainer holder, ResourceLocation source) {
-        Entity owner = holder.rawOwner();
-        if (owner == null) return;
-        if (holder.powersOfType(dev.overgrown.apoli.power.ApoliIds.SCARE_MOBS).isEmpty()) {
-            HOLDERS.remove(owner.getUUID());
+    private static void collect(Entity entity) {
+        if (!(entity instanceof LivingEntity living) || !living.isAlive()) return;
+        PowerContainer container = PowerContainer.of(entity);
+        if (container == null || container.isEmpty()) return;
+        List<net.minecraft.resources.ResourceLocation> powers = container.powersOfType(ApoliIds.SCARE_MOBS);
+        for (int i = 0; i < powers.size(); i++) {
+            if (!container.isSuppressed(powers.get(i))) {
+                FOUND.add(living);
+                return;
+            }
         }
-    }
-
-    public static void onEntityGone(UUID uuid) {
-        HOLDERS.remove(uuid);
     }
 
     @Override

@@ -16,6 +16,8 @@ public final class ApoliIds {
     public static final ResourceLocation PREVENT_GAME_EVENT = Apoli.id("prevent_game_event");
     public static final ResourceLocation PREVENT_SLEEP = Apoli.id("prevent_sleep");
     public static final ResourceLocation WALK_ON_FLUID = Apoli.id("walk_on_fluid");
+    public static final ResourceLocation IGNORE_FLUID = Apoli.id("ignore_fluid");
+    public static final ResourceLocation STARTING_EQUIPMENT = Apoli.id("starting_equipment");
     public static final ResourceLocation MODIFY_FALLING = Apoli.id("modify_falling");
     public static final ResourceLocation MODIFY_AIR_SPEED = Apoli.id("modify_air_speed");
     public static final ResourceLocation MODIFY_STATUS_EFFECT_AMPLIFIER = Apoli.id("modify_status_effect_amplifier");
@@ -37,6 +39,7 @@ public final class ApoliIds {
     public static final ResourceLocation ACTION_ON_SENDING_MESSAGE = Apoli.id("action_on_sending_message");
     public static final ResourceLocation ACTION_ON_SPEECH = Apoli.id("action_on_speech");
     public static final ResourceLocation ACTION_ON_KEY_SEQUENCE = Apoli.id("action_on_key_sequence");
+    public static final ResourceLocation ACTION_ON_SCROLL_WHEEL = Apoli.id("action_on_scroll_wheel");
     public static final ResourceLocation SHOW_BOTH_ARMS = Apoli.id("show_both_arms");
     public static final ResourceLocation EMISSIVE = Apoli.id("emissive");
     public static final ResourceLocation CREATIVE_FLIGHT = Apoli.id("creative_flight");
@@ -54,6 +57,7 @@ public final class ApoliIds {
     public static final ResourceLocation MODIFY_SWIM_SPEED = Apoli.id("modify_swim_speed");
     public static final ResourceLocation WATER_BREATHING = Apoli.id("water_breathing");
     public static final ResourceLocation PREVENT_ENTITY_RENDER = Apoli.id("prevent_entity_render");
+    public static final ResourceLocation PREVENT_ENTITY_SELECTION = Apoli.id("prevent_entity_selection");
     public static final ResourceLocation PREVENT_BLOCK_SELECTION = Apoli.id("prevent_block_selection");
     public static final ResourceLocation ACTION_ON_WAKE_UP = Apoli.id("action_on_wake_up");
     public static final ResourceLocation MODIFY_BLOCK_RENDER = Apoli.id("modify_block_render");
