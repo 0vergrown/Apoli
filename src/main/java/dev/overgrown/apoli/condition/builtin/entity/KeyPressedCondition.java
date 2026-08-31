@@ -28,6 +28,7 @@ public final class KeyPressedCondition implements ConditionType<EntityCtx, KeyPr
         if (level != null && level.isClientSide()) {
             return HeldKeys.clientHeld(entity, key);
         }
+        if (dev.overgrown.apoli.keybind.KeyDispatch.blocked(entity, key)) return false;
         return HeldKeys.serverHeld(entity.getUUID(), key);
     }
 }

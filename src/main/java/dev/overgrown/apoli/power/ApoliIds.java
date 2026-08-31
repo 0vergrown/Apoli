@@ -11,6 +11,8 @@ public final class ApoliIds {
     public static final ResourceLocation INVISIBILITY = Apoli.id("invisibility");
     public static final ResourceLocation ELYTRA_FLIGHT = Apoli.id("elytra_flight");
     public static final ResourceLocation DISABLE_REGEN = Apoli.id("disable_regen");
+    public static final ResourceLocation MODIFY_HARVEST = Apoli.id("modify_harvest");
+    public static final ResourceLocation PREVENT_TELEPORT = Apoli.id("prevent_teleport");
     public static final ResourceLocation ENTITY_GLOW = Apoli.id("entity_glow");
     public static final ResourceLocation RESTRICT_ARMOR = Apoli.id("restrict_armor");
     public static final ResourceLocation PREVENT_GAME_EVENT = Apoli.id("prevent_game_event");
@@ -67,6 +69,7 @@ public final class ApoliIds {
     public static final ResourceLocation MODIFY_PLAYER_SPAWN = Apoli.id("modify_player_spawn");
     public static final ResourceLocation PREVENT_ITEM_USE = Apoli.id("prevent_item_use");
     public static final ResourceLocation ITEM_ON_ITEM = Apoli.id("item_on_item");
+    public static final ResourceLocation PREVENT_KEY_PRESS = Apoli.id("prevent_key_press");
 
     private ApoliIds() {}
 }

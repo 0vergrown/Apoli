@@ -29,6 +29,14 @@ public class CustomParticle extends SingleQuadParticle {
     private final float startSize;
     private final float endSize;
     private final float rollStep;
+    private final float startRed;
+    private final float startGreen;
+    private final float startBlue;
+    private final float startAlpha;
+    private final float endRed;
+    private final float endGreen;
+    private final float endBlue;
+    private final float endAlpha;
     private int cell;
 
     protected CustomParticle(ClientLevel level, CustomParticleOptions options,
@@ -59,6 +67,30 @@ public class CustomParticle extends SingleQuadParticle {
         this.oRoll = this.roll;
         this.rollStep = options.rollSpeed() * Mth.DEG_TO_RAD;
         this.cell = this.sheet.cellAt(0, this.lifetime, this.loopFrames);
+
+        int from = options.color();
+        int to = options.endColorOr();
+        if (options.hueVariation() != 0.0F) {
+            float degrees = (this.random.nextFloat() * 2.0F - 1.0F) * options.hueVariation();
+            from = ColorCodecs.rotateHue(from, degrees);
+            to = ColorCodecs.rotateHue(to, degrees);
+        }
+        if (options.colorVariation() != 0.0F) {
+            float spread = options.colorVariation();
+            float dRed = (this.random.nextFloat() * 2.0F - 1.0F) * spread;
+            float dGreen = (this.random.nextFloat() * 2.0F - 1.0F) * spread;
+            float dBlue = (this.random.nextFloat() * 2.0F - 1.0F) * spread;
+            from = ColorCodecs.offsetRgb(from, dRed, dGreen, dBlue);
+            to = ColorCodecs.offsetRgb(to, dRed, dGreen, dBlue);
+        }
+        this.startRed = ColorCodecs.red(from);
+        this.startGreen = ColorCodecs.green(from);
+        this.startBlue = ColorCodecs.blue(from);
+        this.startAlpha = ColorCodecs.alpha(from);
+        this.endRed = ColorCodecs.red(to);
+        this.endGreen = ColorCodecs.green(to);
+        this.endBlue = ColorCodecs.blue(to);
+        this.endAlpha = ColorCodecs.alpha(to);
         tint(0.0F);
     }
 
@@ -74,12 +106,10 @@ public class CustomParticle extends SingleQuadParticle {
 
     private void tint(float progress) {
         float eased = this.options.easing().apply(progress);
-        int from = this.options.color();
-        int to = this.options.endColorOr();
-        this.rCol = Mth.lerp(eased, ColorCodecs.red(from), ColorCodecs.red(to));
-        this.gCol = Mth.lerp(eased, ColorCodecs.green(from), ColorCodecs.green(to));
-        this.bCol = Mth.lerp(eased, ColorCodecs.blue(from), ColorCodecs.blue(to));
-        this.alpha = Mth.lerp(eased, ColorCodecs.alpha(from), ColorCodecs.alpha(to));
+        this.rCol = Mth.lerp(eased, this.startRed, this.endRed);
+        this.gCol = Mth.lerp(eased, this.startGreen, this.endGreen);
+        this.bCol = Mth.lerp(eased, this.startBlue, this.endBlue);
+        this.alpha = Mth.lerp(eased, this.startAlpha, this.endAlpha);
     }
 
     @Override

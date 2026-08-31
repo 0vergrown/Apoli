@@ -14,6 +14,7 @@ import dev.overgrown.apoli.power.PowerTypeRegistry;
 import dev.overgrown.apoli.power.builtin.ActionOnKeyPressPower;
 import dev.overgrown.apoli.power.builtin.FireProjectilePower;
 import dev.overgrown.apoli.power.builtin.InventoryPower;
+import dev.overgrown.apoli.power.builtin.PreventKeyPressPower;
 import dev.overgrown.apoli.power.builtin.TogglePower;
 import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.network.payload.ForceKeyS2C;
@@ -31,6 +32,7 @@ public final class KeyDispatch {
     public static void force(Entity entity, String key, int duration, boolean release) {
         if (entity == null || !(entity.level() instanceof ServerLevel)) return;
         if (key == null || key.isEmpty()) return;
+        if (!release && PreventKeyPressPower.blocksForcedKeys(entity, key)) return;
 
         if (entity instanceof ServerPlayer player) {
             ApoliNetwork.sendForceKey(player, new ForceKeyS2C(key, Math.max(1, duration), release));
@@ -56,6 +58,14 @@ public final class KeyDispatch {
         return dispatch(entity, key, false);
     }
 
+    public static boolean blocked(Entity entity, String key) {
+        if (!PreventKeyPressPower.any(entity)) return false;
+        if (HeldKeys.forcedHeld(entity.getUUID(), key)) {
+            return PreventKeyPressPower.blocksForcedKeys(entity, key);
+        }
+        return PreventKeyPressPower.blocks(entity, key);
+    }
+
     private static int dispatch(Entity entity, String key, boolean continuousOnly) {
         if (entity == null || !(entity.level() instanceof ServerLevel level)) return 0;
         PowerContainer container = PowerContainer.of(entity);
@@ -63,6 +73,7 @@ public final class KeyDispatch {
 
         List<ResourceLocation> candidates = PowerKeys.heldPowersUsingKey(container, key);
         if (candidates.isEmpty()) return 0;
+        if (blocked(entity, key)) return 0;
 
         EntityCtx ctx = new EntityCtx(entity, level);
         ServerPlayer player = entity instanceof ServerPlayer sp ? sp : null;

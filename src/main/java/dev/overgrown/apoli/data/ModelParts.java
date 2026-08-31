@@ -57,6 +57,8 @@ public final class ModelParts {
         list -> list.size() == 1 ? Either.left(list.get(0)) : Either.right(list)
     );
 
+    public static final Codec<String> NAME_CODEC = Codec.STRING.xmap(ModelParts::normalize, Function.identity());
+
     public static String normalize(String name) {
         return name.toLowerCase(Locale.ROOT).replace("_", "").replace(" ", "").replace("-", "");
     }

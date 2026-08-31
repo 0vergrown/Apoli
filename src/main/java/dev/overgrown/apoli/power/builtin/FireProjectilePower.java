@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.power.builtin;
 
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -15,6 +16,7 @@ import dev.overgrown.apoli.entity.ProjectileHitActions;
 import dev.overgrown.apoli.data.HudRender;
 import dev.overgrown.apoli.data.Key;
 import dev.overgrown.apoli.data.Nbt;
+import dev.overgrown.apoli.data.Space;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.power.PowerType;
@@ -55,8 +57,20 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         Optional<Nbt> tag,
         boolean allowConditionalCancelling,
         boolean blockActionCancelsMissAction,
-        Optional<Key> key
-    ) {}
+        Optional<Key> key,
+        float offsetX,
+        float offsetY,
+        float offsetZ,
+        Space space
+    ) {
+        Params withSpawn(Spawn spawn) {
+            return new Params(entityType, textureLocation, cooldown, hudRender, count, interval, startDelay,
+                speed, divergence, sound, tag, allowConditionalCancelling, blockActionCancelsMissAction, key,
+                spawn.offsetX(), spawn.offsetY(), spawn.offsetZ(), spawn.space());
+        }
+    }
+
+    private record Spawn(float offsetX, float offsetY, float offsetZ, Space space) {}
 
     public record Hooks(
         Optional<EntityAction> entityActionBeforeFiring,
@@ -73,7 +87,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         Optional<EntityAction> shooterAction
     ) {}
 
-    private static final MapCodec<Params> PARAMS = RecordCodecBuilder.mapCodec(i -> i.group(
+    private static final MapCodec<Params> PARAMS_BODY = RecordCodecBuilder.mapCodec(i -> i.group(
         IdCodecs.ID.optionalFieldOf("entity_type").forGetter(Params::entityType),
         IdCodecs.ID.optionalFieldOf("texture_location").forGetter(Params::textureLocation),
         Expression.INT_OR_EXPR.optionalFieldOf("cooldown", Expression.constant(1)).forGetter(Params::cooldown),
@@ -88,7 +102,21 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         Codec.BOOL.optionalFieldOf("allow_conditional_cancelling", false).forGetter(Params::allowConditionalCancelling),
         Codec.BOOL.optionalFieldOf("block_action_cancels_miss_action", false).forGetter(Params::blockActionCancelsMissAction),
         Key.CODEC.optionalFieldOf("key").forGetter(Params::key)
-    ).apply(i, Params::new));
+    ).apply(i, (entityType, textureLocation, cooldown, hudRender, count, interval, startDelay, speed, divergence,
+                sound, tag, allowConditionalCancelling, blockActionCancelsMissAction, key) ->
+        new Params(entityType, textureLocation, cooldown, hudRender, count, interval, startDelay, speed, divergence,
+            sound, tag, allowConditionalCancelling, blockActionCancelsMissAction, key, 0f, 0f, 0f, Space.WORLD)));
+
+    private static final MapCodec<Spawn> PARAMS_SPAWN = RecordCodecBuilder.mapCodec(i -> i.group(
+        Codec.FLOAT.optionalFieldOf("offset_x", 0f).forGetter(Spawn::offsetX),
+        Codec.FLOAT.optionalFieldOf("offset_y", 0f).forGetter(Spawn::offsetY),
+        Codec.FLOAT.optionalFieldOf("offset_z", 0f).forGetter(Spawn::offsetZ),
+        Space.CODEC.optionalFieldOf("space", Space.WORLD).forGetter(Spawn::space)
+    ).apply(i, Spawn::new));
+
+    private static final MapCodec<Params> PARAMS = Codec.mapPair(PARAMS_BODY, PARAMS_SPAWN).xmap(
+        pair -> pair.getFirst().withSpawn(pair.getSecond()),
+        params -> Pair.of(params, new Spawn(params.offsetX(), params.offsetY(), params.offsetZ(), params.space())));
 
     private static final MapCodec<Hooks> HOOKS = RecordCodecBuilder.mapCodec(i -> i.group(
         dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action_before_firing", EntityAction.CODEC).forGetter(Hooks::entityActionBeforeFiring),
@@ -270,7 +298,9 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
 
         float yaw = owner.getYRot();
         float pitch = owner.getXRot();
-        projectile.moveTo(owner.getX(), owner.getEyeY(), owner.getZ(), yaw, pitch);
+        Vec3 spawn = new Vec3(owner.getX(), owner.getEyeY(), owner.getZ())
+            .add(p.space().toGlobal(owner, new Vec3(p.offsetX(), p.offsetY(), p.offsetZ())));
+        projectile.moveTo(spawn.x, spawn.y, spawn.z, yaw, pitch);
 
         if (projectile instanceof Projectile proj) {
             proj.setOwner(owner);
@@ -298,6 +328,10 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         level.addFreshEntity(projectile);
 
         cfg.hooks().projectileAction().ifPresent(a -> a.run(new EntityCtx(projectile, level)));
+        if (projectile instanceof CustomProjectileEntity custom) {
+            ResourceLocation modelPower = CustomModelRenderPower.firstGeometryPowerId(projectile);
+            if (modelPower != null) custom.setModelPower(modelPower);
+        }
         cfg.hooks().bientityActionAfterFiring().ifPresent(a ->
             a.run(dev.overgrown.apoli.condition.context.BiEntityCtx.of(owner, projectile, level)));
         cfg.hooks().tickBientityAction().ifPresent(a ->

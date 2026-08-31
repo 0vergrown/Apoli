@@ -257,6 +257,7 @@ public final class ApoliClient implements ClientModInitializer {
                 RopeClientManager.clear();
                 KeyPressWatcher.reset();
                 dev.overgrown.apoli.client.ForcedKeys.clear();
+                dev.overgrown.apoli.client.BlockedKeys.clear();
                 dev.overgrown.apoli.client.CursorSpeedState.reset();
                 dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
                 dev.overgrown.apoli.client.skill.ClientSkillState.clear();

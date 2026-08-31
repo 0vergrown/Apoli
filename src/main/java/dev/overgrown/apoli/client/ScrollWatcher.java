@@ -20,6 +20,7 @@ public final class ScrollWatcher {
         if (delta == 0) return false;
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.screen != null) return false;
+        if (BlockedKeys.blocksScroll()) return true;
 
         ScrollDirection notch = ScrollDirection.ofDelta(delta);
         if (!ActionOnScrollWheelPower.anyAccepting(mc.player, notch)) return false;

@@ -26,6 +26,7 @@ public final class MetaActions {
     private static final ResourceLocation IF_ELSE = Apoli.id("if_else");
     private static final ResourceLocation IF_ELSE_LIST = Apoli.id("if_else_list");
     private static final ResourceLocation IF_CASE = Apoli.id("if_case");
+    private static final ResourceLocation NOTHING = Apoli.id("nothing");
 
     private static AliasingOptions chanceAliases() {
         return AliasingOptions.builder().addTypeAlias(Apoli.id("chance")).build();
@@ -46,6 +47,7 @@ public final class MetaActions {
             EntityCondition::test, EntityAction::run));
         reg.register(IF_CASE, new IfCaseMetaAction<>(EntityCondition.CODEC, EntityAction.CODEC,
             EntityCondition::test, EntityAction::run));
+        reg.register(NOTHING, new NothingMetaAction<>());
     }
 
     public static void registerBiEntity() {
@@ -63,6 +65,7 @@ public final class MetaActions {
             BiEntityCondition::test, BiEntityAction::run));
         reg.register(IF_CASE, new IfCaseMetaAction<>(BiEntityCondition.CODEC, BiEntityAction.CODEC,
             BiEntityCondition::test, BiEntityAction::run));
+        reg.register(NOTHING, new NothingMetaAction<>());
     }
 
     public static void registerBlock() {
@@ -80,6 +83,7 @@ public final class MetaActions {
             BlockCondition::test, BlockAction::run));
         reg.register(IF_CASE, new IfCaseMetaAction<>(BlockCondition.CODEC, BlockAction.CODEC,
             BlockCondition::test, BlockAction::run));
+        reg.register(NOTHING, new NothingMetaAction<>());
     }
 
     public static void registerItem() {
@@ -97,5 +101,6 @@ public final class MetaActions {
             ItemCondition::test, ItemAction::run));
         reg.register(IF_CASE, new IfCaseMetaAction<>(ItemCondition.CODEC, ItemAction.CODEC,
             ItemCondition::test, ItemAction::run));
+        reg.register(NOTHING, new NothingMetaAction<>());
     }
 }
