@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.network.payload;
 
 import dev.overgrown.apoli.Apoli;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -29,7 +30,10 @@ public record RadialMenuOpenS2C(int nonce, Optional<ResourceLocation> sprite, Li
         int iconWidth,
         int iconHeight,
         int itemWidth,
-        int itemHeight
+        int itemHeight,
+        int offsetX,
+        int offsetY,
+        Optional<Float> angle
     ) {}
 
     public static final Type<RadialMenuOpenS2C> TYPE = new Type<>(Apoli.id("radial_menu_open"));
@@ -60,6 +64,9 @@ public record RadialMenuOpenS2C(int nonce, Optional<ResourceLocation> sprite, Li
             buf.writeVarInt(e.iconHeight);
             buf.writeVarInt(e.itemWidth);
             buf.writeVarInt(e.itemHeight);
+            buf.writeInt(e.offsetX);
+            buf.writeInt(e.offsetY);
+            buf.writeOptional(e.angle, (b, v) -> b.writeFloat(v));
         }
     }
 
@@ -85,8 +92,12 @@ public record RadialMenuOpenS2C(int nonce, Optional<ResourceLocation> sprite, Li
             int iconHeight = buf.readVarInt();
             int itemWidth = buf.readVarInt();
             int itemHeight = buf.readVarInt();
+            int offsetX = buf.readInt();
+            int offsetY = buf.readInt();
+            Optional<Float> angle = buf.readOptional(FriendlyByteBuf::readFloat);
             entries.add(new Entry(item, buttonTexture, icon, highlightIcon, highlightButtonTexture,
-                tooltip, distance, velocity, buttonWidth, buttonHeight, iconWidth, iconHeight, itemWidth, itemHeight));
+                tooltip, distance, velocity, buttonWidth, buttonHeight, iconWidth, iconHeight, itemWidth, itemHeight,
+                offsetX, offsetY, angle));
         }
         return new RadialMenuOpenS2C(nonce, sprite, entries);
     }

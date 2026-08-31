@@ -164,6 +164,7 @@ public final class ApoliClient {
             RopeClientManager.clear();
             KeyPressWatcher.reset();
             ForcedKeys.clear();
+                BlockedKeys.clear();
             CursorSpeedState.reset();
             dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
             dev.overgrown.apoli.client.skill.ClientSkillState.clear();

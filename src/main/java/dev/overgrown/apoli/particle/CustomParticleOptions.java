@@ -36,7 +36,9 @@ public record CustomParticleOptions(
     ParticleBlend blend,
     ParticleFacing facing,
     Easing easing,
-    ParticleFrameLayout frameLayout
+    ParticleFrameLayout frameLayout,
+    float colorVariation,
+    float hueVariation
 ) implements ParticleOptions {
 
     private static final int FLAG_LOOP_VALUE = 1;
@@ -49,7 +51,8 @@ public record CustomParticleOptions(
     private static final int LAYOUT_MASK = 3;
 
     private record Extra(ParticleBlend blend, ParticleFacing facing, Easing easing,
-                        ParticleFrameLayout frameLayout, float sizeVariation) {}
+                         ParticleFrameLayout frameLayout, float sizeVariation,
+                         float colorVariation, float hueVariation) {}
 
     private static final MapCodec<CustomParticleOptions> BODY_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
         IdCodecs.ID.fieldOf("texture").forGetter(CustomParticleOptions::texture),
@@ -72,20 +75,22 @@ public record CustomParticleOptions(
                        roll, rollSpeed, frames, frameTime, loopFrames, physics, emissive) ->
         new CustomParticleOptions(texture, lifetime, lifetimeVariation, size, 0.0F, endSize, color, endColor, gravity,
             friction, roll, rollSpeed, frames, frameTime, loopFrames, physics, emissive,
-            ParticleBlend.TRANSLUCENT, ParticleFacing.CAMERA, Easing.LINEAR, ParticleFrameLayout.AUTO)));
+            ParticleBlend.TRANSLUCENT, ParticleFacing.CAMERA, Easing.LINEAR, ParticleFrameLayout.AUTO, 0.0F, 0.0F)));
 
     private static final MapCodec<Extra> EXTRA_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
         ParticleBlend.CODEC.optionalFieldOf("blend", ParticleBlend.TRANSLUCENT).forGetter(Extra::blend),
         ParticleFacing.CODEC.optionalFieldOf("facing", ParticleFacing.CAMERA).forGetter(Extra::facing),
         Easing.CODEC.optionalFieldOf("easing", Easing.LINEAR).forGetter(Extra::easing),
         ParticleFrameLayout.CODEC.optionalFieldOf("frame_layout", ParticleFrameLayout.AUTO).forGetter(Extra::frameLayout),
-        Codec.FLOAT.optionalFieldOf("size_variation", 0.0F).forGetter(Extra::sizeVariation)
+        Codec.FLOAT.optionalFieldOf("size_variation", 0.0F).forGetter(Extra::sizeVariation),
+        Codec.FLOAT.optionalFieldOf("color_variation", 0.0F).forGetter(Extra::colorVariation),
+        Codec.FLOAT.optionalFieldOf("hue_variation", 0.0F).forGetter(Extra::hueVariation)
     ).apply(instance, Extra::new));
 
     public static final MapCodec<CustomParticleOptions> CODEC = Codec.mapPair(BODY_CODEC, EXTRA_CODEC).xmap(
         pair -> pair.getFirst().withExtra(pair.getSecond()),
         options -> Pair.of(options, new Extra(options.blend(), options.facing(), options.easing(),
-            options.frameLayout(), options.sizeVariation())));
+            options.frameLayout(), options.sizeVariation(), options.colorVariation(), options.hueVariation())));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, CustomParticleOptions> STREAM_CODEC = StreamCodec.of(
         (buf, options) -> options.write(buf),
@@ -94,7 +99,8 @@ public record CustomParticleOptions(
     private CustomParticleOptions withExtra(Extra extra) {
         return new CustomParticleOptions(texture, lifetime, lifetimeVariation, size, extra.sizeVariation(),
             endSize, color, endColor, gravity, friction, roll, rollSpeed, frames, frameTime, loopFrames,
-            physics, emissive, extra.blend(), extra.facing(), extra.easing(), extra.frameLayout());
+            physics, emissive, extra.blend(), extra.facing(), extra.easing(), extra.frameLayout(),
+            extra.colorVariation(), extra.hueVariation());
     }
 
     public float endSizeOr() {
@@ -129,6 +135,8 @@ public record CustomParticleOptions(
             | (frameLayout.ordinal() << LAYOUT_SHIFT);
         buf.writeByte(flags);
         buf.writeByte(easing.ordinal());
+        buf.writeFloat(colorVariation);
+        buf.writeFloat(hueVariation);
     }
 
     private static CustomParticleOptions read(RegistryFriendlyByteBuf buf) {
@@ -150,6 +158,8 @@ public record CustomParticleOptions(
         Easing[] easings = Easing.values();
         int easingIndex = buf.readByte();
         Easing easing = easingIndex >= 0 && easingIndex < easings.length ? easings[easingIndex] : Easing.LINEAR;
+        float colorVariation = buf.readFloat();
+        float hueVariation = buf.readFloat();
         ParticleFrameLayout[] layouts = ParticleFrameLayout.values();
         ParticleFrameLayout layout = layouts[(flags >> LAYOUT_SHIFT) & LAYOUT_MASK];
         Optional<Boolean> loopFrames = (flags & FLAG_LOOP_SET) != 0
@@ -160,7 +170,7 @@ public record CustomParticleOptions(
             loopFrames, (flags & FLAG_PHYSICS) != 0, (flags & FLAG_EMISSIVE) != 0,
             (flags & FLAG_ADDITIVE) != 0 ? ParticleBlend.ADDITIVE : ParticleBlend.TRANSLUCENT,
             (flags & FLAG_FACING_VERTICAL) != 0 ? ParticleFacing.VERTICAL : ParticleFacing.CAMERA,
-            easing, layout);
+            easing, layout, colorVariation, hueVariation);
     }
 
     @Override

@@ -132,8 +132,8 @@ config="${mod_id}-sodium.mixins.json"
 [[dependencies.${mod_id}]]
     modId="origins"
     type="incompatible"
-    reason="Origins older than 1.25.2 was built against an older Apoli API. Update Origins."
-    versionRange="[0,1.25.2)"
+    reason="Origins older than 1.26.0 was built against an older Apoli API. Update Origins."
+    versionRange="[0,1.26.0)"
     ordering="NONE"
     side="BOTH"
 

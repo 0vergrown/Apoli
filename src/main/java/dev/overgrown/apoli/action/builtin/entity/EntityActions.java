@@ -15,7 +15,6 @@ public final class EntityActions {
     public static void register() {
         ActionTypes.ENTITY.register(Apoli.id("run_function"), new RunFunctionAction());
         ActionTypes.ENTITY.register(Apoli.id("add_velocity"), new AddVelocityAction());
-        ActionTypes.ENTITY.register(Apoli.id("nothing"), new NothingAction());
         ActionTypes.ENTITY.register(
             Apoli.id("team"),
             new TeamAction(),
@@ -48,6 +47,14 @@ public final class EntityActions {
         );
         ActionTypes.ENTITY.register(Apoli.id("trigger_cooldown"), new TriggerCooldownAction());
         ActionTypes.ENTITY.register(Apoli.id("dismount"), new DismountAction());
+        ActionTypes.ENTITY.register(
+            Apoli.id("teleport"),
+            new TeleportAction(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("teleport_to")).build()
+        );
+        ActionTypes.ENTITY.register(Apoli.id("save_location"), new SaveLocationAction());
+        ActionTypes.ENTITY.register(Apoli.id("teleport_to_location"), new TeleportToLocationAction());
+        ActionTypes.ENTITY.register(Apoli.id("teleport_to_spawn"), new TeleportToSpawnAction());
         ActionTypes.ENTITY.register(Apoli.id("extinguish"), new ExtinguishAction());
         ActionTypes.ENTITY.register(Apoli.id("crafting_table"), new CraftingTableAction());
         ActionTypes.ENTITY.register(Apoli.id("ender_chest"), new EnderChestAction());

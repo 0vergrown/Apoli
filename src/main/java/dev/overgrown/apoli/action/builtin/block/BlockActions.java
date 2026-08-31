@@ -8,6 +8,7 @@ public final class BlockActions {
 
     public static void register() {
         ActionTypes.BLOCK.register(Apoli.id("add_block"), new AddBlockAction());
+        ActionTypes.BLOCK.register(Apoli.id("break_block"), new BreakBlockAction());
         ActionTypes.BLOCK.register(Apoli.id("bonemeal"), new BonemealBlockAction());
         ActionTypes.BLOCK.register(Apoli.id("execute_command"), new ExecuteCommandBlockAction());
         ActionTypes.BLOCK.register(Apoli.id("explode"), new ExplodeBlockAction());

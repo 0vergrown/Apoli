@@ -27,6 +27,7 @@ public final class EntityConditions {
                 .build()
         );
         ConditionTypes.ENTITY.register(Apoli.id("entity_type"), new EntityTypeCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("has_location"), new HasLocationCondition());
         ConditionTypes.ENTITY.register(Apoli.id("has_command_tag"), new HasCommandTagCondition());
         ConditionTypes.ENTITY.register(Apoli.id("difficulty"), new DifficultyCondition());
         ConditionTypes.ENTITY.register(Apoli.id("invisible"), new InvisibleCondition());

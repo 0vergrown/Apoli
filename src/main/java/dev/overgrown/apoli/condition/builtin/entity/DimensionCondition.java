@@ -19,6 +19,8 @@ public final class DimensionCondition implements ConditionType<EntityCtx, Dimens
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        return ctx.level().dimension().location().equals(cfg.dimension);
+        net.minecraft.world.entity.Entity entity = ctx.entity();
+        net.minecraft.world.level.Level level = entity != null ? entity.level() : ctx.level();
+        return level != null && level.dimension().location().equals(cfg.dimension);
     }
 }

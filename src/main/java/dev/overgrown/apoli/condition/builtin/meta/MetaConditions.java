@@ -20,6 +20,7 @@ public final class MetaConditions {
     private static final ResourceLocation ANY_OF = Apoli.id("any_of");
     private static final ResourceLocation RANDOM_CHANCE = Apoli.id("random_chance");
     private static final ResourceLocation CONSTANT = Apoli.id("constant");
+    private static final ResourceLocation NOTHING = Apoli.id("nothing");
 
     private static AliasingOptions allOfAliases() {
         return AliasingOptions.builder().addTypeAlias(Apoli.id("and")).build();
@@ -37,6 +38,7 @@ public final class MetaConditions {
         reg.register(ANY_OF, new AnyOfMeta<>(EntityCondition.CODEC, EntityCondition::test), anyOfAliases());
         reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
+        reg.register(NOTHING, new NothingMetaCondition<>());
     }
 
     public static void registerBiEntity() {
@@ -45,6 +47,7 @@ public final class MetaConditions {
         reg.register(ANY_OF, new AnyOfMeta<>(BiEntityCondition.CODEC, BiEntityCondition::test), anyOfAliases());
         reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
+        reg.register(NOTHING, new NothingMetaCondition<>());
     }
 
     public static void registerBlock() {
@@ -53,6 +56,7 @@ public final class MetaConditions {
         reg.register(ANY_OF, new AnyOfMeta<>(BlockCondition.CODEC, BlockCondition::test), anyOfAliases());
         reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
+        reg.register(NOTHING, new NothingMetaCondition<>());
         reg.register(Apoli.id("offset"), new OffsetBlockMetaCondition());
     }
 
@@ -62,6 +66,7 @@ public final class MetaConditions {
         reg.register(ANY_OF, new AnyOfMeta<>(ItemCondition.CODEC, ItemCondition::test), anyOfAliases());
         reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
+        reg.register(NOTHING, new NothingMetaCondition<>());
     }
 
     public static void registerDamage() {
@@ -70,6 +75,7 @@ public final class MetaConditions {
         reg.register(ANY_OF, new AnyOfMeta<>(DamageCondition.CODEC, DamageCondition::test), anyOfAliases());
         reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
+        reg.register(NOTHING, new NothingMetaCondition<>());
     }
 
     public static void registerFluid() {
@@ -78,6 +84,7 @@ public final class MetaConditions {
         reg.register(ANY_OF, new AnyOfMeta<>(FluidCondition.CODEC, FluidCondition::test), anyOfAliases());
         reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
+        reg.register(NOTHING, new NothingMetaCondition<>());
     }
 
     public static void registerBiome() {
@@ -86,5 +93,6 @@ public final class MetaConditions {
         reg.register(ANY_OF, new AnyOfMeta<>(BiomeCondition.CODEC, BiomeCondition::test), anyOfAliases());
         reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
+        reg.register(NOTHING, new NothingMetaCondition<>());
     }
 }
