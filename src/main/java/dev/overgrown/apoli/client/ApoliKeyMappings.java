@@ -35,13 +35,13 @@ public final class ApoliKeyMappings {
 
     public static boolean consumePress(KeyMapping km, boolean continuous) {
         KeyState st = state(km);
-        if (screenOpen()) return false;
+        if (screenOpen() || BlockedKeys.blocks(km)) return false;
         return continuous ? st.down() : st.tap();
     }
 
     public static boolean isDown(KeyMapping km) {
         KeyState st = state(km);
-        return !screenOpen() && st.down();
+        return !screenOpen() && !BlockedKeys.blocks(km) && st.down();
     }
 
     private static KeyState state(KeyMapping km) {

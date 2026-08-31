@@ -4,9 +4,11 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
+import dev.overgrown.apoli.compat.sable.SableSubLevels;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.network.VelocityUpdater;
 import dev.overgrown.apoli.rope.Rope;
+import dev.overgrown.apoli.rope.RopeAnchor;
 import dev.overgrown.apoli.rope.RopeManager;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.Entity;
@@ -31,7 +33,8 @@ public final class RopePullAction implements ActionType<EntityCtx, RopePullActio
         }
     }
 
-    public record Cfg(Optional<String> slot, Which which, double speed, boolean set, double reel) {}
+    public record Cfg(Optional<String> slot, Which which, double speed, boolean set, double reel,
+                      double subLevelForce) {}
 
     @Override
     public MapCodec<Cfg> codec() {
@@ -40,7 +43,8 @@ public final class RopePullAction implements ActionType<EntityCtx, RopePullActio
             Which.CODEC.optionalFieldOf("which", Which.SELF).forGetter(Cfg::which),
             Codec.DOUBLE.optionalFieldOf("speed", 1.0).forGetter(Cfg::speed),
             Codec.BOOL.optionalFieldOf("set", false).forGetter(Cfg::set),
-            Codec.DOUBLE.optionalFieldOf("reel", 0.0).forGetter(Cfg::reel)
+            Codec.DOUBLE.optionalFieldOf("reel", 0.0).forGetter(Cfg::reel),
+            Codec.DOUBLE.optionalFieldOf("sublevel_force", 1.0).forGetter(Cfg::subLevelForce)
         ).apply(i, Cfg::new));
     }
 
@@ -63,13 +67,19 @@ public final class RopePullAction implements ActionType<EntityCtx, RopePullActio
 
             Vec3 actorPos = actorIsFrom ? fromPos : toPos;
             Vec3 otherPos = actorIsFrom ? toPos : fromPos;
-            Entity otherEntity = actorIsFrom ? rope.to.entity(level) : rope.from.entity(level);
+            RopeAnchor otherAnchor = actorIsFrom ? rope.to : rope.from;
+            Entity otherEntity = otherAnchor.entity(level);
 
             if (cfg.which != Which.OTHER) {
                 push(actor, otherPos.subtract(actorPos), cfg.speed, cfg.set);
             }
-            if (cfg.which != Which.SELF && otherEntity instanceof LivingEntity) {
-                push(otherEntity, actorPos.subtract(otherPos), cfg.speed, cfg.set);
+            if (cfg.which != Which.SELF) {
+                if (otherEntity instanceof LivingEntity) {
+                    push(otherEntity, actorPos.subtract(otherPos), cfg.speed, cfg.set);
+                } else if (otherAnchor instanceof RopeAnchor.OfSubLevel subLevel) {
+                    SableSubLevels.pull(level, subLevel.subLevel(), subLevel.local(),
+                        actorPos.subtract(otherPos), cfg.speed, cfg.subLevelForce);
+                }
             }
             if (cfg.reel != 0) RopeManager.reel(rope.id, cfg.reel);
         }

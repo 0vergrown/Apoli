@@ -21,6 +21,7 @@ public final class ApoliKeyHandler {
     public static void onClientTick() {
         ClientPowerState.tickCooldowns();
         ApoliKeyMappings.beginTick();
+        BlockedKeys.tick();
         for (ResourceLocation powerId : ClientPowerState.localPowers()) {
             Power power = ApoliPowers.get(powerId);
             if (power == null) continue;

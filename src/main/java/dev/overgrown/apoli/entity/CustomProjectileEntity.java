@@ -22,6 +22,8 @@ import java.util.List;
 public class CustomProjectileEntity extends ThrowableProjectile {
     private static final EntityDataAccessor<String> TEXTURE =
         SynchedEntityData.defineId(CustomProjectileEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<String> MODEL_POWER =
+        SynchedEntityData.defineId(CustomProjectileEntity.class, EntityDataSerializers.STRING);
 
     public CustomProjectileEntity(EntityType<? extends CustomProjectileEntity> type, Level level) {
         super(type, level);
@@ -36,6 +38,7 @@ public class CustomProjectileEntity extends ThrowableProjectile {
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         builder.define(TEXTURE, "");
+        builder.define(MODEL_POWER, "");
     }
 
     public void setTexture(ResourceLocation texture) {
@@ -44,6 +47,15 @@ public class CustomProjectileEntity extends ThrowableProjectile {
 
     public ResourceLocation getTexture() {
         String s = this.entityData.get(TEXTURE);
+        return s.isEmpty() ? null : ResourceLocation.tryParse(s);
+    }
+
+    public void setModelPower(ResourceLocation powerId) {
+        this.entityData.set(MODEL_POWER, powerId == null ? "" : powerId.toString());
+    }
+
+    public ResourceLocation getModelPower() {
+        String s = this.entityData.get(MODEL_POWER);
         return s.isEmpty() ? null : ResourceLocation.tryParse(s);
     }
 
@@ -59,11 +71,13 @@ public class CustomProjectileEntity extends ThrowableProjectile {
     protected void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putString("Texture", this.entityData.get(TEXTURE));
+        tag.putString("ModelPower", this.entityData.get(MODEL_POWER));
     }
 
     @Override
     protected void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         this.entityData.set(TEXTURE, tag.getString("Texture"));
+        this.entityData.set(MODEL_POWER, tag.getString("ModelPower"));
     }
 }

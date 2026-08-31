@@ -156,17 +156,18 @@ public class RadialMenu {
         if (count == 0) return;
         float angleInterval = 360.0F / count;
         for (int i = 0; i < count; i++) {
-            float angle = angleInterval * i;
             float centerX = client.getWindow().getGuiScaledWidth() / 2.0F;
             float centerY = client.getWindow().getGuiScaledHeight() / 2.0F;
 
             RadialMenuOpenS2C.Entry entry = entries.get(i);
+            float angle = entry.angle().orElse(angleInterval * i);
             int maxDistance = entry.distance() != -1 ? entry.distance() : client.getWindow().getGuiScaledHeight() / 4;
             float velocity = entry.velocity() != -1 ? entry.velocity() : maxDistance / 3.0F;
             float distance = velocity * elapsedTime < maxDistance ? velocity * elapsedTime : maxDistance;
+            float progress = maxDistance == 0 ? 1.0F : distance / maxDistance;
 
-            float px = (float) (centerX + distance * Math.cos(Math.toRadians(angle)));
-            float py = (float) (centerY + distance * Math.sin(Math.toRadians(angle)));
+            float px = (float) (centerX + distance * Math.cos(Math.toRadians(angle))) + entry.offsetX() * progress;
+            float py = (float) (centerY + distance * Math.sin(Math.toRadians(angle))) + entry.offsetY() * progress;
 
             posX[i] = px - entry.buttonWidth() / 2.0F;
             posY[i] = py - entry.buttonHeight() / 2.0F;

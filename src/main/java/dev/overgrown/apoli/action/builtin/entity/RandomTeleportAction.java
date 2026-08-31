@@ -7,16 +7,15 @@ import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.action.EntityAction;
 import dev.overgrown.apoli.condition.BlockCondition;
 import dev.overgrown.apoli.condition.EntityCondition;
-import dev.overgrown.apoli.condition.context.BlockCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Heightmap;
 import dev.overgrown.apoli.data.Vector;
+import dev.overgrown.apoli.entity.TeleportHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.Optional;
 
@@ -70,27 +69,23 @@ public final class RandomTeleportAction implements ActionType<EntityCtx, RandomT
                 int top = serverLevel.getHeight(cfg.heightmap.get().vanilla(), candidate.getX(), candidate.getZ());
                 candidate = new BlockPos(candidate.getX(), top, candidate.getZ());
             }
-            if (!isValidLanding(candidate, cfg, entity, serverLevel)) continue;
             double x = candidate.getX() + cfg.landingOffset.x();
             double y = candidate.getY() + cfg.landingOffset.y();
             double z = candidate.getZ() + cfg.landingOffset.z();
-            entity.teleportTo(x, y, z);
+            if (!isValidLanding(candidate, x, y, z, cfg, entity, serverLevel)) continue;
+            if (TeleportHelper.teleport(entity, serverLevel, x, y, z) == null) continue;
             cfg.successAction.ifPresent(a -> a.run(ctx));
             return;
         }
         cfg.failAction.ifPresent(a -> a.run(ctx));
     }
 
-    private static boolean isValidLanding(BlockPos pos, Cfg cfg, Entity entity, ServerLevel level) {
-        if (cfg.landingBlockCondition.isPresent()) {
-            BlockState state = level.getBlockState(pos.below());
-            if (!cfg.landingBlockCondition.get().test(new BlockCtx(pos.below(), state, level))) return false;
-        } else if (!level.getBlockState(pos.below()).blocksMotion()) {
-            return false;
-        }
-        if (cfg.landingCondition.isPresent()) {
-            return cfg.landingCondition.get().test(new EntityCtx(entity, level));
-        }
-        return level.getBlockState(pos).getCollisionShape(level, pos).isEmpty();
+    private static boolean isValidLanding(BlockPos pos, double x, double y, double z, Cfg cfg,
+                                          Entity entity, ServerLevel level) {
+        if (cfg.landingBlockCondition.isEmpty() && !level.getBlockState(pos.below()).blocksMotion()) return false;
+        if (cfg.landingCondition.isEmpty()
+            && !level.getBlockState(pos).getCollisionShape(level, pos).isEmpty()) return false;
+        return TeleportHelper.landingAllowed(entity, level, x, y, z,
+            cfg.landingBlockCondition, cfg.landingCondition);
     }
 }
