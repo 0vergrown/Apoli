@@ -20,7 +20,10 @@ public final class TimeOfDayCondition implements ConditionType<EntityCtx, TimeOf
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        long t = ctx.level().getDayTime() % 24000;
+        net.minecraft.world.entity.Entity entity = ctx.entity();
+        net.minecraft.world.level.Level level = entity != null ? entity.level() : ctx.level();
+        if (level == null) return false;
+        long t = level.getDayTime() % 24000;
         return cfg.comparison.compare((int) t, cfg.compareTo);
     }
 }

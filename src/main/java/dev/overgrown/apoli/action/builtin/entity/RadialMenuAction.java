@@ -52,7 +52,10 @@ public final class RadialMenuAction implements ActionType<EntityCtx, RadialMenuA
                 entry.iconWidth(),
                 entry.iconHeight(),
                 entry.itemWidth(),
-                entry.itemHeight()));
+                entry.itemHeight(),
+                entry.offsetX(),
+                entry.offsetY(),
+                entry.angle()));
         }
         if (display.isEmpty()) return;
 

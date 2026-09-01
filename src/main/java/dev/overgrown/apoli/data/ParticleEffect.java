@@ -1,38 +1,67 @@
 package dev.overgrown.apoli.data;
 
+import com.google.gson.JsonElement;
 import com.mojang.brigadier.StringReader;
-import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.JsonOps;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleType;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
-public record ParticleEffect(ResourceLocation type, String params) {
+public final class ParticleEffect {
 
-    public static final ParticleEffect EMPTY = new ParticleEffect(new ResourceLocation("minecraft", "poof"), "");
+    public static final ParticleEffect EMPTY =
+        new ParticleEffect(new Dynamic<>(JsonOps.INSTANCE).createString("minecraft:poof"));
 
-    private static final Codec<ParticleEffect> STRING_CODEC = ResourceLocation.CODEC.xmap(
-        rl -> new ParticleEffect(rl, ""),
-        ParticleEffect::type
+    public static final Codec<ParticleEffect> CODEC = Codec.PASSTHROUGH.xmap(
+        ParticleEffect::new,
+        ParticleEffect::raw
     );
 
-    private static final Codec<ParticleEffect> OBJECT_CODEC = RecordCodecBuilder.create(i -> i.group(
-        ResourceLocation.CODEC.fieldOf("type").forGetter(ParticleEffect::type),
-        Codec.STRING.optionalFieldOf("params", "").forGetter(ParticleEffect::params)
-    ).apply(i, ParticleEffect::new));
+    private record Resolved(@Nullable ParticleOptions options) {}
 
-    public static final Codec<ParticleEffect> CODEC = Codec.either(STRING_CODEC, OBJECT_CODEC).xmap(
-        either -> either.map(java.util.function.Function.identity(), java.util.function.Function.identity()),
-        eff -> eff.params.isEmpty() ? Either.left(eff) : Either.right(eff)
-    );
+    private final Dynamic<?> raw;
+    private volatile @Nullable Resolved resolved;
+
+    public ParticleEffect(Dynamic<?> raw) {
+        this.raw = raw;
+    }
+
+    public Dynamic<?> raw() {
+        return this.raw;
+    }
 
     public @Nullable ParticleOptions resolve(net.minecraft.world.level.Level level) {
-        ParticleType<?> particleType = BuiltInRegistries.PARTICLE_TYPE.get(type);
-        if (particleType == null) return null;
-        return readUnchecked(particleType, params);
+        Resolved hit = this.resolved;
+        if (hit != null) return hit.options();
+        ParticleOptions built = parse();
+        this.resolved = new Resolved(built);
+        return built;
+    }
+
+    private @Nullable ParticleOptions parse() {
+        Dynamic<JsonElement> data = raw.convert(JsonOps.INSTANCE);
+
+        String simple = data.asString().result().orElse(null);
+        if (simple != null) return fromCommand(simple, "");
+
+        if (data.getMapValues().result().isEmpty()) return null;
+
+        String params = data.get("params").asString().result().orElse(null);
+        if (params != null) return fromCommand(data.get("type").asString().result().orElse(""), params);
+
+        return ParticleTypes.CODEC.parse(data).result().orElse(null);
+    }
+
+    private static @Nullable ParticleOptions fromCommand(String rawType, String params) {
+        ResourceLocation id = ResourceLocation.tryParse(rawType);
+        if (id == null) return null;
+        ParticleType<?> particleType = BuiltInRegistries.PARTICLE_TYPE.get(id);
+        return particleType == null ? null : readUnchecked(particleType, params);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -45,5 +74,20 @@ public record ParticleEffect(ResourceLocation type, String params) {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        return this == other || (other instanceof ParticleEffect effect && this.raw.equals(effect.raw));
+    }
+
+    @Override
+    public int hashCode() {
+        return this.raw.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "ParticleEffect[" + this.raw + "]";
     }
 }

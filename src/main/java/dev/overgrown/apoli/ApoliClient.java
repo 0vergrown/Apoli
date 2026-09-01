@@ -50,6 +50,10 @@ public final class ApoliClient implements ClientModInitializer {
             dev.overgrown.apoli.entity.ApoliEntities.CUSTOM_PROJECTILE,
             dev.overgrown.apoli.client.CustomProjectileRenderer::new);
 
+        net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry.getInstance().register(
+            dev.overgrown.apoli.particle.ApoliParticles.CUSTOM,
+            new dev.overgrown.apoli.client.particle.CustomParticle.Provider());
+
         net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry.registerModelLayer(
             dev.overgrown.apoli.client.summon.SummonModelLayers.MINION,
             dev.overgrown.apoli.client.summon.MinionModel::createBodyLayer);
@@ -68,10 +72,12 @@ public final class ApoliClient implements ClientModInitializer {
             dev.overgrown.apoli.entity.ApoliEntities.CLONE,
             dev.overgrown.apoli.client.summon.CloneRenderer::new);
 
-        PowerContainerAttachment.setClientLookup(entity ->
-            dev.overgrown.apoli.client.ClientPowerState.powersFor(entity.getId()).isEmpty()
-                ? null
-                : new ClientPowerContainer(entity));
+        PowerContainerAttachment.setClientLookup(dev.overgrown.apoli.client.ClientPowerState::containerFor);
+
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents.ENTITY_UNLOAD.register((entity, level) -> {
+            dev.overgrown.apoli.client.ClientPowerState.removeEntity(entity.getId());
+            dev.overgrown.apoli.client.ClientLabelState.removeEntity(entity.getId());
+        });
 
         dev.overgrown.apoli.power.PowerResources.setClientCooldownLookup((owner, powerId) ->
             owner == Minecraft.getInstance().player
@@ -110,6 +116,13 @@ public final class ApoliClient implements ClientModInitializer {
             mc.execute(() -> ClientPowerState.applyEntityPowersSync(payload));
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(
+            dev.overgrown.apoli.network.payload.SyncAuxIntsS2C.CHANNEL, (mc, handler, buf, sender) -> {
+                dev.overgrown.apoli.network.payload.SyncAuxIntsS2C aux =
+                    dev.overgrown.apoli.network.payload.SyncAuxIntsS2C.read(buf);
+                mc.execute(() -> ClientPowerState.applyAuxInts(aux));
+            });
+
         ClientPlayNetworking.registerGlobalReceiver(PowerActivatedS2C.CHANNEL, (mc, handler, buf, sender) -> {
             PowerActivatedS2C payload = PowerActivatedS2C.read(buf);
             mc.execute(() -> ClientPowerState.setCooldown(payload.power(), payload.cooldown()));
@@ -131,12 +144,9 @@ public final class ApoliClient implements ClientModInitializer {
             dev.overgrown.apoli.network.payload.MountOffsetS2C.CHANNEL, (mc, handler, buf, sender) -> {
                 dev.overgrown.apoli.network.payload.MountOffsetS2C payload =
                     dev.overgrown.apoli.network.payload.MountOffsetS2C.read(buf);
-                mc.execute(() -> {
-                    if (mc.level == null) return;
-                    dev.overgrown.apoli.mount.MountOffsets.put(mc.level.getEntity(payload.passengerId()),
-                        new dev.overgrown.apoli.mount.MountOffsets.Offset(
-                            payload.x(), payload.y(), payload.z(), payload.space()));
-                });
+                mc.execute(() -> dev.overgrown.apoli.mount.MountOffsets.put(payload.passengerId(),
+                    new dev.overgrown.apoli.mount.MountOffsets.Offset(
+                        payload.x(), payload.y(), payload.z(), payload.space(), payload.rotation())));
             });
 
         dev.overgrown.apoli.power.builtin.InventoryPower.setClientLookup((holder, powerId) ->
@@ -240,11 +250,14 @@ public final class ApoliClient implements ClientModInitializer {
                 ClientPowerState.clear();
                 dev.overgrown.apoli.mount.MountOffsets.clearAll();
                 dev.overgrown.apoli.client.ShaderPowerState.clear();
+                dev.overgrown.apoli.client.render.BlockRenderRules.clear();
+                dev.overgrown.apoli.client.render.ClientRenderFlags.clear();
                 dev.overgrown.apoli.client.TextOverlayRenderer.clear();
                 dev.overgrown.apoli.client.ClientLabelState.clear();
                 RopeClientManager.clear();
                 KeyPressWatcher.reset();
                 dev.overgrown.apoli.client.ForcedKeys.clear();
+                dev.overgrown.apoli.client.BlockedKeys.clear();
                 dev.overgrown.apoli.client.CursorSpeedState.reset();
                 dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
                 dev.overgrown.apoli.client.skill.ClientSkillState.clear();
@@ -264,6 +277,8 @@ public final class ApoliClient implements ClientModInitializer {
                 public void onResourceManagerReload(net.minecraft.server.packs.resources.ResourceManager manager) {
                     dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.onResourcesReloaded();
                     dev.overgrown.apoli.client.ShaderPowerState.invalidate();
+                    dev.overgrown.apoli.client.particle.ParticleSheet.clearCache();
+                    dev.overgrown.apoli.client.particle.ParticleTextures.clearCache();
                 }
             });
 
@@ -281,6 +296,8 @@ public final class ApoliClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             dev.overgrown.apoli.client.CursorSpeedState.tick(mc);
+            dev.overgrown.apoli.client.render.ClientRenderFlags.clientTick(mc);
+            dev.overgrown.apoli.client.render.BlockRenderRules.clientTick(mc);
             if (mc.player != null && !mc.isPaused()) {
                 ApoliKeyHandler.onClientTick();
                 while (SKILL_TREE_KEY.consumeClick()) {
@@ -301,6 +318,7 @@ public final class ApoliClient implements ClientModInitializer {
                 dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.tick(mc);
             }
             dev.overgrown.apoli.client.PlayerModelTypeReporter.tick(mc);
+            dev.overgrown.apoli.client.CameraPerspectiveReporter.tick(mc);
             dev.overgrown.apoli.client.ForcedKeys.tick();
         });
 

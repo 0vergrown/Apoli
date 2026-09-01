@@ -32,6 +32,10 @@ public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
 
     public static final float[] IDENTITY = new float[]{1f, 1f, 1f, 1f, 0f};
 
+    private static Optional<Float> channel(float value, boolean whiten) {
+        return whiten || value != 1f ? Optional.of(value) : Optional.empty();
+    }
+
     private static boolean explicitWhite(Optional<Float> r, Optional<Float> g, Optional<Float> b) {
         return r.isPresent() && g.isPresent() && b.isPresent()
             && r.get() >= 0.999f && g.get() >= 0.999f && b.get() >= 0.999f;
@@ -39,9 +43,9 @@ public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
 
     private static final MapCodec<PartColor> PART_COLOR_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
         Codec.STRING.fieldOf("part").forGetter(PartColor::part),
-        Codec.FLOAT.optionalFieldOf("red").forGetter(pc -> Optional.of(pc.red())),
-        Codec.FLOAT.optionalFieldOf("green").forGetter(pc -> Optional.of(pc.green())),
-        Codec.FLOAT.optionalFieldOf("blue").forGetter(pc -> Optional.of(pc.blue())),
+        Codec.FLOAT.optionalFieldOf("red").forGetter(pc -> channel(pc.red(), pc.whiten())),
+        Codec.FLOAT.optionalFieldOf("green").forGetter(pc -> channel(pc.green(), pc.whiten())),
+        Codec.FLOAT.optionalFieldOf("blue").forGetter(pc -> channel(pc.blue(), pc.whiten())),
         Codec.FLOAT.optionalFieldOf("alpha", 1f).forGetter(PartColor::alpha),
         dev.overgrown.apoli.codec.LoggedOptionalField.strict("condition", EntityCondition.CODEC).forGetter(PartColor::condition)
     ).apply(i, (part, r, g, b, alpha, condition) -> new PartColor(
@@ -50,9 +54,9 @@ public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.FLOAT.optionalFieldOf("red").forGetter(c -> Optional.of(c.red())),
-            Codec.FLOAT.optionalFieldOf("green").forGetter(c -> Optional.of(c.green())),
-            Codec.FLOAT.optionalFieldOf("blue").forGetter(c -> Optional.of(c.blue())),
+            Codec.FLOAT.optionalFieldOf("red").forGetter(c -> channel(c.red(), c.whiten())),
+            Codec.FLOAT.optionalFieldOf("green").forGetter(c -> channel(c.green(), c.whiten())),
+            Codec.FLOAT.optionalFieldOf("blue").forGetter(c -> channel(c.blue(), c.whiten())),
             Codec.FLOAT.optionalFieldOf("alpha", 1f).forGetter(Config::alpha),
             PART_COLOR_CODEC.codec().listOf().optionalFieldOf("parts", List.of()).forGetter(Config::parts)
         ).apply(i, (r, g, b, alpha, parts) -> new Config(

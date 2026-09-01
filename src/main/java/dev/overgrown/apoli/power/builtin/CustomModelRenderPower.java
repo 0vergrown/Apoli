@@ -8,9 +8,13 @@ import dev.overgrown.apoli.data.EquipmentSlot;
 import dev.overgrown.apoli.data.ModelAnimation;
 import dev.overgrown.apoli.data.ModelParts;
 import dev.overgrown.apoli.data.RenderMode;
+import dev.overgrown.apoli.power.PowerContainer;
+import dev.overgrown.apoli.power.ApoliPowers;
+import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.codec.IdCodecs;
+import dev.overgrown.apoli.codec.LoggedOptionalField;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.LivingEntity;
@@ -145,7 +149,7 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
     ).apply(instance, Base::new));
 
     private static final MapCodec<Config> CONFIG_CODEC =
-        Codec.mapPair(BASE_CODEC, ModelAnimation.CODEC.optionalFieldOf("animations"))
+        Codec.mapPair(BASE_CODEC, LoggedOptionalField.of("animations", ModelAnimation.CODEC))
             .xmap(
                 pair -> merge(pair.getFirst(), pair.getSecond()),
                 config -> com.mojang.datafixers.util.Pair.of(split(config), config.animations())
@@ -232,19 +236,46 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         return out;
     }
 
-    public static List<GeometryRender> collectGeometry(@Nullable LivingEntity entity) {
+    public static List<GeometryRender> collectGeometry(@Nullable net.minecraft.world.entity.Entity entity) {
         List<GeometryRender> out = new ArrayList<>();
         PowerLookup.forEach(entity, CANONICAL, Config.class, cfg -> {
             if (cfg.mode() != Mode.GEOMETRY || cfg.model().isEmpty() || cfg.texture().isEmpty()) {
                 return;
             }
-            if (hiddenByEquipment(entity, cfg.hiddenSlots())) {
+            if (entity instanceof LivingEntity living && hiddenByEquipment(living, cfg.hiddenSlots())) {
                 return;
             }
-            out.add(new GeometryRender(cfg.model().get(), cfg.texture().get(), cfg.renderType(), cfg.bodyParts(),
-                cfg.red(), cfg.green(), cfg.blue(), cfg.alpha(), cfg.showFirstPerson(), cfg.scale(), cfg.renderAsOverlay(),
-                cfg.animations()));
+            out.add(toRender(cfg));
         });
         return out;
+    }
+
+    private static GeometryRender toRender(Config cfg) {
+        return new GeometryRender(cfg.model().get(), cfg.texture().get(), cfg.renderType(), cfg.bodyParts(),
+            cfg.red(), cfg.green(), cfg.blue(), cfg.alpha(), cfg.showFirstPerson(), cfg.scale(), cfg.renderAsOverlay(),
+            cfg.animations());
+    }
+
+    @Nullable
+    public static ResourceLocation firstGeometryPowerId(@Nullable net.minecraft.world.entity.Entity entity) {
+        if (entity == null) return null;
+        PowerContainer container = PowerContainer.of(entity);
+        if (container == null || container.isEmpty()) return null;
+        List<ResourceLocation> powers = container.powersOfType(CANONICAL);
+        for (int i = 0; i < powers.size(); i++) {
+            ResourceLocation powerId = powers.get(i);
+            if (container.isSuppressed(powerId)) continue;
+            if (geometryOf(powerId) != null) return powerId;
+        }
+        return null;
+    }
+
+    @Nullable
+    public static GeometryRender geometryOf(@Nullable ResourceLocation powerId) {
+        if (powerId == null) return null;
+        Power power = ApoliPowers.get(powerId);
+        if (power == null || !(power.config() instanceof Config cfg)) return null;
+        if (cfg.mode() != Mode.GEOMETRY || cfg.model().isEmpty() || cfg.texture().isEmpty()) return null;
+        return toRender(cfg);
     }
 }

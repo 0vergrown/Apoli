@@ -66,6 +66,16 @@ public final class ApoliNetwork {
         }
     }
 
+    public static boolean canSendAuxInts(ServerPlayer recipient) {
+        return connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.SyncAuxIntsS2C.CHANNEL);
+    }
+
+    public static void sendAuxInts(ServerPlayer recipient,
+                                   dev.overgrown.apoli.network.payload.SyncAuxIntsS2C payload) {
+        send(recipient, dev.overgrown.apoli.network.payload.SyncAuxIntsS2C.CHANNEL, payload::write);
+    }
+
     public static void sendEntityPowers(ServerPlayer recipient, SyncEntityPowersS2C payload) {
         send(recipient, SyncEntityPowersS2C.CHANNEL, payload::write);
     }

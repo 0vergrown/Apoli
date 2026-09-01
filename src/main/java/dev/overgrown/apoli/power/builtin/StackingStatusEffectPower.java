@@ -43,7 +43,7 @@ public final class StackingStatusEffectPower extends PowerType<StackingStatusEff
     public void onAdded(ResourceLocation powerId, Config cfg, PowerContainer holder, ResourceLocation source) {
         if (!(holder instanceof PowerContainerImpl impl)) return;
         if (impl.getAuxInt(powerId).isPresent()) return;
-        impl.setAuxInt(powerId, Math.max(cfg.minStacks, Math.min(cfg.maxStacks, 0)));
+        impl.setAuxInt(powerId, 0);
     }
 
     @Override
@@ -62,8 +62,13 @@ public final class StackingStatusEffectPower extends PowerType<StackingStatusEff
         if (owner.tickCount % cfg.tickRate != 0) return;
         int current = impl.getAuxInt(powerId).orElse(0);
         boolean active = conditionActive(powerId, owner, level);
-        int next = active ? current + 1 : current - 1;
-        next = Math.max(cfg.minStacks, Math.min(cfg.maxStacks, next));
+        int next;
+        if (active) {
+            next = Math.min(cfg.maxStacks, current + 1);
+            if (next < cfg.minStacks) next = cfg.minStacks;
+        } else {
+            next = Math.max(0, current - 1);
+        }
         if (next != current) impl.setAuxInt(powerId, next);
         if (next > 0) reapplyEffects(owner, cfg, next);
     }

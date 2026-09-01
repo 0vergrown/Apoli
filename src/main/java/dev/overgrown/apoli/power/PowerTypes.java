@@ -49,6 +49,11 @@ public final class PowerTypes {
             new ActionOnKeySequencePower(),
             AliasingOptions.builder().addTypeAlias("sync:action_on_key_sequence").build()
         );
+        PowerTypeRegistry.register(
+            Apoli.id("action_on_scroll_wheel"),
+            new ActionOnScrollWheelPower(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("action_on_scroll")).build()
+        );
         PowerTypeRegistry.register(Apoli.id("entity_set"), new EntitySetPower());
         PowerTypeRegistry.register(Apoli.id("modify_type_tag"), new ModifyTypeTagPower(),
             AliasingOptions.builder().addTypeAlias(Apoli.id("entity_group")).build());
@@ -113,9 +118,13 @@ public final class PowerTypes {
         PowerTypeRegistry.register(
             Apoli.id("simple"),
             new SimplePower(),
-            AliasingOptions.builder().addTypeAlias(Apoli.id("dummy")).build()
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("dummy"))
+                .addTypeAlias(Apoli.id("nothing"))
+                .build()
         );
         PowerTypeRegistry.register(Apoli.id("disable_regen"), new DisableRegenPower());
+        PowerTypeRegistry.register(Apoli.id("prevent_teleport"), new PreventTeleportPower());
         PowerTypeRegistry.register(
             Apoli.id("invulnerability"),
             new InvulnerabilityPower(),
@@ -204,6 +213,7 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("prevent_item_pickup"), new PreventItemPickupPower());
         PowerTypeRegistry.register(Apoli.id("prevent_item_use"), new PreventItemUsePower());
         PowerTypeRegistry.register(Apoli.id("prevent_sleep"), new PreventSleepPower());
+        PowerTypeRegistry.register(Apoli.id("prevent_key_press"), new PreventKeyPressPower());
         PowerTypeRegistry.register(Apoli.id("prevent_sprinting"), new PreventSprintingPower());
 
         PowerTypeRegistry.register(Apoli.id("action_on_block_break"), new ActionOnBlockBreakPower());

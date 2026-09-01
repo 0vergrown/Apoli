@@ -126,6 +126,11 @@ dependencies {
 	// category. Gated by ModCompat.PUFFISH_SKILLS, so Apoli runs fine without it.
 	modCompileOnly "maven.modrinth:skills:${project.puffish_skills_version}"
 
+	// Sodium (compile-only, optional at runtime) — Sodium meshes chunks from its own WorldSlice
+	// instead of vanilla RenderChunkRegion, so apoli:modify_block_render needs a second hook there.
+	// Gated by SodiumCompatMixinPlugin, so Apoli runs fine without it.
+	modCompileOnly "maven.modrinth:sodium:${project.sodium_version}"
+
 	modCompileOnly "me.lucko:fabric-permissions-api:0.3.1"
 
 	// Simple Voice Chat API (compile-only, optional at runtime) — the voice_* conditions and

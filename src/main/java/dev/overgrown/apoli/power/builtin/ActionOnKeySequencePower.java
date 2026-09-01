@@ -17,6 +17,7 @@ import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.data.Expression;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -39,7 +40,7 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
     public record Config(
         Optional<EntityAction> successAction,
         Optional<EntityAction> failAction,
-        int cooldown,
+        Expression cooldown,
         int timeout,
         HudRender hudRender,
         List<FunctionalKey> keys,
@@ -74,7 +75,7 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
         return RecordCodecBuilder.mapCodec(i -> i.group(
             dev.overgrown.apoli.codec.LoggedOptionalField.of("success_action", EntityAction.CODEC).forGetter(Config::successAction),
             dev.overgrown.apoli.codec.LoggedOptionalField.of("fail_action", EntityAction.CODEC).forGetter(Config::failAction),
-            Codec.INT.optionalFieldOf("cooldown", 0).forGetter(Config::cooldown),
+            Expression.INT_OR_EXPR.optionalFieldOf("cooldown", Expression.constant(0)).forGetter(Config::cooldown),
             Codec.INT.optionalFieldOf("timeout", 20).forGetter(Config::timeout),
             HudRender.CODEC.optionalFieldOf("hud_render", HudRender.DONT_RENDER).forGetter(Config::hudRender),
             Codec.list(FunctionalKey.CODEC).fieldOf("keys").forGetter(Config::keys),
@@ -117,7 +118,7 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
     public OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
         LivingEntity owner = holder.owner();
         if (owner == null || owner.level().isClientSide()) return OptionalInt.empty();
-        int clamped = Math.max(0, Math.min(value, Math.max(cfg.cooldown, 0)));
+        int clamped = Math.max(0, Math.min(value, Math.max(PowerResources.cooldownTicks(cfg.cooldown, holder), 0)));
         states.computeIfAbsent(owner.getUUID(), u -> new PlayerState())
             .seqs.computeIfAbsent(powerId, k -> new SeqState()).cooldown = clamped;
         if (owner instanceof ServerPlayer player) {
@@ -128,7 +129,7 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
 
     @Override
     public OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
-        return OptionalInt.of(max ? Math.max(cfg.cooldown, 0) : 0);
+        return OptionalInt.of(max ? Math.max(PowerResources.cooldownTicks(cfg.cooldown, holder), 0) : 0);
     }
 
     @Override
@@ -261,9 +262,10 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
         st.pending = false;
         st.progress = 0;
         st.idle = 0;
-        st.cooldown = Math.max(cfg.cooldown, 0);
+        int ticks = Math.max(PowerResources.cooldownTicks(cfg.cooldown, PowerContainer.of(player)), 0);
+        st.cooldown = ticks;
         cfg.successAction.ifPresent(a -> a.run(ctx));
-        ApoliNetwork.sendActivated(player, new PowerActivatedS2C(powerId, cfg.cooldown));
+        ApoliNetwork.sendActivated(player, new PowerActivatedS2C(powerId, ticks));
     }
 
     private static List<String> edges(Set<String> held, Set<String> heldLast) {

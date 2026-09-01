@@ -11,8 +11,10 @@ public final class BiEntityActions {
 
     public static void register() {
         ActionTypes.BI_ENTITY.register(Apoli.id("add_velocity"), new AddVelocityAction());
-        ActionTypes.BI_ENTITY.register(Apoli.id("nothing"), new NothingBiEntityAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("damage"), new DamageBiEntityAction());
+        ActionTypes.BI_ENTITY.register(Apoli.id("punch"), new PunchBiEntityAction());
+        ActionTypes.BI_ENTITY.register(Apoli.id("teleport_to"), new TeleportToBiEntityAction(false));
+        ActionTypes.BI_ENTITY.register(Apoli.id("swap"), new TeleportToBiEntityAction(true));
         ActionTypes.BI_ENTITY.register(Apoli.id("explode"), new ExplodeBiEntityAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("mount"), new MountAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("grab"), new GrabAction());

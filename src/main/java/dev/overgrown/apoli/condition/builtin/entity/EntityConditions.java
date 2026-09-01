@@ -27,6 +27,7 @@ public final class EntityConditions {
                 .build()
         );
         ConditionTypes.ENTITY.register(Apoli.id("entity_type"), new EntityTypeCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("has_location"), new HasLocationCondition());
         ConditionTypes.ENTITY.register(Apoli.id("invisible"), new InvisibleCondition());
         ConditionTypes.ENTITY.register(Apoli.id("player_model_type"), new PlayerModelTypeCondition());
         ConditionTypes.ENTITY.register(Apoli.id("sneaking"), new SneakingCondition());
@@ -53,6 +54,7 @@ public final class EntityConditions {
         ConditionTypes.ENTITY.register(Apoli.id("living"), new LivingCondition());
         ConditionTypes.ENTITY.register(Apoli.id("passenger"), new PassengerCondition());
         ConditionTypes.ENTITY.register(Apoli.id("riding"), new RidingCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("owner"), new OwnerCondition());
         ConditionTypes.ENTITY.register(Apoli.id("equipped_item"), new EquippedItemCondition());
         ConditionTypes.ENTITY.register(Apoli.id("climbing"), SimpleFlagConditions.climbing());
         ConditionTypes.ENTITY.register(Apoli.id("collided_horizontally"), SimpleFlagConditions.collidedHoriz());

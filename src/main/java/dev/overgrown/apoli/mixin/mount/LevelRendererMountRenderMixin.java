@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.mixin.mount;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.overgrown.apoli.mount.MountOffsets;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -8,6 +9,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArgs;
@@ -27,8 +29,9 @@ public abstract class LevelRendererMountRenderMixin {
         double vx = Mth.lerp(partialTick, vehicle.xOld, vehicle.getX());
         double vy = Mth.lerp(partialTick, vehicle.yOld, vehicle.getY());
         double vz = Mth.lerp(partialTick, vehicle.zOld, vehicle.getZ());
-        args.set(1, vx - camX);
-        args.set(2, vy + vehicle.getBbHeight() + entity.getMyRidingOffset() - camY);
-        args.set(3, vz - camZ);
+        Vec3 offset = MountOffsets.resolve(vehicle, entity, partialTick);
+        args.set(1, vx + offset.x - camX);
+        args.set(2, vy + vehicle.getBbHeight() + entity.getMyRidingOffset() + offset.y - camY);
+        args.set(3, vz + offset.z - camZ);
     }
 }
