@@ -25,7 +25,7 @@ public class BlockBouncinessMixin {
     public void apoli$updateEntityAfterFallOn(BlockGetter blockGetter, Entity entity, CallbackInfo ci) {
         var pos = entity.getOnPos();
         var block = new BlockCtx(pos, blockGetter.getBlockState(pos), entity.level());
-        if (entity instanceof LivingEntity && (!entity.isSuppressingBounce() || !ModifyBouncinessHandler.preventable((LivingEntity) entity, block))) {
+        if (entity instanceof LivingEntity && (!entity.isSuppressingBounce() || !ModifyBouncinessHandler.preventable((LivingEntity) entity, block)) && !((LivingEntity) entity).hasLandedInLiquid()) {
             var old_delta = entity.getDeltaMovement();
             var delta = ModifyBouncinessHandler.modify((LivingEntity) entity, old_delta.y * -1, block);
 
