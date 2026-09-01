@@ -8,6 +8,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -21,7 +22,8 @@ public abstract class EntityRenderDispatcherDisguiseMixin {
     private <E extends Entity> void apoli$renderDisguise(E entity, double x, double y, double z, float yaw, float partialTick,
                                                          PoseStack pose, MultiBufferSource buffers, int light, CallbackInfo ci) {
         DisguiseData data = ClientDisguiseManager.get(entity.getId());
-        if (data == null || data.isPlayerDisguise()) return;
+        if (data == null) return;
+        if (data.isPlayerDisguise() && entity instanceof Player) return;
 
         Entity dummy = ClientDisguiseManager.syncedDummy(entity.getId(), entity);
         if (dummy == null) return;

@@ -16,6 +16,7 @@ import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerContainerImpl;
 import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.data.Expression;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -33,7 +34,7 @@ public final class ActionOnCollisionPower extends PowerType<ActionOnCollisionPow
         Optional<BiEntityCondition> bientityCondition,
         Optional<EntityCondition> targetCondition,
         float radius,
-        int cooldown,
+        Expression cooldown,
         boolean includeRiding,
         HudRender hudRender
     ) {}
@@ -47,7 +48,7 @@ public final class ActionOnCollisionPower extends PowerType<ActionOnCollisionPow
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("target_condition", EntityCondition.CODEC).forGetter(Config::targetCondition),
             Codec.FLOAT.optionalFieldOf("radius", 0.0F).forGetter(Config::radius),
-            Codec.INT.optionalFieldOf("cooldown", 0).forGetter(Config::cooldown),
+            Expression.INT_OR_EXPR.optionalFieldOf("cooldown", Expression.constant(0)).forGetter(Config::cooldown),
             Codec.BOOL.optionalFieldOf("include_riding", false).forGetter(Config::includeRiding),
             HudRender.CODEC.optionalFieldOf("hud_render", HudRender.DONT_RENDER).forGetter(Config::hudRender)
         ).apply(i, Config::new));
@@ -95,8 +96,9 @@ public final class ActionOnCollisionPower extends PowerType<ActionOnCollisionPow
             if (cfg.entityAction().isPresent()) cfg.entityAction().get().run(selfCtx);
             if (cfg.targetAction().isPresent()) cfg.targetAction().get().run(targetCtx);
 
-            if (cfg.cooldown() > 0) {
-                impl.setAuxInt(powerId, HitActionHandler.expiry(now, cfg.cooldown()));
+            int ticks = PowerResources.cooldownTicks(cfg.cooldown(), impl);
+            if (ticks > 0) {
+                impl.setAuxInt(powerId, HitActionHandler.expiry(now, ticks));
                 return;
             }
         }
@@ -109,12 +111,12 @@ public final class ActionOnCollisionPower extends PowerType<ActionOnCollisionPow
 
     @Override
     public OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
-        return PowerResources.writeDeadline(holder, powerId, value, cfg.cooldown());
+        return PowerResources.writeDeadline(holder, powerId, value, PowerResources.cooldownTicks(cfg.cooldown(), holder));
     }
 
     @Override
     public OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
-        return OptionalInt.of(max ? Math.max(cfg.cooldown(), 0) : 0);
+        return OptionalInt.of(max ? Math.max(PowerResources.cooldownTicks(cfg.cooldown(), holder), 0) : 0);
     }
 
 }

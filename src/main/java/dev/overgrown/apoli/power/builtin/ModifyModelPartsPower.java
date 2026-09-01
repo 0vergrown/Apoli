@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.data.EntityPoses;
 import dev.overgrown.apoli.data.ModelPartTransformation;
+import dev.overgrown.apoli.data.Perspective;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
@@ -17,14 +18,17 @@ import java.util.List;
 public final class ModifyModelPartsPower extends PowerType<ModifyModelPartsPower.Config> {
     public static final ResourceLocation CANONICAL = Apoli.id("modify_model_parts");
 
-    public record Config(List<ModelPartTransformation> transformations, List<Pose> overridePose, int overridePoseMask) {}
+    public record Config(List<ModelPartTransformation> transformations, List<Pose> overridePose, int overridePoseMask,
+                         List<Perspective> perspectives, int perspectiveMask) {}
 
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(instance -> instance.group(
             ModelPartTransformation.CODEC.listOf().fieldOf("transformations").forGetter(Config::transformations),
-            EntityPoses.CODEC.listOf().optionalFieldOf("override_pose", List.of()).forGetter(Config::overridePose)
-        ).apply(instance, (transformations, poses) -> new Config(transformations, poses, maskOf(poses))));
+            EntityPoses.CODEC.listOf().optionalFieldOf("override_pose", List.of()).forGetter(Config::overridePose),
+            Perspective.LIST_CODEC.optionalFieldOf("perspectives", Perspective.THIRD_ONLY).forGetter(Config::perspectives)
+        ).apply(instance, (transformations, poses, perspectives) ->
+            new Config(transformations, poses, maskOf(poses), perspectives, Perspective.maskOf(perspectives))));
     }
 
     public static int maskOf(List<Pose> poses) {

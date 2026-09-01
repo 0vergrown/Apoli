@@ -80,7 +80,7 @@ public final class HitActionHandler {
             } finally {
                 ExprDamageContext.restore(prevDamage);
             }
-            impl.setAuxInt(powerId, expiry(now, cfg.cooldown()));
+            impl.setAuxInt(powerId, expiry(now, dev.overgrown.apoli.power.PowerResources.cooldownTicks(cfg.cooldown(), impl)));
         }
     }
 
@@ -137,7 +137,7 @@ public final class HitActionHandler {
             } finally {
                 ExprDamageContext.restore(prevDamage);
             }
-            impl.setAuxInt(powerId, expiry(now, cfg.cooldown()));
+            impl.setAuxInt(powerId, expiry(now, dev.overgrown.apoli.power.PowerResources.cooldownTicks(cfg.cooldown(), impl)));
         }
     }
 

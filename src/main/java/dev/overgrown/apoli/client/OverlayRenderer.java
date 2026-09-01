@@ -16,6 +16,8 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 
+import java.util.List;
+
 @Environment(EnvType.CLIENT)
 public final class OverlayRenderer {
     private OverlayRenderer() {}
@@ -43,27 +45,42 @@ public final class OverlayRenderer {
             PowerType<?> type = PowerTypeRegistry.get(power.typeId());
             if (!(type instanceof OverlayPower)) continue;
             if (!(power.config() instanceof OverlayPower.Config cfg)) continue;
-            if (cfg.drawPhase() != phase) continue;
-            if (hudHidden && cfg.hideWithHud()) continue;
-            if (thirdPerson && !cfg.visibleInThirdPerson()) continue;
             if (power.condition().isPresent() && !power.condition().get().test(ctx)) continue;
 
-            switch (cfg.drawMode()) {
-                case TEXTURE -> drawTexture(graphics, cfg);
-                case NAUSEA -> drawNausea(graphics, cfg);
+            List<OverlayPower.Entry> overlays = cfg.overlays();
+            for (int i = 0; i < overlays.size(); i++) {
+                OverlayPower.Entry entry = overlays.get(i);
+                if (entry.drawPhase() != phase) continue;
+                if (hudHidden && entry.hideWithHud()) continue;
+                if (thirdPerson && !entry.visibleInThirdPerson()) continue;
+                if (!entry.shouldRender(ctx)) continue;
+
+                switch (entry.drawMode()) {
+                    case TEXTURE -> drawTexture(graphics, player, entry);
+                    case NAUSEA -> drawNausea(graphics, player, entry);
+                }
             }
         }
     }
 
-    private static void drawTexture(GuiGraphics graphics, OverlayPower.Config cfg) {
-        int w = graphics.guiWidth();
-        int h = graphics.guiHeight();
+    private static void drawTexture(GuiGraphics graphics, LocalPlayer player, OverlayPower.Entry entry) {
+        int screenW = graphics.guiWidth();
+        int screenH = graphics.guiHeight();
+        int w = entry.width().map(e -> e.evalInt(player)).orElse(screenW);
+        int h = entry.height().map(e -> e.evalInt(player)).orElse(screenH);
+        if (w <= 0 || h <= 0) return;
+        int x = entry.anchor().originX(screenW, w) + entry.x().evalInt(player);
+        int y = entry.anchor().originY(screenH, h) + entry.y().evalInt(player);
+        int texW = entry.textureWidth().orElse(w);
+        int texH = entry.textureHeight().orElse(h);
+
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
-        RenderSystem.setShaderColor(cfg.red(), cfg.green(), cfg.blue(), cfg.strength());
-        graphics.blit(cfg.texture(), 0, 0, -90, 0.0F, 0.0F, w, h, w, h);
+        RenderSystem.setShaderColor(entry.red(), entry.green(), entry.blue(), entry.strength());
+        graphics.blit(entry.texture(), x, y, -90,
+            entry.u().evalInt(player), entry.v().evalInt(player), w, h, texW, texH);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableBlend();
@@ -71,16 +88,19 @@ public final class OverlayRenderer {
         RenderSystem.enableDepthTest();
     }
 
-    private static void drawNausea(GuiGraphics graphics, OverlayPower.Config cfg) {
-        int w = graphics.guiWidth();
-        int h = graphics.guiHeight();
-        float strength = Mth.clamp(cfg.strength(), 0.0F, 1.0F);
+    private static void drawNausea(GuiGraphics graphics, LocalPlayer player, OverlayPower.Entry entry) {
+        int screenW = graphics.guiWidth();
+        int screenH = graphics.guiHeight();
+        float strength = Mth.clamp(entry.strength(), 0.0F, 1.0F);
         float scale = Mth.lerp(strength, 2.0F, 1.0F);
 
-        int quadW = Math.round(w * scale);
-        int quadH = Math.round(h * scale);
-        int x = (w - quadW) / 2;
-        int y = (h - quadH) / 2;
+        int baseW = entry.width().map(e -> e.evalInt(player)).orElse(screenW);
+        int baseH = entry.height().map(e -> e.evalInt(player)).orElse(screenH);
+        int quadW = Math.round(baseW * scale);
+        int quadH = Math.round(baseH * scale);
+        if (quadW <= 0 || quadH <= 0) return;
+        int x = entry.anchor().originX(screenW, quadW) + entry.x().evalInt(player);
+        int y = entry.anchor().originY(screenH, quadH) + entry.y().evalInt(player);
 
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
@@ -88,8 +108,9 @@ public final class OverlayRenderer {
         RenderSystem.blendFuncSeparate(
             GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE,
             GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE);
-        RenderSystem.setShaderColor(cfg.red() * strength, cfg.green() * strength, cfg.blue() * strength, 1.0F);
-        graphics.blit(cfg.texture(), x, y, -90, 0.0F, 0.0F, quadW, quadH, quadW, quadH);
+        RenderSystem.setShaderColor(entry.red() * strength, entry.green() * strength, entry.blue() * strength, 1.0F);
+        graphics.blit(entry.texture(), x, y, -90,
+            entry.u().evalInt(player), entry.v().evalInt(player), quadW, quadH, quadW, quadH);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableBlend();

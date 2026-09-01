@@ -73,6 +73,7 @@ public record RopeEndpointSource(Type type, float distance, boolean entities, bo
         Vec3 blockHitPos = null;
         UUID blockHitSubLevel = null;
         double blockDistSq = Double.POSITIVE_INFINITY;
+        double maxDistSq = (distance + 2.0) * (distance + 2.0);
         if (blocks) {
             BlockHitResult blockHit = level.clip(new ClipContext(origin, end,
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, actor));
@@ -83,6 +84,11 @@ public record RopeEndpointSource(Type type, float distance, boolean entities, bo
                     ? blockHitPos
                     : SableSubLevels.toWorld(level, blockHitSubLevel, blockHitPos);
                 blockDistSq = worldPos == null ? Double.POSITIVE_INFINITY : origin.distanceToSqr(worldPos);
+                if (blockDistSq > maxDistSq) {
+                    blockHitPos = null;
+                    blockHitSubLevel = null;
+                    blockDistSq = Double.POSITIVE_INFINITY;
+                }
             }
         }
 

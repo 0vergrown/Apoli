@@ -25,7 +25,7 @@ public final class SkinRenderCompat {
     public static boolean suppressed(@Nullable LivingEntity entity, String[] featureKeys) {
         if (entity == null) return false;
         Entity source = ClientDisguiseManager.powerSource(entity);
-        if (PreventFeatureRenderPower.prevents(source, featureKeys)) return true;
+        if (PreventFeatureRenderPower.prevents(source, featureKeys, net.minecraft.client.Minecraft.getInstance().player)) return true;
         if (!(source instanceof LivingEntity living)) return false;
         return CustomModelRenderPower.replacesSkin(living)
             || ModifyPlayerModelPower.firstActiveModel(living) != null;

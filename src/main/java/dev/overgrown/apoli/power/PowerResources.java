@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.power;
 
+import dev.overgrown.apoli.data.Expression;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
@@ -22,6 +23,11 @@ public final class PowerResources {
 
     public static int clientCooldown(PowerContainer holder, ResourceLocation powerId) {
         return clientCooldowns.remaining(holder.rawOwner(), powerId);
+    }
+
+    public static int cooldownTicks(Expression cooldown, @Nullable PowerContainer holder) {
+        if (cooldown == null) return 0;
+        return cooldown.evalIntWith(holder == null ? null : holder.rawOwner(), holder, 0.0);
     }
 
     public static OptionalInt read(@Nullable PowerContainer holder, ResourceLocation powerId) {
