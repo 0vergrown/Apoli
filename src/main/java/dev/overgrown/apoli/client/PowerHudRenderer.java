@@ -53,7 +53,7 @@ public final class PowerHudRenderer {
     public static void render(GuiGraphics graphics, float partialTick) {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
-        if (player == null || mc.options.hideGui) return;
+        if (player == null || mc.options.hideGui || ClientDevMode.enabled()) return;
 
         int yOffset = 49;
         if (player.isEyeInFluid(FluidTags.WATER) || player.getAirSupply() < player.getMaxAirSupply()) {

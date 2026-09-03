@@ -194,6 +194,7 @@ public final class ClientPowerState {
     }
 
     public static int getCooldown(ResourceLocation power) {
+        if (ClientDevMode.enabled()) return 0;
         return COOLDOWNS.getOrDefault(power, 0);
     }
 

@@ -45,7 +45,7 @@ public final class ModifyCraftingHandler {
                     tablePos[0] = craftingBlockPos(player);
                 }
                 if (tablePos[0] != null) {
-                    cfg.blockAction().get().run(new BlockCtx(tablePos[0], level.getBlockState(tablePos[0]), level));
+                    cfg.blockAction().get().run(new BlockCtx(tablePos[0], level.getBlockState(tablePos[0]), level, player));
                 }
             }
         });

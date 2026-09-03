@@ -7,6 +7,9 @@ import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.power.PowerTypeRegistry;
+import dev.overgrown.apoli.client.render.DynamicTextures;
+import dev.overgrown.apoli.data.expr.ExprContext;
+import dev.overgrown.apoli.data.TextureRef;
 import dev.overgrown.apoli.power.builtin.OverlayPower;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -20,6 +23,9 @@ import java.util.List;
 
 @Environment(EnvType.CLIENT)
 public final class OverlayRenderer {
+    private static final int SLOT_COUNT = ExprContext.slot("count");
+    private static final int SLOT_INDEX = ExprContext.slot("index");
+
     private OverlayRenderer() {}
 
     public static void renderBelowHud(GuiGraphics graphics, float partialTick) {
@@ -55,15 +61,54 @@ public final class OverlayRenderer {
                 if (thirdPerson && !entry.visibleInThirdPerson()) continue;
                 if (!entry.shouldRender(ctx)) continue;
 
-                switch (entry.drawMode()) {
-                    case TEXTURE -> drawTexture(graphics, player, entry);
-                    case NAUSEA -> drawNausea(graphics, player, entry);
-                }
+                drawEntry(graphics, player, entry);
             }
         }
     }
 
-    private static void drawTexture(GuiGraphics graphics, LocalPlayer player, OverlayPower.Entry entry) {
+
+    private static void drawEntry(GuiGraphics graphics, LocalPlayer player, OverlayPower.Entry entry) {
+        ResourceLocation setId = entry.texture().set().orElse(null);
+        if (setId == null) {
+            draw(graphics, player, entry, DynamicTextures.subject(entry.texture(), player), null);
+            return;
+        }
+        java.util.List<java.util.UUID> members = ClientEntitySets.members(setId);
+        int count = members.size();
+        if (count == 0) ClientEntitySets.warnIfUnknown(setId);
+        double previousCount = ExprContext.push(SLOT_COUNT, count);
+        double previousIndex = ExprContext.get(SLOT_INDEX);
+        try {
+            for (int i = 0; i < count; i++) {
+                java.util.UUID uuid = members.get(i);
+                ExprContext.push(SLOT_INDEX, i);
+                draw(graphics, player, entry, memberEntity(player, uuid), uuid);
+            }
+        } finally {
+            ExprContext.pop(SLOT_INDEX, previousIndex);
+            ExprContext.pop(SLOT_COUNT, previousCount);
+        }
+    }
+
+    private static net.minecraft.world.entity.Entity memberEntity(LocalPlayer player, java.util.UUID uuid) {
+        if (player.getUUID().equals(uuid)) return player;
+        java.util.List<? extends net.minecraft.world.entity.player.Player> players = player.level().players();
+        for (int i = 0; i < players.size(); i++) {
+            if (players.get(i).getUUID().equals(uuid)) return players.get(i);
+        }
+        return null;
+    }
+
+    private static void draw(GuiGraphics graphics, LocalPlayer player, OverlayPower.Entry entry,
+                             net.minecraft.world.entity.Entity subject, java.util.UUID member) {
+        switch (entry.drawMode()) {
+            case TEXTURE -> drawTexture(graphics, player, entry, subject, member);
+            case NAUSEA -> drawNausea(graphics, player, entry);
+        }
+    }
+
+    private static void drawTexture(GuiGraphics graphics, LocalPlayer player, OverlayPower.Entry entry,
+                                    net.minecraft.world.entity.Entity subject, java.util.UUID member) {
         int screenW = graphics.guiWidth();
         int screenH = graphics.guiHeight();
         int w = entry.width().map(e -> e.evalInt(player)).orElse(screenW);
@@ -71,21 +116,54 @@ public final class OverlayRenderer {
         if (w <= 0 || h <= 0) return;
         int x = entry.anchor().originX(screenW, w) + entry.x().evalInt(player);
         int y = entry.anchor().originY(screenH, h) + entry.y().evalInt(player);
-        int texW = entry.textureWidth().orElse(w);
-        int texH = entry.textureHeight().orElse(h);
+
+        TextureRef ref = entry.texture();
+        TextureRef.Kind kind = ref.kind();
+        if (kind != null && kind.isItem()) {
+            drawItem(graphics, DynamicTextures.stack(ref.texture(), subject), x, y, w, h);
+            return;
+        }
+        ResourceLocation texture = DynamicTextures.resolve(ref.texture(), subject, member);
+        boolean face = kind == TextureRef.Kind.PLAYER_FACE;
+        int texW = entry.textureWidth().orElse(face ? 64 : w);
+        int texH = entry.textureHeight().orElse(face ? 64 : h);
+        int u = entry.u().evalInt(player);
+        int v = entry.v().evalInt(player);
+        if (face && entry.textureWidth().isEmpty() && u == 0 && v == 0) {
+            u = 8;
+            v = 8;
+        }
+        int regionW = entry.regionWidth().orElse(face ? 8 : w);
+        int regionH = entry.regionHeight().orElse(face ? 8 : h);
 
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.setShaderColor(entry.red(), entry.green(), entry.blue(), entry.strength());
-        graphics.blit(entry.texture(), x, y, -90,
-            entry.u().evalInt(player), entry.v().evalInt(player), w, h, texW, texH);
+        if (regionW == w && regionH == h) {
+            graphics.blit(texture, x, y, -90, u, v, w, h, texW, texH);
+        } else {
+            graphics.blit(texture, x, y, w, h, u, v, regionW, regionH, texW, texH);
+            if (face) {
+                graphics.blit(texture, x, y, w, h, 40, 8, regionW, regionH, texW, texH);
+            }
+        }
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableBlend();
         RenderSystem.depthMask(true);
         RenderSystem.enableDepthTest();
+    }
+
+    private static void drawItem(GuiGraphics graphics, net.minecraft.world.item.ItemStack stack,
+                                 int x, int y, int w, int h) {
+        if (stack.isEmpty()) return;
+        graphics.pose().pushPose();
+        graphics.pose().translate(x, y, 0.0F);
+        graphics.pose().scale(w / 16.0F, h / 16.0F, 1.0F);
+        graphics.renderItem(stack, 0, 0);
+        graphics.pose().popPose();
     }
 
     private static void drawNausea(GuiGraphics graphics, LocalPlayer player, OverlayPower.Entry entry) {
@@ -109,8 +187,8 @@ public final class OverlayRenderer {
             GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE,
             GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE);
         RenderSystem.setShaderColor(entry.red() * strength, entry.green() * strength, entry.blue() * strength, 1.0F);
-        graphics.blit(entry.texture(), x, y, -90,
-            entry.u().evalInt(player), entry.v().evalInt(player), quadW, quadH, quadW, quadH);
+        graphics.blit(DynamicTextures.resolve(entry.texture().texture(), DynamicTextures.subject(entry.texture(), player)),
+            x, y, -90, entry.u().evalInt(player), entry.v().evalInt(player), quadW, quadH, quadW, quadH);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableBlend();

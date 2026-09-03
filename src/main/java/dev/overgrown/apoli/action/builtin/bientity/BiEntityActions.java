@@ -12,6 +12,9 @@ public final class BiEntityActions {
     public static void register() {
         ActionTypes.BI_ENTITY.register(Apoli.id("add_velocity"), new AddVelocityAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("damage"), new DamageBiEntityAction());
+        ActionTypes.BI_ENTITY.register(Apoli.id("modify_resource"), new ModifyResourceBiEntityAction(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("change_resource"))
+                .addTypeAlias("origins:change_resource").build());
         ActionTypes.BI_ENTITY.register(Apoli.id("punch"), new PunchBiEntityAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("teleport_to"), new TeleportToBiEntityAction(false));
         ActionTypes.BI_ENTITY.register(Apoli.id("swap"), new TeleportToBiEntityAction(true));

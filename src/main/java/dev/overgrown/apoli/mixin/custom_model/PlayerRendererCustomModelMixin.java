@@ -60,7 +60,8 @@ public abstract class PlayerRendererCustomModelMixin extends LivingEntityRendere
         if (cfg == null) {
             return;
         }
-        cir.setReturnValue(apoli$slim ? cfg.slim() : cfg.wide());
+        cir.setReturnValue(dev.overgrown.apoli.client.render.DynamicTextures.resolve(
+            apoli$slim ? cfg.slim() : cfg.wide(), player));
     }
 
     @ModifyExpressionValue(method = "renderHand",
@@ -71,7 +72,8 @@ public abstract class PlayerRendererCustomModelMixin extends LivingEntityRendere
         if (cfg == null || !cfg.showFirstPerson()) {
             return original;
         }
-        return apoli$slim ? cfg.slim() : cfg.wide();
+        return dev.overgrown.apoli.client.render.DynamicTextures.resolve(
+            apoli$slim ? cfg.slim() : cfg.wide(), player);
     }
 
     @Inject(method = "renderRightHand", at = @At("TAIL"))
@@ -138,7 +140,7 @@ public abstract class PlayerRendererCustomModelMixin extends LivingEntityRendere
             GeometryRenderer.syncPlayer(custom, model, rest);
             AnimationPlayer.apply(player, render, custom, Minecraft.getInstance().getFrameTime());
             GeometryRenderer.applyVisibility(custom, render.bodyParts());
-            GeometryRenderer.drawSlot(render, custom, slot, alphaScale, pose, buffers, light);
+            GeometryRenderer.drawSlot(render, custom, slot, alphaScale, pose, buffers, light, player);
         }
     }
 

@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.BlockCtx;
+import dev.overgrown.apoli.data.MacroArguments;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
@@ -13,8 +14,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.Optional;
+
 public final class ExecuteCommandBlockAction implements ActionType<BlockCtx, ExecuteCommandBlockAction.Cfg> {
-    public record Cfg(String command) {}
+    public record Cfg(String command, Optional<MacroArguments> arguments) {}
 
     private static final CommandSource SILENT_SOURCE = new CommandSource() {
         @Override public void sendSystemMessage(Component component) {}
@@ -26,7 +29,8 @@ public final class ExecuteCommandBlockAction implements ActionType<BlockCtx, Exe
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.STRING.fieldOf("command").forGetter(Cfg::command)
+            Codec.STRING.fieldOf("command").forGetter(Cfg::command),
+            MacroArguments.FIELD.forGetter(Cfg::arguments)
         ).apply(i, Cfg::new));
     }
 
@@ -35,11 +39,17 @@ public final class ExecuteCommandBlockAction implements ActionType<BlockCtx, Exe
         if (!(ctx.level() instanceof ServerLevel serverLevel)) return;
         MinecraftServer server = serverLevel.getServer();
         if (server == null) return;
+        String command = cfg.command;
+        if (cfg.arguments.isPresent()) {
+            command = MacroArguments.expand(command, cfg.arguments.get().resolve(server, ctx.actor(), null));
+            if (command == null) return;
+        }
+        dev.overgrown.apoli.dev.DevMode.echoCommand(ctx.actor(), command);
         Vec3 pos = Vec3.atCenterOf(ctx.pos());
         CommandSourceStack source = new CommandSourceStack(
             SILENT_SOURCE, pos, Vec2.ZERO, serverLevel, 4,
             "ApoliBlockAction", Component.literal("ApoliBlockAction"), server, null
         );
-        server.getCommands().performPrefixedCommand(source, cfg.command);
+        server.getCommands().performPrefixedCommand(source, command);
     }
 }

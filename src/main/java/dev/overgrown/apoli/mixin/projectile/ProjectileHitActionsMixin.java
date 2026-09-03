@@ -87,7 +87,7 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
         boolean blockActionRan = false;
         if (hooks.blockActionOnHit().isPresent() && result instanceof BlockHitResult blockHit) {
             BlockPos pos = blockHit.getBlockPos();
-            BlockCtx blockCtx = new BlockCtx(pos.immutable(), level.getBlockState(pos), level);
+            BlockCtx blockCtx = new BlockCtx(pos.immutable(), level.getBlockState(pos), level, self.getOwner() != null ? self.getOwner() : self);
             if (hooks.blockCondition().isEmpty() || hooks.blockCondition().get().test(blockCtx)) {
                 hooks.blockActionOnHit().get().run(blockCtx);
                 blockActionRan = true;

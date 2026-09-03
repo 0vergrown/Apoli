@@ -5,19 +5,24 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
+import dev.overgrown.apoli.data.MacroArguments;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
 
+import java.util.Optional;
+
 public final class ExecuteCommandBiEntityAction implements ActionType<BiEntityCtx, ExecuteCommandBiEntityAction.Cfg> {
-    public record Cfg(String command, String actorSelector, String targetSelector) {}
+    public record Cfg(String command, String actorSelector, String targetSelector,
+                      Optional<MacroArguments> arguments) {}
 
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.fieldOf("command").forGetter(Cfg::command),
             Codec.STRING.optionalFieldOf("actor_selector", "%a").forGetter(Cfg::actorSelector),
-            Codec.STRING.optionalFieldOf("target_selector", "%t").forGetter(Cfg::targetSelector)
+            Codec.STRING.optionalFieldOf("target_selector", "%t").forGetter(Cfg::targetSelector),
+            MacroArguments.FIELD.forGetter(Cfg::arguments)
         ).apply(i, Cfg::new));
     }
 
@@ -35,6 +40,11 @@ public final class ExecuteCommandBiEntityAction implements ActionType<BiEntityCt
         if (!cfg.targetSelector().isEmpty()) {
             command = command.replace(cfg.targetSelector(), target.getStringUUID());
         }
+        if (cfg.arguments().isPresent()) {
+            command = MacroArguments.expand(command, cfg.arguments().get().resolve(server, actor, target));
+            if (command == null) return;
+        }
+        dev.overgrown.apoli.dev.DevMode.echoCommand(actor, command);
         CommandSourceStack source = actor.createCommandSourceStack()
             .withPermission(4)
             .withSuppressedOutput();

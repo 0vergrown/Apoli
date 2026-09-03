@@ -76,6 +76,16 @@ public final class ApoliNetwork {
         send(recipient, dev.overgrown.apoli.network.payload.SyncAuxIntsS2C.CHANNEL, payload::write);
     }
 
+    public static void sendDevMode(ServerPlayer recipient,
+                                   dev.overgrown.apoli.network.payload.DevModeS2C payload) {
+        send(recipient, dev.overgrown.apoli.network.payload.DevModeS2C.CHANNEL, payload::write);
+    }
+
+    public static void sendEntitySets(ServerPlayer recipient,
+                                      dev.overgrown.apoli.network.payload.SyncEntitySetsS2C payload) {
+        send(recipient, dev.overgrown.apoli.network.payload.SyncEntitySetsS2C.CHANNEL, payload::write);
+    }
+
     public static void sendEntityPowers(ServerPlayer recipient, SyncEntityPowersS2C payload) {
         send(recipient, SyncEntityPowersS2C.CHANNEL, payload::write);
     }

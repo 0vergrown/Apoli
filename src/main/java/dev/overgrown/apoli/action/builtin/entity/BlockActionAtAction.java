@@ -21,6 +21,6 @@ public final class BlockActionAtAction implements ActionType<EntityCtx, BlockAct
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
         BlockPos pos = ctx.raw().blockPosition();
-        cfg.blockAction.run(new BlockCtx(pos, ctx.level().getBlockState(pos), ctx.level()));
+        cfg.blockAction.run(new BlockCtx(pos, ctx.level().getBlockState(pos), ctx.level(), ctx.raw()));
     }
 }

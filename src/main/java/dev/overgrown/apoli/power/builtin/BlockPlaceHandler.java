@@ -16,8 +16,8 @@ public final class BlockPlaceHandler {
 
     public static boolean isPrevented(Player player, Level level, InteractionHand hand, ItemStack stack,
                                       BlockPos toPos, BlockPos onPos, Direction direction) {
-        BlockCtx toCtx = new BlockCtx(toPos, level.getBlockState(toPos), level);
-        BlockCtx onCtx = new BlockCtx(onPos, level.getBlockState(onPos), level);
+        BlockCtx toCtx = new BlockCtx(toPos, level.getBlockState(toPos), level, player);
+        BlockCtx onCtx = new BlockCtx(onPos, level.getBlockState(onPos), level, player);
         boolean[] prevented = {false};
         PowerLookup.forEach(player, ApoliIds.PREVENT_BLOCK_PLACE, PreventBlockPlacePower.Config.class, cfg -> {
             if (!BlockInteractionHelper.handMatches(cfg.hands(), hand)) return;
@@ -39,8 +39,8 @@ public final class BlockPlaceHandler {
     public static void fireAfterPlace(Player player, Level level, InteractionHand hand, ItemStack stack,
                                       BlockPos toPos, BlockPos onPos, Direction direction) {
         if (level.isClientSide()) return;
-        BlockCtx toCtx = new BlockCtx(toPos, level.getBlockState(toPos), level);
-        BlockCtx onCtx = new BlockCtx(onPos, level.getBlockState(onPos), level);
+        BlockCtx toCtx = new BlockCtx(toPos, level.getBlockState(toPos), level, player);
+        BlockCtx onCtx = new BlockCtx(onPos, level.getBlockState(onPos), level, player);
         PowerLookup.forEach(player, ApoliIds.ACTION_ON_BLOCK_PLACE, ActionOnBlockPlacePower.Config.class, cfg -> {
             if (!BlockInteractionHelper.handMatches(cfg.hands(), hand)) return;
             if (!BlockInteractionHelper.directionMatches(cfg.directions(), direction)) return;

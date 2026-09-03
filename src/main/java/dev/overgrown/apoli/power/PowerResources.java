@@ -90,6 +90,7 @@ public final class PowerResources {
     }
 
     public static OptionalInt readDeadline(PowerContainer holder, ResourceLocation powerId) {
+        if (dev.overgrown.apoli.dev.DevMode.isEnabled(holder.rawOwner())) return OptionalInt.of(0);
         OptionalInt stored = holder.getAuxInt(powerId);
         if (stored.isEmpty()) return OptionalInt.of(0);
         int now = (int) holder.rawOwner().level().getGameTime();
