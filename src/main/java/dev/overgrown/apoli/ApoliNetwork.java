@@ -44,6 +44,10 @@ public final class ApoliNetwork {
             dev.overgrown.apoli.network.payload.SyncResourceTablesS2C.STREAM_CODEC, ApoliNetwork::onSyncResourceTables);
         registrar.playToClient(dev.overgrown.apoli.network.payload.SyncAuxIntsS2C.TYPE,
             dev.overgrown.apoli.network.payload.SyncAuxIntsS2C.STREAM_CODEC, ApoliNetwork::onSyncAuxInts);
+        registrar.playToClient(dev.overgrown.apoli.network.payload.DevModeS2C.TYPE,
+            dev.overgrown.apoli.network.payload.DevModeS2C.STREAM_CODEC, ApoliNetwork::onDevMode);
+        registrar.playToClient(dev.overgrown.apoli.network.payload.SyncEntitySetsS2C.TYPE,
+            dev.overgrown.apoli.network.payload.SyncEntitySetsS2C.STREAM_CODEC, ApoliNetwork::onSyncEntitySets);
         registrar.playToClient(PowerActivatedS2C.TYPE, PowerActivatedS2C.STREAM_CODEC, ApoliNetwork::onPowerActivated);
         registrar.playToClient(SyncKeybindsS2C.TYPE, SyncKeybindsS2C.STREAM_CODEC, ApoliNetwork::onSyncKeybinds);
         registrar.playToClient(ApplyVelocityS2C.TYPE, ApplyVelocityS2C.STREAM_CODEC, ApoliNetwork::onApplyVelocity);
@@ -115,6 +119,15 @@ public final class ApoliNetwork {
     private static void onSyncAuxInts(dev.overgrown.apoli.network.payload.SyncAuxIntsS2C payload,
                                       IPayloadContext ctx) {
         ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPowerState.applyAuxInts(payload));
+    }
+
+    private static void onDevMode(dev.overgrown.apoli.network.payload.DevModeS2C payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientDevMode.set(payload.enabled()));
+    }
+
+    private static void onSyncEntitySets(dev.overgrown.apoli.network.payload.SyncEntitySetsS2C payload,
+                                         IPayloadContext ctx) {
+        ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientEntitySets.apply(payload.powerId(), payload.members()));
     }
 
     private static void onPowerActivated(PowerActivatedS2C payload, IPayloadContext ctx) {
@@ -292,6 +305,18 @@ public final class ApoliNetwork {
     }
 
     public static void sendActivated(ServerPlayer recipient, PowerActivatedS2C payload) {
+        if (!connected(recipient)) return;
+        PacketDistributor.sendToPlayer(recipient, payload);
+    }
+
+    public static void sendDevMode(ServerPlayer recipient,
+                                   dev.overgrown.apoli.network.payload.DevModeS2C payload) {
+        if (!connected(recipient)) return;
+        PacketDistributor.sendToPlayer(recipient, payload);
+    }
+
+    public static void sendEntitySets(ServerPlayer recipient,
+                                      dev.overgrown.apoli.network.payload.SyncEntitySetsS2C payload) {
         if (!connected(recipient)) return;
         PacketDistributor.sendToPlayer(recipient, payload);
     }

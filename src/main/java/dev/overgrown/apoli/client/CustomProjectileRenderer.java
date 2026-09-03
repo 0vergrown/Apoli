@@ -16,8 +16,11 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.util.Mth;
 
 import java.util.List;
@@ -26,17 +29,35 @@ import java.util.List;
 public class CustomProjectileRenderer extends EntityRenderer<CustomProjectileEntity> {
     private static final ResourceLocation MISSING = ResourceLocation.withDefaultNamespace("textures/misc/unknown_pack.png");
 
+    private final ItemRenderer itemRenderer;
+
     public CustomProjectileRenderer(EntityRendererProvider.Context context) {
         super(context);
+        this.itemRenderer = context.getItemRenderer();
     }
 
     @Override
     public void render(CustomProjectileEntity entity, float yaw, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light) {
         List<GeometryRender> geometry = resolveGeometry(entity);
         if (geometry.isEmpty() || !renderGeometry(entity, geometry, partialTick, poseStack, buffers, light)) {
-            renderBillboard(entity, poseStack, buffers, light);
+            ItemStack stack = entity.getItem();
+            if (stack.isEmpty()) {
+                renderBillboard(entity, poseStack, buffers, light);
+            } else {
+                renderItem(entity, stack, poseStack, buffers, light);
+            }
         }
         super.render(entity, yaw, partialTick, poseStack, buffers, light);
+    }
+
+    private void renderItem(CustomProjectileEntity entity, ItemStack stack, PoseStack poseStack,
+                            MultiBufferSource buffers, int light) {
+        poseStack.pushPose();
+        poseStack.mulPose(this.entityRenderDispatcher.cameraOrientation());
+        poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
+        this.itemRenderer.renderStatic(stack, ItemDisplayContext.GROUND, light, OverlayTexture.NO_OVERLAY,
+            poseStack, buffers, entity.level(), entity.getId());
+        poseStack.popPose();
     }
 
     private void renderBillboard(CustomProjectileEntity entity, PoseStack poseStack, MultiBufferSource buffers, int light) {
@@ -76,7 +97,7 @@ public class CustomProjectileRenderer extends EntityRenderer<CustomProjectileEnt
             GeometryRenderer.resetAll(custom);
             AnimationPlayer.apply(entity, render, custom, partialTick);
             GeometryRenderer.applyVisibility(custom, render.bodyParts());
-            GeometryRenderer.draw(render, custom, poseStack, buffers, light);
+            GeometryRenderer.draw(render, custom, poseStack, buffers, light, entity);
             drew = true;
         }
         poseStack.popPose();

@@ -10,6 +10,7 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.util.FastColor;
 import org.jetbrains.annotations.Nullable;
 
@@ -87,7 +88,13 @@ public final class GeometryRenderer {
     }
 
     public static void draw(GeometryRender render, CustomModel model, PoseStack pose, MultiBufferSource buffers, int light) {
-        VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(render.mode(), render.texture()));
+        draw(render, model, pose, buffers, light, null);
+    }
+
+    public static void draw(GeometryRender render, CustomModel model, PoseStack pose, MultiBufferSource buffers,
+                            int light, @Nullable Entity subject) {
+        VertexConsumer consumer = buffers.getBuffer(
+            OverlayRenderTypes.forMode(render.mode(), DynamicTextures.resolve(render.texture(), subject)));
         int color = FastColor.ARGB32.colorFromFloat(render.alpha(), render.red(), render.green(), render.blue());
         boolean scaled = render.scale() != 1.0F;
         if (scaled) {
@@ -102,11 +109,17 @@ public final class GeometryRenderer {
 
     public static void drawSlot(GeometryRender render, CustomModel model, String normalizedName, float alphaScale,
                                 PoseStack pose, MultiBufferSource buffers, int light) {
+        drawSlot(render, model, normalizedName, alphaScale, pose, buffers, light, null);
+    }
+
+    public static void drawSlot(GeometryRender render, CustomModel model, String normalizedName, float alphaScale,
+                                PoseStack pose, MultiBufferSource buffers, int light, @Nullable Entity subject) {
         CustomModel.Bone[] bound = model.bones(normalizedName);
         if (bound.length == 0) {
             return;
         }
-        VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(render.mode(), render.texture()));
+        VertexConsumer consumer = buffers.getBuffer(
+            OverlayRenderTypes.forMode(render.mode(), DynamicTextures.resolve(render.texture(), subject)));
         int color = FastColor.ARGB32.colorFromFloat(render.alpha() * alphaScale, render.red(), render.green(), render.blue());
         boolean scaled = render.scale() != 1.0F;
         if (scaled) {

@@ -55,6 +55,8 @@ public final class ApoliClient {
             (graphics, deltaTracker) -> TextOverlayRenderer.render(graphics, deltaTracker.getGameTimeDeltaPartialTick(false)));
         event.registerAboveAll(Apoli.id("overlay_above_hud"),
             (graphics, deltaTracker) -> OverlayRenderer.renderAboveHud(graphics, deltaTracker.getGameTimeDeltaPartialTick(false)));
+        event.registerAboveAll(Apoli.id("dev_hud"),
+            (graphics, deltaTracker) -> DevHudRenderer.render(graphics, deltaTracker.getGameTimeDeltaPartialTick(false)));
         NeoForge.EVENT_BUS.register(GameBus.class);
     }
 
@@ -120,6 +122,12 @@ public final class ApoliClient {
         private GameBus() {}
 
         @SubscribeEvent
+        public static void onClientTickPre(ClientTickEvent.Pre event) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null && !mc.isPaused()) ApoliKeyHandler.onClientTick();
+        }
+
+        @SubscribeEvent
         public static void onClientTick(ClientTickEvent.Post event) {
             Minecraft mc = Minecraft.getInstance();
             CursorSpeedState.tick(mc);
@@ -139,7 +147,6 @@ public final class ApoliClient {
                 ForcedKeys.tick();
                 return;
             }
-            ApoliKeyHandler.onClientTick();
             while (SKILL_TREE_KEY.consumeClick()) {
                 if (mc.screen == null && dev.overgrown.apoli.client.skill.ClientSkillState.hasAnyTree()) {
                     if (mc.getConnection() != null && mc.getConnection().hasChannel(dev.overgrown.apoli.network.payload.RequestSkillStateC2S.TYPE)) {
@@ -155,6 +162,8 @@ public final class ApoliClient {
         public static void onDisconnect(ClientPlayerNetworkEvent.LoggingOut event) {
             DynamicKeyMappingManager.unregisterAll();
             ClientPowerState.clear();
+            dev.overgrown.apoli.client.ClientEntitySets.clear();
+            dev.overgrown.apoli.client.ClientDevMode.clear();
             dev.overgrown.apoli.mount.MountOffsets.clearAll();
             ShaderPowerState.clear();
             dev.overgrown.apoli.client.render.BlockRenderRules.clear();
@@ -163,6 +172,7 @@ public final class ApoliClient {
             ClientLabelState.clear();
             RopeClientManager.clear();
             KeyPressWatcher.reset();
+            ApoliKeyMappings.reset();
             ForcedKeys.clear();
                 BlockedKeys.clear();
             CursorSpeedState.reset();

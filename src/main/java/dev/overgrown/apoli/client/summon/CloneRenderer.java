@@ -50,7 +50,8 @@ public class CloneRenderer extends HumanoidMobRenderer<CloneEntity, CloneModel> 
         if (owner != null) {
             CustomModelRenderPower.Config overlay = CustomModelRenderPower.firstReplace(owner);
             if (overlay != null) {
-                return slim ? overlay.slim() : overlay.wide();
+                return dev.overgrown.apoli.client.render.DynamicTextures.resolve(
+                    slim ? overlay.slim() : overlay.wide(), owner);
             }
         }
         if (owner instanceof AbstractClientPlayer player) return player.getSkin().texture();

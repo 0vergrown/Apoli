@@ -124,6 +124,7 @@
     "input.EntityTurnCursorSpeedMixin",
     "input.MouseHandlerScrollMixin",
     "keybinding.KeyMappingCategoryAccessor",
+    "keybinding.KeyMappingClickCountAccessor",
     "keybinding.KeyMappingForcePressMixin",
     "keybinding.OptionsAccessor",
     "label.EntityRendererLabelMixin",

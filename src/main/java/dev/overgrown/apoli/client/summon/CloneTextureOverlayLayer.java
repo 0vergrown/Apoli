@@ -35,7 +35,7 @@ public class CloneTextureOverlayLayer extends RenderLayer<CloneEntity, CloneMode
         boolean slim = CloneRenderer.resolveSlim(clone);
         CloneModel model = this.getParentModel();
         for (ResolvedLayer layer : layers) {
-            ResourceLocation texture = layer.texture(slim);
+            ResourceLocation texture = dev.overgrown.apoli.client.render.DynamicTextures.resolve(layer.texture(slim), owner);
             int color = FastColor.ARGB32.colorFromFloat(layer.alpha(), layer.red(), layer.green(), layer.blue());
             VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(layer.mode(), texture));
             boolean scaled = layer.scale() != 1.0F;

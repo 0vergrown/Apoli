@@ -10,10 +10,12 @@ import dev.overgrown.apoli.condition.BiEntityCondition;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Shape;
+import dev.overgrown.apoli.data.Space;
 import dev.overgrown.apoli.data.Vector;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
 import java.util.Map;
@@ -26,7 +28,9 @@ public final class AreaOfEffectAction implements ActionType<EntityCtx, AreaOfEff
         Optional<BiEntityAction> bientityAction,
         Optional<BiEntityCondition> bientityCondition,
         boolean includeActor,
-        Optional<dev.overgrown.apoli.action.EntityAction> afterAction
+        Optional<dev.overgrown.apoli.action.EntityAction> afterAction,
+        Vector offset,
+        Space space
     ) {}
 
     private static final int SLOT_COUNT = dev.overgrown.apoli.data.expr.ExprContext.slot("count");
@@ -38,7 +42,9 @@ public final class AreaOfEffectAction implements ActionType<EntityCtx, AreaOfEff
         dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Cfg::bientityAction),
         dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Cfg::bientityCondition),
         Codec.BOOL.optionalFieldOf("include_actor", false).forGetter(Cfg::includeActor),
-        dev.overgrown.apoli.codec.LoggedOptionalField.of("after_action", dev.overgrown.apoli.action.EntityAction.CODEC).forGetter(Cfg::afterAction)
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("after_action", dev.overgrown.apoli.action.EntityAction.CODEC).forGetter(Cfg::afterAction),
+        Vector.SCALAR_OR_VECTOR.optionalFieldOf("offset", Vector.ZERO).forGetter(Cfg::offset),
+        Space.CODEC.optionalFieldOf("space", Space.WORLD).forGetter(Cfg::space)
     ).apply(i, Cfg::new));
 
     @Override
@@ -49,12 +55,21 @@ public final class AreaOfEffectAction implements ActionType<EntityCtx, AreaOfEff
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
         Entity actor = ctx.entity();
-        BlockPos center = actor.blockPosition();
+        Vec3 origin = actor.position();
+        Vector offset = cfg.offset;
+        if (offset.x() != 0f || offset.y() != 0f || offset.z() != 0f) {
+            origin = origin.add(cfg.space.toGlobal(actor, new Vec3(offset.x(), offset.y(), offset.z())));
+        }
+        BlockPos center = BlockPos.containing(origin);
         int rx = (int) Math.ceil(cfg.radius.x());
         int ry = (int) Math.ceil(cfg.radius.y());
         int rz = (int) Math.ceil(cfg.radius.z());
         int boxHalf = Math.max(rx, Math.max(ry, rz));
-        AABB box = AABB.ofSize(actor.position(), boxHalf * 2.0, boxHalf * 2.0, boxHalf * 2.0);
+        AABB box = AABB.ofSize(origin, boxHalf * 2.0, boxHalf * 2.0, boxHalf * 2.0);
+        if (dev.overgrown.apoli.dev.DevMode.any() && actor.level() instanceof net.minecraft.server.level.ServerLevel devLevel) {
+            dev.overgrown.apoli.dev.DevParticles.outlineShape(devLevel, origin, cfg.shape,
+                cfg.radius.x(), cfg.radius.y(), cfg.radius.z());
+        }
         List<Entity> nearby = actor.level().getEntities((Entity) null, box,
             target -> {
                 if (target == actor) return cfg.includeActor;

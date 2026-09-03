@@ -131,6 +131,7 @@ public final class Apoli {
         dev.overgrown.apoli.command.ApoliCloneCommand.register(event.getDispatcher());
         dev.overgrown.apoli.command.ApoliMountCommand.register(event.getDispatcher());
         dev.overgrown.apoli.command.ApoliKeyCommand.register(event.getDispatcher());
+        dev.overgrown.apoli.command.ApoliDevModeCommand.register(event.getDispatcher());
         if (dev.overgrown.apoli.compat.ModCompat.anyAccessory()) {
             dev.overgrown.apoli.compat.accessory.command.AccessoryCommand.register(event.getDispatcher());
         }
@@ -220,6 +221,7 @@ public final class Apoli {
             dev.overgrown.apoli.skill.SkillTrees.grantOnJoin(sp);
             ApoliNetwork.sendSkillDefs(sp);
             ApoliNetwork.sendSkillState(sp);
+            dev.overgrown.apoli.power.builtin.EntitySetPower.syncAllTo(sp);
         }
     }
 
@@ -323,6 +325,7 @@ public final class Apoli {
     public void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer sp) {
             dev.overgrown.apoli.keybind.HeldKeys.clearServer(sp.getUUID());
+            dev.overgrown.apoli.dev.DevMode.forget(sp.getUUID());
             dev.overgrown.apoli.compat.voicechat.ActionOnSpeechPower.forget(sp.getUUID());
             if (dev.overgrown.apoli.power.PowerTypeRegistry.get(dev.overgrown.apoli.power.ApoliIds.ACTION_ON_KEY_SEQUENCE)
                 instanceof dev.overgrown.apoli.power.builtin.ActionOnKeySequencePower seq) {
@@ -444,6 +447,7 @@ public final class Apoli {
         dev.overgrown.apoli.block.GhostBlocks.tick(event.getServer());
         dev.overgrown.apoli.power.builtin.ShaderPower.tick(event.getServer());
         EntitySetPower.flushPendingRemovals();
+        EntitySetPower.flushSync(event.getServer());
     }
 
     public static void resumePowers(net.minecraft.world.entity.Entity entity) {

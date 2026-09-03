@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import dev.overgrown.apoli.client.render.HandRenderPass;
 import dev.overgrown.apoli.client.render.ModelPartAnimator;
+import dev.overgrown.apoli.data.ModelPartTimeline;
 import dev.overgrown.apoli.client.render.ModelPartLookup;
 import dev.overgrown.apoli.data.ModelPartTransformation;
 import net.neoforged.api.distmarker.Dist;
@@ -75,12 +76,12 @@ public abstract class HumanoidModelModifyPartsMixin {
 
     @Inject(method = SETUP_ANIM, at = @At("TAIL"))
     private void apoli$modifyPartsTail(LivingEntity entity, float f, float g, float h, float i, float j, CallbackInfo ci) {
-        List<ModelPartAnimator.Slot> slots = ModelPartAnimator.update(entity);
+        List<ModelPartTimeline.Slot> slots = ModelPartAnimator.update(entity);
         if (!slots.isEmpty()) {
             HumanoidModel<?> model = (HumanoidModel<?>) (Object) this;
             boolean handPass = HandRenderPass.active();
             for (int s = 0; s < slots.size(); s++) {
-                ModelPartAnimator.Slot slot = slots.get(s);
+                ModelPartTimeline.Slot slot = slots.get(s);
                 if (slot.weight() <= 0.0F) continue;
                 if (!slot.rendersIn(handPass)) continue;
                 apoli$scratch.clear();
@@ -127,7 +128,7 @@ public abstract class HumanoidModelModifyPartsMixin {
     }
 
     @Unique
-    private void apoli$apply(ModelPart part, ModelPartAnimator.Slot slot) {
+    private void apoli$apply(ModelPart part, ModelPartTimeline.Slot slot) {
         ModelPartTransformation t = slot.transformation();
         float[] o = apoli$originals.get(part);
         float value = slot.value();

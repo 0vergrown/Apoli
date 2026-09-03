@@ -89,7 +89,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
 
     private static final MapCodec<Params> PARAMS_BODY = RecordCodecBuilder.mapCodec(i -> i.group(
         IdCodecs.ID.optionalFieldOf("entity_type").forGetter(Params::entityType),
-        IdCodecs.ID.optionalFieldOf("texture_location").forGetter(Params::textureLocation),
+        dev.overgrown.apoli.data.TextureRef.ID_CODEC.optionalFieldOf("texture_location").forGetter(Params::textureLocation),
         Expression.INT_OR_EXPR.optionalFieldOf("cooldown", Expression.constant(1)).forGetter(Params::cooldown),
         HudRender.CODEC.optionalFieldOf("hud_render").forGetter(Params::hudRender),
         Codec.INT.optionalFieldOf("count", 1).forGetter(Params::count),
@@ -281,7 +281,14 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         Entity projectile;
         if (p.textureLocation().isPresent()) {
             CustomProjectileEntity custom = new CustomProjectileEntity(ApoliEntities.customProjectile(), owner, level);
-            custom.setTexture(p.textureLocation().get());
+            ResourceLocation declared = p.textureLocation().get();
+            dev.overgrown.apoli.data.TextureRef.Kind kind = dev.overgrown.apoli.data.TextureRef.kindOf(declared);
+            if (kind != null && kind.isItem() && owner instanceof LivingEntity holder) {
+                custom.setItem(kind == dev.overgrown.apoli.data.TextureRef.Kind.HELD_ITEM
+                    ? holder.getMainHandItem() : holder.getOffhandItem());
+            } else {
+                custom.setTexture(declared);
+            }
             projectile = custom;
         } else if (p.entityType().isPresent()) {
             EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.getOptional(p.entityType().get()).orElse(null);

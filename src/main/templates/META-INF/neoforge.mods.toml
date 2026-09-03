@@ -128,12 +128,12 @@ config="${mod_id}-sodium.mixins.json"
     ordering="NONE"
     side="BOTH"
 
-# Origins builds older than 1.9.3 were compiled against an older Apoli API and crash at runtime.
+# Origins builds older than 1.29.1 were compiled against an older Apoli API and crash at runtime.
 [[dependencies.${mod_id}]]
     modId="origins"
     type="incompatible"
-    reason="Origins older than 1.26.0 was built against an older Apoli API. Update Origins."
-    versionRange="[0,1.26.0)"
+    reason="Origins older than 1.29.1 was built against an older Apoli API. Update Origins."
+    versionRange="[0,1.29.1)"
     ordering="NONE"
     side="BOTH"
 
