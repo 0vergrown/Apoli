@@ -6,6 +6,7 @@
     "block.BeehiveBlockEntityMixin",
     "block.BeehiveBlockMixin",
     "block.BlockBehaviourBreakSpeedMixin",
+    "block.BlockBouncinessMixin",
     "block.BlockItemPlaceMixin",
     "block.BlockStateBaseSelectionMixin",
     "block.PlayerWakeUpMixin",
