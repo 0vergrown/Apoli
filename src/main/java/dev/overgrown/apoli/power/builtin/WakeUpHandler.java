@@ -16,7 +16,7 @@ public final class WakeUpHandler {
         Level level = player.level();
         if (level.isClientSide()) return;
         BlockState state = level.getBlockState(bedPos);
-        BlockCtx blockCtx = new BlockCtx(bedPos, state, level);
+        BlockCtx blockCtx = new BlockCtx(bedPos, state, level, player);
         PowerLookup.forEach(player, ApoliIds.ACTION_ON_WAKE_UP, ActionOnWakeUpPower.Config.class, cfg -> {
             if (cfg.blockCondition().isPresent() && !cfg.blockCondition().get().test(blockCtx)) return;
             cfg.entityAction().ifPresent(action -> action.run(new EntityCtx(player, level)));

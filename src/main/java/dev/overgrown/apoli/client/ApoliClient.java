@@ -90,6 +90,15 @@ public final class ApoliClient implements ClientModInitializer {
             dev.overgrown.apoli.network.payload.SyncAuxIntsS2C.TYPE, (payload, context) ->
                 context.client().execute(() -> ClientPowerState.applyAuxInts(payload)));
 
+        ClientPlayNetworking.registerGlobalReceiver(
+            dev.overgrown.apoli.network.payload.DevModeS2C.TYPE, (payload, context) ->
+                context.client().execute(() -> ClientDevMode.set(payload.enabled())));
+
+        ClientPlayNetworking.registerGlobalReceiver(
+            dev.overgrown.apoli.network.payload.SyncEntitySetsS2C.TYPE, (payload, context) ->
+                context.client().execute(() -> dev.overgrown.apoli.client.ClientEntitySets.apply(
+                    payload.powerId(), payload.members())));
+
         ClientPlayNetworking.registerGlobalReceiver(PowerActivatedS2C.TYPE, (payload, context) ->
             context.client().execute(() -> ClientPowerState.setCooldown(payload.power(), payload.cooldown())));
 
@@ -173,6 +182,8 @@ public final class ApoliClient implements ClientModInitializer {
             mc.execute(() -> {
                 DynamicKeyMappingManager.unregisterAll();
                 ClientPowerState.clear();
+                dev.overgrown.apoli.client.ClientEntitySets.clear();
+                ClientDevMode.clear();
                 dev.overgrown.apoli.mount.MountOffsets.clearAll();
                 ShaderPowerState.clear();
                 dev.overgrown.apoli.client.render.BlockRenderRules.clear();
@@ -181,6 +192,7 @@ public final class ApoliClient implements ClientModInitializer {
                 ClientLabelState.clear();
                 RopeClientManager.clear();
                 KeyPressWatcher.reset();
+                ApoliKeyMappings.reset();
                 ForcedKeys.clear();
                 BlockedKeys.clear();
                 CursorSpeedState.reset();
@@ -224,11 +236,14 @@ public final class ApoliClient implements ClientModInitializer {
             dev.overgrown.apoli.compat.ears.EarsCompat.init();
         }
 
+        ClientTickEvents.START_CLIENT_TICK.register(mc -> {
+            if (mc.player != null && !mc.isPaused()) ApoliKeyHandler.onClientTick();
+        });
+
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             CursorSpeedState.tick(mc);
             dev.overgrown.apoli.client.render.ClientRenderFlags.clientTick(mc);
             dev.overgrown.apoli.client.render.BlockRenderRules.clientTick(mc);
-            if (mc.player != null && !mc.isPaused()) ApoliKeyHandler.onClientTick();
             PhasingRenderState.clientTick(mc);
             RopeClientManager.tick();
             TextOverlayRenderer.tick();
@@ -256,5 +271,6 @@ public final class ApoliClient implements ClientModInitializer {
         HudRenderCallback.EVENT.register((gfx, tracker) -> PowerHudRenderer.render(gfx, tracker.getGameTimeDeltaPartialTick(false)));
         HudRenderCallback.EVENT.register((gfx, tracker) -> TextOverlayRenderer.render(gfx, tracker.getGameTimeDeltaPartialTick(false)));
         HudRenderCallback.EVENT.register((gfx, tracker) -> OverlayRenderer.renderAboveHud(gfx, tracker.getGameTimeDeltaPartialTick(false)));
+        HudRenderCallback.EVENT.register((gfx, tracker) -> DevHudRenderer.render(gfx, tracker.getGameTimeDeltaPartialTick(false)));
     }
 }

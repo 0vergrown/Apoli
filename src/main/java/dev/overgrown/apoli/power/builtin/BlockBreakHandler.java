@@ -13,7 +13,7 @@ public final class BlockBreakHandler {
     private BlockBreakHandler() {}
 
     public static void fire(Player player, Level level, BlockPos pos, BlockState brokenState, boolean harvested) {
-        BlockCtx blockCtx = new BlockCtx(pos, brokenState, level);
+        BlockCtx blockCtx = new BlockCtx(pos, brokenState, level, player);
         PowerLookup.forEach(player, ApoliIds.ACTION_ON_BLOCK_BREAK, ActionOnBlockBreakPower.Config.class, cfg -> {
             if (cfg.onlyWhenHarvested() && !harvested) return;
             if (cfg.blockCondition().isPresent() && !cfg.blockCondition().get().test(blockCtx)) return;

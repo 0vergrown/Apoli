@@ -24,6 +24,6 @@ public final class OffsetBlockMetaAction implements ActionType<BlockCtx, OffsetB
     @Override
     public void run(Cfg cfg, BlockCtx ctx) {
         BlockPos offset = ctx.pos().offset(cfg.x, cfg.y, cfg.z);
-        cfg.action.run(new BlockCtx(offset, ctx.level().getBlockState(offset), ctx.level()));
+        cfg.action.run(ctx.at(offset, ctx.level().getBlockState(offset)));
     }
 }

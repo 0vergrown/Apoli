@@ -28,6 +28,7 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("conjure_equipment"), new ConjureEquipmentAction());
         ActionTypes.ENTITY.register(Apoli.id("release_grab"), new ReleaseGrabAction());
         ActionTypes.ENTITY.register(Apoli.id("execute_command"), new ExecuteCommandAction());
+        ActionTypes.ENTITY.register(Apoli.id("store_data"), new StoreDataAction());
         ActionTypes.ENTITY.register(Apoli.id("exhaust"), new ExhaustAction());
         ActionTypes.ENTITY.register(Apoli.id("heal"), new HealAction());
         ActionTypes.ENTITY.register(Apoli.id("set_on_fire"), new SetOnFireAction());

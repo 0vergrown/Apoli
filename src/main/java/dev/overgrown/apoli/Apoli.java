@@ -176,6 +176,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.command.ApoliCloneCommand.register(dispatcher);
             dev.overgrown.apoli.command.ApoliMountCommand.register(dispatcher);
             dev.overgrown.apoli.command.ApoliKeyCommand.register(dispatcher);
+            dev.overgrown.apoli.command.ApoliDevModeCommand.register(dispatcher);
             if (dev.overgrown.apoli.compat.ModCompat.anyAccessory()) {
                 dev.overgrown.apoli.compat.accessory.command.AccessoryCommand.register(dispatcher);
             }
@@ -251,6 +252,7 @@ public final class Apoli implements ModInitializer {
 
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             HeldKeys.clearServer(handler.player.getUUID());
+            dev.overgrown.apoli.dev.DevMode.forget(handler.player.getUUID());
             dev.overgrown.apoli.network.ProtocolCompat.forget(handler.player.getUUID());
             dev.overgrown.apoli.network.PowerSyncCache.forget(handler.player.getUUID());
             dev.overgrown.apoli.compat.voicechat.ActionOnSpeechPower.forget(handler.player.getUUID());
@@ -338,6 +340,7 @@ public final class Apoli implements ModInitializer {
                     dev.overgrown.apoli.skill.SkillTrees.grantOnJoin(sp);
                     ApoliNetwork.sendSkillDefs(sp);
                     ApoliNetwork.sendSkillState(sp);
+                    dev.overgrown.apoli.power.builtin.EntitySetPower.syncAllTo(sp);
                 });
             }
         });
@@ -454,6 +457,7 @@ public final class Apoli implements ModInitializer {
         dev.overgrown.apoli.block.GhostBlocks.tick(server);
         dev.overgrown.apoli.power.builtin.ShaderPower.tick(server);
         dev.overgrown.apoli.power.builtin.EntitySetPower.flushPendingRemovals();
+        dev.overgrown.apoli.power.builtin.EntitySetPower.flushSync(server);
     }
 
     private static SyncEntityPowersS2C fullPayload(Entity entity, PowerContainerImpl impl) {

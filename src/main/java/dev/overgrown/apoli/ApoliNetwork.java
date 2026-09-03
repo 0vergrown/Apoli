@@ -44,6 +44,10 @@ public final class ApoliNetwork {
         PayloadTypeRegistry.playS2C().register(SyncEntityPowersS2C.TYPE, SyncEntityPowersS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SyncResourceTablesS2C.TYPE, SyncResourceTablesS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SyncAuxIntsS2C.TYPE, SyncAuxIntsS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.DevModeS2C.TYPE,
+            dev.overgrown.apoli.network.payload.DevModeS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.SyncEntitySetsS2C.TYPE,
+            dev.overgrown.apoli.network.payload.SyncEntitySetsS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(PowerActivatedS2C.TYPE, PowerActivatedS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SyncKeybindsS2C.TYPE, SyncKeybindsS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(ApplyVelocityS2C.TYPE, ApplyVelocityS2C.STREAM_CODEC);
@@ -157,6 +161,22 @@ public final class ApoliNetwork {
 
     public static void sendActivated(ServerPlayer recipient, PowerActivatedS2C payload) {
         if (connected(recipient)) ServerPlayNetworking.send(recipient, payload);
+    }
+
+    public static void sendDevMode(ServerPlayer recipient,
+                                   dev.overgrown.apoli.network.payload.DevModeS2C payload) {
+        if (connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.DevModeS2C.TYPE)) {
+            ServerPlayNetworking.send(recipient, payload);
+        }
+    }
+
+    public static void sendEntitySets(ServerPlayer recipient,
+                                      dev.overgrown.apoli.network.payload.SyncEntitySetsS2C payload) {
+        if (connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.SyncEntitySetsS2C.TYPE)) {
+            ServerPlayNetworking.send(recipient, payload);
+        }
     }
 
     public static void sendKeybinds(ServerPlayer recipient, SyncKeybindsS2C payload) {

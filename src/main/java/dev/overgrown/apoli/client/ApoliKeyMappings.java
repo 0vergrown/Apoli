@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import dev.overgrown.apoli.mixin.keybinding.KeyMappingClickCountAccessor;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.Nullable;
@@ -10,7 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public final class ApoliKeyMappings {
-    private static final Map<KeyMapping, Boolean> WAS_DOWN = new HashMap<>();
+    private static final Map<KeyMapping, Sample> SAMPLES = new HashMap<>();
 
     private static final Map<KeyMapping, KeyState> TICK_CACHE = new HashMap<>();
 
@@ -18,9 +19,19 @@ public final class ApoliKeyMappings {
 
     private record KeyState(boolean down, boolean tap) {}
 
+    private static final class Sample {
+        boolean down;
+        int clicks = -1;
+    }
+
     private enum Probe { DOWN, UP, UNKNOWN }
 
     public static void beginTick() {
+        TICK_CACHE.clear();
+    }
+
+    public static void reset() {
+        SAMPLES.clear();
         TICK_CACHE.clear();
     }
 
@@ -54,15 +65,22 @@ public final class ApoliKeyMappings {
     }
 
     private static KeyState computeState(KeyMapping km) {
-        boolean wasDown = WAS_DOWN.getOrDefault(km, false);
+        Sample sample = SAMPLES.get(km);
+        if (sample == null) {
+            sample = new Sample();
+            SAMPLES.put(km, sample);
+        }
+        boolean wasDown = sample.down;
         boolean down = switch (probe(km)) {
             case DOWN -> true;
             case UP -> false;
             case UNKNOWN -> wasDown;
         };
-        WAS_DOWN.put(km, down);
-        boolean clicked = false;
-        while (km.consumeClick()) clicked = true;
+        sample.down = down;
+        int clicks = ((KeyMappingClickCountAccessor) km).apoli$getClickCount();
+        boolean clicked = sample.clicks >= 0 && clicks > sample.clicks;
+        sample.clicks = clicks;
+        while (ForcedKeys.consumeLocalForcedClick(km)) clicked = true;
         boolean tap = !wasDown && (down || clicked);
         return new KeyState(down, tap);
     }

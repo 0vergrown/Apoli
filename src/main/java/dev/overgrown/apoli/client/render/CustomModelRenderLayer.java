@@ -34,7 +34,7 @@ public class CustomModelRenderLayer extends RenderLayer<AbstractClientPlayer, Pl
 
         List<ResolvedLayer> layers = CustomModelRenderPower.collectTextureOverlays(player);
         for (ResolvedLayer layer : layers) {
-            ResourceLocation texture = layer.texture(slim);
+            ResourceLocation texture = DynamicTextures.resolve(layer.texture(slim), player);
             int color = FastColor.ARGB32.colorFromFloat(layer.alpha(), layer.red(), layer.green(), layer.blue());
             VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(layer.mode(), texture));
             boolean scaled = layer.scale() != 1.0F;
@@ -69,7 +69,7 @@ public class CustomModelRenderLayer extends RenderLayer<AbstractClientPlayer, Pl
             GeometryRenderer.syncPlayer(custom, model, rest);
             AnimationPlayer.apply(player, render, custom, partialTick);
             GeometryRenderer.applyVisibility(custom, render.bodyParts());
-            GeometryRenderer.draw(render, custom, pose, buffers, light);
+            GeometryRenderer.draw(render, custom, pose, buffers, light, player);
         }
     }
 }

@@ -20,7 +20,7 @@ public final class BlockUseHandler {
     public static InteractionResult handle(Player player, Level level, InteractionHand hand, BlockHitResult hit) {
         BlockPos pos = hit.getBlockPos();
         BlockState state = level.getBlockState(pos);
-        BlockCtx blockCtx = new BlockCtx(pos, state, level);
+        BlockCtx blockCtx = new BlockCtx(pos, state, level, player);
 
         if (isPrevented(player, blockCtx)) {
             return InteractionResult.FAIL;

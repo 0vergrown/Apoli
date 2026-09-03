@@ -36,7 +36,7 @@ public final class AreaOfEffectBlockMetaAction implements ActionType<BlockCtx, A
         for (BlockPos pos : cfg.shape.positions(ctx.pos(),
                 (int) Math.ceil(cfg.radius.x()), (int) Math.ceil(cfg.radius.y()), (int) Math.ceil(cfg.radius.z()))) {
             BlockState state = ctx.level().getBlockState(pos);
-            BlockCtx nestedCtx = new BlockCtx(pos.immutable(), state, ctx.level());
+            BlockCtx nestedCtx = ctx.at(pos.immutable(), state);
             if (cfg.blockCondition.isPresent() && !cfg.blockCondition.get().test(nestedCtx)) continue;
             cfg.blockAction.run(nestedCtx);
         }
