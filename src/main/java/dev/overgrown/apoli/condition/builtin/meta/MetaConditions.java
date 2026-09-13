@@ -10,6 +10,7 @@ import dev.overgrown.apoli.condition.DamageCondition;
 import dev.overgrown.apoli.condition.EntityCondition;
 import dev.overgrown.apoli.condition.FluidCondition;
 import dev.overgrown.apoli.condition.ItemCondition;
+import dev.overgrown.apoli.condition.StaticCondition;
 import dev.overgrown.apoli.condition.TypedConditionRegistry;
 import net.minecraft.resources.ResourceLocation;
 
@@ -21,6 +22,8 @@ public final class MetaConditions {
     private static final ResourceLocation RANDOM_CHANCE = Apoli.id("random_chance");
     private static final ResourceLocation CONSTANT = Apoli.id("constant");
     private static final ResourceLocation NOTHING = Apoli.id("nothing");
+    private static final ResourceLocation MOD_LOADED = Apoli.id("mod_loaded");
+    private static final ResourceLocation MINECRAFT_VERSION = Apoli.id("minecraft_version");
 
     private static AliasingOptions allOfAliases() {
         return AliasingOptions.builder().addTypeAlias(Apoli.id("and")).build();
@@ -31,6 +34,24 @@ public final class MetaConditions {
     private static AliasingOptions randomChanceAliases() {
         return AliasingOptions.builder().addTypeAlias(Apoli.id("chance")).build();
     }
+    private static AliasingOptions modLoadedAliases() {
+        return AliasingOptions.builder()
+            .addTypeAlias(Apoli.id("mod_installed"))
+            .renameField("mod_id", "mod")
+            .renameField("modid", "mod")
+            .build();
+    }
+    private static AliasingOptions minecraftVersionAliases() {
+        return AliasingOptions.builder()
+            .addTypeAlias(Apoli.id("game_version"))
+            .addTypeAlias(Apoli.id("mc_version"))
+            .build();
+    }
+
+    private static <CTX> void registerUniversal(TypedConditionRegistry<CTX> reg) {
+        reg.register(MOD_LOADED, new ModLoadedCondition<>(), modLoadedAliases());
+        reg.register(MINECRAFT_VERSION, new MinecraftVersionCondition<>(), minecraftVersionAliases());
+    }
 
     public static void registerEntity() {
         TypedConditionRegistry<dev.overgrown.apoli.condition.context.EntityCtx> reg = ConditionTypes.ENTITY;
@@ -39,6 +60,7 @@ public final class MetaConditions {
         reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
         reg.register(NOTHING, new NothingMetaCondition<>());
+        registerUniversal(reg);
     }
 
     public static void registerBiEntity() {
@@ -48,6 +70,7 @@ public final class MetaConditions {
         reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
         reg.register(NOTHING, new NothingMetaCondition<>());
+        registerUniversal(reg);
     }
 
     public static void registerBlock() {
@@ -58,6 +81,7 @@ public final class MetaConditions {
         reg.register(CONSTANT, new ConstantMeta<>());
         reg.register(NOTHING, new NothingMetaCondition<>());
         reg.register(Apoli.id("offset"), new OffsetBlockMetaCondition());
+        registerUniversal(reg);
     }
 
     public static void registerItem() {
@@ -67,6 +91,7 @@ public final class MetaConditions {
         reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
         reg.register(NOTHING, new NothingMetaCondition<>());
+        registerUniversal(reg);
     }
 
     public static void registerDamage() {
@@ -76,6 +101,7 @@ public final class MetaConditions {
         reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
         reg.register(NOTHING, new NothingMetaCondition<>());
+        registerUniversal(reg);
     }
 
     public static void registerFluid() {
@@ -85,6 +111,7 @@ public final class MetaConditions {
         reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
         reg.register(NOTHING, new NothingMetaCondition<>());
+        registerUniversal(reg);
     }
 
     public static void registerBiome() {
@@ -94,5 +121,15 @@ public final class MetaConditions {
         reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
         reg.register(NOTHING, new NothingMetaCondition<>());
+        registerUniversal(reg);
+    }
+
+    public static void registerStatic() {
+        TypedConditionRegistry<dev.overgrown.apoli.condition.context.StaticCtx> reg = ConditionTypes.STATIC;
+        reg.register(ALL_OF, new AllOfMeta<>(StaticCondition.CODEC, (cond, ctx) -> cond.test(ctx)), allOfAliases());
+        reg.register(ANY_OF, new AnyOfMeta<>(StaticCondition.CODEC, (cond, ctx) -> cond.test(ctx)), anyOfAliases());
+        reg.register(CONSTANT, new ConstantMeta<>());
+        reg.register(NOTHING, new NothingMetaCondition<>());
+        registerUniversal(reg);
     }
 }

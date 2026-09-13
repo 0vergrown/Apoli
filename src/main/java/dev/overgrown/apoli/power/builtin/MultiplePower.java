@@ -6,6 +6,7 @@ import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.power.PowerTypeRegistry;
 import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 
@@ -15,7 +16,8 @@ import java.util.Set;
 
 public final class MultiplePower extends PowerType<MultiplePower.Cfg> {
     public static final Set<String> RESERVED_FIELDS = Set.of(
-        "type", "loading_priority", "name", "description", "hidden", "condition", "sub_powers", "skill"
+        "type", "loading_priority", "name", "description", "hidden", "condition", "tags", "sub_powers", "skill",
+        "load_condition"
     );
 
     public record Cfg(List<ResourceLocation> subPowerIds) {}
@@ -35,6 +37,24 @@ public final class MultiplePower extends PowerType<MultiplePower.Cfg> {
     @Override
     public void onRemoved(ResourceLocation powerId, Cfg cfg, PowerContainer holder, ResourceLocation source) {
         for (ResourceLocation subId : cfg.subPowerIds) holder.removePower(subId, powerId);
+    }
+
+    @Override
+    public void tickStored(ResourceLocation powerId, Cfg cfg, PowerContainer holder) {
+        List<ResourceLocation> subs = cfg.subPowerIds;
+        for (int i = 0; i < subs.size(); i++) {
+            ResourceLocation subId = subs.get(i);
+            Power sub = ApoliPowers.get(subId);
+            if (sub == null) continue;
+            PowerType<?> type = PowerTypeRegistry.get(sub.typeId());
+            if (type == null || type instanceof MultiplePower) continue;
+            invokeTickStored(type, subId, sub.config(), holder);
+        }
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void invokeTickStored(PowerType type, ResourceLocation id, Object cfg, PowerContainer holder) {
+        type.tickStored(id, cfg, holder);
     }
 
     public static void reconcile(PowerContainer holder) {

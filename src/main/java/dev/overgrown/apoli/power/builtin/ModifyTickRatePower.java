@@ -29,6 +29,7 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 public final class ModifyTickRatePower extends PowerType<ModifyTickRatePower.Config> {
 
@@ -68,7 +69,7 @@ public final class ModifyTickRatePower extends PowerType<ModifyTickRatePower.Con
 
     @Override
     public MapCodec<Config> configCodec() {
-        return RecordCodecBuilder.mapCodec(i -> i.group(
+        return RecordCodecBuilder.<Config>mapCodec(i -> i.group(
             Target.CODEC.optionalFieldOf("target", Target.SELF).forGetter(Config::target),
             Expression.INT_OR_EXPR.optionalFieldOf("rate").forGetter(Config::rate),
             Codec.BOOL.optionalFieldOf("frozen", false).forGetter(Config::frozen),
@@ -78,7 +79,18 @@ public final class ModifyTickRatePower extends PowerType<ModifyTickRatePower.Con
             Codec.BOOL.optionalFieldOf("include_self").forGetter(Config::includeSelf),
             Codec.BOOL.optionalFieldOf("affect_chunks", false).forGetter(Config::affectChunks),
             Codec.INT.optionalFieldOf("interval", 1).forGetter(Config::interval)
-        ).apply(i, Config::new));
+        ).apply(i, Config::new)).xmap(ModifyTickRatePower::reportIgnoredFilter, Function.identity());
+    }
+
+    private static Config reportIgnoredFilter(Config cfg) {
+        if (cfg.bientityCondition.isPresent() && cfg.target != Target.AREA) {
+            String where = LoggedOptionalField.context();
+            dev.overgrown.apoli.Apoli.LOGGER.warn("[Apoli] apoli:modify_tick_rate{} sets 'bientity_condition' "
+                + "together with \"target\": \"{}\" — the filter only picks which entities an \"area\" "
+                + "affects, so it does nothing here and every entity in scope is affected.",
+                where == null ? "" : " of " + where, cfg.target.getSerializedName());
+        }
+        return cfg;
     }
 
     @Override
@@ -135,13 +147,18 @@ public final class ModifyTickRatePower extends PowerType<ModifyTickRatePower.Con
         List<Entity> nearby = level.getEntities((Entity) null, box, target -> {
             if (target == owner) return cfg.includeSelf.orElse(false);
             BlockPos tp = target.blockPosition();
-            if (!cfg.shape.contains(tp.getX() - center.getX(), tp.getY() - center.getY(),
-                tp.getZ() - center.getZ(), rx, ry, rz)) return false;
-            return cfg.bientityCondition.isEmpty()
-                || cfg.bientityCondition.get().test(BiEntityCtx.of(owner, target, level));
+            return cfg.shape.contains(tp.getX() - center.getX(), tp.getY() - center.getY(),
+                tp.getZ() - center.getZ(), rx, ry, rz);
         });
+        boolean filtered = cfg.bientityCondition.isPresent();
         for (int i = 0; i < nearby.size(); i++) {
-            write(TickRates.stateFor(nearby.get(i), TickScope.ENTITY), cfg, owner, expiry);
+            Entity target = nearby.get(i);
+            if (filtered && target != owner
+                && !cfg.bientityCondition.get().test(BiEntityCtx.of(owner, target, level))) {
+                if (cfg.affectChunks) TickRates.exempt(target, expiry);
+                continue;
+            }
+            write(TickRates.stateFor(target, TickScope.ENTITY), cfg, owner, expiry);
         }
         if (!cfg.affectChunks) return;
         int minX = center.getX() - rx;

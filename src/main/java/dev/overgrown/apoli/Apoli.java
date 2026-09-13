@@ -84,6 +84,7 @@ public final class Apoli implements ModInitializer {
         ActionTypes.bootstrap();
         PowerTypes.bootstrap();
         dev.overgrown.apoli.power.PowerSources.bootstrap();
+        dev.overgrown.apoli.attribution.PowerCause.bootstrap();
         dev.overgrown.apoli.compat.accessory.AccessoryCompat.init();
         if (dev.overgrown.apoli.compat.ModCompat.HARDCORE_REVIVAL) {
             dev.overgrown.apoli.compat.hardcorerevival.HardcoreRevivalCompat.init();
@@ -243,7 +244,7 @@ public final class Apoli implements ModInitializer {
 
         ServerPlayNetworking.registerGlobalReceiver(KeyHeldC2S.CHANNEL, (server, player, handler, buf, sender) -> {
             KeyHeldC2S payload = KeyHeldC2S.read(buf);
-            server.execute(() -> HeldKeys.setServerHeld(player.getUUID(), payload.keys()));
+            server.execute(() -> HeldKeys.setServerHeld(player, payload.keys()));
         });
 
         ServerPlayNetworking.registerGlobalReceiver(

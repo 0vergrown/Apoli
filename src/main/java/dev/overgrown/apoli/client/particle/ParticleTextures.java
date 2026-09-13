@@ -17,11 +17,26 @@ public final class ParticleTextures {
     private static final String PNG = ".png";
 
     private static final Map<ResourceLocation, ResourceLocation> RESOLVED = new HashMap<>();
+    private static final Map<ResourceLocation, ResourceLocation> BOUND = new HashMap<>();
+    private static final Map<ResourceLocation, ResourceLocation> BLED = new HashMap<>();
 
     private ParticleTextures() {}
 
     public static synchronized void clearCache() {
         RESOLVED.clear();
+        BOUND.clear();
+        BLED.clear();
+    }
+
+    public static synchronized ResourceLocation bound(ResourceLocation source, boolean bleed) {
+        Map<ResourceLocation, ResourceLocation> cache = bleed ? BLED : BOUND;
+        ResourceLocation cached = cache.get(source);
+        if (cached != null) return cached;
+        ResourceLocation id = new ResourceLocation(Apoli.MOD_ID,
+            (bleed ? "particle_bled/" : "particle/") + source.getNamespace() + "/" + source.getPath());
+        Minecraft.getInstance().getTextureManager().register(id, new RepairedParticleTexture(source, bleed));
+        cache.put(source, id);
+        return id;
     }
 
     public static synchronized ResourceLocation resolve(ResourceLocation declared) {

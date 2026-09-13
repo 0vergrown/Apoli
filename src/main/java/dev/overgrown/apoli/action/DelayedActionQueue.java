@@ -1,6 +1,9 @@
 package dev.overgrown.apoli.action;
 
 import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.attribution.PowerCause;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,13 +21,14 @@ public final class DelayedActionQueue {
 
     private static final Map<Long, List<Entry>> BUCKETS = new HashMap<>();
 
-    private record Entry(BooleanSupplier alive, Runnable action) {}
+    private record Entry(BooleanSupplier alive, Runnable action, Entity causeHolder, ResourceLocation causePower) {}
 
     private DelayedActionQueue() {}
 
     public static synchronized void schedule(int ticks, BooleanSupplier alive, Runnable action) {
         long fireTick = currentTick + Math.max(1, ticks);
-        BUCKETS.computeIfAbsent(fireTick, k -> new ArrayList<>()).add(new Entry(alive, action));
+        BUCKETS.computeIfAbsent(fireTick, k -> new ArrayList<>())
+            .add(new Entry(alive, action, PowerCause.holder(), PowerCause.powerId()));
     }
 
     public static synchronized void tick() {
@@ -34,7 +38,12 @@ public final class DelayedActionQueue {
             Entry entry = due.get(i);
             try {
                 if (!entry.alive().getAsBoolean()) continue;
-                entry.action().run();
+                boolean attributed = PowerCause.push(entry.causeHolder(), entry.causePower());
+                try {
+                    entry.action().run();
+                } finally {
+                    if (attributed) PowerCause.pop();
+                }
             } catch (Throwable t) {
                 if (!loggedActionFailure) {
                     loggedActionFailure = true;

@@ -84,8 +84,8 @@ public final class ApoliClient implements ClientModInitializer {
                 ? dev.overgrown.apoli.client.ClientPowerState.getCooldown(powerId)
                 : 0);
 
-        HeldKeys.setClientLookup((entity, key) ->
-            entity == Minecraft.getInstance().player && KeyPressWatcher.isLocalHeld(key));
+        HeldKeys.setClientLookup((entity, key, grace) ->
+            entity == Minecraft.getInstance().player && KeyPressWatcher.isLocalHeld(key, grace));
         KeyPressWatcher.setSender(keys -> {
             FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
             new KeyHeldC2S(keys).write(buf);

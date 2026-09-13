@@ -272,6 +272,12 @@ public final class BedrockModelParser {
         if (array.size() > 0) {
             out.x = array.get(0);
         }
+        if (array.size() > 1) {
+            out.y = array.get(1);
+        }
+        if (array.size() > 2) {
+            out.z = array.get(2);
+        }
         return out;
     }
 

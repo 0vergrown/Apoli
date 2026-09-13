@@ -73,6 +73,7 @@ public final class ApoliIds {
     public static final ResourceLocation ITEM_ON_ITEM = Apoli.id("item_on_item");
     public static final ResourceLocation PREVENT_KEY_PRESS = Apoli.id("prevent_key_press");
     public static final ResourceLocation MODIFY_BOUNCINESS = Apoli.id("modify_bounciness");
+    public static final ResourceLocation POWER_STORAGE = Apoli.id("power_storage");
 
     private ApoliIds() {}
 }

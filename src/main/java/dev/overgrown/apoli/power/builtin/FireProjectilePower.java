@@ -243,6 +243,11 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
     }
 
     @Override
+    public void tickStored(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+        tick(powerId, cfg, holder);
+    }
+
+    @Override
     public void tick(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         StateKey k = new StateKey(holder.rawOwner().getUUID(), powerId);
         FireState st = states.get(k);

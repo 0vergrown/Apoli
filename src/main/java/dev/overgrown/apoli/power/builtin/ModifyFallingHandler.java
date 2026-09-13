@@ -48,12 +48,32 @@ public final class ModifyFallingHandler {
                 if (mods == null) mods = new ArrayList<>(4);
                 mods.addAll(cfg.modifiers().get());
             }
-            if (!cfg.takeFallDamage()) {
-                entity.fallDistance = 0.0f;
-            }
         }
         if (!applied) return original;
         if (mods != null) gravity = AttributeModifierHelper.apply(gravity, mods, entity, container);
         return gravity;
+    }
+
+    public static void applyLandingImmunity(LivingEntity entity) {
+        if (entity.fallDistance <= 0.0f) return;
+        PowerContainer container = PowerContainer.of(entity);
+        if (container == null || container.isEmpty()) return;
+        List<ResourceLocation> powers = container.powersOfType(ApoliIds.MODIFY_FALLING);
+        if (powers.isEmpty()) return;
+
+        EntityCtx ctx = null;
+        for (int i = 0; i < powers.size(); i++) {
+            ResourceLocation powerId = powers.get(i);
+            if (container.isSuppressed(powerId)) continue;
+            Power power = ApoliPowers.get(powerId);
+            if (power == null || !(power.config() instanceof ModifyFallingPower.Config cfg)) continue;
+            if (cfg.takeFallDamage()) continue;
+            if (power.condition().isPresent()) {
+                if (ctx == null) ctx = EntityCtx.of(entity, entity.level());
+                if (!power.condition().get().test(ctx)) continue;
+            }
+            entity.fallDistance = 0.0f;
+            return;
+        }
     }
 }
