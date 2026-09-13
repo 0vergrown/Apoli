@@ -211,7 +211,7 @@ public final class ApoliNetwork {
     private static void onKeyHeld(KeyHeldC2S payload, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (ctx.player() instanceof ServerPlayer sp) {
-                dev.overgrown.apoli.keybind.HeldKeys.setServerHeld(sp.getUUID(), payload.keys());
+                dev.overgrown.apoli.keybind.HeldKeys.setServerHeld(sp, payload.keys());
             }
         });
     }

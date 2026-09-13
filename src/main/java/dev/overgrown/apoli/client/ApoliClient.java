@@ -105,8 +105,8 @@ public final class ApoliClient {
                 owner == Minecraft.getInstance().player ? ClientPowerState.getCooldown(powerId) : 0);
             dev.overgrown.apoli.power.builtin.InventoryPower.setClientLookup((holder, powerId) ->
                 holder == Minecraft.getInstance().player ? ClientPowerState.powerInventory(powerId) : null);
-            HeldKeys.setClientLookup((entity, key) ->
-                entity == Minecraft.getInstance().player && KeyPressWatcher.isLocalHeld(key));
+            HeldKeys.setClientLookup((entity, key, grace) ->
+                entity == Minecraft.getInstance().player && KeyPressWatcher.isLocalHeld(key, grace));
             KeyPressWatcher.setSender(keys -> PacketDistributor.sendToServer(new KeyHeldC2S(keys)));
             dev.overgrown.apoli.client.disguise.ClientDisguiseManager.install();
             if (dev.overgrown.apoli.compat.ModCompat.LAMBDYNLIGHTS) {

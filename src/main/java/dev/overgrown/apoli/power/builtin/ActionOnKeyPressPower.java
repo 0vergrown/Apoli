@@ -49,6 +49,11 @@ public final class ActionOnKeyPressPower extends PowerType<ActionOnKeyPressPower
     }
 
     @Override
+    public void tickStored(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+        tick(powerId, cfg, holder);
+    }
+
+    @Override
     public void onRemoved(ResourceLocation powerId, Config cfg, PowerContainer holder, ResourceLocation source) {
         if (!holder.allPowers().contains(powerId)) {
             cooldowns.remove(new CooldownKey(holder.rawOwner().getUUID(), powerId));

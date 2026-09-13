@@ -38,4 +38,22 @@ public final class ModCompat {
     public static final boolean KUBEJS = ModList.get().isLoaded("kubejs");
 
     public static final boolean PUFFISH_SKILLS = ModList.get().isLoaded("puffish_skills");
+
+    public static final boolean LEDGER = classPresent("com.github.quiltservertools.ledger.database.ActionQueueService");
+
+    public static final boolean INDEXOR = classPresent("ledger.core.LedgerManager");
+
+    public static boolean classPresent(String binaryName) {
+        return ModCompat.class.getClassLoader().getResource(binaryName.replace('.', '/') + ".class") != null;
+    }
+
+    public static boolean isLoaded(String modId) {
+        return ModList.get().isLoaded(modId);
+    }
+
+    public static String versionOf(String modId) {
+        return ModList.get().getModContainerById(modId)
+            .map(container -> container.getModInfo().getVersion().toString())
+            .orElse(null);
+    }
 }

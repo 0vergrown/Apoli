@@ -4,6 +4,7 @@ import dev.overgrown.apoli.Apoli;
 import net.neoforged.fml.loading.FMLPaths;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Constructor;
@@ -13,10 +14,18 @@ import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class VoskRuntime {
 
     private static final String[] LIBS = {"jna.jar", "vosk.jar"};
+
+    private static final AtomicBoolean REPORTED = new AtomicBoolean();
 
     private static boolean attempted;
     private static @Nullable Bridge bridge;
@@ -45,7 +54,7 @@ public final class VoskRuntime {
         try {
             bridge = new Bridge(loader());
         } catch (Throwable t) {
-            failure = t.getClass().getSimpleName() + ": " + t.getMessage();
+            failure = describe(t);
             Apoli.LOGGER.error("[Apoli] Could not start the Vosk runtime", t);
         }
         return bridge;
@@ -90,9 +99,13 @@ public final class VoskRuntime {
             super("apoli-vosk", urls, parent);
         }
 
+        private static boolean owned(String name) {
+            return name.startsWith("com.sun.jna.") || name.startsWith("org.vosk.");
+        }
+
         @Override
         protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
-            if (name.startsWith("com.sun.jna.") || name.startsWith("org.vosk.")) {
+            if (owned(name)) {
                 synchronized (getClassLoadingLock(name)) {
                     Class<?> loaded = findLoadedClass(name);
                     if (loaded == null) loaded = findClass(name);
@@ -102,9 +115,29 @@ public final class VoskRuntime {
             }
             return super.loadClass(name, resolve);
         }
+
+        @Override
+        public URL getResource(String name) {
+            URL own = findResource(name);
+            return own != null ? own : super.getResource(name);
+        }
+
+        @Override
+        public Enumeration<URL> getResources(String name) throws IOException {
+            List<URL> ordered = new ArrayList<>(4);
+            for (Enumeration<URL> own = findResources(name); own.hasMoreElements(); ) {
+                ordered.add(own.nextElement());
+            }
+            for (Enumeration<URL> inherited = super.getResources(name); inherited.hasMoreElements(); ) {
+                URL url = inherited.nextElement();
+                if (!ordered.contains(url)) ordered.add(url);
+            }
+            return Collections.enumeration(ordered);
+        }
     }
 
     private record Bridge(
+        String jnaVersion,
         Constructor<?> newModel,
         Constructor<?> newRecognizer,
         Method reset,
@@ -117,7 +150,7 @@ public final class VoskRuntime {
         Method closeRecognizer
     ) {
         Bridge(ClassLoader cl) throws Exception {
-            this(
+            this(startJna(cl),
                 Class.forName("org.vosk.Model", true, cl).getConstructor(String.class),
                 Class.forName("org.vosk.Recognizer", true, cl)
                     .getConstructor(Class.forName("org.vosk.Model", true, cl), float.class),
@@ -133,6 +166,40 @@ public final class VoskRuntime {
         }
     }
 
+    private static String describe(Throwable t) {
+        Throwable root = t;
+        while (root.getMessage() == null && root.getCause() != null) {
+            root = root.getCause();
+        }
+        String message = root.getMessage();
+        String text = root.getClass().getSimpleName();
+        if (message == null) return text;
+        return text + ": " + message.replace('\n', ' ').trim();
+    }
+
+    private static String startJna(ClassLoader cl) throws Exception {
+        Class<?> nativeClass = Class.forName("com.sun.jna.Native", true, cl);
+        Package pkg = nativeClass.getPackage();
+        String version = pkg == null ? null : pkg.getImplementationVersion();
+        if (version == null) version = "unknown";
+        Apoli.LOGGER.info("[Apoli] Speech runtime: JNA {} in {}, jnidispatch at {}.",
+            version, nativeClass.getClassLoader().getName(), System.getProperty("jnidispatch.path"));
+        return version;
+    }
+
+    private static void logVoskLibrary(ClassLoader cl) {
+        try {
+            Object library = Class.forName("com.sun.jna.NativeLibrary", true, cl)
+                .getMethod("getInstance", String.class, ClassLoader.class)
+                .invoke(null, System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win")
+                    ? "libvosk" : "vosk", cl);
+            Object file = library.getClass().getMethod("getFile").invoke(library);
+            Apoli.LOGGER.info("[Apoli] Speech runtime: libvosk loaded from {}.", file);
+        } catch (Throwable t) {
+            Apoli.LOGGER.debug("[Apoli] Could not report the libvosk path", t);
+        }
+    }
+
     public static final class Session implements AutoCloseable {
         private final Bridge bridge;
         private final Object model;
@@ -141,6 +208,7 @@ public final class VoskRuntime {
         Session(Bridge bridge, String modelPath, float sampleRate) throws Exception {
             this.bridge = bridge;
             this.model = bridge.newModel().newInstance(modelPath);
+            if (REPORTED.compareAndSet(false, true)) logVoskLibrary(model.getClass().getClassLoader());
             this.recognizer = bridge.newRecognizer().newInstance(model, sampleRate);
         }
 

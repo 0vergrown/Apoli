@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.power;
 
+import dev.overgrown.apoli.attribution.PowerCause;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
@@ -79,7 +80,12 @@ public final class PowerLookup {
                 if (ctx == null) ctx = EntityCtx.of(entity, entity.level());
                 if (!power.condition().get().test(ctx)) continue;
             }
-            consumer.accept(powerId, (C) cfg);
+            boolean attributed = PowerCause.push(entity, powerId);
+            try {
+                consumer.accept(powerId, (C) cfg);
+            } finally {
+                if (attributed) PowerCause.pop();
+            }
         }
     }
 
@@ -103,7 +109,12 @@ public final class PowerLookup {
                 if (ctx == null) ctx = EntityCtx.of(entity, entity.level());
                 if (!power.condition().get().test(ctx)) continue;
             }
-            consumer.accept((C) cfg);
+            boolean attributed = PowerCause.push(entity, powerId);
+            try {
+                consumer.accept((C) cfg);
+            } finally {
+                if (attributed) PowerCause.pop();
+            }
         }
     }
 

@@ -28,6 +28,9 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("conjure_equipment"), new ConjureEquipmentAction());
         ActionTypes.ENTITY.register(Apoli.id("release_grab"), new ReleaseGrabAction());
         ActionTypes.ENTITY.register(Apoli.id("execute_command"), new ExecuteCommandAction());
+        ActionTypes.ENTITY.register(Apoli.id("run_stored_power"), new RunStoredPowerAction());
+        ActionTypes.ENTITY.register(Apoli.id("store_power"),
+            new dev.overgrown.apoli.action.builtin.bientity.StorePowerAction.Self());
         ActionTypes.ENTITY.register(Apoli.id("store_data"), new StoreDataAction());
         ActionTypes.ENTITY.register(Apoli.id("exhaust"), new ExhaustAction());
         ActionTypes.ENTITY.register(Apoli.id("heal"), new HealAction());

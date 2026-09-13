@@ -93,6 +93,11 @@ config="${mod_id}-walkers.mixins.json"
 [[mixins]]
 config="${mod_id}-sodium.mixins.json"
 
+# Optional Ledger / Indexor compatibility — labels logged block and container edits with the Apoli
+# power (and Origins origin) that caused them. Gated by LedgerCompatMixinPlugin, inert without them.
+[[mixins]]
+config="${mod_id}-ledger.mixins.json"
+
 # The [[accessTransformers]] block allows you to declare where your AT file is.
 # If this block is omitted, a fallback attempt will be made to load an AT from META-INF/accesstransformer.cfg
 #[[accessTransformers]]
@@ -132,8 +137,8 @@ config="${mod_id}-sodium.mixins.json"
 [[dependencies.${mod_id}]]
     modId="origins"
     type="incompatible"
-    reason="Origins older than 1.30.0 was built against an older Apoli API. Update Origins."
-    versionRange="[0,1.33.0)"
+    reason="Origins older than 1.36.3 was built against an older Apoli API. Update Origins."
+    versionRange="[0,1.36.4)"
     ordering="NONE"
     side="BOTH"
 

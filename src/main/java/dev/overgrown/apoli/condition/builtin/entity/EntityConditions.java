@@ -117,6 +117,7 @@ public final class EntityConditions {
         ConditionTypes.ENTITY.register(Apoli.id("entity_in_radius"), new EntityInRadiusCondition());
 
         ConditionTypes.ENTITY.register(Apoli.id("power"), new PowerCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("stored_power"), new StoredPowerCondition());
         ConditionTypes.ENTITY.register(Apoli.id("power_active"), new PowerActiveCondition());
         ConditionTypes.ENTITY.register(Apoli.id("power_type"), new PowerTypeCondition());
 
@@ -161,6 +162,15 @@ public final class EntityConditions {
         if (ModCompat.HARDCORE_REVIVAL) {
             ConditionTypes.ENTITY.register(Apoli.id("knocked_out"), new KnockedOutCondition());
         }
+
+        ConditionTypes.ENTITY.register(
+            Apoli.id("sound_playing"),
+            new SoundPlayingCondition(),
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("playing_sound"))
+                .addTypeAlias(Apoli.id("hearing_sound"))
+                .build()
+        );
 
         ConditionTypes.ENTITY.register(Apoli.id("script"), new ScriptCondition());
 

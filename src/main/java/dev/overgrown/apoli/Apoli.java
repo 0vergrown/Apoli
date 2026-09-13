@@ -86,6 +86,7 @@ public final class Apoli {
         ActionTypes.bootstrap();
         PowerTypes.bootstrap();
         dev.overgrown.apoli.power.PowerSources.bootstrap();
+        dev.overgrown.apoli.attribution.PowerCause.bootstrap();
         dev.overgrown.apoli.compat.accessory.AccessoryCompat.init();
         if (dev.overgrown.apoli.compat.ModCompat.HARDCORE_REVIVAL) {
             dev.overgrown.apoli.compat.hardcorerevival.HardcoreRevivalCompat.init();
