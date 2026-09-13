@@ -354,6 +354,8 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("prevent_bee_anger"), new PreventBeeAngerPower());
 
         PowerTypeRegistry.register(Apoli.id("modify_bounciness"), new ModifyBouncinessPower(), AliasingOptions.builder().addTypeAlias(Apoli.id("modify_block_bounciness")).build());
+
+        PowerTypeRegistry.register(Apoli.id("modify_fog"), new ModifyFogPower(), AliasingOptions.builder().addTypeAlias(Apoli.id("blindness")).build());
     }
 
     private static AliasDefault<Boolean> selfGlowTarget(boolean value) {
