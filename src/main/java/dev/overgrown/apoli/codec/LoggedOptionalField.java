@@ -47,6 +47,10 @@ public final class LoggedOptionalField<A> extends MapCodec<Optional<A>> {
         CONTEXT.remove();
     }
 
+    public static String context() {
+        return CONTEXT.get();
+    }
+
     @Override
     public <T> Stream<T> keys(DynamicOps<T> ops) {
         return Stream.of(ops.createString(name));

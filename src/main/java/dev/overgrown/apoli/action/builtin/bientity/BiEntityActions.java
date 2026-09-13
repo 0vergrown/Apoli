@@ -41,6 +41,7 @@ public final class BiEntityActions {
         ActionTypes.BI_ENTITY.register(Apoli.id("disguise"), new DisguiseBiEntityAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("transfer"), new TransferAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("execute_command"), new ExecuteCommandBiEntityAction());
+        ActionTypes.BI_ENTITY.register(Apoli.id("store_power"), new StorePowerAction.BiEntity());
         ActionTypes.BI_ENTITY.register(Apoli.id("attach_rope"), new AttachRopeAction.BiEntity());
         ActionTypes.BI_ENTITY.register(
             Apoli.id("raycast"),

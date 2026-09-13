@@ -15,6 +15,7 @@ import dev.overgrown.apoli.condition.context.DamageCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.condition.context.FluidCtx;
 import dev.overgrown.apoli.condition.context.ItemCtx;
+import dev.overgrown.apoli.condition.context.StaticCtx;
 
 public final class ConditionTypes {
     public static final TypedConditionRegistry<EntityCtx> ENTITY = new TypedConditionRegistry<>("entity");
@@ -24,6 +25,7 @@ public final class ConditionTypes {
     public static final TypedConditionRegistry<DamageCtx> DAMAGE = new TypedConditionRegistry<>("damage");
     public static final TypedConditionRegistry<FluidCtx> FLUID = new TypedConditionRegistry<>("fluid");
     public static final TypedConditionRegistry<BiomeCtx> BIOME = new TypedConditionRegistry<>("biome");
+    public static final TypedConditionRegistry<StaticCtx> STATIC = new TypedConditionRegistry<>("static");
 
     private ConditionTypes() {}
 
@@ -42,5 +44,6 @@ public final class ConditionTypes {
         MetaConditions.registerDamage();
         MetaConditions.registerFluid();
         MetaConditions.registerBiome();
+        MetaConditions.registerStatic();
     }
 }

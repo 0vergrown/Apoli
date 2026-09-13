@@ -23,14 +23,15 @@ public final class OverlayPower extends PowerType<OverlayPower.Config> {
 
     public record Entry(
         TextureRef texture,
-        float strength,
-        float red,
-        float green,
-        float blue,
+        Expression strength,
+        Expression red,
+        Expression green,
+        Expression blue,
         DrawMode drawMode,
         DrawPhase drawPhase,
         boolean hideWithHud,
         boolean visibleInThirdPerson,
+        int guiScaleLock,
         Expression x,
         Expression y,
         Optional<Expression> width,
@@ -50,7 +51,7 @@ public final class OverlayPower extends PowerType<OverlayPower.Config> {
 
         Entry withPlacement(Placement placement) {
             return new Entry(texture, strength, red, green, blue, drawMode, drawPhase, hideWithHud,
-                visibleInThirdPerson, placement.x(), placement.y(), placement.width(), placement.height(),
+                visibleInThirdPerson, guiScaleLock, placement.x(), placement.y(), placement.width(), placement.height(),
                 placement.u(), placement.v(), placement.textureWidth(), placement.textureHeight(),
                 placement.regionWidth(), placement.regionHeight(), placement.anchor(), placement.condition());
         }
@@ -141,16 +142,17 @@ public final class OverlayPower extends PowerType<OverlayPower.Config> {
 
     private static final MapCodec<Entry> APPEARANCE = RecordCodecBuilder.mapCodec(i -> i.group(
         TextureRef.MAP_CODEC.forGetter(Entry::texture),
-        Codec.FLOAT.optionalFieldOf("strength", 1f).forGetter(Entry::strength),
-        Codec.FLOAT.optionalFieldOf("red", 1f).forGetter(Entry::red),
-        Codec.FLOAT.optionalFieldOf("green", 1f).forGetter(Entry::green),
-        Codec.FLOAT.optionalFieldOf("blue", 1f).forGetter(Entry::blue),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("strength", Expression.constant(1)).forGetter(Entry::strength),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("red", Expression.constant(1)).forGetter(Entry::red),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("green", Expression.constant(1)).forGetter(Entry::green),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("blue", Expression.constant(1)).forGetter(Entry::blue),
         DrawMode.CODEC.optionalFieldOf("draw_mode", DrawMode.TEXTURE).forGetter(Entry::drawMode),
         DrawPhase.CODEC.optionalFieldOf("draw_phase", DrawPhase.ABOVE_HUD).forGetter(Entry::drawPhase),
         Codec.BOOL.optionalFieldOf("hide_with_hud", true).forGetter(Entry::hideWithHud),
-        Codec.BOOL.optionalFieldOf("visible_in_third_person", false).forGetter(Entry::visibleInThirdPerson)
-    ).apply(i, (texture, strength, red, green, blue, drawMode, drawPhase, hideWithHud, thirdPerson) ->
-        new Entry(texture, strength, red, green, blue, drawMode, drawPhase, hideWithHud, thirdPerson,
+        Codec.BOOL.optionalFieldOf("visible_in_third_person", false).forGetter(Entry::visibleInThirdPerson),
+        Codec.INT.optionalFieldOf("gui_scale_lock", 0).forGetter(Entry::guiScaleLock)
+    ).apply(i, (texture, strength, red, green, blue, drawMode, drawPhase, hideWithHud, thirdPerson, guiScaleLock) ->
+        new Entry(texture, strength, red, green, blue, drawMode, drawPhase, hideWithHud, thirdPerson, guiScaleLock,
             Expression.constant(0), Expression.constant(0), Optional.empty(), Optional.empty(),
             Expression.constant(0), Expression.constant(0), Optional.empty(), Optional.empty(),
             Optional.empty(), Optional.empty(), Anchor.TOP_LEFT, Optional.empty())));

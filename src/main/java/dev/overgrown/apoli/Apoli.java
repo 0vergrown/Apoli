@@ -88,6 +88,7 @@ public final class Apoli implements ModInitializer {
         ActionTypes.bootstrap();
         PowerTypes.bootstrap();
         PowerSources.bootstrap();
+        dev.overgrown.apoli.attribution.PowerCause.bootstrap();
         dev.overgrown.apoli.compat.accessory.AccessoryCompat.init();
         if (dev.overgrown.apoli.compat.ModCompat.HARDCORE_REVIVAL) {
             dev.overgrown.apoli.compat.hardcorerevival.HardcoreRevivalCompat.init();
@@ -241,7 +242,7 @@ public final class Apoli implements ModInitializer {
                     context.player().getUUID(), payload.firstPerson())));
         ServerPlayNetworking.registerGlobalReceiver(KeyHeldC2S.TYPE, (payload, context) ->
             context.player().server.execute(() ->
-                HeldKeys.setServerHeld(context.player().getUUID(), payload.keys())));
+                HeldKeys.setServerHeld(context.player(), payload.keys())));
 
         ServerPlayNetworking.registerGlobalReceiver(
             dev.overgrown.apoli.network.payload.ScrollWheelC2S.TYPE, (payload, context) -> {

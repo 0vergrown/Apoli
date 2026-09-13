@@ -70,8 +70,8 @@ public final class ApoliClient implements ClientModInitializer {
                 ? ClientPowerState.getCooldown(powerId)
                 : 0);
 
-        HeldKeys.setClientLookup((entity, key) ->
-            entity == net.minecraft.client.Minecraft.getInstance().player && KeyPressWatcher.isLocalHeld(key));
+        HeldKeys.setClientLookup((entity, key, grace) ->
+            entity == net.minecraft.client.Minecraft.getInstance().player && KeyPressWatcher.isLocalHeld(key, grace));
         KeyPressWatcher.setSender(keys -> ClientPlayNetworking.send(new KeyHeldC2S(keys)));
 
         ClientPlayNetworking.registerGlobalReceiver(SyncPowersS2C.TYPE, (payload, context) ->

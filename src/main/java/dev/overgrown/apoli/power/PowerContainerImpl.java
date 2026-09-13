@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.power;
 
+import dev.overgrown.apoli.attribution.PowerCause;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -179,9 +180,7 @@ public final class PowerContainerImpl implements PowerContainer {
                 }
                 removeAllFromSource(power);
             }
-            boolean droppedAux = auxInt.remove(power) != null;
-            if (auxInts.remove(power) != null) droppedAux = true;
-            if (droppedAux) markDirty();
+            removeAux(power);
         }
         if (removed) {
             markStructureDirty();
@@ -205,9 +204,6 @@ public final class PowerContainerImpl implements PowerContainer {
         if (sources == null) return false;
         suppressedBySources.remove(power);
         releaseSuppressionSource(power);
-        boolean droppedAux = auxInt.remove(power) != null;
-        if (auxInts.remove(power) != null) droppedAux = true;
-        if (droppedAux) markDirty();
         markStructureDirty();
         if (owner != null && owner.level() instanceof ServerLevel) {
             Power loaded = ApoliPowers.get(power);
@@ -218,6 +214,7 @@ public final class PowerContainerImpl implements PowerContainer {
                 }
             }
         }
+        removeAux(power);
         removeAllFromSource(power);
         refreshSuppression();
         return true;
@@ -229,9 +226,10 @@ public final class PowerContainerImpl implements PowerContainer {
         bySources.clear();
         suppressedBySources.clear();
         notifiedSuppressed = Set.of();
-        if (!auxInt.isEmpty() || !auxInts.isEmpty()) {
+        if (!auxInt.isEmpty() || !auxInts.isEmpty() || !auxNbt.isEmpty()) {
             auxInt.clear();
             auxInts.clear();
+            auxNbt.clear();
             markDirty();
         }
         markStructureDirty();
@@ -532,6 +530,7 @@ public final class PowerContainerImpl implements PowerContainer {
         if (reconciledGeneration != generation) {
             reconciledGeneration = generation;
             dev.overgrown.apoli.power.builtin.MultiplePower.reconcile(this);
+            dev.overgrown.apoli.power.builtin.PowerStoragePower.reconcile(this);
         }
         List<TickEntry> entries = tickEntries();
         if (entries.isEmpty()) return;
@@ -554,7 +553,12 @@ public final class PowerContainerImpl implements PowerContainer {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void invokeTick(PowerType type, ResourceLocation powerId, Object cfg) {
-        type.tick(powerId, cfg, this);
+        boolean attributed = PowerCause.push(owner, powerId);
+        try {
+            type.tick(powerId, cfg, this);
+        } finally {
+            if (attributed) PowerCause.pop();
+        }
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
