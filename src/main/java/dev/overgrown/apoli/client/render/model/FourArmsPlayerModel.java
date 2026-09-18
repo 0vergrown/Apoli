@@ -126,6 +126,12 @@ public class FourArmsPlayerModel<T extends LivingEntity> extends PlayerModel<T> 
             }
             case "rightsecondsleeve", "secondrightsleeve" -> parts.add(this.rightSecondSleeve);
             case "leftsecondsleeve", "secondleftsleeve" -> parts.add(this.leftSecondSleeve);
+            case "arms", "upper" -> {
+                parts.add(this.rightSecondArm);
+                parts.add(this.rightSecondSleeve);
+                parts.add(this.leftSecondArm);
+                parts.add(this.leftSecondSleeve);
+            }
             default -> {}
         }
     }

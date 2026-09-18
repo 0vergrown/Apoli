@@ -91,6 +91,7 @@ public class CustomProjectileRenderer extends EntityRenderer<CustomProjectileEnt
         poseStack.pushPose();
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - bodyYaw));
         poseStack.mulPose(Axis.XP.rotationDegrees(bodyPitch));
+        poseStack.scale(-1.0F, -1.0F, 1.0F);
         poseStack.translate(0.0F, -1.5F, 0.0F);
 
         boolean drew = false;

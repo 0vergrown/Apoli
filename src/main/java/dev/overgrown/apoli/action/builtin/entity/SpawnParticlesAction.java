@@ -10,7 +10,7 @@ import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.data.ExprVector;
-import dev.overgrown.apoli.data.ModelParts;
+import dev.overgrown.apoli.data.BodyPart;
 import dev.overgrown.apoli.data.ParticleEffect;
 import dev.overgrown.apoli.data.ParticlePlacement;
 import dev.overgrown.apoli.data.Space;
@@ -40,7 +40,7 @@ public final class SpawnParticlesAction implements ActionType<EntityCtx, SpawnPa
         Expression velocityY,
         Expression velocityZ,
         Optional<Space> space,
-        Optional<String> modelPart
+        Optional<BodyPart> modelPart
     ) {}
 
     private static final ExprVector DEFAULT_SPREAD = ExprVector.of(0.5f, 0.5f, 0.5f);
@@ -63,7 +63,7 @@ public final class SpawnParticlesAction implements ActionType<EntityCtx, SpawnPa
             Expression.FLOAT_OR_EXPR.optionalFieldOf("velocity_y", ZERO).forGetter(Cfg::velocityY),
             Expression.FLOAT_OR_EXPR.optionalFieldOf("velocity_z", ZERO).forGetter(Cfg::velocityZ),
             Space.CODEC.optionalFieldOf("space").forGetter(Cfg::space),
-            ModelParts.NAME_CODEC.optionalFieldOf("model_part").forGetter(Cfg::modelPart)
+            BodyPart.CODEC.optionalFieldOf("model_part").forGetter(Cfg::modelPart)
         ).apply(i, Cfg::new));
     }
 

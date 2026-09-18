@@ -15,6 +15,7 @@ import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,44 +25,44 @@ public final class ActionOverTimePower extends PowerType<ActionOverTimePower.Con
     public static final ResourceLocation CANONICAL = dev.overgrown.apoli.Apoli.id("action_over_time");
 
     public record Step(
-        int interval,
+        Expression interval,
+        int fixedInterval,
         Expression onsetDelay,
         EntityAction entityAction,
         Optional<EntityCondition> condition
     ) {
         public static final Codec<Step> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.INT.optionalFieldOf("interval", 20).forGetter(Step::interval),
-            Expression.INT_OR_EXPR.optionalFieldOf("onset_delay", Expression.constant(0)).forGetter(Step::onsetDelay),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("interval", Expression.INT_OR_EXPR, Expression.constant(20)).forGetter(Step::interval),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("onset_delay", Expression.INT_OR_EXPR, Expression.constant(0)).forGetter(Step::onsetDelay),
             EntityAction.CODEC.fieldOf("entity_action").forGetter(Step::entityAction),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("condition", EntityCondition.CODEC).forGetter(Step::condition)
-        ).apply(instance, Step::new));
+        ).apply(instance, Step::build));
 
-        public int clampedInterval() {
-            return interval > 0 ? interval : 1;
+        private static Step build(Expression interval, Expression onsetDelay, EntityAction entityAction,
+                                  Optional<EntityCondition> condition) {
+            return new Step(interval, fixedTicks(interval), onsetDelay, entityAction, condition);
         }
     }
 
     public record Config(
-        int interval,
+        Expression interval,
+        int fixedInterval,
         Expression onsetDelay,
         Optional<EntityAction> entityAction,
         Optional<EntityAction> risingAction,
         Optional<EntityAction> fallingAction,
         List<Step> steps,
-        int stride
-    ) {
-        public int clampedInterval() {
-            return interval > 0 ? interval : 1;
-        }
-    }
+        int stride,
+        boolean scheduled
+    ) {}
 
     private static final int TICK_MASK = 0x3FFFFFFF;
 
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.INT.optionalFieldOf("interval", 20).forGetter(Config::interval),
-            Expression.INT_OR_EXPR.optionalFieldOf("onset_delay", Expression.constant(0)).forGetter(Config::onsetDelay),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("interval", Expression.INT_OR_EXPR, Expression.constant(20)).forGetter(Config::interval),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("onset_delay", Expression.INT_OR_EXPR, Expression.constant(0)).forGetter(Config::onsetDelay),
             dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction),
             dev.overgrown.apoli.codec.LoggedOptionalField.of("rising_action", EntityAction.CODEC).forGetter(Config::risingAction),
             dev.overgrown.apoli.codec.LoggedOptionalField.of("falling_action", EntityAction.CODEC).forGetter(Config::fallingAction),
@@ -69,13 +70,30 @@ public final class ActionOverTimePower extends PowerType<ActionOverTimePower.Con
         ).apply(instance, ActionOverTimePower::build));
     }
 
-    private static Config build(int interval, Expression onsetDelay, Optional<EntityAction> entityAction,
+    private static int fixedTicks(Expression expression) {
+        java.util.OptionalDouble constant = expression.constantValue();
+        if (constant.isEmpty()) return 0;
+        long ticks = Math.round(constant.getAsDouble());
+        return ticks > 0 ? (int) Math.min(ticks, Integer.MAX_VALUE) : 1;
+    }
+
+    private static Config build(Expression interval, Expression onsetDelay, Optional<EntityAction> entityAction,
                                 Optional<EntityAction> risingAction, Optional<EntityAction> fallingAction,
                                 List<Step> steps) {
-        int stride = interval > 0 ? interval : 1;
-        for (int i = 0; i < steps.size(); i++) stride = gcd(stride, steps.get(i).clampedInterval());
-        return new Config(interval, onsetDelay, entityAction, risingAction, fallingAction,
-            List.copyOf(steps), Math.max(1, stride));
+        int fixed = fixedTicks(interval);
+        boolean scheduled = fixed <= 0;
+        int stride = scheduled ? 1 : fixed;
+        for (int i = 0; i < steps.size(); i++) {
+            int stepFixed = steps.get(i).fixedInterval();
+            if (stepFixed <= 0) {
+                scheduled = true;
+                stride = 1;
+            } else {
+                stride = gcd(stride, stepFixed);
+            }
+        }
+        return new Config(interval, fixed, onsetDelay, entityAction, risingAction, fallingAction,
+            List.copyOf(steps), Math.max(1, stride), scheduled);
     }
 
     private static int gcd(int a, int b) {
@@ -99,19 +117,18 @@ public final class ActionOverTimePower extends PowerType<ActionOverTimePower.Con
         int stride = cfg.stride;
         int tick = owner.tickCount;
         int phase = Math.floorMod(powerId.hashCode() + owner.getId(), stride);
-        int offset = Math.floorMod(tick - phase, stride);
-        if (offset != 0) return;
+        if (Math.floorMod(tick - phase, stride) != 0) return;
 
         if (!(owner.level() instanceof ServerLevel level)) return;
 
-        int interval = cfg.clampedInterval();
-        boolean masterTick = Math.floorMod(tick - phase, interval) == 0;
         List<Step> steps = cfg.steps;
         boolean wasActive = holder.getAuxInt(powerId).orElse(0) != 0;
+        int[] schedule = cfg.scheduled ? schedule(holder, powerId, steps.size() + 1) : null;
+        boolean masterTick = cfg.fixedInterval <= 0 || Math.floorMod(tick - phase, cfg.fixedInterval) == 0;
 
         if (!masterTick) {
-            if (!wasActive || !anyStepDue(steps, tick, phase)) return;
-            runSteps(steps, EntityCtx.of(owner, level), holder, powerId, owner, level.getGameTime(), tick, phase);
+            if (!wasActive || !anyStepDue(steps, tick, phase, schedule)) return;
+            runSteps(steps, EntityCtx.of(owner, level), holder, powerId, owner, level.getGameTime(), tick, phase, schedule);
             return;
         }
 
@@ -122,31 +139,56 @@ public final class ActionOverTimePower extends PowerType<ActionOverTimePower.Con
             if (!wasActive) {
                 cfg.risingAction.ifPresent(a -> a.run(ctx));
                 markActivated(holder, powerId, level.getGameTime());
+                if (schedule != null) java.util.Arrays.fill(schedule, tick);
             }
             long gameTime = level.getGameTime();
-            if (onsetElapsed(holder, powerId, cfg.onsetDelay, owner, gameTime)) {
-                cfg.entityAction.ifPresent(a -> a.run(ctx));
+            if (schedule == null || cfg.fixedInterval > 0) {
+                if (onsetElapsed(holder, powerId, cfg.onsetDelay, owner, gameTime)) {
+                    cfg.entityAction.ifPresent(a -> a.run(ctx));
+                }
+            } else if (tick - schedule[0] >= 0) {
+                if (onsetElapsed(holder, powerId, cfg.onsetDelay, owner, gameTime)) {
+                    cfg.entityAction.ifPresent(a -> a.run(ctx));
+                }
+                schedule[0] = tick + evalTicks(cfg.interval, owner);
             }
-            runSteps(steps, ctx, holder, powerId, owner, gameTime, tick, phase);
+            runSteps(steps, ctx, holder, powerId, owner, gameTime, tick, phase, schedule);
         } else if (wasActive) {
             cfg.fallingAction.ifPresent(a -> a.run(ctx));
             clearActivated(holder, powerId);
         }
     }
 
-    private static boolean anyStepDue(List<Step> steps, int tick, int phase) {
+    private static int @Nullable [] schedule(PowerContainer holder, ResourceLocation powerId, int length) {
+        return holder instanceof PowerContainerImpl impl ? impl.scratchInts(powerId, length) : null;
+    }
+
+    private static int evalTicks(Expression expression, Entity owner) {
+        int ticks = expression.evalInt(owner);
+        return ticks > 0 ? ticks : 1;
+    }
+
+    private static boolean stepDue(Step step, int slot, int tick, int phase, int @Nullable [] schedule) {
+        int fixed = step.fixedInterval();
+        if (fixed > 0) return Math.floorMod(tick - phase, fixed) == 0;
+        return schedule != null && tick - schedule[slot] >= 0;
+    }
+
+    private static boolean anyStepDue(List<Step> steps, int tick, int phase, int @Nullable [] schedule) {
         for (int i = 0; i < steps.size(); i++) {
-            if (Math.floorMod(tick - phase, steps.get(i).clampedInterval()) == 0) return true;
+            if (stepDue(steps.get(i), i + 1, tick, phase, schedule)) return true;
         }
         return false;
     }
 
     private static void runSteps(List<Step> steps, EntityCtx ctx, PowerContainer holder, ResourceLocation powerId,
-                                 Entity owner, long gameTime, int tick, int phase) {
+                                 Entity owner, long gameTime, int tick, int phase, int @Nullable [] schedule) {
         for (int i = 0; i < steps.size(); i++) {
             Step step = steps.get(i);
-            if (Math.floorMod(tick - phase, step.clampedInterval()) != 0) continue;
+            if (!stepDue(step, i + 1, tick, phase, schedule)) continue;
+            boolean dynamic = step.fixedInterval() <= 0 && schedule != null;
             if (!onsetElapsed(holder, powerId, step.onsetDelay(), owner, gameTime)) continue;
+            if (dynamic) schedule[i + 1] = tick + evalTicks(step.interval(), owner);
             if (step.condition().isPresent() && !step.condition().get().test(ctx)) continue;
             step.entityAction().run(ctx);
         }

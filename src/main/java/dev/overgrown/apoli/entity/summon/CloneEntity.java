@@ -129,10 +129,11 @@ public class CloneEntity extends Monster implements OwnableEntity, CrossbowAttac
     public void tick() {
         super.tick();
         if (this.level().isClientSide) return;
+        if (this.isDeadOrDying()) return;
         LivingEntity owner = this.getOwner();
         boolean expired = this.maxLifeTime > 0 && --this.lifeTicks <= 0;
         if (owner == null || owner.level() != this.level() || expired) {
-            this.discard();
+            Summons.expire(this);
         }
     }
 

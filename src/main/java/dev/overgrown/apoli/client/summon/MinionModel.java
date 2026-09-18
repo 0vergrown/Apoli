@@ -2,6 +2,7 @@ package dev.overgrown.apoli.client.summon;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import dev.overgrown.apoli.client.render.model.ExtraModelParts;
 import dev.overgrown.apoli.entity.summon.MinionEntity;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.geom.ModelPart;
@@ -13,7 +14,9 @@ import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
 
-public class MinionModel extends EntityModel<MinionEntity> {
+import java.util.List;
+
+public class MinionModel extends EntityModel<MinionEntity> implements ExtraModelParts {
     public static final String MAIN = "main";
     public static final String FLAT_2 = "flat2";
     public static final String FLAT_3 = "flat3";
@@ -55,6 +58,17 @@ public class MinionModel extends EntityModel<MinionEntity> {
             case FLAT_3 -> this.flat3;
             default -> null;
         };
+    }
+
+    @Override
+    public void collectExtraParts(String normalized, List<ModelPart> parts) {
+        ModelPart part = bone(normalized);
+        if (part != null) parts.add(part);
+    }
+
+    @Override
+    public void collectExtraParts(List<ModelPart> parts) {
+        parts.add(this.main);
     }
 
     @Override

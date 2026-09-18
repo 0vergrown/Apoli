@@ -168,6 +168,18 @@ public final class ApoliClient implements ClientModInitializer {
                 ? dev.overgrown.apoli.client.ClientPowerState.powerInventory(powerId)
                 : null);
 
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.ScaleSyncS2C.CHANNEL,
+            (client, handler, buf, sender) -> {
+                dev.overgrown.apoli.network.payload.ScaleSyncS2C payload =
+                    dev.overgrown.apoli.network.payload.ScaleSyncS2C.read(buf);
+                client.execute(() -> {
+                    if (client.level == null) return;
+                    net.minecraft.world.entity.Entity entity = client.level.getEntity(payload.entityId());
+                    if (entity == null) return;
+                    dev.overgrown.apoli.scale.ScaleSync.decode(entity, payload.data());
+                });
+            });
+
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.TickRateS2C.CHANNEL,
             (client, handler, buf, sender) -> {
                 dev.overgrown.apoli.network.payload.TickRateS2C payload =

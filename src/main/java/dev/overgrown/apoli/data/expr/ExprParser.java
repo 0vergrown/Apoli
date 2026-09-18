@@ -36,6 +36,7 @@ public final class ExprParser {
     private boolean needsPeer;
 
     private T tokType;
+    private boolean bracketFnIdent;
     private String tokText = "";
     private double tokNum;
     private int tokStart;
@@ -192,6 +193,8 @@ public final class ExprParser {
                     return functionCall(name, at);
                 }
                 if (tokType == T.LBRACKET) {
+                    BracketFnBuilder bracket = BRACKET_FUNCTIONS.get(name);
+                    if (bracket != null) return bracketFunctionCall(name, at, bracket);
                     return indexedVariable(name, at);
                 }
                 return variable(name, at);
@@ -236,6 +239,96 @@ public final class ExprParser {
         needsContainer |= rv.needsContainer();
         needsPeer |= rv.needsPeer();
         return new ExprNodes.Var(rv.accessor());
+    }
+
+    private ExprNode bracketFunctionCall(String name, int at, BracketFnBuilder builder) throws ExprParseException {
+        int open = tokStart;
+        int close = matchingBracket(open);
+        List<String> args = splitArguments(src.substring(open + 1, close));
+        pos = close + 1;
+        advance();
+        ExprVars.ResolvedVar rv = builder.build(args, name, at);
+        needsContainer |= rv.needsContainer();
+        needsPeer |= rv.needsPeer();
+        return new ExprNodes.Var(rv.accessor());
+    }
+
+    private int matchingBracket(int open) throws ExprParseException {
+        int level = 0;
+        char quote = 0;
+        for (int i = open; i < src.length(); i++) {
+            char c = src.charAt(i);
+            if (quote != 0) {
+                if (c == '\\') i++;
+                else if (c == quote) quote = 0;
+                continue;
+            }
+            switch (c) {
+                case '"', '\'' -> quote = c;
+                case '[', '{', '(' -> level++;
+                case ']', '}', ')' -> {
+                    level--;
+                    if (level == 0) {
+                        if (c != ']') throw new ExprParseException("expected ']' but found '" + c + "'", i);
+                        return i;
+                    }
+                }
+                default -> { }
+            }
+        }
+        throw new ExprParseException("unterminated '['", open);
+    }
+
+    private static List<String> splitArguments(String inner) {
+        List<String> args = new ArrayList<>(4);
+        int level = 0;
+        char quote = 0;
+        int start = 0;
+        for (int i = 0; i < inner.length(); i++) {
+            char c = inner.charAt(i);
+            if (quote != 0) {
+                if (c == '\\') i++;
+                else if (c == quote) quote = 0;
+                continue;
+            }
+            switch (c) {
+                case '"', '\'' -> quote = c;
+                case '[', '{', '(' -> level++;
+                case ']', '}', ')' -> level--;
+                case ',' -> {
+                    if (level == 0) {
+                        args.add(inner.substring(start, i).trim());
+                        start = i + 1;
+                    }
+                }
+                default -> { }
+            }
+        }
+        String tail = inner.substring(start).trim();
+        if (!tail.isEmpty() || !args.isEmpty()) args.add(tail);
+        return args;
+    }
+
+    public record Nested(ExprNode node, boolean needsContainer, boolean needsPeer) {}
+
+    public static Nested compileNested(String source, String name, int at) throws ExprParseException {
+        try {
+            Result result = parse(source, ExprVars::resolve);
+            return new Nested(result.root(), result.needsContainer(), result.needsPeer());
+        } catch (ExprParseException e) {
+            throw new ExprParseException(name + " argument \"" + source + "\": " + e.getMessage(), at);
+        }
+    }
+
+    @FunctionalInterface
+    public interface BracketFnBuilder {
+        ExprVars.ResolvedVar build(List<String> args, String name, int at) throws ExprParseException;
+    }
+
+    private static final Map<String, BracketFnBuilder> BRACKET_FUNCTIONS = new HashMap<>();
+
+    public static void registerBracketFunction(String name, BracketFnBuilder builder) {
+        BRACKET_FUNCTIONS.put(name, builder);
     }
 
     @FunctionalInterface
@@ -431,9 +524,12 @@ public final class ExprParser {
             if (args.size() != 2) throw new ExprParseException("rNor expects 2 arguments", at);
             return new ExprNodes.RNor(args.get(0), args.get(1));
         });
+        ExprVars.load();
     }
 
     private void advance() throws ExprParseException {
+        boolean afterBracketFn = bracketFnIdent;
+        bracketFnIdent = false;
         while (pos < src.length() && Character.isWhitespace(src.charAt(pos))) pos++;
         tokStart = pos;
         if (pos >= src.length()) {
@@ -451,7 +547,7 @@ public final class ExprParser {
             return;
         }
         if (c == '[') {
-            if (looksLikeGenerator()) {
+            if (!afterBracketFn && looksLikeGenerator()) {
                 scanGenerator();
             } else {
                 tokType = T.LBRACKET;
@@ -552,6 +648,7 @@ public final class ExprParser {
         }
         tokType = T.IDENT;
         tokText = src.substring(start, pos);
+        bracketFnIdent = BRACKET_FUNCTIONS.containsKey(tokText);
     }
 
     private static boolean isResourcePathChar(char c) {

@@ -77,14 +77,15 @@ public class MinionEntity extends Mob implements OwnableEntity, Temporary {
     public void tick() {
         super.tick();
         if (this.level().isClientSide) return;
+        if (this.isDeadOrDying()) return;
         if (this.maxLifeTime > 0 && --this.lifeTicks <= 0) {
-            this.discard();
+            Summons.expire(this);
             return;
         }
         if (this.isFollowingOwner()) {
             LivingEntity owner = this.getOwner();
             if (owner == null || owner.level() != this.level()) {
-                this.discard();
+                Summons.expire(this);
                 return;
             }
             this.aimAt(owner.getYHeadRot(), owner.getXRot());
