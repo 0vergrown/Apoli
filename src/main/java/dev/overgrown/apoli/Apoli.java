@@ -87,6 +87,7 @@ public final class Apoli implements ModInitializer {
         ConditionTypes.bootstrap();
         ActionTypes.bootstrap();
         PowerTypes.bootstrap();
+        dev.overgrown.apoli.scale.ScaleTypes.bootstrap();
         PowerSources.bootstrap();
         dev.overgrown.apoli.attribution.PowerCause.bootstrap();
         dev.overgrown.apoli.compat.accessory.AccessoryCompat.init();
@@ -187,6 +188,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.command.ApoliKeyCommand.register(dispatcher);
             dev.overgrown.apoli.command.ApoliDevModeCommand.register(dispatcher);
             dev.overgrown.apoli.command.ApoliTickCommand.register(dispatcher);
+            dev.overgrown.apoli.command.ApoliScaleCommand.register(dispatcher);
             if (dev.overgrown.apoli.compat.ModCompat.anyAccessory()) {
                 dev.overgrown.apoli.compat.accessory.command.AccessoryCommand.register(dispatcher);
             }
@@ -362,6 +364,7 @@ public final class Apoli implements ModInitializer {
                     ApoliNetwork.sendSkillDefs(sp);
                     ApoliNetwork.sendSkillState(sp);
                     dev.overgrown.apoli.power.builtin.EntitySetPower.syncAllTo(sp);
+                    dev.overgrown.apoli.scale.Scales.syncIfScaled(sp);
                 });
             }
         });
@@ -381,6 +384,7 @@ public final class Apoli implements ModInitializer {
         ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
             PoweredEntities.unregister(oldPlayer);
             dev.overgrown.apoli.power.builtin.ActionOverTimePower.resetEdges(newPlayer);
+            dev.overgrown.apoli.scale.Scales.transfer(oldPlayer, newPlayer);
             resumePowers(newPlayer);
             dev.overgrown.apoli.power.PowerLookup.forEach(newPlayer,
                 dev.overgrown.apoli.power.ApoliIds.STARTING_EQUIPMENT,
@@ -390,12 +394,16 @@ public final class Apoli implements ModInitializer {
         });
 
         net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD
-            .register((player, origin, destination) -> resumePowers(player));
+            .register((player, origin, destination) -> {
+                resumePowers(player);
+                dev.overgrown.apoli.scale.Scales.syncIfScaled(player);
+            });
 
         net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents.AFTER_ENTITY_CHANGE_WORLD
             .register((originalEntity, newEntity, origin, destination) -> {
                 PoweredEntities.unregister(originalEntity);
                 resumePowers(newEntity);
+                dev.overgrown.apoli.scale.Scales.syncIfScaled(newEntity);
             });
 
         net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DEATH.register(
@@ -403,6 +411,22 @@ public final class Apoli implements ModInitializer {
 
         net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.ALLOW_DEATH.register(
             (entity, source, amount) -> !dev.overgrown.apoli.power.builtin.PreventDeathHandler.tryPrevent(entity, source, amount));
+
+        dev.overgrown.apoli.scale.Scales.setSyncer(entity -> {
+            dev.overgrown.apoli.network.payload.ScaleSyncS2C payload =
+                new dev.overgrown.apoli.network.payload.ScaleSyncS2C(entity.getId(),
+                    dev.overgrown.apoli.scale.ScaleSync.encode(entity));
+            ApoliNetwork.broadcastScale(entity, payload);
+        });
+
+        EntityTrackingEvents.START_TRACKING.register((trackedEntity, player) -> {
+            dev.overgrown.apoli.scale.ScaleState scales =
+                dev.overgrown.apoli.scale.Scales.stateOf(trackedEntity);
+            if (scales != null && !scales.isDefault()) {
+                ApoliNetwork.sendScale(player, new dev.overgrown.apoli.network.payload.ScaleSyncS2C(
+                    trackedEntity.getId(), dev.overgrown.apoli.scale.ScaleSync.encode(trackedEntity)));
+            }
+        });
 
         EntityTrackingEvents.START_TRACKING.register((trackedEntity, player) -> {
             PowerContainer c = PowerContainer.of(trackedEntity);
@@ -560,6 +584,7 @@ public final class Apoli implements ModInitializer {
         if (dev.overgrown.apoli.entity.GrabManager.keybindsDisabled(player.getUUID())) return;
         PowerContainer c = PowerContainer.of(player);
         if (c == null || !c.hasPower(payload.power()) || c.isSuppressed(payload.power())) return;
+        if (dev.overgrown.apoli.power.builtin.PowerStoragePower.keyMuted(c, payload.power())) return;
         Power loaded = ApoliPowers.get(payload.power());
         if (loaded == null) return;
         PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
@@ -588,6 +613,7 @@ public final class Apoli implements ModInitializer {
         if (dev.overgrown.apoli.entity.GrabManager.keybindsDisabled(player.getUUID())) return;
         PowerContainer c = PowerContainer.of(player);
         if (c == null || !c.hasPower(payload.power()) || c.isSuppressed(payload.power())) return;
+        if (dev.overgrown.apoli.power.builtin.PowerStoragePower.keyMuted(c, payload.power())) return;
         Power loaded = ApoliPowers.get(payload.power());
         if (loaded == null) return;
         if (!(PowerTypeRegistry.get(loaded.typeId()) instanceof TogglePower)) return;

@@ -19,6 +19,7 @@ public final class DamageConditions {
                 .build()
         );
         ConditionTypes.DAMAGE.register(Apoli.id("attacker"), new AttackerDamageCondition());
+        ConditionTypes.DAMAGE.register(Apoli.id("body_part"), new BodyPartDamageCondition());
         ConditionTypes.DAMAGE.register(Apoli.id("critical"), new CriticalDamageCondition());
         ConditionTypes.DAMAGE.register(Apoli.id("in_tag"), new InTagDamageCondition());
         ConditionTypes.DAMAGE.register(Apoli.id("name"), new NameDamageCondition());

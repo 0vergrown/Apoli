@@ -23,16 +23,27 @@ public final class HumanoidPose {
     public static final float ARM_LENGTH = 10.0F;
     public static final float LEG_LENGTH = 12.0F;
 
-    private static final int STRIDE = 9;
-    private static final int X = 0;
-    private static final int Y = 1;
-    private static final int Z = 2;
-    private static final int X_ROT = 3;
-    private static final int Y_ROT = 4;
-    private static final int Z_ROT = 5;
-    private static final int X_SCALE = 6;
-    private static final int Y_SCALE = 7;
-    private static final int Z_SCALE = 8;
+    private static final int STRIDE = PoseMath.STRIDE;
+    private static final int X = PoseMath.X;
+    private static final int Y = PoseMath.Y;
+    private static final int Z = PoseMath.Z;
+    private static final int X_ROT = PoseMath.X_ROT;
+    private static final int Y_ROT = PoseMath.Y_ROT;
+    private static final int Z_ROT = PoseMath.Z_ROT;
+    private static final int X_SCALE = PoseMath.X_SCALE;
+    private static final int Y_SCALE = PoseMath.Y_SCALE;
+    private static final int Z_SCALE = PoseMath.Z_SCALE;
+
+    private static final float[] BOXES = {
+        -4.0F, -8.0F, -4.0F, 4.0F, 0.0F, 4.0F,
+        -4.0F, 0.0F, -2.0F, 4.0F, 12.0F, 2.0F,
+        -3.0F, -2.0F, -2.0F, 1.0F, 10.0F, 2.0F,
+        -1.0F, -2.0F, -2.0F, 3.0F, 10.0F, 2.0F,
+        -2.0F, 0.0F, -2.0F, 2.0F, 12.0F, 2.0F,
+        -2.0F, 0.0F, -2.0F, 2.0F, 12.0F, 2.0F
+    };
+
+    private static final String[] NAMES = {"head", "body", "right_arm", "left_arm", "right_leg", "left_leg"};
 
     private static final float DEG_TO_RAD = (float) (Math.PI / 180.0);
 
@@ -44,7 +55,11 @@ public final class HumanoidPose {
 
     private static final ModelPartTimeline TIMELINE = new ModelPartTimeline();
 
+    public static final HumanoidPose REST = new HumanoidPose();
+
     private final float[] parts = new float[PART_COUNT * STRIDE];
+    private float[] pivot;
+    private double[] scratch;
 
     private HumanoidPose() {
         rest();
@@ -57,6 +72,22 @@ public final class HumanoidPose {
             pose.applyPowers(living);
         }
         return pose;
+    }
+
+    public static float boxMin(int limb, int axis) {
+        return BOXES[limb * 6 + axis];
+    }
+
+    public static float boxMax(int limb, int axis) {
+        return BOXES[limb * 6 + 3 + axis];
+    }
+
+    public static String nameOf(int limb) {
+        return NAMES[limb];
+    }
+
+    public float[] poses() {
+        return parts;
     }
 
     public float x(int part) {
@@ -344,9 +375,47 @@ public final class HumanoidPose {
             if (weight <= 0.0F) continue;
             if (!slot.rendersIn(false)) continue;
             ModelPartTransformation transformation = slot.transformation();
-            int part = indexOf(transformation.normalizedPart());
+            BodyPart bodyPart = transformation.bodyPart();
+            if (bodyPart.isGroup()) {
+                if (PoseMath.isSpatial(transformation.type())) {
+                    applyGroup(bodyPart, transformation, slot.value(), weight);
+                }
+                continue;
+            }
+            int part = indexOf(bodyPart);
             if (part < 0) continue;
             apply(part, transformation, slot.value(), weight);
+        }
+    }
+
+    private void applyGroup(BodyPart bodyPart, ModelPartTransformation transformation, float value, float weight) {
+        if (pivot == null) {
+            pivot = new float[3];
+            scratch = new double[3];
+        }
+        groupPivot(bodyPart, transformation, parts, scratch, pivot);
+        int limbs = bodyPart.limbs();
+        boolean override = transformation.overrideAnimation();
+        for (int limb = 0; limb < PART_COUNT; limb++) {
+            if ((limbs & (1 << limb)) == 0) continue;
+            PoseMath.applyGroup(transformation.type(), parts, limb * STRIDE, value, weight, override,
+                pivot[0], pivot[1], pivot[2]);
+        }
+    }
+
+    public static void groupPivot(BodyPart bodyPart, ModelPartTransformation transformation, float[] limbPoses,
+                                  double[] scratch, float[] out) {
+        if (transformation.pivot().isPresent()) {
+            Vector explicit = transformation.pivot().get();
+            out[0] = explicit.x();
+            out[1] = explicit.y();
+            out[2] = explicit.z();
+            return;
+        }
+        if (!bodyPart.pointInto(limbPoses, scratch, out)) {
+            out[0] = 0.0F;
+            out[1] = 0.0F;
+            out[2] = 0.0F;
         }
     }
 
@@ -376,18 +445,14 @@ public final class HumanoidPose {
         return TIMELINE.overridesPose(entity, entity.tickCount);
     }
 
-    public static int indexOf(String normalizedPart) {
-        String slot = ModelParts.slot(normalizedPart);
-        if (slot == null) return -1;
-        return switch (slot) {
-            case ModelParts.HEAD, ModelParts.HAT -> HEAD;
-            case ModelParts.BODY -> BODY;
-            case ModelParts.RIGHT_ARM -> RIGHT_ARM;
-            case ModelParts.LEFT_ARM -> LEFT_ARM;
-            case ModelParts.RIGHT_LEG -> RIGHT_LEG;
-            case ModelParts.LEFT_LEG -> LEFT_LEG;
-            default -> -1;
-        };
+    public static int indexOf(BodyPart part) {
+        if (part.isGroup() || part.models() == 0) return -1;
+        return singleLimb(part);
+    }
+
+    public static int singleLimb(BodyPart part) {
+        int limbs = part.limbs();
+        return Integer.bitCount(limbs) == 1 ? Integer.numberOfTrailingZeros(limbs) : -1;
     }
 
     private static int armPose(LivingEntity entity, InteractionHand hand) {

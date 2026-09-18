@@ -9,12 +9,12 @@ import dev.overgrown.apoli.codec.LoggedOptionalField;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.entity.TeleportHelper;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.level.portal.DimensionTransition;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.Optional;
 
@@ -41,29 +41,24 @@ public final class TeleportToSpawnAction implements ActionType<EntityCtx, Telepo
         MinecraftServer server = current.getServer();
 
         ServerLevel level = null;
-        BlockPos pos = null;
+        Vec3 destination = null;
         float yaw = 0.0F;
 
         if (cfg.playerSpawn && entity instanceof ServerPlayer player) {
-            BlockPos respawn = player.getRespawnPosition();
-            ResourceKey<Level> dimension = player.getRespawnDimension();
-            if (respawn != null) {
-                ServerLevel respawnLevel = server.getLevel(dimension);
-                if (respawnLevel != null) {
-                    level = respawnLevel;
-                    pos = respawn;
-                    yaw = player.getRespawnAngle();
-                }
-            }
+            DimensionTransition respawn = player.findRespawnPositionAndUseSpawnBlock(true, DimensionTransition.DO_NOTHING);
+            level = respawn.newLevel();
+            destination = respawn.pos();
+            yaw = respawn.yRot();
         }
-        if (level == null) {
+        if (level == null || destination == null) {
             level = server.overworld();
-            pos = level.getSharedSpawnPos();
+            BlockPos shared = level.getSharedSpawnPos();
+            destination = new Vec3(shared.getX() + 0.5, shared.getY(), shared.getZ() + 0.5);
             yaw = level.getSharedSpawnAngle();
         }
 
         Entity moved = TeleportHelper.teleport(entity, level,
-            pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, yaw, 0.0F);
+            destination.x, destination.y, destination.z, yaw, 0.0F);
         if (moved == null) {
             cfg.failAction.ifPresent(a -> a.run(ctx));
             return;

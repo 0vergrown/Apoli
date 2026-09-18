@@ -6,7 +6,9 @@ import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.entity.disguise.DisguiseManager;
 import dev.overgrown.apoli.keybind.HeldKeys;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 
 import java.util.List;
 
@@ -22,6 +24,14 @@ public final class Summons {
         for (ResourceLocation power : powers) {
             holder.addPower(power, POWER_SOURCE);
         }
+    }
+
+    public static void expire(LivingEntity summon) {
+        if (summon.isRemoved()) return;
+        if (summon.level() instanceof ServerLevel && !summon.isDeadOrDying()) {
+            summon.hurt(summon.damageSources().genericKill(), Float.MAX_VALUE);
+        }
+        if (!summon.isRemoved()) summon.discard();
     }
 
     public static void onRemoved(Entity summon) {

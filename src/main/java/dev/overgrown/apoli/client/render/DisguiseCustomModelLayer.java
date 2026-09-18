@@ -1,24 +1,19 @@
 package dev.overgrown.apoli.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.overgrown.apoli.client.disguise.ClientDisguiseManager;
 import dev.overgrown.apoli.client.model.CustomModel;
-import dev.overgrown.apoli.data.ModelParts;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.GeometryRender;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.ResolvedLayer;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.HumanoidModel;
-import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.PlayerSkin;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.FastColor;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.List;
@@ -42,25 +37,7 @@ public class DisguiseCustomModelLayer<T extends LivingEntity, M extends EntityMo
         for (int i = 0; i < overlays.size(); i++) {
             ResolvedLayer layer = overlays.get(i);
             ResourceLocation texture = DynamicTextures.resolve(layer.texture(slim), player);
-            int color = FastColor.ARGB32.colorFromFloat(layer.alpha(), layer.red(), layer.green(), layer.blue());
-            VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(layer.mode(), texture));
-            boolean scaled = layer.scale() != 1.0F;
-            if (scaled) {
-                pose.pushPose();
-                pose.scale(layer.scale(), layer.scale(), layer.scale());
-            }
-            if (layer.wholeModel()) {
-                humanoid.renderToBuffer(pose, consumer, light, OverlayTexture.NO_OVERLAY, color);
-            } else {
-                for (String partName : layer.bodyParts()) {
-                    for (ModelPart part : ModelPartLookup.resolve(humanoid, ModelParts.normalize(partName))) {
-                        part.render(pose, consumer, light, OverlayTexture.NO_OVERLAY, color);
-                    }
-                }
-            }
-            if (scaled) {
-                pose.popPose();
-            }
+            TextureOverlays.render(humanoid, layer, texture, 1.0F, ageInTicks, player, pose, buffers, light);
         }
 
         List<GeometryRender> geometry = CustomModelRenderPower.collectGeometry(player);

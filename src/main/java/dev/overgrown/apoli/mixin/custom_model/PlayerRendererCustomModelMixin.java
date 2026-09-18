@@ -2,15 +2,14 @@ package dev.overgrown.apoli.mixin.custom_model;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.overgrown.apoli.client.model.CustomModel;
 import dev.overgrown.apoli.client.render.AnimationPlayer;
 import dev.overgrown.apoli.client.render.CustomModelManager;
 import dev.overgrown.apoli.client.render.CustomModelRenderLayer;
 import dev.overgrown.apoli.client.render.GeometryRenderer;
 import dev.overgrown.apoli.client.render.GhostArmState;
-import dev.overgrown.apoli.client.render.ModelPartLookup;
-import dev.overgrown.apoli.client.render.OverlayRenderTypes;
+import dev.overgrown.apoli.client.render.ModelPartAnimator;
+import dev.overgrown.apoli.client.render.TextureOverlays;
 import dev.overgrown.apoli.client.render.PlayerRestPose;
 import dev.overgrown.apoli.data.ModelParts;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower;
@@ -26,9 +25,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.FastColor;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -97,24 +94,15 @@ public abstract class PlayerRendererCustomModelMixin extends LivingEntityRendere
             return;
         }
         float alphaScale = GhostArmState.isActive() ? GhostArmState.alpha() : 1.0F;
+        float ageInTicks = ModelPartAnimator.ageInTicks(player);
         PlayerModel<AbstractClientPlayer> model = this.getModel();
-        for (ResolvedLayer layer : layers) {
-            if (!layer.showFirstPerson() || !apoli$layerAffectsArm(model, layer, arm, sleeve)) {
+        for (int i = 0; i < layers.size(); i++) {
+            ResolvedLayer layer = layers.get(i);
+            if (!layer.showFirstPerson() || !TextureOverlays.affectsArm(model, layer, player, arm, sleeve)) {
                 continue;
             }
-            ResourceLocation texture = layer.texture(apoli$slim);
-            int color = FastColor.ARGB32.colorFromFloat(layer.alpha() * alphaScale, layer.red(), layer.green(), layer.blue());
-            VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(layer.mode(), texture));
-            boolean scaled = layer.scale() != 1.0F;
-            if (scaled) {
-                pose.pushPose();
-                pose.scale(layer.scale(), layer.scale(), layer.scale());
-            }
-            arm.render(pose, consumer, light, OverlayTexture.NO_OVERLAY, color);
-            sleeve.render(pose, consumer, light, OverlayTexture.NO_OVERLAY, color);
-            if (scaled) {
-                pose.popPose();
-            }
+            ResourceLocation texture = dev.overgrown.apoli.client.render.DynamicTextures.resolve(layer.texture(apoli$slim), player);
+            TextureOverlays.renderArm(layer, texture, alphaScale, ageInTicks, arm, sleeve, pose, buffers, light);
         }
     }
 
@@ -144,17 +132,4 @@ public abstract class PlayerRendererCustomModelMixin extends LivingEntityRendere
         }
     }
 
-    @Unique
-    private boolean apoli$layerAffectsArm(PlayerModel<AbstractClientPlayer> model, ResolvedLayer layer, ModelPart arm, ModelPart sleeve) {
-        if (layer.wholeModel()) {
-            return true;
-        }
-        for (String partName : layer.bodyParts()) {
-            List<ModelPart> parts = ModelPartLookup.resolve(model, ModelParts.normalize(partName));
-            if (parts.contains(arm) || parts.contains(sleeve)) {
-                return true;
-            }
-        }
-        return false;
-    }
 }

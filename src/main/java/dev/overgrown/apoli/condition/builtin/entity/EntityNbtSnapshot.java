@@ -59,22 +59,26 @@ public final class EntityNbtSnapshot {
         return actual;
     }
 
-    private static CompoundTag cachedFullSnapshot(Entity entity, CompoundTag expected) {
-        if (!ModCompat.NERB && expected.contains("recipeBook")) {
-            return serialize(entity, false);
-        }
+    public static CompoundTag cached(Entity entity) {
         long now = entity.level().getGameTime();
         TickCache cache = CACHE.get();
         if (cache.tick != now) {
             cache.snapshots.clear();
             cache.tick = now;
         }
-        CompoundTag cached = cache.snapshots.get(entity);
-        if (cached == null) {
-            cached = serialize(entity, true);
-            cache.snapshots.put(entity, cached);
+        CompoundTag snapshot = cache.snapshots.get(entity);
+        if (snapshot == null) {
+            snapshot = serialize(entity, true);
+            cache.snapshots.put(entity, snapshot);
         }
-        return cached;
+        return snapshot;
+    }
+
+    private static CompoundTag cachedFullSnapshot(Entity entity, CompoundTag expected) {
+        if (!ModCompat.NERB && expected.contains("recipeBook")) {
+            return serialize(entity, false);
+        }
+        return cached(entity);
     }
 
     private static CompoundTag serialize(Entity entity, boolean skipRecipeBook) {

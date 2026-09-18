@@ -121,6 +121,14 @@ public final class ApoliClient implements ClientModInitializer {
                     new dev.overgrown.apoli.mount.MountOffsets.Offset(
                         payload.x(), payload.y(), payload.z(), payload.space(), payload.rotation()))));
 
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.ScaleSyncS2C.TYPE,
+            (payload, context) -> context.client().execute(() -> {
+                if (context.client().level == null) return;
+                net.minecraft.world.entity.Entity entity = context.client().level.getEntity(payload.entityId());
+                if (entity == null) return;
+                dev.overgrown.apoli.scale.ScaleSync.decode(entity, payload.data());
+            }));
+
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.TickRateS2C.TYPE,
             (payload, context) -> context.client().execute(() ->
                 dev.overgrown.apoli.client.ClientTickRates.set(payload.entityId(), payload.rate(), payload.baseRate())));

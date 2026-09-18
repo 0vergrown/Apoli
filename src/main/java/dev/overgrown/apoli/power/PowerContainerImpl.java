@@ -29,6 +29,7 @@ public final class PowerContainerImpl implements PowerContainer {
     private final Map<ResourceLocation, Integer> auxInt = new HashMap<>();
     private final Map<ResourceLocation, CompoundTag> auxNbt = new HashMap<>();
     private final Map<ResourceLocation, int[]> auxInts = new HashMap<>();
+    private final Map<ResourceLocation, int[]> scratchInts = new HashMap<>();
     private final Map<ResourceLocation, Set<ResourceLocation>> suppressedBySources = new HashMap<>();
     private @Nullable Entity owner;
     private boolean dirty;
@@ -94,11 +95,21 @@ public final class PowerContainerImpl implements PowerContainer {
         markDirty();
     }
 
+    public int[] scratchInts(ResourceLocation powerId, int length) {
+        int[] existing = scratchInts.get(powerId);
+        if (existing != null && existing.length >= length) return existing;
+        int[] grown = new int[length];
+        if (existing != null) System.arraycopy(existing, 0, grown, 0, existing.length);
+        scratchInts.put(powerId, grown);
+        return grown;
+    }
+
     public Map<ResourceLocation, int[]> auxIntsSnapshot() {
         return auxInts.isEmpty() ? Map.of() : new HashMap<>(auxInts);
     }
 
     public void removeAux(ResourceLocation powerId) {
+        scratchInts.remove(powerId);
         boolean changed = auxInt.remove(powerId) != null;
         if (auxInts.remove(powerId) != null) changed = true;
         if (auxNbt.remove(powerId) != null) {
@@ -230,6 +241,7 @@ public final class PowerContainerImpl implements PowerContainer {
             auxInt.clear();
             auxInts.clear();
             auxNbt.clear();
+            scratchInts.clear();
             markDirty();
         }
         markStructureDirty();

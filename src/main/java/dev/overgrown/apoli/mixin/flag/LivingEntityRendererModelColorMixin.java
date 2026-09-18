@@ -3,7 +3,7 @@ package dev.overgrown.apoli.mixin.flag;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.overgrown.apoli.client.disguise.ClientDisguiseManager;
 import dev.overgrown.apoli.client.render.ModelColorState;
-import dev.overgrown.apoli.client.render.ModelPartLookup;
+import dev.overgrown.apoli.client.render.PartColorMap;
 import dev.overgrown.apoli.power.builtin.ModelColorPower;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -25,7 +25,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
-import java.util.Map;
 
 @Mixin(LivingEntityRenderer.class)
 @Environment(EnvType.CLIENT)
@@ -41,9 +40,7 @@ public abstract class LivingEntityRendererModelColorMixin {
         if (!ModelColorPower.hasPartColors(source)) return;
         EntityModel<?> model = ((LivingEntityRenderer<?, ?>) (Object) this).getModel();
         if (!(model instanceof HumanoidModel<?> humanoid)) return;
-        Map<String, float[]> parts = ModelColorPower.partColorsFor(source);
-        if (parts == null) return;
-        ModelColorState.set(ModelPartLookup.buildColorMap(humanoid, parts));
+        ModelColorState.set(PartColorMap.build(source, humanoid));
     }
 
     @Inject(method = RENDER, at = @At("RETURN"))
