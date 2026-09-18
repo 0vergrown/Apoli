@@ -150,6 +150,7 @@
     "player_model.PlayerRendererModelSwapMixin",
     "pose.LivingEntityRendererPoseMixin",
     "pose.PlayerRendererPoseMixin",
+    "power.FogRendererModifyFogMixin",
     "power.PreventEntitySelectionMixin",
     "shader.GameRendererShaderAccessor",
     "shader.GameRendererShaderMixin",
@@ -158,13 +159,13 @@
     "sound.SoundEngineTrackMixin",
     "swing.HumanoidModelDualSwingMixin",
     "swing.ItemInHandRendererDualSwingMixin",
+    "tick.CameraTickRateMixin",
     "tick.ClientLevelTickRateMixin",
     "tick.EntityLerpFollowMixin",
-    "tick.LivingEntityTickRateMixin",
-    "tick.LocalPlayerTickRateMixin",
+    "tick.GameRendererTickRateMixin",
     "tick.LevelRendererTickRateMixin",
-    "tick.CameraTickRateMixin",
-    "tick.GameRendererTickRateMixin"
+    "tick.LivingEntityTickRateMixin",
+    "tick.LocalPlayerTickRateMixin"
   ],
   "injectors": {
     "defaultRequire": 1

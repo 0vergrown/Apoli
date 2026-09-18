@@ -268,6 +268,7 @@ public final class ApoliClient implements ClientModInitializer {
             PlayerModelTypeReporter.tick(mc);
             CameraPerspectiveReporter.tick(mc);
             ForcedKeys.tick();
+            dev.overgrown.apoli.power.builtin.ModifyFogInterpolator.tick(mc.player);
         });
 
         WorldRenderEvents.AFTER_ENTITIES.register(RopeRenderer::render);
