@@ -83,6 +83,7 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("remove_power"), new RemovePowerAction());
         ActionTypes.ENTITY.register(Apoli.id("suppress_power"), new SuppressPowerAction(),
             AliasingOptions.builder().renameField("powers", "power").renameField("sources", "source").build());
+        ActionTypes.ENTITY.register(Apoli.id("unfreeze"), new UnfreezeAction());
         ActionTypes.ENTITY.register(Apoli.id("unsuppress_power"), new UnsuppressPowerAction(),
             AliasingOptions.builder().renameField("powers", "power").renameField("sources", "source").build());
         ActionTypes.ENTITY.register(Apoli.id("modify_stat"), new ModifyStatAction(),
