@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.data;
 
+import dev.overgrown.apoli.data.expr.ExprPeer;
 import dev.overgrown.apoli.power.PowerContainer;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
@@ -78,6 +79,59 @@ public final class AttributeModifierHelper {
             base = r.base();
             total = r.total();
             if (mod.operation().phase() == AttributeModifierOperation.Phase.BASE) total = base;
+        }
+        return total;
+    }
+
+    public static double apply(double baseValue, List<AttributeModifier> mods, @Nullable Entity entity,
+                               @Nullable PowerContainer container,
+                               @Nullable Entity actor, @Nullable Entity target) {
+        if (mods.isEmpty()) return baseValue;
+        Entity[] frame = ExprPeer.frame();
+        Entity previousActor = frame[ExprPeer.ACTOR];
+        Entity previousTarget = frame[ExprPeer.TARGET];
+        frame[ExprPeer.ACTOR] = actor;
+        frame[ExprPeer.TARGET] = target;
+        try {
+            return apply(baseValue, mods, entity, container);
+        } finally {
+            frame[ExprPeer.ACTOR] = previousActor;
+            frame[ExprPeer.TARGET] = previousTarget;
+        }
+    }
+
+    public record Owned(AttributeModifier modifier, @Nullable Entity entity, @Nullable PowerContainer container,
+                        @Nullable Entity actor, @Nullable Entity target) {}
+
+    private static final Comparator<Owned> OWNED_ORDERING = Comparator
+        .comparingInt((Owned o) -> o.modifier().operation().phase().ordinal())
+        .thenComparingInt(o -> o.modifier().operation().order());
+
+    public static double applyOwned(double baseValue, List<Owned> mods) {
+        int n = mods.size();
+        if (n == 0) return baseValue;
+        Owned[] ordered = mods.toArray(new Owned[0]);
+        if (n > 1) Arrays.sort(ordered, OWNED_ORDERING);
+        double base = baseValue;
+        double total = baseValue;
+        Entity[] frame = ExprPeer.frame();
+        Entity previousActor = frame[ExprPeer.ACTOR];
+        Entity previousTarget = frame[ExprPeer.TARGET];
+        try {
+            for (int i = 0; i < n; i++) {
+                Owned owned = ordered[i];
+                frame[ExprPeer.ACTOR] = owned.actor();
+                frame[ExprPeer.TARGET] = owned.target();
+                AttributeModifier mod = owned.modifier();
+                double modValue = mod.resolveInput(owned.entity(), owned.container(), baseValue);
+                AttributeModifierOperation.Result r = mod.operation().apply(base, total, modValue);
+                base = r.base();
+                total = r.total();
+                if (mod.operation().phase() == AttributeModifierOperation.Phase.BASE) total = base;
+            }
+        } finally {
+            frame[ExprPeer.ACTOR] = previousActor;
+            frame[ExprPeer.TARGET] = previousTarget;
         }
         return total;
     }

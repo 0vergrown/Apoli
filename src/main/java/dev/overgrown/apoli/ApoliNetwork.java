@@ -98,6 +98,15 @@ public final class ApoliNetwork {
         send(recipient, SyncKeybindsS2C.CHANNEL, payload::write);
     }
 
+    public static void sendScale(ServerPlayer recipient, dev.overgrown.apoli.network.payload.ScaleSyncS2C payload) {
+        send(recipient, dev.overgrown.apoli.network.payload.ScaleSyncS2C.CHANNEL, payload::write);
+    }
+
+    public static void broadcastScale(Entity entity, dev.overgrown.apoli.network.payload.ScaleSyncS2C payload) {
+        for (ServerPlayer viewer : PlayerLookup.tracking(entity)) sendScale(viewer, payload);
+        if (entity instanceof ServerPlayer self) sendScale(self, payload);
+    }
+
     public static void broadcastTickRate(MinecraftServer server, dev.overgrown.apoli.network.payload.TickRateS2C payload) {
         broadcast(server, dev.overgrown.apoli.network.payload.TickRateS2C.CHANNEL, payload::write);
     }

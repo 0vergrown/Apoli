@@ -6,22 +6,21 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.condition.EntityCondition;
 import dev.overgrown.apoli.condition.context.EntityCtx;
-import dev.overgrown.apoli.data.ModelParts;
+import dev.overgrown.apoli.data.BodyPart;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
     public static final ResourceLocation CANONICAL = Apoli.id("model_color");
 
-    public record PartColor(String part, float red, float green, float blue, float alpha,
+    public record PartColor(BodyPart part, float red, float green, float blue, float alpha,
                             boolean whiten, Optional<EntityCondition> condition) {}
 
     public record Config(float red, float green, float blue, float alpha, boolean whiten, List<PartColor> parts) {
@@ -31,6 +30,8 @@ public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
     }
 
     public static final float[] IDENTITY = new float[]{1f, 1f, 1f, 1f, 0f};
+
+    private static final ThreadLocal<List<Config>> CONFIGS = ThreadLocal.withInitial(() -> new ArrayList<>(2));
 
     private static Optional<Float> channel(float value, boolean whiten) {
         return whiten || value != 1f ? Optional.of(value) : Optional.empty();
@@ -42,7 +43,7 @@ public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
     }
 
     private static final MapCodec<PartColor> PART_COLOR_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-        Codec.STRING.fieldOf("part").forGetter(PartColor::part),
+        BodyPart.CODEC.fieldOf("part").forGetter(PartColor::part),
         Codec.FLOAT.optionalFieldOf("red").forGetter(pc -> channel(pc.red(), pc.whiten())),
         Codec.FLOAT.optionalFieldOf("green").forGetter(pc -> channel(pc.green(), pc.whiten())),
         Codec.FLOAT.optionalFieldOf("blue").forGetter(pc -> channel(pc.blue(), pc.whiten())),
@@ -63,61 +64,61 @@ public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
             r.orElse(1f), g.orElse(1f), b.orElse(1f), alpha, explicitWhite(r, g, b), parts)));
     }
 
-    public static float[] colorFor(Entity entity) {
-        float[] rgba = new float[]{1f, 1f, 1f, 1f, 0f};
-        boolean[] any = new boolean[]{false};
-        PowerLookup.forEach(entity, CANONICAL, Config.class, cfg -> {
-            if (cfg.hasParts()) return;
-            any[0] = true;
-            rgba[0] *= cfg.red;
-            rgba[1] *= cfg.green;
-            rgba[2] *= cfg.blue;
-            rgba[3] *= cfg.alpha;
+    public static float[] colorFor(@Nullable Entity entity) {
+        List<Config> configs = CONFIGS.get();
+        configs.clear();
+        PowerLookup.collect(entity, CANONICAL, Config.class, configs);
+        float[] rgba = null;
+        for (int i = 0; i < configs.size(); i++) {
+            Config cfg = configs.get(i);
+            if (cfg.hasParts()) continue;
+            if (rgba == null) rgba = new float[]{1f, 1f, 1f, 1f, 0f};
+            rgba[0] *= cfg.red();
+            rgba[1] *= cfg.green();
+            rgba[2] *= cfg.blue();
+            rgba[3] *= cfg.alpha();
             if (cfg.whiten()) rgba[4] = 1f;
-        });
-        return any[0] ? rgba : IDENTITY;
+        }
+        configs.clear();
+        return rgba == null ? IDENTITY : rgba;
     }
 
-    public static boolean hasPartColors(Entity entity) {
-        boolean[] any = new boolean[]{false};
-        PowerLookup.forEach(entity, CANONICAL, Config.class, cfg -> {
-            if (cfg.hasParts()) any[0] = true;
-        });
-        return any[0];
+    public static boolean hasPartColors(@Nullable Entity entity) {
+        return PowerLookup.anyActive(entity, CANONICAL, Config.class, Config::hasParts);
     }
 
-    @Nullable
-    public static Map<String, float[]> partColorsFor(Entity entity) {
-        Map<String, float[]> map = new HashMap<>();
-
-        EntityCtx[] ctx = new EntityCtx[1];
-        PowerLookup.forEach(entity, CANONICAL, Config.class, cfg -> {
-            for (PartColor pc : cfg.parts()) {
+    public static void collectPartColors(@Nullable Entity entity, List<PartColor> out) {
+        if (entity == null) return;
+        List<Config> configs = CONFIGS.get();
+        configs.clear();
+        PowerLookup.collect(entity, CANONICAL, Config.class, configs);
+        EntityCtx ctx = null;
+        for (int i = 0; i < configs.size(); i++) {
+            List<PartColor> parts = configs.get(i).parts();
+            for (int p = 0; p < parts.size(); p++) {
+                PartColor pc = parts.get(p);
                 if (pc.condition().isPresent()) {
-                    if (ctx[0] == null) ctx[0] = EntityCtx.of(entity, entity.level());
-                    if (!pc.condition().get().test(ctx[0])) continue;
+                    if (ctx == null) ctx = EntityCtx.of(entity, entity.level());
+                    if (!pc.condition().get().test(ctx)) continue;
                 }
-                float[] c = map.computeIfAbsent(ModelParts.normalize(pc.part()), k -> new float[]{1f, 1f, 1f, 1f, 0f});
-                c[0] *= pc.red();
-                c[1] *= pc.green();
-                c[2] *= pc.blue();
-                c[3] *= pc.alpha();
-                if (pc.whiten()) c[4] = 1f;
-            }
-        });
-        return map.isEmpty() ? null : map;
-    }
-
-    public static float minAlpha(Entity entity) {
-        float min = colorFor(entity)[3];
-        if (hasPartColors(entity)) {
-            Map<String, float[]> parts = partColorsFor(entity);
-            if (parts != null) {
-                for (float[] c : parts.values()) {
-                    min = Math.min(min, c[3]);
-                }
+                out.add(pc);
             }
         }
+        configs.clear();
+    }
+
+    public static float minAlpha(@Nullable Entity entity) {
+        float min = colorFor(entity)[3];
+        if (!hasPartColors(entity)) return min;
+        List<PartColor> parts = PART_COLORS.get();
+        parts.clear();
+        collectPartColors(entity, parts);
+        for (int i = 0; i < parts.size(); i++) {
+            min = Math.min(min, parts.get(i).alpha());
+        }
+        parts.clear();
         return min;
     }
+
+    private static final ThreadLocal<List<PartColor>> PART_COLORS = ThreadLocal.withInitial(() -> new ArrayList<>(4));
 }

@@ -9,8 +9,8 @@ import dev.overgrown.apoli.client.render.CustomModelManager;
 import dev.overgrown.apoli.client.render.CustomModelRenderLayer;
 import dev.overgrown.apoli.client.render.GeometryRenderer;
 import dev.overgrown.apoli.client.render.GhostArmState;
-import dev.overgrown.apoli.client.render.ModelPartLookup;
-import dev.overgrown.apoli.client.render.OverlayRenderTypes;
+import dev.overgrown.apoli.client.render.ModelPartAnimator;
+import dev.overgrown.apoli.client.render.TextureOverlays;
 import dev.overgrown.apoli.client.render.PlayerRestPose;
 import dev.overgrown.apoli.data.ModelParts;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower;
@@ -96,25 +96,15 @@ public abstract class PlayerRendererCustomModelMixin extends LivingEntityRendere
             return;
         }
         float alphaScale = GhostArmState.isActive() ? GhostArmState.alpha() : 1.0F;
+        float ageInTicks = ModelPartAnimator.ageInTicks(player);
         PlayerModel<AbstractClientPlayer> model = this.getModel();
-        for (ResolvedLayer layer : layers) {
-            if (!layer.showFirstPerson() || !apoli$layerAffectsArm(model, layer, arm, sleeve)) {
+        for (int i = 0; i < layers.size(); i++) {
+            ResolvedLayer layer = layers.get(i);
+            if (!layer.showFirstPerson() || !TextureOverlays.affectsArm(model, layer, player, arm, sleeve)) {
                 continue;
             }
-            ResourceLocation texture = layer.texture(apoli$slim);
-            VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(layer.mode(), texture));
-            boolean scaled = layer.scale() != 1.0F;
-            if (scaled) {
-                pose.pushPose();
-                pose.scale(layer.scale(), layer.scale(), layer.scale());
-            }
-            arm.render(pose, consumer, light, OverlayTexture.NO_OVERLAY,
-                layer.red(), layer.green(), layer.blue(), layer.alpha() * alphaScale);
-            sleeve.render(pose, consumer, light, OverlayTexture.NO_OVERLAY,
-                layer.red(), layer.green(), layer.blue(), layer.alpha() * alphaScale);
-            if (scaled) {
-                pose.popPose();
-            }
+            ResourceLocation texture = dev.overgrown.apoli.client.render.DynamicTextures.resolve(layer.texture(apoli$slim), player);
+            TextureOverlays.renderArm(layer, texture, alphaScale, ageInTicks, arm, sleeve, pose, buffers, light);
         }
     }
 
@@ -144,17 +134,4 @@ public abstract class PlayerRendererCustomModelMixin extends LivingEntityRendere
         }
     }
 
-    @Unique
-    private boolean apoli$layerAffectsArm(PlayerModel<AbstractClientPlayer> model, ResolvedLayer layer, ModelPart arm, ModelPart sleeve) {
-        if (layer.wholeModel()) {
-            return true;
-        }
-        for (String partName : layer.bodyParts()) {
-            List<ModelPart> parts = ModelPartLookup.resolve(model, ModelParts.normalize(partName));
-            if (parts.contains(arm) || parts.contains(sleeve)) {
-                return true;
-            }
-        }
-        return false;
-    }
 }

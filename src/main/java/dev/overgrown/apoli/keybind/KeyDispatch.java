@@ -98,6 +98,7 @@ public final class KeyDispatch {
         for (int i = 0; i < candidates.size(); i++) {
             ResourceLocation id = candidates.get(i);
             if (container.isSuppressed(id)) continue;
+            if (dev.overgrown.apoli.power.builtin.PowerStoragePower.keyMuted(container, id)) continue;
             Power loaded = ApoliPowers.get(id);
             if (loaded == null) continue;
             if (loaded.condition().isPresent() && !loaded.condition().get().test(ctx)) continue;

@@ -169,6 +169,16 @@ public class SixArmsPlayerModel<T extends LivingEntity> extends PlayerModel<T> i
             }
             case "rightthirdsleeve", "thirdrightsleeve" -> parts.add(this.rightThirdSleeve);
             case "leftthirdsleeve", "thirdleftsleeve" -> parts.add(this.leftThirdSleeve);
+            case "arms", "upper" -> {
+                parts.add(this.rightSecondArm);
+                parts.add(this.rightSecondSleeve);
+                parts.add(this.leftSecondArm);
+                parts.add(this.leftSecondSleeve);
+                parts.add(this.rightThirdArm);
+                parts.add(this.rightThirdSleeve);
+                parts.add(this.leftThirdArm);
+                parts.add(this.leftThirdSleeve);
+            }
             default -> {}
         }
     }

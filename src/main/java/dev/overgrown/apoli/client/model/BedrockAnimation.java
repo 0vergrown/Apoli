@@ -44,12 +44,14 @@ public final class BedrockAnimation {
 
     public static final class Bone {
         public final String name;
+        public final dev.overgrown.apoli.data.BodyPart part;
         @Nullable public final Track position;
         @Nullable public final Track rotation;
         @Nullable public final Track scale;
 
         public Bone(String name, @Nullable Track position, @Nullable Track rotation, @Nullable Track scale) {
             this.name = name;
+            this.part = dev.overgrown.apoli.data.BodyParts.lookupOrCustom(name);
             this.position = position;
             this.rotation = rotation;
             this.scale = scale;

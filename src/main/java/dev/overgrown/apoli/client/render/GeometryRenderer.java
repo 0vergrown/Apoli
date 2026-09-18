@@ -3,6 +3,7 @@ package dev.overgrown.apoli.client.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.overgrown.apoli.client.model.CustomModel;
+import dev.overgrown.apoli.data.BodyPart;
 import dev.overgrown.apoli.data.ModelParts;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.GeometryRender;
 import net.minecraft.client.model.PlayerModel;
@@ -79,7 +80,7 @@ public final class GeometryRenderer {
         part.zRot += live.zRot - rest.zRot;
     }
 
-    public static void applyVisibility(CustomModel model, List<String> bodyParts) {
+    public static void applyVisibility(CustomModel model, List<BodyPart> bodyParts) {
         CustomModel.Bone[] all = model.bones();
         if (bodyParts.isEmpty()) {
             for (int i = 0; i < all.length; i++) {
@@ -91,10 +92,32 @@ public final class GeometryRenderer {
             all[i].part.visible = false;
         }
         for (int i = 0; i < bodyParts.size(); i++) {
-            CustomModel.Bone[] bound = model.bones(ModelParts.normalize(bodyParts.get(i)));
-            for (int j = 0; j < bound.length; j++) {
-                bound[j].part.visible = true;
+            BodyPart part = bodyParts.get(i);
+            if (part.isEverything()) {
+                for (int j = 0; j < all.length; j++) {
+                    all[j].part.visible = true;
+                }
+                return;
             }
+            show(model, part.key());
+            if (!part.isGroup()) continue;
+            int limbs = part.limbs();
+            for (int limb = 0; limb < LIMB_KEYS.length; limb++) {
+                if ((limbs & (1 << limb)) == 0) continue;
+                show(model, LIMB_KEYS[limb]);
+                if (limb == 0) show(model, ModelParts.HAT);
+            }
+        }
+    }
+
+    private static final String[] LIMB_KEYS = {
+        ModelParts.HEAD, ModelParts.BODY, ModelParts.RIGHT_ARM, ModelParts.LEFT_ARM, ModelParts.RIGHT_LEG, ModelParts.LEFT_LEG
+    };
+
+    private static void show(CustomModel model, String key) {
+        CustomModel.Bone[] bound = model.bones(key);
+        for (int j = 0; j < bound.length; j++) {
+            bound[j].part.visible = true;
         }
     }
 
@@ -104,8 +127,8 @@ public final class GeometryRenderer {
 
     public static void draw(GeometryRender render, CustomModel model, PoseStack pose, MultiBufferSource buffers,
                             int light, @Nullable Entity subject) {
-        VertexConsumer consumer = buffers.getBuffer(
-            OverlayRenderTypes.forMode(render.mode(), DynamicTextures.resolve(render.texture(), subject)));
+        VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(render.mode(),
+            DynamicTextures.resolve(render.texture(), subject), ModelPartAnimator.ageInTicks(subject), render.scrollSpeed()));
         boolean scaled = render.scale() != 1.0F;
         if (scaled) {
             pose.pushPose();
@@ -129,8 +152,8 @@ public final class GeometryRenderer {
         if (bound.length == 0) {
             return;
         }
-        VertexConsumer consumer = buffers.getBuffer(
-            OverlayRenderTypes.forMode(render.mode(), DynamicTextures.resolve(render.texture(), subject)));
+        VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(render.mode(),
+            DynamicTextures.resolve(render.texture(), subject), ModelPartAnimator.ageInTicks(subject), render.scrollSpeed()));
         boolean scaled = render.scale() != 1.0F;
         if (scaled) {
             pose.pushPose();

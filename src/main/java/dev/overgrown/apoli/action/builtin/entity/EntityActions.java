@@ -28,6 +28,8 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("conjure_equipment"), new ConjureEquipmentAction());
         ActionTypes.ENTITY.register(Apoli.id("release_grab"), new ReleaseGrabAction());
         ActionTypes.ENTITY.register(Apoli.id("execute_command"), new ExecuteCommandAction());
+        ActionTypes.ENTITY.register(Apoli.id("scale"), new ScaleAction(),
+            AliasingOptions.builder().renameField("scale_type", "scale_types").build());
         ActionTypes.ENTITY.register(Apoli.id("run_stored_power"), new RunStoredPowerAction());
         ActionTypes.ENTITY.register(Apoli.id("store_power"),
             new dev.overgrown.apoli.action.builtin.bientity.StorePowerAction.Self());

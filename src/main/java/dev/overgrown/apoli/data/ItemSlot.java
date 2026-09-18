@@ -18,7 +18,7 @@ public record ItemSlot(String name, int index) {
         ItemSlot::name
     );
 
-    private static DataResult<ItemSlot> parse(String s) {
+    public static DataResult<ItemSlot> parse(String s) {
         String trimmed = s.trim();
         int dot = trimmed.indexOf('.');
         String head = dot < 0 ? trimmed : trimmed.substring(0, dot);
