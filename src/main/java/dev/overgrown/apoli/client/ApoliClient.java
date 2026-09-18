@@ -157,6 +157,7 @@ public final class ApoliClient {
                 }
             }
             ForcedKeys.tick();
+            dev.overgrown.apoli.power.builtin.ModifyFogInterpolator.tick(mc.player);
         }
 
         @SubscribeEvent

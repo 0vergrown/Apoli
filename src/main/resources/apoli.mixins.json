@@ -152,6 +152,7 @@
     "player_model.PlayerRendererModelSwapMixin",
     "pose.LivingEntityRendererPoseMixin",
     "pose.PlayerRendererPoseMixin",
+    "power.FogRendererModifyFogMixin",
     "power.PreventEntitySelectionMixin",
     "scale.CameraScaleMixin",
     "scale.EntityRenderDispatcherScaleMixin",
