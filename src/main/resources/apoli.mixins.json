@@ -165,6 +165,7 @@
     "player_model.PlayerRendererModelSwapMixin",
     "pose.LivingEntityRendererPoseMixin",
     "pose.PlayerRendererPoseMixin",
+    "power.FogRendererModifyFogMixin",
     "power.PreventEntitySelectionMixin",
     "reach.GameRendererReachMixin",
     "reach.MultiPlayerGameModeReachMixin",
