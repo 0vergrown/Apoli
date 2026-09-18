@@ -2,6 +2,7 @@ package dev.overgrown.apoli.mixin.power;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.mojang.blaze3d.systems.RenderSystem;
 import dev.overgrown.apoli.power.builtin.ModifyFogHandler;
 import dev.overgrown.apoli.power.builtin.ModifyFogInterpolator;
 import net.minecraft.client.Camera;
@@ -32,6 +33,8 @@ public class FogRendererModifyFogMixin {
             fogRed = (float) fog.color.x;
             fogGreen = (float) fog.color.y;
             fogBlue = (float) fog.color.z;
+
+            RenderSystem.clearColor(fogRed, fogGreen, fogBlue, 1f);
         }
     }
 

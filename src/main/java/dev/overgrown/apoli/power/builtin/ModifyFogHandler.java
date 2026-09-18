@@ -17,25 +17,25 @@ public final class ModifyFogHandler {
             if ((p.isEmpty() || cfg.priority() > p.get())) {
                 switch (i) { //0 -> s, 1 -> v, 2 -> r, 3 -> g, 4 -> b, 5 -> fade_in, 6 -> fade_out
                     case 0:
-                        if (cfg.s().isPresent()) result.s = cfg.s().get();
+                        if (cfg.s().isPresent()) result.s = (float) cfg.s().get().eval(entity);
                         break;
                     case 1:
-                        if (cfg.v().isPresent()) result.v = cfg.v().get();
+                        if (cfg.v().isPresent()) result.v = (float) cfg.v().get().eval(entity);
                         break;
                     case 2:
-                        if (cfg.r().isPresent()) result.color = new Vec3(cfg.r().get(), result.color.y, result.color.z);
+                        if (cfg.r().isPresent()) result.color = new Vec3((float) cfg.r().get().eval(entity), result.color.y, result.color.z);
                         break;
                     case 3:
-                        if (cfg.g().isPresent()) result.color = new Vec3(result.color.x, cfg.g().get(), result.color.z);
+                        if (cfg.g().isPresent()) result.color = new Vec3(result.color.x, (float) cfg.g().get().eval(entity), result.color.z);
                         break;
                     case 4:
-                        if (cfg.b().isPresent()) result.color = new Vec3(result.color.x, result.color.y, cfg.b().get());
+                        if (cfg.b().isPresent()) result.color = new Vec3(result.color.x, result.color.y, (float) cfg.b().get().eval(entity));
                         break;
                     case 5:
-                        result.fade_in = cfg.fade_in();
+                        result.fade_in = (float) cfg.fade_in().eval(entity);
                         break;
                     case 6:
-                        result.fade_out = cfg.fade_out();
+                        result.fade_out = (float) cfg.fade_out().eval(entity);
                         break;
                 }
                 priorities.replace(i, Optional.of(cfg.priority()));
