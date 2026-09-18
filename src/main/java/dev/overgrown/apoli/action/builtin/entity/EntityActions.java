@@ -77,6 +77,8 @@ public final class EntityActions {
                 .addTypeAlias(Apoli.id("press_key"))
                 .addTypeAlias(Apoli.id("force_key"))
                 .build());
+
+        ActionTypes.ENTITY.register(Apoli.id("freeze"), new FreezeAction());
         ActionTypes.ENTITY.register(Apoli.id("grant_power"), new GrantPowerAction());
         ActionTypes.ENTITY.register(Apoli.id("grant_all_powers"), new GrantAllPowersAction());
         ActionTypes.ENTITY.register(Apoli.id("revoke_power"), new RevokePowerAction());
@@ -84,6 +86,7 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("remove_power"), new RemovePowerAction());
         ActionTypes.ENTITY.register(Apoli.id("suppress_power"), new SuppressPowerAction(),
             AliasingOptions.builder().renameField("powers", "power").renameField("sources", "source").build());
+        ActionTypes.ENTITY.register(Apoli.id("unfreeze"), new UnfreezeAction());
         ActionTypes.ENTITY.register(Apoli.id("unsuppress_power"), new UnsuppressPowerAction(),
             AliasingOptions.builder().renameField("powers", "power").renameField("sources", "source").build());
         ActionTypes.ENTITY.register(Apoli.id("modify_stat"), new ModifyStatAction(),
