@@ -72,6 +72,8 @@ public final class EntityActions {
                 .addTypeAlias(Apoli.id("press_key"))
                 .addTypeAlias(Apoli.id("force_key"))
                 .build());
+
+        ActionTypes.ENTITY.register(Apoli.id("freeze"), new FreezeAction());
         ActionTypes.ENTITY.register(Apoli.id("grant_power"), new GrantPowerAction());
         ActionTypes.ENTITY.register(Apoli.id("grant_all_powers"), new GrantAllPowersAction());
         ActionTypes.ENTITY.register(Apoli.id("revoke_power"), new RevokePowerAction());
