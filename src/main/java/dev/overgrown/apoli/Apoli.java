@@ -85,6 +85,7 @@ public final class Apoli {
         ConditionTypes.bootstrap();
         ActionTypes.bootstrap();
         PowerTypes.bootstrap();
+        dev.overgrown.apoli.scale.ScaleTypes.bootstrap();
         dev.overgrown.apoli.power.PowerSources.bootstrap();
         dev.overgrown.apoli.attribution.PowerCause.bootstrap();
         dev.overgrown.apoli.compat.accessory.AccessoryCompat.init();
@@ -102,6 +103,9 @@ public final class Apoli {
 
         NeoForge.EVENT_BUS.register(this);
 
+        dev.overgrown.apoli.scale.Scales.setSyncer(entity ->
+            ApoliNetwork.broadcastScale(entity, new dev.overgrown.apoli.network.payload.ScaleSyncS2C(
+                entity.getId(), dev.overgrown.apoli.scale.ScaleSync.encode(entity))));
         dev.overgrown.apoli.entity.disguise.DisguiseManager.setBroadcaster((entity, data) ->
             ApoliNetwork.broadcastDisguise(entity, new dev.overgrown.apoli.network.payload.DisguiseUpdateS2C(entity.getId(), data)));
         dev.overgrown.apoli.entity.LabelManager.setBroadcaster((entity, texts) ->
@@ -135,6 +139,7 @@ public final class Apoli {
         dev.overgrown.apoli.command.ApoliKeyCommand.register(event.getDispatcher());
         dev.overgrown.apoli.command.ApoliDevModeCommand.register(event.getDispatcher());
         dev.overgrown.apoli.command.ApoliTickCommand.register(event.getDispatcher());
+        dev.overgrown.apoli.command.ApoliScaleCommand.register(event.getDispatcher());
         if (dev.overgrown.apoli.compat.ModCompat.anyAccessory()) {
             dev.overgrown.apoli.compat.accessory.command.AccessoryCommand.register(event.getDispatcher());
         }
@@ -230,6 +235,7 @@ public final class Apoli {
             ApoliNetwork.sendSkillDefs(sp);
             ApoliNetwork.sendSkillState(sp);
             dev.overgrown.apoli.power.builtin.EntitySetPower.syncAllTo(sp);
+            dev.overgrown.apoli.scale.Scales.syncIfScaled(sp);
         }
     }
 
@@ -373,6 +379,7 @@ public final class Apoli {
         if (event.getEntity() instanceof ServerPlayer sp) {
             dev.overgrown.apoli.power.builtin.ActionOverTimePower.resetEdges(sp);
             resumePowers(sp);
+            dev.overgrown.apoli.scale.Scales.syncIfScaled(sp);
             dev.overgrown.apoli.power.PowerLookup.forEach(sp,
                 dev.overgrown.apoli.power.ApoliIds.STARTING_EQUIPMENT,
                 dev.overgrown.apoli.power.builtin.StartingEquipmentPower.Config.class,
@@ -383,12 +390,16 @@ public final class Apoli {
 
     @SubscribeEvent
     public void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
-        if (event.getEntity() instanceof ServerPlayer sp) resumePowers(sp);
+        if (event.getEntity() instanceof ServerPlayer sp) {
+            resumePowers(sp);
+            dev.overgrown.apoli.scale.Scales.syncIfScaled(sp);
+        }
     }
 
     @SubscribeEvent
     public void onPlayerClone(PlayerEvent.Clone event) {
         PoweredEntities.unregister(event.getOriginal());
+        dev.overgrown.apoli.scale.Scales.transfer(event.getOriginal(), event.getEntity());
     }
 
     @SubscribeEvent
@@ -436,6 +447,11 @@ public final class Apoli {
         if (!labels.isEmpty()) {
             ApoliNetwork.sendLabel(viewer, new dev.overgrown.apoli.network.payload.LabelUpdateS2C(
                 target.getId(), labels));
+        }
+        dev.overgrown.apoli.scale.ScaleState scales = dev.overgrown.apoli.scale.Scales.stateOf(target);
+        if (scales != null && !scales.isDefault()) {
+            ApoliNetwork.sendScale(viewer, new dev.overgrown.apoli.network.payload.ScaleSyncS2C(
+                target.getId(), dev.overgrown.apoli.scale.ScaleSync.encode(target)));
         }
         dev.overgrown.apoli.mount.MountOffsets.syncTo(viewer, target);
     }
@@ -517,6 +533,7 @@ public final class Apoli {
         if (dev.overgrown.apoli.entity.GrabManager.keybindsDisabled(player.getUUID())) return;
         PowerContainer c = PowerContainer.of(player);
         if (c == null || !c.hasPower(payload.power()) || c.isSuppressed(payload.power())) return;
+        if (dev.overgrown.apoli.power.builtin.PowerStoragePower.keyMuted(c, payload.power())) return;
         Power loaded = ApoliPowers.get(payload.power());
         if (loaded == null) return;
         PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
@@ -545,6 +562,7 @@ public final class Apoli {
         if (dev.overgrown.apoli.entity.GrabManager.keybindsDisabled(player.getUUID())) return;
         PowerContainer c = PowerContainer.of(player);
         if (c == null || !c.hasPower(payload.power()) || c.isSuppressed(payload.power())) return;
+        if (dev.overgrown.apoli.power.builtin.PowerStoragePower.keyMuted(c, payload.power())) return;
         Power loaded = ApoliPowers.get(payload.power());
         if (loaded == null) return;
         if (!(PowerTypeRegistry.get(loaded.typeId()) instanceof TogglePower)) return;

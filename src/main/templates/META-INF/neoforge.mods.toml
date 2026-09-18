@@ -137,8 +137,8 @@ config="${mod_id}-ledger.mixins.json"
 [[dependencies.${mod_id}]]
     modId="origins"
     type="incompatible"
-    reason="Origins older than 1.36.3 was built against an older Apoli API. Update Origins."
-    versionRange="[0,1.36.4)"
+    reason="Origins older than 1.39.0 was built against an older Apoli API. Update Origins."
+    versionRange="[0,1.39.0)"
     ordering="NONE"
     side="BOTH"
 

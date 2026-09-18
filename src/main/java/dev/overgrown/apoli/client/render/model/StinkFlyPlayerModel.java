@@ -189,6 +189,12 @@ public class StinkFlyPlayerModel<T extends LivingEntity> extends PlayerModel<T> 
             }
             case "rightsecondpants", "secondrightpants" -> parts.add(this.rightSecondPants);
             case "leftsecondpants", "secondleftpants" -> parts.add(this.leftSecondPants);
+            case "legs", "lower" -> {
+                parts.add(this.rightSecondLeg);
+                parts.add(this.rightSecondPants);
+                parts.add(this.leftSecondLeg);
+                parts.add(this.leftSecondPants);
+            }
             default -> {}
         }
     }

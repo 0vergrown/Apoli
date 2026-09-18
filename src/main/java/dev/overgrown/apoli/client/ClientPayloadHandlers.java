@@ -47,6 +47,14 @@ public final class ClientPayloadHandlers {
             new dev.overgrown.apoli.mount.MountOffsets.Offset(msg.x(), msg.y(), msg.z(), msg.space(), msg.rotation()));
     }
 
+    public static void onScaleSync(dev.overgrown.apoli.network.payload.ScaleSyncS2C payload) {
+        net.minecraft.client.multiplayer.ClientLevel level = Minecraft.getInstance().level;
+        if (level == null) return;
+        net.minecraft.world.entity.Entity entity = level.getEntity(payload.entityId());
+        if (entity == null) return;
+        dev.overgrown.apoli.scale.ScaleSync.decode(entity, payload.data());
+    }
+
     public static void onTickRate(dev.overgrown.apoli.network.payload.TickRateS2C payload) {
         ClientTickRates.set(payload.entityId(), payload.rate(), payload.baseRate());
     }

@@ -58,6 +58,8 @@ public final class ApoliNetwork {
         registrar.playToClient(dev.overgrown.apoli.network.payload.MountOffsetS2C.TYPE,
             dev.overgrown.apoli.network.payload.MountOffsetS2C.STREAM_CODEC, ApoliNetwork::onMountOffset);
         registrar.playToClient(DisguiseUpdateS2C.TYPE, DisguiseUpdateS2C.STREAM_CODEC, ApoliNetwork::onDisguiseUpdate);
+        registrar.playToClient(dev.overgrown.apoli.network.payload.ScaleSyncS2C.TYPE,
+            dev.overgrown.apoli.network.payload.ScaleSyncS2C.STREAM_CODEC, ApoliNetwork::onScaleSync);
         registrar.playToClient(dev.overgrown.apoli.network.payload.TextDisplayS2C.TYPE,
             dev.overgrown.apoli.network.payload.TextDisplayS2C.STREAM_CODEC, ApoliNetwork::onTextDisplay);
         registrar.playToClient(dev.overgrown.apoli.network.payload.ForceKeyS2C.TYPE,
@@ -357,6 +359,19 @@ public final class ApoliNetwork {
 
     private static void onDisguiseUpdate(DisguiseUpdateS2C payload, net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
         ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPayloadHandlers.onDisguiseUpdate(payload));
+    }
+
+    private static void onScaleSync(dev.overgrown.apoli.network.payload.ScaleSyncS2C payload,
+                                    net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
+        ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPayloadHandlers.onScaleSync(payload));
+    }
+
+    public static void sendScale(ServerPlayer recipient, dev.overgrown.apoli.network.payload.ScaleSyncS2C payload) {
+        PacketDistributor.sendToPlayer(recipient, payload);
+    }
+
+    public static void broadcastScale(Entity entity, dev.overgrown.apoli.network.payload.ScaleSyncS2C payload) {
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(entity, payload);
     }
 
     public static void broadcastDisguise(Entity entity, DisguiseUpdateS2C payload) {

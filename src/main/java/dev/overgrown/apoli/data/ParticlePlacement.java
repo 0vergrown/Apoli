@@ -24,7 +24,7 @@ public final class ParticlePlacement {
 
     private ParticlePlacement() {}
 
-    public static @Nullable ModelPartAnchor.Frame frame(Entity entity, Optional<String> modelPart) {
+    public static @Nullable ModelPartAnchor.Frame frame(Entity entity, Optional<BodyPart> modelPart) {
         return modelPart.isPresent() ? ModelPartAnchor.frameOf(entity, modelPart.get()) : null;
     }
 

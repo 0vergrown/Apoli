@@ -9,7 +9,10 @@ import dev.overgrown.apoli.data.ModelAnimation;
 import dev.overgrown.apoli.power.builtin.ModifyPlayerModelPower;
 import dev.overgrown.apoli.data.ModelPartTimeline;
 import dev.overgrown.apoli.client.render.ModelPartLookup;
+import dev.overgrown.apoli.data.BodyPart;
+import dev.overgrown.apoli.data.HumanoidPose;
 import dev.overgrown.apoli.data.ModelPartTransformation;
+import dev.overgrown.apoli.data.PoseMath;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.model.HumanoidModel;
@@ -38,6 +41,14 @@ public abstract class HumanoidModelModifyPartsMixin {
     private final Map<ModelPart, float[]> apoli$originals = new IdentityHashMap<>();
     @Unique
     private final List<ModelPart> apoli$scratch = new ArrayList<>(2);
+    @Unique
+    private final float[] apoli$limbs = new float[HumanoidPose.PART_COUNT * PoseMath.STRIDE];
+    @Unique
+    private final float[] apoli$pose = new float[PoseMath.STRIDE];
+    @Unique
+    private final float[] apoli$pivot = new float[3];
+    @Unique
+    private final double[] apoli$vector = new double[3];
     @Unique
     private ModelAnimation apoli$modelAnimation;
     @Unique
@@ -94,8 +105,14 @@ public abstract class HumanoidModelModifyPartsMixin {
                 ModelPartTimeline.Slot slot = slots.get(s);
                 if (slot.weight() <= 0.0F) continue;
                 if (!slot.rendersIn(handPass)) continue;
+                ModelPartTransformation transformation = slot.transformation();
+                BodyPart part = transformation.bodyPart().sided(entity);
                 apoli$scratch.clear();
-                ModelPartLookup.resolveInto(model, slot.transformation().normalizedPart(), apoli$scratch);
+                ModelPartLookup.resolveInto(model, part, apoli$scratch);
+                if (part.isGroup() && PoseMath.isSpatial(transformation.type())) {
+                    apoli$applyGroup(model, part, slot);
+                    continue;
+                }
                 for (int p = 0; p < apoli$scratch.size(); p++) {
                     apoli$apply(apoli$scratch.get(p), slot);
                 }
@@ -119,8 +136,25 @@ public abstract class HumanoidModelModifyPartsMixin {
     }
 
     @Unique
+    private void apoli$applyGroup(HumanoidModel<?> model, BodyPart part, ModelPartTimeline.Slot slot) {
+        ModelPartTransformation transformation = slot.transformation();
+        ModelPartLookup.limbPosesInto(model, apoli$limbs);
+        HumanoidPose.groupPivot(part, transformation, apoli$limbs, apoli$vector, apoli$pivot);
+        for (int p = 0; p < apoli$scratch.size(); p++) {
+            ModelPart member = apoli$scratch.get(p);
+            ModelPartLookup.read(member, apoli$pose, 0);
+            PoseMath.applyGroup(transformation.type(), apoli$pose, 0, slot.value(), slot.weight(),
+                transformation.overrideAnimation(), apoli$pivot[0], apoli$pivot[1], apoli$pivot[2]);
+            ModelPartLookup.write(apoli$pose, 0, member);
+        }
+        apoli$scratch.clear();
+    }
+
+    @Unique
     private void apoli$snapshot() {
-        for (ModelPart part : ModelPartLookup.allParts((HumanoidModel<?>) (Object) this)) {
+        apoli$scratch.clear();
+        ModelPartLookup.allPartsInto((HumanoidModel<?>) (Object) this, apoli$scratch);
+        for (ModelPart part : apoli$scratch) {
             apoli$originals.put(part, new float[]{
                 part.x, part.y, part.z,
                 part.xRot, part.yRot, part.zRot,
@@ -128,6 +162,7 @@ public abstract class HumanoidModelModifyPartsMixin {
                 part.visible ? 1f : 0f, part.skipDraw ? 1f : 0f
             });
         }
+        apoli$scratch.clear();
     }
 
     @Unique

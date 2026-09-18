@@ -159,16 +159,17 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
         long now = level.getGameTime();
         if (ps.lastTick == now) return;
         ps.lastTick = now;
-        process(player, level, ps);
+        process(player, level, ps, holder);
     }
 
-    private void process(ServerPlayer player, ServerLevel level, PlayerState ps) {
+    private void process(ServerPlayer player, ServerLevel level, PlayerState ps, PowerContainer holder) {
         ps.ids.clear();
         ps.configs.clear();
         PowerLookup.forEachEntry(player, ApoliIds.ACTION_ON_KEY_SEQUENCE, Config.class, ps.collector);
         if (ps.ids.isEmpty()) return;
         if (ps.ids.size() > 1) Collections.sort(ps.ids);
 
+        boolean anyStorage = !holder.powersOfType(ApoliIds.POWER_STORAGE).isEmpty();
         EntityCtx ctx = new EntityCtx(player, level);
         Set<String> held = HeldKeys.serverHeldSet(player.getUUID());
         List<String> edges = edges(held, ps.heldLast);
@@ -178,6 +179,7 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
         for (int i = 0; i < ps.ids.size(); i++) {
             ResourceLocation id = ps.ids.get(i);
             Config cfg = ps.configs.get(id);
+            if (anyStorage && PowerStoragePower.keyMuted(holder, id)) continue;
             SeqState st = ps.seqs.computeIfAbsent(id, k -> new SeqState());
             st.completedNow = false;
 

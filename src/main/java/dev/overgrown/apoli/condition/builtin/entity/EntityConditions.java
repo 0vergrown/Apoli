@@ -28,6 +28,7 @@ public final class EntityConditions {
         );
         ConditionTypes.ENTITY.register(Apoli.id("entity_type"), new EntityTypeCondition());
         ConditionTypes.ENTITY.register(Apoli.id("tick_rate"), new TickRateCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("scale"), new ScaleCondition());
         ConditionTypes.ENTITY.register(Apoli.id("has_location"), new HasLocationCondition());
         ConditionTypes.ENTITY.register(Apoli.id("has_command_tag"), new HasCommandTagCondition());
         ConditionTypes.ENTITY.register(Apoli.id("difficulty"), new DifficultyCondition());

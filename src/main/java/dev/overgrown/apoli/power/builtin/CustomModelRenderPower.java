@@ -6,7 +6,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.data.EquipmentSlot;
 import dev.overgrown.apoli.data.ModelAnimation;
-import dev.overgrown.apoli.data.ModelParts;
+import dev.overgrown.apoli.data.BodyPart;
 import dev.overgrown.apoli.data.RenderMode;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.ApoliPowers;
@@ -54,23 +54,24 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         boolean hideCape,
         List<EquipmentSlot> hiddenSlots,
         RenderMode renderType,
-        List<String> bodyParts,
+        List<BodyPart> bodyParts,
         float red,
         float green,
         float blue,
         float alpha,
         boolean showFirstPerson,
         float scale,
-        Optional<ModelAnimation> animations
+        Optional<ModelAnimation> animations,
+        float scrollSpeed
     ) {
         @Nullable
         public ResourceLocation wide() {
-            return wideTexture.orElse(null);
+            return wideTexture.or(() -> texture).orElse(null);
         }
 
         @Nullable
         public ResourceLocation slim() {
-            return slimTexture.or(() -> wideTexture).orElse(null);
+            return slimTexture.or(() -> wideTexture).or(() -> texture).orElse(null);
         }
     }
 
@@ -78,13 +79,14 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         ResourceLocation wide,
         ResourceLocation slim,
         RenderMode mode,
-        List<String> bodyParts,
+        List<BodyPart> bodyParts,
         float red,
         float green,
         float blue,
         float alpha,
         boolean showFirstPerson,
-        float scale
+        float scale,
+        float scrollSpeed
     ) {
         public ResourceLocation texture(boolean slimModel) {
             return slimModel ? slim : wide;
@@ -99,7 +101,7 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         ResourceLocation model,
         ResourceLocation texture,
         RenderMode mode,
-        List<String> bodyParts,
+        List<BodyPart> bodyParts,
         float red,
         float green,
         float blue,
@@ -107,7 +109,8 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         boolean showFirstPerson,
         float scale,
         boolean renderAsOverlay,
-        Optional<ModelAnimation> animations
+        Optional<ModelAnimation> animations,
+        float scrollSpeed
     ) {}
 
     private record Base(
@@ -120,7 +123,7 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         boolean hideCape,
         List<EquipmentSlot> hiddenSlots,
         RenderMode renderType,
-        List<String> bodyParts,
+        List<BodyPart> bodyParts,
         float red,
         float green,
         float blue,
@@ -128,6 +131,8 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         boolean showFirstPerson,
         float scale
     ) {}
+
+    private record Extras(Optional<ModelAnimation> animations, float scrollSpeed) {}
 
     private static final MapCodec<Base> BASE_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
         Mode.CODEC.optionalFieldOf("mode", Mode.TEXTURE).forGetter(Base::mode),
@@ -139,7 +144,7 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         Codec.BOOL.optionalFieldOf("hide_cape", false).forGetter(Base::hideCape),
         EquipmentSlot.CODEC.listOf().optionalFieldOf("hidden_slots", List.of()).forGetter(Base::hiddenSlots),
         RenderMode.CODEC.optionalFieldOf("render_type", RenderMode.TRANSLUCENT).forGetter(Base::renderType),
-        ModelParts.PART_LIST_CODEC.optionalFieldOf("body_parts", List.of()).forGetter(Base::bodyParts),
+        BodyPart.LIST_CODEC.optionalFieldOf("body_parts", List.of()).forGetter(Base::bodyParts),
         Codec.FLOAT.optionalFieldOf("red", 1.0F).forGetter(Base::red),
         Codec.FLOAT.optionalFieldOf("green", 1.0F).forGetter(Base::green),
         Codec.FLOAT.optionalFieldOf("blue", 1.0F).forGetter(Base::blue),
@@ -148,17 +153,24 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         Codec.FLOAT.optionalFieldOf("scale", 1.0F).forGetter(Base::scale)
     ).apply(instance, Base::new));
 
+    private static final MapCodec<Extras> EXTRAS_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+        LoggedOptionalField.of("animations", ModelAnimation.CODEC).forGetter(Extras::animations),
+        LoggedOptionalField.of("scroll_speed", Codec.FLOAT, 0.0F).forGetter(Extras::scrollSpeed)
+    ).apply(instance, Extras::new));
+
     private static final MapCodec<Config> CONFIG_CODEC =
-        Codec.mapPair(BASE_CODEC, LoggedOptionalField.of("animations", ModelAnimation.CODEC))
+        Codec.mapPair(BASE_CODEC, EXTRAS_CODEC)
             .xmap(
                 pair -> merge(pair.getFirst(), pair.getSecond()),
-                config -> com.mojang.datafixers.util.Pair.of(split(config), config.animations())
+                config -> com.mojang.datafixers.util.Pair.of(split(config),
+                    new Extras(config.animations(), config.scrollSpeed()))
             );
 
-    private static Config merge(Base base, Optional<ModelAnimation> animations) {
+    private static Config merge(Base base, Extras extras) {
         return new Config(base.mode(), base.wideTexture(), base.slimTexture(), base.model(), base.texture(),
             base.renderAsOverlay(), base.hideCape(), base.hiddenSlots(), base.renderType(), base.bodyParts(),
-            base.red(), base.green(), base.blue(), base.alpha(), base.showFirstPerson(), base.scale(), animations);
+            base.red(), base.green(), base.blue(), base.alpha(), base.showFirstPerson(), base.scale(),
+            extras.animations(), extras.scrollSpeed());
     }
 
     private static Base split(Config config) {
@@ -188,7 +200,7 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
             if (found[0] != null || cfg.mode() != Mode.TEXTURE || cfg.renderAsOverlay()) {
                 return;
             }
-            if (cfg.wideTexture().isEmpty() || hiddenByEquipment(entity, cfg.hiddenSlots())) {
+            if (cfg.wide() == null || hiddenByEquipment(entity, cfg.hiddenSlots())) {
                 return;
             }
             found[0] = cfg;
@@ -203,7 +215,7 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
                 return;
             }
             hit[0] = cfg.mode() == Mode.TEXTURE
-                ? cfg.wideTexture().isPresent()
+                ? cfg.wide() != null
                 : cfg.model().isPresent() && cfg.texture().isPresent();
         });
         return hit[0];
@@ -220,6 +232,7 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
     }
 
     public static List<ResolvedLayer> collectTextureOverlays(@Nullable LivingEntity entity) {
+        if (!PowerLookup.hasActive(entity, CANONICAL)) return List.of();
         List<ResolvedLayer> out = new ArrayList<>();
         PowerLookup.forEach(entity, CANONICAL, Config.class, cfg -> {
             if (cfg.mode() != Mode.TEXTURE || !cfg.renderAsOverlay()) {
@@ -231,12 +244,13 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
             }
             ResourceLocation slim = cfg.slim();
             out.add(new ResolvedLayer(wide, slim != null ? slim : wide, cfg.renderType(), cfg.bodyParts(),
-                cfg.red(), cfg.green(), cfg.blue(), cfg.alpha(), cfg.showFirstPerson(), cfg.scale()));
+                cfg.red(), cfg.green(), cfg.blue(), cfg.alpha(), cfg.showFirstPerson(), cfg.scale(), cfg.scrollSpeed()));
         });
         return out;
     }
 
     public static List<GeometryRender> collectGeometry(@Nullable net.minecraft.world.entity.Entity entity) {
+        if (!PowerLookup.hasActive(entity, CANONICAL)) return List.of();
         List<GeometryRender> out = new ArrayList<>();
         PowerLookup.forEach(entity, CANONICAL, Config.class, cfg -> {
             if (cfg.mode() != Mode.GEOMETRY || cfg.model().isEmpty() || cfg.texture().isEmpty()) {
@@ -253,7 +267,7 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
     private static GeometryRender toRender(Config cfg) {
         return new GeometryRender(cfg.model().get(), cfg.texture().get(), cfg.renderType(), cfg.bodyParts(),
             cfg.red(), cfg.green(), cfg.blue(), cfg.alpha(), cfg.showFirstPerson(), cfg.scale(), cfg.renderAsOverlay(),
-            cfg.animations());
+            cfg.animations(), cfg.scrollSpeed());
     }
 
     @Nullable

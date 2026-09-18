@@ -24,13 +24,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 
 public final class PowerStoragePower extends PowerType<PowerStoragePower.Config> {
 
     private static final String KEY = "Powers";
 
+    private static final int MAX_SOURCE_DEPTH = 8;
+
     public record Config(int slots, Optional<List<ResourceLocation>> powers, List<String> tags,
-                         boolean replaceOldest, boolean dropOnDeath, boolean grant) {}
+                         boolean replaceOldest, boolean dropOnDeath, boolean grant, boolean ownKey) {}
 
     @Override
     public MapCodec<Config> configCodec() {
@@ -40,7 +43,8 @@ public final class PowerStoragePower extends PowerType<PowerStoragePower.Config>
             LoggedOptionalField.of("tags", SingleOrList.of(Codec.STRING), List.of()).forGetter(Config::tags),
             Codec.BOOL.optionalFieldOf("replace_oldest", false).forGetter(Config::replaceOldest),
             Codec.BOOL.optionalFieldOf("drop_on_death", false).forGetter(Config::dropOnDeath),
-            Codec.BOOL.optionalFieldOf("grant", true).forGetter(Config::grant)
+            Codec.BOOL.optionalFieldOf("grant", true).forGetter(Config::grant),
+            Codec.BOOL.optionalFieldOf("own_key", true).forGetter(Config::ownKey)
         ).apply(i, Config::new));
     }
 
@@ -80,11 +84,40 @@ public final class PowerStoragePower extends PowerType<PowerStoragePower.Config>
         return live(holder, storageId).size();
     }
 
+    public enum StoreResult {
+        STORED, NO_CONTAINER, UNKNOWN_POWER, IS_STORAGE, NOT_IN_POWERS, NO_MATCHING_TAG, ALREADY_STORED, FULL
+    }
+
     public static boolean accepts(Config cfg, ResourceLocation powerId) {
-        if (isStorage(powerId)) return false;
-        if (cfg.powers().isPresent() && !cfg.powers().get().contains(powerId)) return false;
-        if (cfg.tags().isEmpty()) return true;
-        return ApoliPowers.hasAnyTag(powerId, cfg.tags());
+        return refusal(cfg, powerId) == null;
+    }
+
+    @Nullable
+    private static StoreResult refusal(Config cfg, ResourceLocation powerId) {
+        if (isStorage(powerId)) return StoreResult.IS_STORAGE;
+        if (cfg.powers().isPresent() && !cfg.powers().get().contains(powerId)) return StoreResult.NOT_IN_POWERS;
+        if (cfg.tags().isEmpty()) return null;
+        return ApoliPowers.hasAnyTag(powerId, cfg.tags()) ? null : StoreResult.NO_MATCHING_TAG;
+    }
+
+    public static boolean keyMuted(@Nullable PowerContainer holder, ResourceLocation powerId) {
+        if (holder == null || holder.powersOfType(ApoliIds.POWER_STORAGE).isEmpty()) return false;
+        return muted(holder, powerId, 0);
+    }
+
+    private static boolean muted(PowerContainer holder, ResourceLocation powerId, int depth) {
+        if (depth >= MAX_SOURCE_DEPTH) return false;
+        Set<ResourceLocation> sources = holder.sourcesOf(powerId);
+        if (sources.isEmpty()) return false;
+        for (ResourceLocation source : sources) {
+            Power power = ApoliPowers.get(source);
+            if (power != null && power.config() instanceof Config cfg) {
+                if (cfg.ownKey()) return false;
+                continue;
+            }
+            if (!muted(holder, source, depth + 1)) return false;
+        }
+        return true;
     }
 
     public static boolean isStorage(ResourceLocation powerId) {
@@ -94,18 +127,25 @@ public final class PowerStoragePower extends PowerType<PowerStoragePower.Config>
 
     public static boolean store(@Nullable PowerContainer holder, ResourceLocation storageId, Config cfg,
                                 ResourceLocation powerId) {
-        if (!(holder instanceof PowerContainerImpl impl)) return false;
-        if (ApoliPowers.get(powerId) == null || !accepts(cfg, powerId)) return false;
+        return attempt(holder, storageId, cfg, powerId) == StoreResult.STORED;
+    }
+
+    public static StoreResult attempt(@Nullable PowerContainer holder, ResourceLocation storageId, Config cfg,
+                                      ResourceLocation powerId) {
+        if (!(holder instanceof PowerContainerImpl impl)) return StoreResult.NO_CONTAINER;
+        if (ApoliPowers.get(powerId) == null) return StoreResult.UNKNOWN_POWER;
+        StoreResult refused = refusal(cfg, powerId);
+        if (refused != null) return refused;
         List<ResourceLocation> current = new ArrayList<>(stored(impl, storageId));
         current.removeIf(id -> ApoliPowers.get(id) == null);
-        if (current.contains(powerId)) return false;
+        if (current.contains(powerId)) return StoreResult.ALREADY_STORED;
         if (cfg.slots() > 0 && current.size() >= cfg.slots()) {
-            if (!cfg.replaceOldest()) return false;
+            if (!cfg.replaceOldest()) return StoreResult.FULL;
             current.remove(0);
         }
         current.add(powerId);
         write(impl, storageId, current);
-        return true;
+        return StoreResult.STORED;
     }
 
     public static boolean remove(@Nullable PowerContainer holder, ResourceLocation storageId,
@@ -140,7 +180,7 @@ public final class PowerStoragePower extends PowerType<PowerStoragePower.Config>
         boolean grant = storage != null && storage.config() instanceof Config cfg && cfg.grant();
         List<ResourceLocation> wanted = grant ? live(impl, storageId) : List.of();
         for (ResourceLocation held : List.copyOf(impl.allPowers())) {
-            if (wanted.contains(held)) continue;
+            if (held.equals(storageId) || wanted.contains(held)) continue;
             if (impl.sourcesOf(held).contains(storageId)) impl.removePower(held, storageId);
         }
         for (int i = 0; i < wanted.size(); i++) impl.addPower(wanted.get(i), storageId);

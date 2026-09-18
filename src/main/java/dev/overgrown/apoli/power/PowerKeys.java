@@ -9,6 +9,7 @@ import dev.overgrown.apoli.power.builtin.FireProjectilePower;
 import dev.overgrown.apoli.power.builtin.InventoryPower;
 import dev.overgrown.apoli.power.builtin.TogglePower;
 import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,6 +35,18 @@ public final class PowerKeys {
             for (FunctionalKey fk : c.keys()) out.add(fk.key().key());
             out.addAll(c.atomKeys());
         }
+    }
+
+    public static @Nullable String activeKey(Power power) {
+        Object cfg = power.config();
+        if (cfg instanceof ActionOnKeyPressPower.Config c) return c.key().key();
+        if (cfg instanceof InventoryPower.Config c) return c.key().key();
+        if (cfg instanceof FireProjectilePower.Config c) return c.params().key().map(Key::key).orElse(null);
+        if (cfg instanceof ActionOnKeySequencePower.Config c) {
+            List<String> atoms = c.atomKeys();
+            return atoms.isEmpty() ? null : atoms.get(0);
+        }
+        return null;
     }
 
     public static boolean uses(Power power, String key) {

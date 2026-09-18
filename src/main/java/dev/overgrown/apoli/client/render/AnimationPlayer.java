@@ -103,9 +103,8 @@ public final class AnimationPlayer {
         List<ModelPart> parts = PARTS.get();
         for (int i = 0; i < bones.length; i++) {
             BedrockAnimation.Bone bone = bones[i];
-            String normalized = ModelParts.normalize(bone.name);
             parts.clear();
-            if (ROOT_BONE.equals(normalized)) {
+            if (ROOT_BONE.equals(bone.part.key())) {
                 if (bone.position == null) continue;
                 bone.position.sample(time, scratch);
                 ModelPartLookup.allPartsInto(model, parts);
@@ -117,7 +116,7 @@ public final class AnimationPlayer {
                 }
                 continue;
             }
-            ModelPartLookup.resolveInto(model, normalized, parts);
+            ModelPartLookup.resolveInto(model, bone.part, parts);
             for (int j = 0; j < parts.size(); j++) {
                 applyTo(parts.get(j), bone, time, scratch);
             }
