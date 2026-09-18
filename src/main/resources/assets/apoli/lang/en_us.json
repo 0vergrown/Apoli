@@ -32,5 +32,11 @@
     "apoli.config.speech_source.tooltip": "Where speech is captured from. Auto uses Simple Voice Chat when it is installed, otherwise the microphone directly.",
     "apoli.config.speech_input_device": "Input Device",
     "apoli.config.speech_input_device.hint": "System default",
-    "apoli.config.speech_input_device.tooltip": "Name of the microphone to capture from. Leave blank for the system default; the usable names are listed in the log when capture fails."
+    "apoli.config.speech_input_device.tooltip": "Name of the microphone to capture from. Leave blank for the system default; the usable names are listed in the log when capture fails.",
+    "apoli.config.hud_auto_stack": "Auto-Position Power Bars",
+    "apoli.config.hud_auto_stack.tooltip": "Stack the power bars on top of whatever the HUD already draws above the hotbar, including rows added by other mods. Turn this off to pin them to the vanilla position and place them by hand with the offsets.",
+    "apoli.config.hud_offset_x": "Bar X Offset: %s",
+    "apoli.config.hud_offset_x.tooltip": "Nudges the power bars sideways from wherever they would otherwise sit.",
+    "apoli.config.hud_offset_y": "Bar Y Offset: %s",
+    "apoli.config.hud_offset_y.tooltip": "Nudges the power bars down (positive) or up (negative) from wherever they would otherwise sit."
 }

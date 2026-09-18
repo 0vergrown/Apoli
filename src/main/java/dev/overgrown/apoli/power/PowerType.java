@@ -19,6 +19,8 @@ public abstract class PowerType<C> {
 
     public void tick(ResourceLocation powerId, C cfg, PowerContainer holder) {}
 
+    public void tickStored(ResourceLocation powerId, C cfg, PowerContainer holder) {}
+
     public boolean isActive(ResourceLocation powerId, C cfg, EntityCtx ctx) {
         return true;
     }

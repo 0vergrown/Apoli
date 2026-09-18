@@ -1,26 +1,26 @@
 package dev.overgrown.apoli.mixin.input;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import dev.overgrown.apoli.client.CursorSpeedState;
+import dev.overgrown.apoli.client.MouseMovementWatcher;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 @Mixin(Entity.class)
 @Environment(EnvType.CLIENT)
 public abstract class EntityTurnCursorSpeedMixin {
 
-    @ModifyVariable(method = "turn(DD)V", at = @At("HEAD"), argsOnly = true, ordinal = 0)
-    private double apoli$scaleTurnYaw(double yRot) {
-        if (!CursorSpeedState.appliesTo((Entity) (Object) this)) return yRot;
-        return yRot * CursorSpeedState.horizontal();
-    }
-
-    @ModifyVariable(method = "turn(DD)V", at = @At("HEAD"), argsOnly = true, ordinal = 1)
-    private double apoli$scaleTurnPitch(double xRot) {
-        if (!CursorSpeedState.appliesTo((Entity) (Object) this)) return xRot;
-        return xRot * CursorSpeedState.vertical();
+    @WrapMethod(method = "turn(DD)V")
+    private void apoli$turn(double yRot, double xRot, Operation<Void> original) {
+        Entity self = (Entity) (Object) this;
+        MouseMovementWatcher.onTurn(self, yRot, xRot);
+        if (!CursorSpeedState.appliesTo(self)) {
+            original.call(yRot, xRot);
+            return;
+        }
+        original.call(yRot * CursorSpeedState.horizontal(), xRot * CursorSpeedState.vertical());
     }
 }

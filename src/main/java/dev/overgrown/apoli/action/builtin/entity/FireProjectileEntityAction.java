@@ -19,6 +19,6 @@ public final class FireProjectileEntityAction implements ActionType<EntityCtx, F
     @Override
     public void run(FireProjectilePower.Config cfg, EntityCtx ctx) {
         if (!(ctx.level() instanceof ServerLevel level)) return;
-        FireProjectilePower.fireBurst(ctx.entity(), level, cfg);
+        FireProjectilePower.fireVolley(ctx.entity(), level, cfg);
     }
 }

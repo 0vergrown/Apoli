@@ -44,6 +44,8 @@ public final class TransferAction implements ActionType<BiEntityCtx, TransferAct
         Mode mode,
         boolean copy,
         Optional<List<ResourceLocation>> sources,
+        Optional<List<String>> tags,
+        Optional<List<ResourceLocation>> powers,
         ResourceLocation newSource,
         boolean preserveSource,
         Optional<EntityAction> actorAction,
@@ -56,6 +58,8 @@ public final class TransferAction implements ActionType<BiEntityCtx, TransferAct
             Mode.CODEC.optionalFieldOf("mode", Mode.STEAL).forGetter(Cfg::mode),
             Codec.BOOL.optionalFieldOf("copy", false).forGetter(Cfg::copy),
             IdCodecs.ID.listOf().optionalFieldOf("sources").forGetter(Cfg::sources),
+            dev.overgrown.apoli.codec.SingleOrList.of(Codec.STRING).optionalFieldOf("tags").forGetter(Cfg::tags),
+            dev.overgrown.apoli.codec.SingleOrList.of(IdCodecs.ID).optionalFieldOf("powers").forGetter(Cfg::powers),
             IdCodecs.ID.optionalFieldOf("new_source", DEFAULT_SOURCE).forGetter(Cfg::newSource),
             Codec.BOOL.optionalFieldOf("preserve_source", false).forGetter(Cfg::preserveSource),
             dev.overgrown.apoli.codec.LoggedOptionalField.of("actor_action", EntityAction.CODEC).forGetter(Cfg::actorAction),
@@ -76,6 +80,8 @@ public final class TransferAction implements ActionType<BiEntityCtx, TransferAct
         Map<ResourceLocation, Set<ResourceLocation>> toTransfer = new LinkedHashMap<>();
         for (ResourceLocation power : donorContainer.allPowers()) {
             if (ApoliPowers.isSubPower(power)) continue;
+            if (cfg.powers.isPresent() && !cfg.powers.get().contains(power)) continue;
+            if (cfg.tags.isPresent() && !ApoliPowers.hasAnyTag(power, cfg.tags.get())) continue;
             for (ResourceLocation source : donorContainer.sourcesOf(power)) {
                 if (source.equals(cfg.newSource)) continue;
                 if (cfg.sources.isPresent() && !cfg.sources.get().contains(source)) continue;

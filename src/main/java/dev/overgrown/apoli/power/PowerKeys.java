@@ -32,6 +32,7 @@ public final class PowerKeys {
             c.params().key().map(Key::key).ifPresent(out::add);
         } else if (cfg instanceof ActionOnKeySequencePower.Config c) {
             for (FunctionalKey fk : c.keys()) out.add(fk.key().key());
+            out.addAll(c.atomKeys());
         }
     }
 

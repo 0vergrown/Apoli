@@ -13,6 +13,7 @@ public final class VelocityUpdater {
         if (!(recipient instanceof Player)) {
             Vec3 current = recipient.getDeltaMovement();
             recipient.setDeltaMovement(set ? worldDelta : current.add(worldDelta));
+            recipient.hasImpulse = true;
         }
         ApoliNetwork.sendApplyVelocityToTrackers(recipient,
             new ApplyVelocityS2C(recipient.getId(), worldDelta.x, worldDelta.y, worldDelta.z, set));

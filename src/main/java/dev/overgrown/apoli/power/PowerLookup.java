@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.power;
 
+import dev.overgrown.apoli.attribution.PowerCause;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
@@ -35,6 +36,31 @@ public final class PowerLookup {
     }
 
     @SuppressWarnings("unchecked")
+    @Nullable
+    public static <C> C firstActive(@Nullable Entity entity, ResourceLocation canonicalId, Class<C> configClass) {
+        if (entity == null) return null;
+        PowerContainer container = PowerContainer.of(entity);
+        if (container == null || container.isEmpty()) return null;
+        List<ResourceLocation> powers = container.powersOfType(canonicalId);
+        if (powers.isEmpty()) return null;
+        EntityCtx ctx = null;
+        for (int i = 0; i < powers.size(); i++) {
+            ResourceLocation powerId = powers.get(i);
+            if (container.isSuppressed(powerId)) continue;
+            Power power = ApoliPowers.get(powerId);
+            if (power == null) continue;
+            Object cfg = power.config();
+            if (!configClass.isInstance(cfg)) continue;
+            if (power.condition().isPresent()) {
+                if (ctx == null) ctx = EntityCtx.of(entity, entity.level());
+                if (!power.condition().get().test(ctx)) continue;
+            }
+            return (C) cfg;
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
     public static <C> void forEachEntry(@Nullable Entity entity, ResourceLocation canonicalId,
                                         Class<C> configClass, BiConsumer<ResourceLocation, C> consumer) {
         if (entity == null) return;
@@ -54,7 +80,12 @@ public final class PowerLookup {
                 if (ctx == null) ctx = EntityCtx.of(entity, entity.level());
                 if (!power.condition().get().test(ctx)) continue;
             }
-            consumer.accept(powerId, (C) cfg);
+            boolean attributed = PowerCause.push(entity, powerId);
+            try {
+                consumer.accept(powerId, (C) cfg);
+            } finally {
+                if (attributed) PowerCause.pop();
+            }
         }
     }
 
@@ -78,7 +109,12 @@ public final class PowerLookup {
                 if (ctx == null) ctx = EntityCtx.of(entity, entity.level());
                 if (!power.condition().get().test(ctx)) continue;
             }
-            consumer.accept((C) cfg);
+            boolean attributed = PowerCause.push(entity, powerId);
+            try {
+                consumer.accept((C) cfg);
+            } finally {
+                if (attributed) PowerCause.pop();
+            }
         }
     }
 

@@ -9,6 +9,7 @@ import dev.overgrown.apoli.codec.IdCodecs;
 import dev.overgrown.apoli.codec.LoggedOptionalField;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.data.ItemStackData;
+import dev.overgrown.apoli.mixin.damage.LivingEntityAttackStrengthAccessor;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -32,14 +33,17 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import java.util.Optional;
 
 public final class PunchBiEntityAction implements ActionType<BiEntityCtx, PunchBiEntityAction.Cfg> {
-    public record Cfg(Optional<ItemStackData> stack, Optional<ResourceLocation> damageType, boolean swingHand) {}
+    public record Cfg(Optional<ItemStackData> stack, Optional<ResourceLocation> damageType, boolean swingHand,
+                      boolean resetCooldown, boolean ignoreCooldown) {}
 
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             LoggedOptionalField.strict("stack", ItemStackData.CODEC).forGetter(Cfg::stack),
             LoggedOptionalField.strict("damage_type", IdCodecs.ID).forGetter(Cfg::damageType),
-            Codec.BOOL.optionalFieldOf("swing_hand", true).forGetter(Cfg::swingHand)
+            Codec.BOOL.optionalFieldOf("swing_hand", true).forGetter(Cfg::swingHand),
+            Codec.BOOL.optionalFieldOf("reset_cooldown", true).forGetter(Cfg::resetCooldown),
+            Codec.BOOL.optionalFieldOf("ignore_cooldown", false).forGetter(Cfg::ignoreCooldown)
         ).apply(i, Cfg::new));
     }
 
@@ -56,6 +60,15 @@ public final class PunchBiEntityAction implements ActionType<BiEntityCtx, PunchB
             original = actor.getItemInHand(InteractionHand.MAIN_HAND);
             hold(actor, original, substitute);
         }
+        LivingEntityAttackStrengthAccessor cooldown = null;
+        int restoreTicker = 0;
+        if (actor instanceof Player player && (cfg.ignoreCooldown || !cfg.resetCooldown)) {
+            cooldown = (LivingEntityAttackStrengthAccessor) actor;
+            restoreTicker = cooldown.apoli$getAttackStrengthTicker();
+            if (cfg.ignoreCooldown) {
+                cooldown.apoli$setAttackStrengthTicker((int) Math.ceil(player.getCurrentItemAttackStrengthDelay()) + 1);
+            }
+        }
         try {
             if (cfg.damageType.isPresent()) {
                 typed(cfg.damageType.get(), actor, target, level);
@@ -68,6 +81,7 @@ public final class PunchBiEntityAction implements ActionType<BiEntityCtx, PunchB
             }
             if (cfg.swingHand) actor.swing(InteractionHand.MAIN_HAND, true);
         } finally {
+            if (cooldown != null && !cfg.resetCooldown) cooldown.apoli$setAttackStrengthTicker(restoreTicker);
             if (substitute != null) hold(actor, substitute, original);
         }
     }

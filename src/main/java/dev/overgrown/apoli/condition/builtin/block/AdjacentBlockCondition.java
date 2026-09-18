@@ -27,7 +27,7 @@ public final class AdjacentBlockCondition implements ConditionType<BlockCtx, Adj
         int matches = 0;
         for (Direction dir : Direction.values()) {
             BlockPos neighbor = ctx.pos().relative(dir);
-            BlockCtx neighborCtx = new BlockCtx(neighbor, ctx.level().getBlockState(neighbor), ctx.level());
+            BlockCtx neighborCtx = ctx.at(neighbor, ctx.level().getBlockState(neighbor));
             if (cfg.adjacentCondition.test(neighborCtx)) matches++;
         }
         return cfg.comparison.compare(matches, cfg.compareTo);

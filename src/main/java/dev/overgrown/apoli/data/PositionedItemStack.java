@@ -1,35 +1,33 @@
 package dev.overgrown.apoli.data;
 
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import dev.overgrown.apoli.alias.AliasingMapCodec;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 
-public record PositionedItemStack(ItemStack stack, OptionalInt slot) {
+public record PositionedItemStack(ItemStack stack, OptionalInt slot, boolean lock) {
 
-    public static final Codec<PositionedItemStack> CODEC = AliasingMapCodec.wrap(
-        RecordCodecBuilder.<PositionedItemStack>mapCodec(i -> i.group(
-            BuiltInRegistries.ITEM.byNameCodec().fieldOf("item").forGetter(s -> s.stack.getItem()),
-            Codec.INT.optionalFieldOf("amount", 1).forGetter(s -> s.stack.getCount()),
-            Nbt.CODEC.optionalFieldOf("tag").forGetter(s -> s.stack.hasTag()
-                ? Optional.of(new Nbt(s.stack.getTag()))
-                : Optional.empty()),
-            Codec.INT.optionalFieldOf("slot").forGetter(s -> s.slot.isPresent()
-                ? Optional.of(s.slot.getAsInt())
-                : Optional.empty())
-        ).apply(i, PositionedItemStack::build)),
-        Map.of("id", "item", "count", "amount")
-    ).codec();
+    private record Placement(Optional<Integer> slot, boolean lock) {}
 
-    private static PositionedItemStack build(Item item, Integer amount, Optional<Nbt> tag, Optional<Integer> slot) {
-        ItemStack stack = new ItemStack(item, amount);
-        tag.ifPresent(n -> stack.setTag(n.tag()));
-        return new PositionedItemStack(stack, slot.map(OptionalInt::of).orElse(OptionalInt.empty()));
-    }
+    private static final MapCodec<Placement> PLACEMENT = RecordCodecBuilder.mapCodec(i -> i.group(
+        Codec.INT.optionalFieldOf("slot").forGetter(Placement::slot),
+        Codec.BOOL.optionalFieldOf("lock", false).forGetter(Placement::lock)
+    ).apply(i, Placement::new));
+
+    public static final Codec<PositionedItemStack> CODEC =
+        Codec.mapPair(ItemStackData.MAP_CODEC, PLACEMENT).xmap(
+            pair -> new PositionedItemStack(
+                pair.getFirst().stack(),
+                pair.getSecond().slot().map(OptionalInt::of).orElse(OptionalInt.empty()),
+                pair.getSecond().lock()),
+            positioned -> Pair.of(
+                new ItemStackData(positioned.stack()),
+                new Placement(positioned.slot().isPresent()
+                    ? Optional.of(positioned.slot().getAsInt())
+                    : Optional.empty(), positioned.lock()))
+        ).codec();
 }

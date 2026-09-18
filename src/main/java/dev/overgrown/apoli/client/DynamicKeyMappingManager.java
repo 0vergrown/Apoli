@@ -3,6 +3,7 @@ package dev.overgrown.apoli.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.logging.LogUtils;
 import dev.overgrown.apoli.keybind.Keybind;
+import net.minecraft.network.chat.Component;
 import dev.overgrown.apoli.mixin.keybinding.KeyMappingCategoryAccessor;
 import dev.overgrown.apoli.mixin.keybinding.OptionsAccessor;
 import net.fabricmc.api.EnvType;
@@ -10,6 +11,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.io.BufferedReader;
@@ -30,7 +32,10 @@ public final class DynamicKeyMappingManager {
     private static final Logger LOG = LogUtils.getLogger();
 
     private static final List<KeyMapping> SESSION_BINDINGS = new ArrayList<>();
-    private static final Map<String, String> NAME_HINTS = new HashMap<>();
+    private static final Map<String, Component> NAME_HINTS = new HashMap<>();
+
+    private static volatile boolean hasNameHints;
+    private static boolean resolvingHint;
 
     private DynamicKeyMappingManager() {}
 
@@ -45,6 +50,10 @@ public final class DynamicKeyMappingManager {
 
         for (Keybind def : definitions) {
             String translationKey = def.translationKey();
+            def.name().ifPresent(component -> {
+                NAME_HINTS.put(translationKey, component);
+                hasNameHints = true;
+            });
             if (isAlreadyRegistered(translationKey, mc.options.keyMappings)) {
                 LOG.debug("[Apoli] '{}' already present in Options.keyMappings — skipping.", translationKey);
                 continue;
@@ -62,7 +71,6 @@ public final class DynamicKeyMappingManager {
             ((OptionsAccessor) mc.options).apoli$setKeyMappings(extended);
 
             SESSION_BINDINGS.add(km);
-            def.name().ifPresent(n -> NAME_HINTS.put(translationKey, n));
 
             LOG.debug("[Apoli] Registered keybind '{}' (default {}, category {}).",
                 translationKey, def.key(), def.category());
@@ -73,7 +81,11 @@ public final class DynamicKeyMappingManager {
     }
 
     public static synchronized void unregisterAll() {
-        if (SESSION_BINDINGS.isEmpty()) return;
+        if (SESSION_BINDINGS.isEmpty()) {
+            NAME_HINTS.clear();
+            hasNameHints = false;
+            return;
+        }
 
         Minecraft mc = Minecraft.getInstance();
         if (mc != null) {
@@ -90,10 +102,23 @@ public final class DynamicKeyMappingManager {
         }
         SESSION_BINDINGS.clear();
         NAME_HINTS.clear();
+        hasNameHints = false;
     }
 
-    public static String nameHint(String translationKey) {
-        return NAME_HINTS.get(translationKey);
+    public static boolean hasNameHints() {
+        return hasNameHints;
+    }
+
+    public static @Nullable String nameHint(String translationKey) {
+        if (!hasNameHints || resolvingHint) return null;
+        Component component = NAME_HINTS.get(translationKey);
+        if (component == null) return null;
+        resolvingHint = true;
+        try {
+            return component.getString();
+        } finally {
+            resolvingHint = false;
+        }
     }
 
     private static boolean isAlreadyRegistered(String translationKey, KeyMapping[] all) {

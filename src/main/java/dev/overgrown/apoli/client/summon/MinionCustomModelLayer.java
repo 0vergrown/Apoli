@@ -43,7 +43,7 @@ public class MinionCustomModelLayer extends RenderLayer<MinionEntity, MinionMode
             }
             AnimationPlayer.apply(minion, render, custom, partialTick);
             GeometryRenderer.applyVisibility(custom, render.bodyParts());
-            GeometryRenderer.draw(render, custom, pose, buffers, light);
+            GeometryRenderer.draw(render, custom, pose, buffers, light, minion);
         }
     }
 

@@ -24,6 +24,8 @@ public class CustomProjectileEntity extends ThrowableProjectile {
         SynchedEntityData.defineId(CustomProjectileEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<String> MODEL_POWER =
         SynchedEntityData.defineId(CustomProjectileEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<net.minecraft.world.item.ItemStack> ITEM =
+        SynchedEntityData.defineId(CustomProjectileEntity.class, EntityDataSerializers.ITEM_STACK);
 
     public CustomProjectileEntity(EntityType<? extends CustomProjectileEntity> type, Level level) {
         super(type, level);
@@ -39,6 +41,7 @@ public class CustomProjectileEntity extends ThrowableProjectile {
     protected void defineSynchedData() {
         this.entityData.define(TEXTURE, "");
         this.entityData.define(MODEL_POWER, "");
+        this.entityData.define(ITEM, net.minecraft.world.item.ItemStack.EMPTY);
     }
 
     public void setTexture(ResourceLocation texture) {
@@ -48,6 +51,14 @@ public class CustomProjectileEntity extends ThrowableProjectile {
     public ResourceLocation getTexture() {
         String s = this.entityData.get(TEXTURE);
         return s.isEmpty() ? null : ResourceLocation.tryParse(s);
+    }
+
+    public void setItem(net.minecraft.world.item.ItemStack stack) {
+        this.entityData.set(ITEM, stack == null ? net.minecraft.world.item.ItemStack.EMPTY : stack.copy());
+    }
+
+    public net.minecraft.world.item.ItemStack getItem() {
+        return this.entityData.get(ITEM);
     }
 
     public void setModelPower(ResourceLocation powerId) {

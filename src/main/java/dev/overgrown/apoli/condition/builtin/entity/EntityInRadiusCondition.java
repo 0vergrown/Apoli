@@ -36,6 +36,10 @@ public final class EntityInRadiusCondition implements ConditionType<EntityCtx, E
         Entity self = ctx.entity();
 
         double r = cfg.radius;
+        if (dev.overgrown.apoli.dev.DevParticles.due(ctx.level())
+            && ctx.level() instanceof net.minecraft.server.level.ServerLevel devLevel) {
+            dev.overgrown.apoli.dev.DevParticles.outlineCondition(devLevel, self.position(), cfg.shape, r, r, r);
+        }
         AABB box = new AABB(self.getX() - r, self.getY() - r, self.getZ() - r,
                             self.getX() + r, self.getY() + r, self.getZ() + r);
         List<Entity> nearby = ctx.level().getEntities(self, box);

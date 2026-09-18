@@ -48,7 +48,7 @@ public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyR
             "from_index", "from_position",
             "from_slot", "from_position"));
 
-    private static final MapCodec<Cfg> WITH_LEGACY = new MapCodec<>() {
+    public static final MapCodec<Cfg> CONFIG_CODEC = new MapCodec<>() {
         @Override
         public <T> Stream<T> keys(DynamicOps<T> ops) {
             return Stream.of(
@@ -128,17 +128,22 @@ public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyR
 
     @Override
     public MapCodec<Cfg> codec() {
-        return WITH_LEGACY;
+        return CONFIG_CODEC;
     }
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        Entity entity = ctx.entity();
+        run(cfg, ctx.entity(), ctx.entity());
+    }
+
+    public static void run(Cfg cfg, Entity entity, Entity source) {
         PowerContainer container = PowerContainer.of(entity);
         if (container == null) return;
 
         if (cfg.from.isPresent()) {
-            copy(cfg, entity, container);
+            PowerContainer sourceContainer = source == entity ? container : PowerContainer.of(source);
+            if (sourceContainer == null) return;
+            copy(cfg, entity, container, sourceContainer);
             return;
         }
 
@@ -164,15 +169,15 @@ public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyR
         PowerResources.writeAt(container, cfg.resource, slot, (int) Math.round(next));
     }
 
-    private static void copy(Cfg cfg, Entity entity, PowerContainer container) {
+    private static void copy(Cfg cfg, Entity entity, PowerContainer container, PowerContainer sourceContainer) {
         ResourceLocation source = cfg.from.get();
         boolean wholeTable = cfg.position.isEmpty() && cfg.fromPosition.isEmpty();
         if (wholeTable) {
             int destination = Math.max(1, PowerResources.size(container, cfg.resource));
-            int available = Math.max(1, PowerResources.size(container, source));
+            int available = Math.max(1, PowerResources.size(sourceContainer, source));
             int slots = Math.min(destination, available);
             for (int slot = 0; slot < slots; slot++) {
-                OptionalInt value = PowerResources.readAt(container, source, slot);
+                OptionalInt value = PowerResources.readAt(sourceContainer, source, slot);
                 if (value.isEmpty()) continue;
                 writeInto(cfg, entity, container, slot, value.getAsInt());
             }
@@ -181,7 +186,7 @@ public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyR
         int fromSlot = cfg.fromPosition.isPresent()
             ? cfg.fromPosition.get().evalIntWith(entity, container, 0)
             : 0;
-        OptionalInt value = PowerResources.readAt(container, source, fromSlot);
+        OptionalInt value = PowerResources.readAt(sourceContainer, source, fromSlot);
         if (value.isEmpty()) return;
         int toSlot = cfg.position.isPresent()
             ? cfg.position.get().evalIntWith(entity, container, 0)

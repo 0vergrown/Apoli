@@ -1,10 +1,14 @@
 package dev.overgrown.apoli.mixin.block;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import dev.overgrown.apoli.power.builtin.BlockPlaceHandler;
+import dev.overgrown.apoli.power.builtin.PreventItemUseHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
@@ -20,6 +24,10 @@ public abstract class BlockItemPlaceMixin {
 
     private static final String PLACE =
         "place(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/InteractionResult;";
+    private static final String USE_ON =
+        "useOn(Lnet/minecraft/world/item/context/UseOnContext;)Lnet/minecraft/world/InteractionResult;";
+    private static final String ITEM_USE =
+        "Lnet/minecraft/world/item/BlockItem;use(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResultHolder;";
 
     @Inject(method = PLACE, at = @At("HEAD"), cancellable = true)
     private void apoli$preventBlockPlace(BlockPlaceContext context, CallbackInfoReturnable<InteractionResult> cir) {
@@ -43,6 +51,19 @@ public abstract class BlockItemPlaceMixin {
         ItemStack placed = context.getItemInHand();
         if (placed.isEmpty()) placed = new ItemStack(((BlockItem) (Object) this));
         BlockPlaceHandler.fireAfterPlace(player, level, hand, placed, toPos, apoli$onPos(context), face);
+    }
+
+    @WrapOperation(method = USE_ON, at = @At(value = "INVOKE", target = ITEM_USE))
+    private InteractionResultHolder<ItemStack> apoli$preventEatingBlockItem(
+            BlockItem item, Level level, Player player, InteractionHand hand,
+            Operation<InteractionResultHolder<ItemStack>> original) {
+        if (player != null) {
+            ItemStack held = player.getItemInHand(hand);
+            if (PreventItemUseHandler.isBlocked(player, held, level)) {
+                return InteractionResultHolder.fail(held);
+            }
+        }
+        return original.call(item, level, player, hand);
     }
 
     private static BlockPos apoli$onPos(BlockPlaceContext context) {

@@ -1,6 +1,9 @@
 package dev.overgrown.apoli.data;
 
+import dev.overgrown.apoli.access.ExplosionDamageToggle;
+import dev.overgrown.apoli.condition.BiEntityCondition;
 import dev.overgrown.apoli.condition.BlockCondition;
+import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.BlockCtx;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.damagesource.DamageSource;
@@ -23,7 +26,9 @@ public final class ExplosionHelper {
     public static void detonate(Level level, @Nullable Entity source, Vec3 pos, float power,
                                 boolean createFire, DestructionType destructionType,
                                 Optional<BlockCondition> indestructible,
-                                Optional<BlockCondition> destructible) {
+                                Optional<BlockCondition> destructible,
+                                boolean damageTargets,
+                                Optional<BiEntityCondition> targetCondition) {
         if (level.isClientSide()) return;
         DamageSource damageSource = level.damageSources().explosion(source, source);
         ExplosionDamageCalculator calculator = (indestructible.isPresent() || destructible.isPresent())
@@ -34,6 +39,14 @@ public final class ExplosionHelper {
             level, source, damageSource, calculator,
             pos.x, pos.y, pos.z, power, createFire, destructionType.vanilla()
         );
+        if (!damageTargets) {
+            ((ExplosionDamageToggle) explosion).apoli$sparePassersby(source);
+        }
+        if (targetCondition.isPresent()) {
+            BiEntityCondition condition = targetCondition.get();
+            ((ExplosionDamageToggle) explosion).apoli$setDamageFilter(
+                entity -> condition.test(BiEntityCtx.of(source, entity, level)));
+        }
         explosion.explode();
         explosion.finalizeExplosion(true);
     }

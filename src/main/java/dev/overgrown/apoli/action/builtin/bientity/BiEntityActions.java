@@ -12,6 +12,9 @@ public final class BiEntityActions {
     public static void register() {
         ActionTypes.BI_ENTITY.register(Apoli.id("add_velocity"), new AddVelocityAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("damage"), new DamageBiEntityAction());
+        ActionTypes.BI_ENTITY.register(Apoli.id("modify_resource"), new ModifyResourceBiEntityAction(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("change_resource"))
+                .addTypeAlias("origins:change_resource").build());
         ActionTypes.BI_ENTITY.register(Apoli.id("punch"), new PunchBiEntityAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("teleport_to"), new TeleportToBiEntityAction(false));
         ActionTypes.BI_ENTITY.register(Apoli.id("swap"), new TeleportToBiEntityAction(true));
@@ -22,6 +25,7 @@ public final class BiEntityActions {
         ActionTypes.BI_ENTITY.register(Apoli.id("tame"), new TameAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("actor_action"), new ActorAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("target_action"), new TargetAction());
+        ActionTypes.BI_ENTITY.register(Apoli.id("both"), new BothAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("invert"), new InvertBiEntityAction());
         ActionTypes.BI_ENTITY.register(
             Apoli.id("add_to_entity_set"),
@@ -36,6 +40,7 @@ public final class BiEntityActions {
         ActionTypes.BI_ENTITY.register(Apoli.id("disguise"), new DisguiseBiEntityAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("transfer"), new TransferAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("execute_command"), new ExecuteCommandBiEntityAction());
+        ActionTypes.BI_ENTITY.register(Apoli.id("store_power"), new StorePowerAction.BiEntity());
         ActionTypes.BI_ENTITY.register(Apoli.id("attach_rope"),
             new dev.overgrown.apoli.action.builtin.entity.AttachRopeAction.BiEntity());
         ActionTypes.BI_ENTITY.register(

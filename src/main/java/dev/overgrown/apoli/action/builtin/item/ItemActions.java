@@ -17,6 +17,7 @@ public final class ItemActions {
         );
         ActionTypes.ITEM.register(Apoli.id("merge_nbt"), new MergeNbtItemAction());
         ActionTypes.ITEM.register(Apoli.id("modify"), new ModifyItemAction());
+        ActionTypes.ITEM.register(Apoli.id("store_data"), new StoreDataItemAction());
         ActionTypes.ITEM.register(Apoli.id("remove_enchantment"), new RemoveEnchantmentItemAction());
 
         ActionTypes.ITEM.register(Apoli.id("script"), new ScriptItemAction());

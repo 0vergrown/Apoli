@@ -4,4 +4,6 @@ import dev.overgrown.apoli.power.builtin.FireProjectilePower;
 
 public interface ProjectileHitActions {
     void apoli$setFireConfig(FireProjectilePower.Config config);
+
+    void apoli$setMaxRange(double blocks);
 }

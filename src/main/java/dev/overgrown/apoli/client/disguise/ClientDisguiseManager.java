@@ -43,6 +43,8 @@ public final class ClientDisguiseManager {
 
     @Nullable
     private static Entity renderActor;
+    private static final java.util.Set<Object> LAYERED =
+        java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
 
     public static void install() {
         DisguiseManager.setClientView(new DisguiseManager.ClientView() {
@@ -186,6 +188,21 @@ public final class ClientDisguiseManager {
             if (dummy instanceof DisguisePlayerDummy playerDummy) playerDummy.snapCloak();
         }
         return dummy;
+    }
+
+    @Nullable
+    public static Entity renderActor() {
+        return renderActor;
+    }
+
+    public static void ensureCustomModelLayer(net.minecraft.client.renderer.entity.EntityRenderDispatcher dispatcher,
+                                              Entity dummy) {
+        net.minecraft.client.renderer.entity.EntityRenderer<?> renderer = dispatcher.getRenderer(dummy);
+        if (!(renderer instanceof net.minecraft.client.renderer.entity.LivingEntityRenderer<?, ?> living)) return;
+        if (!(living.getModel() instanceof net.minecraft.client.model.HumanoidModel<?>)) return;
+        if (!LAYERED.add(renderer)) return;
+        ((dev.overgrown.apoli.mixin.disguise.LivingEntityRendererAddLayerAccessor) renderer).apoli$addLayer(
+            new dev.overgrown.apoli.client.render.DisguiseCustomModelLayer<>(living));
     }
 
     @Nullable

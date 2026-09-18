@@ -25,9 +25,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -44,6 +42,7 @@ public final class PowerHudRenderer {
     private static final int BAR_INDEX_OFFSET = BAR_HEIGHT + 2;
     private static final int ICON_INDEX_OFFSET = ICON_SIZE + 1;
     private static final int ICONS_U_OFFSET = BAR_WIDTH + 2;
+    private static final int BAR_STEP = 8;
 
     private static final List<Renderable> RENDERABLES = new ArrayList<>();
     private static final Comparator<Renderable> BY_ORDER = Comparator.comparingInt(Renderable::order);
@@ -53,19 +52,11 @@ public final class PowerHudRenderer {
     public static void render(GuiGraphics graphics, float partialTick) {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
-        if (player == null || mc.options.hideGui) return;
+        if (player == null || mc.options.hideGui || ClientDevMode.enabled()) return;
 
-        int yOffset = 49;
-        if (player.isEyeInFluid(FluidTags.WATER) || player.getAirSupply() < player.getMaxAirSupply()) {
-            yOffset += 10;
-        }
-        if (player.getVehicle() instanceof LivingEntity vehicle) {
-            int rows = Mth.clamp((int) Math.ceil(vehicle.getMaxHealth() / 20.0F), 1, 3) - 1;
-            yOffset += rows * 10;
-        }
-
-        int x = (graphics.guiWidth() / 2) + 20;
-        int y = graphics.guiHeight() - yOffset;
+        ApoliClientConfig config = ApoliClientConfig.get();
+        int x = (graphics.guiWidth() / 2) + 20 + config.hudOffsetX();
+        int y = graphics.guiHeight() - HudStatusStack.rightHeight() + config.hudOffsetY();
 
         EntityCtx ctx = new EntityCtx(player, player.level());
         PowerContainer container = PowerContainer.of(player);
@@ -79,12 +70,21 @@ public final class PowerHudRenderer {
         if (RENDERABLES.isEmpty()) return;
         RENDERABLES.sort(BY_ORDER);
 
-        for (int i = 0; i < RENDERABLES.size(); i++) {
+        int bars = RENDERABLES.size();
+        HudStatusStack.pause();
+        for (int i = 0; i < bars; i++) {
             Renderable r = RENDERABLES.get(i);
             drawEntry(graphics, x, y, r.entry, r.fill);
-            y -= 8;
+            y -= BAR_STEP;
         }
+        HudStatusStack.resume();
         RENDERABLES.clear();
+        HudStatusStack.reserveRight(reservedHeight(bars));
+    }
+
+    private static int reservedHeight(int bars) {
+        int used = (bars - 1) * BAR_STEP + HudStatusStack.ROW_HEIGHT;
+        return ((used + HudStatusStack.ROW_HEIGHT - 1) / HudStatusStack.ROW_HEIGHT) * HudStatusStack.ROW_HEIGHT;
     }
 
     private static void collect(Power power, ResourceLocation powerId, LocalPlayer player,

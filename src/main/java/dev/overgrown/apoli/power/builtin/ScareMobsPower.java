@@ -28,7 +28,18 @@ public final class ScareMobsPower extends PowerType<ScareMobsPower.Config> {
         scannedTick = now;
         FOUND.clear();
         PoweredEntities.forEach(ScareMobsPower::collect);
+        if (dev.overgrown.apoli.dev.DevParticles.due(level)) outlineHolders(level);
         return FOUND;
+    }
+
+    private static void outlineHolders(Level level) {
+        for (int i = 0; i < FOUND.size(); i++) {
+            LivingEntity holder = FOUND.get(i);
+            if (!(holder.level() instanceof net.minecraft.server.level.ServerLevel devLevel)) continue;
+            dev.overgrown.apoli.power.PowerLookup.forEach(holder, ApoliIds.SCARE_MOBS, Config.class,
+                cfg -> dev.overgrown.apoli.dev.DevParticles.outlineShape(devLevel, holder.position(),
+                    dev.overgrown.apoli.data.Shape.SPHERE, cfg.radius(), cfg.radius(), cfg.radius()));
+        }
     }
 
     private static void collect(Entity entity) {

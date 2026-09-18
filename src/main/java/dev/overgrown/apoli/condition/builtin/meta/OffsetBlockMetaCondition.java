@@ -24,6 +24,6 @@ public final class OffsetBlockMetaCondition implements ConditionType<BlockCtx, O
     @Override
     public boolean test(Cfg cfg, BlockCtx ctx) {
         BlockPos offset = ctx.pos().offset(cfg.x, cfg.y, cfg.z);
-        return cfg.condition.test(new BlockCtx(offset, ctx.level().getBlockState(offset), ctx.level()));
+        return cfg.condition.test(ctx.at(offset, ctx.level().getBlockState(offset)));
     }
 }

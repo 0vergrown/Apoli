@@ -9,6 +9,7 @@ import dev.overgrown.apoli.condition.BiEntityCondition;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Expression;
+import dev.overgrown.apoli.data.ExprVector;
 import dev.overgrown.apoli.data.ModelParts;
 import dev.overgrown.apoli.data.ParticleEffect;
 import dev.overgrown.apoli.data.ParticlePlacement;
@@ -33,19 +34,19 @@ public final class ParticlePower extends PowerType<ParticlePower.Config> {
     public record Config(
         ParticleEffect particle,
         Optional<BiEntityCondition> bientityCondition,
-        int count,
-        Either<Expression, Vector> speed,
+        Expression count,
+        Either<Expression, ExprVector> speed,
         boolean force,
-        Vector spread,
-        float offsetX,
-        float offsetY,
-        float offsetZ,
-        int frequency,
+        ExprVector spread,
+        Expression offsetX,
+        Expression offsetY,
+        Expression offsetZ,
+        Expression frequency,
         boolean visibleInFirstPerson,
         boolean visibleWhileInvisible,
-        float velocityX,
-        float velocityY,
-        float velocityZ,
+        Expression velocityX,
+        Expression velocityY,
+        Expression velocityZ,
         Optional<Space> space,
         Optional<String> modelPart
     ) {
@@ -56,33 +57,36 @@ public final class ParticlePower extends PowerType<ParticlePower.Config> {
         }
     }
 
-    private record Motion(float velocityX, float velocityY, float velocityZ, Optional<Space> space,
+    private record Motion(Expression velocityX, Expression velocityY, Expression velocityZ, Optional<Space> space,
                           Optional<String> modelPart) {}
 
-    private static final Vector DEFAULT_SPREAD = new Vector(0.5f, 0.5f, 0.5f);
+    private static final ExprVector DEFAULT_SPREAD = ExprVector.of(0.5f, 0.5f, 0.5f);
+    private static final Expression ZERO = Expression.constant(0.0);
+    private static final Expression HALF = Expression.constant(0.5);
+    private static final Expression ONE = Expression.constant(1.0);
 
     private static final MapCodec<Config> BODY = RecordCodecBuilder.mapCodec(i -> i.group(
             ParticleEffect.CODEC.fieldOf("particle").forGetter(Config::particle),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition),
-            Codec.INT.optionalFieldOf("count", 1).forGetter(Config::count),
+            Expression.INT_OR_EXPR.optionalFieldOf("count", ONE).forGetter(Config::count),
             ParticlePlacement.SPEED_CODEC.optionalFieldOf("speed", ParticlePlacement.NO_SPEED).forGetter(Config::speed),
             Codec.BOOL.optionalFieldOf("force", false).forGetter(Config::force),
-            Vector.CODEC.optionalFieldOf("spread", DEFAULT_SPREAD).forGetter(Config::spread),
-            Codec.FLOAT.optionalFieldOf("offset_x", 0f).forGetter(Config::offsetX),
-            Codec.FLOAT.optionalFieldOf("offset_y", 0.5f).forGetter(Config::offsetY),
-            Codec.FLOAT.optionalFieldOf("offset_z", 0f).forGetter(Config::offsetZ),
-            Codec.INT.fieldOf("frequency").forGetter(Config::frequency),
+            ExprVector.SCALAR_OR_VECTOR.optionalFieldOf("spread", DEFAULT_SPREAD).forGetter(Config::spread),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("offset_x", ZERO).forGetter(Config::offsetX),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("offset_y", HALF).forGetter(Config::offsetY),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("offset_z", ZERO).forGetter(Config::offsetZ),
+            Expression.INT_OR_EXPR.fieldOf("frequency").forGetter(Config::frequency),
             Codec.BOOL.optionalFieldOf("visible_in_first_person", false).forGetter(Config::visibleInFirstPerson),
             Codec.BOOL.optionalFieldOf("visible_while_invisible", false).forGetter(Config::visibleWhileInvisible)
         ).apply(i, (particle, bientityCondition, count, speed, force, spread, offsetX, offsetY, offsetZ,
                     frequency, firstPerson, whileInvisible) ->
             new Config(particle, bientityCondition, count, speed, force, spread, offsetX, offsetY, offsetZ,
-                frequency, firstPerson, whileInvisible, 0f, 0f, 0f, Optional.empty(), Optional.empty())));
+                frequency, firstPerson, whileInvisible, ZERO, ZERO, ZERO, Optional.empty(), Optional.empty())));
 
     private static final MapCodec<Motion> MOTION = RecordCodecBuilder.mapCodec(i -> i.group(
-        Codec.FLOAT.optionalFieldOf("velocity_x", 0f).forGetter(Motion::velocityX),
-        Codec.FLOAT.optionalFieldOf("velocity_y", 0f).forGetter(Motion::velocityY),
-        Codec.FLOAT.optionalFieldOf("velocity_z", 0f).forGetter(Motion::velocityZ),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("velocity_x", ZERO).forGetter(Motion::velocityX),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("velocity_y", ZERO).forGetter(Motion::velocityY),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("velocity_z", ZERO).forGetter(Motion::velocityZ),
         Space.CODEC.optionalFieldOf("space").forGetter(Motion::space),
         ModelParts.NAME_CODEC.optionalFieldOf("model_part").forGetter(Motion::modelPart)
     ).apply(i, Motion::new));
@@ -104,10 +108,11 @@ public final class ParticlePower extends PowerType<ParticlePower.Config> {
 
     @Override
     public void tick(ResourceLocation powerId, Config cfg, PowerContainer holder) {
-        if (cfg.frequency() < 1) return;
         Entity owner = holder.rawOwner();
         if (!(owner.level() instanceof ServerLevel level)) return;
-        if (owner.tickCount % cfg.frequency() != 0) return;
+        int frequency = cfg.frequency().evalInt(owner);
+        if (frequency < 1) return;
+        if (owner.tickCount % frequency != 0) return;
 
         Power loaded = ApoliPowers.get(powerId);
         if (loaded != null && loaded.condition().isPresent()
@@ -115,13 +120,19 @@ public final class ParticlePower extends PowerType<ParticlePower.Config> {
             return;
         }
 
-        ParticleOptions opts = cfg.particle().resolve(level);
+        ParticleOptions opts = cfg.particle().resolve(level, owner);
         if (opts == null) return;
 
         dev.overgrown.apoli.data.ModelPartAnchor.Frame frame = ParticlePlacement.frame(owner, cfg.modelPart());
-        Vec3 origin = ParticlePlacement.origin(owner, frame, cfg.space(), cfg.offsetX(), cfg.offsetY(), cfg.offsetZ());
-        Vec3 velocity = ParticlePlacement.velocity(owner, frame, cfg.space(), cfg.velocityX(), cfg.velocityY(),
-            cfg.velocityZ(), cfg.speed());
+        Vec3 origin = ParticlePlacement.origin(owner, frame, cfg.space(),
+            (float) cfg.offsetX().eval(owner), (float) cfg.offsetY().eval(owner), (float) cfg.offsetZ().eval(owner));
+        Vector speedVector = ParticlePlacement.speedVector(owner, cfg.speed());
+        Vec3 velocity = ParticlePlacement.velocity(owner, frame, cfg.space(),
+            (float) cfg.velocityX().eval(owner), (float) cfg.velocityY().eval(owner),
+            (float) cfg.velocityZ().eval(owner), speedVector);
+        int count = Math.max(0, cfg.count().evalInt(owner));
+        Vector spread = cfg.spread().resolve(owner);
+        float scalarSpeed = ParticlePlacement.scalarSpeed(owner, cfg.speed());
         double x = origin.x;
         double y = origin.y;
         double z = origin.z;
@@ -136,8 +147,8 @@ public final class ParticlePower extends PowerType<ParticlePower.Config> {
             if (cfg.bientityCondition().isPresent() && owner instanceof LivingEntity le
                 && !cfg.bientityCondition().get().test(new BiEntityCtx(le, player, level))) continue;
             if (packets == null) {
-                packets = ParticlePlacement.packets(opts, cfg.force(), origin, velocity, cfg.count(), cfg.spread(),
-                    ParticlePlacement.scalarSpeed(owner, cfg.speed()), level);
+                packets = ParticlePlacement.packets(opts, cfg.force(), origin, velocity, count, spread,
+                    scalarSpeed, level, owner, frame, cfg.space());
             }
             for (int p = 0; p < packets.size(); p++) {
                 dev.overgrown.apoli.data.ParticleBroadcast.send(level, player, packets.get(p));

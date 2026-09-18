@@ -9,6 +9,7 @@ public final class BlockConditions {
 
     public static void register() {
         ConditionTypes.BLOCK.register(Apoli.id("adjacent"), new AdjacentBlockCondition());
+        ConditionTypes.BLOCK.register(Apoli.id("tick_rate"), new TickRateBlockCondition());
         ConditionTypes.BLOCK.register(Apoli.id("attachable"), new AttachableBlockCondition());
         ConditionTypes.BLOCK.register(Apoli.id("blast_resistance"), new BlastResistanceBlockCondition());
         ConditionTypes.BLOCK.register(Apoli.id("block"), new BlockIdCondition());

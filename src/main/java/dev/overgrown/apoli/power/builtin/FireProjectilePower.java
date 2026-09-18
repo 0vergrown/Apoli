@@ -5,6 +5,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.BiEntityAction;
+import dev.overgrown.apoli.action.DelayedActionQueue;
 import dev.overgrown.apoli.action.BlockAction;
 import dev.overgrown.apoli.action.EntityAction;
 import dev.overgrown.apoli.condition.BiEntityCondition;
@@ -48,11 +49,12 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         Optional<ResourceLocation> textureLocation,
         Expression cooldown,
         Optional<HudRender> hudRender,
-        int count,
+        Expression count,
         int interval,
         int startDelay,
-        float speed,
-        float divergence,
+        Expression speed,
+        Expression divergence,
+        Expression maxDistance,
         Optional<ResourceLocation> sound,
         Optional<Nbt> tag,
         boolean allowConditionalCancelling,
@@ -65,8 +67,8 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
     ) {
         Params withSpawn(Spawn spawn) {
             return new Params(entityType, textureLocation, cooldown, hudRender, count, interval, startDelay,
-                speed, divergence, sound, tag, allowConditionalCancelling, blockActionCancelsMissAction, key,
-                spawn.offsetX(), spawn.offsetY(), spawn.offsetZ(), spawn.space());
+                speed, divergence, maxDistance, sound, tag, allowConditionalCancelling,
+                blockActionCancelsMissAction, key, spawn.offsetX(), spawn.offsetY(), spawn.offsetZ(), spawn.space());
         }
     }
 
@@ -89,23 +91,25 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
 
     private static final MapCodec<Params> PARAMS_BODY = RecordCodecBuilder.mapCodec(i -> i.group(
         IdCodecs.ID.optionalFieldOf("entity_type").forGetter(Params::entityType),
-        IdCodecs.ID.optionalFieldOf("texture_location").forGetter(Params::textureLocation),
+        dev.overgrown.apoli.data.TextureRef.ID_CODEC.optionalFieldOf("texture_location").forGetter(Params::textureLocation),
         Expression.INT_OR_EXPR.optionalFieldOf("cooldown", Expression.constant(1)).forGetter(Params::cooldown),
         HudRender.CODEC.optionalFieldOf("hud_render").forGetter(Params::hudRender),
-        Codec.INT.optionalFieldOf("count", 1).forGetter(Params::count),
+        Expression.INT_OR_EXPR.optionalFieldOf("count", Expression.constant(1)).forGetter(Params::count),
         Codec.INT.optionalFieldOf("interval", 0).forGetter(Params::interval),
         Codec.INT.optionalFieldOf("start_delay", 0).forGetter(Params::startDelay),
-        Codec.FLOAT.optionalFieldOf("speed", 1.5f).forGetter(Params::speed),
-        Codec.FLOAT.optionalFieldOf("divergence", 1.0f).forGetter(Params::divergence),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("speed", Expression.constant(1.5)).forGetter(Params::speed),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("divergence", Expression.constant(1.0)).forGetter(Params::divergence),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("max_distance", Expression.constant(0)).forGetter(Params::maxDistance),
         IdCodecs.ID.optionalFieldOf("sound").forGetter(Params::sound),
         Nbt.CODEC.optionalFieldOf("tag").forGetter(Params::tag),
         Codec.BOOL.optionalFieldOf("allow_conditional_cancelling", false).forGetter(Params::allowConditionalCancelling),
         Codec.BOOL.optionalFieldOf("block_action_cancels_miss_action", false).forGetter(Params::blockActionCancelsMissAction),
         Key.CODEC.optionalFieldOf("key").forGetter(Params::key)
     ).apply(i, (entityType, textureLocation, cooldown, hudRender, count, interval, startDelay, speed, divergence,
-                sound, tag, allowConditionalCancelling, blockActionCancelsMissAction, key) ->
+                maxDistance, sound, tag, allowConditionalCancelling, blockActionCancelsMissAction, key) ->
         new Params(entityType, textureLocation, cooldown, hudRender, count, interval, startDelay, speed, divergence,
-            sound, tag, allowConditionalCancelling, blockActionCancelsMissAction, key, 0f, 0f, 0f, Space.WORLD)));
+            maxDistance, sound, tag, allowConditionalCancelling, blockActionCancelsMissAction, key,
+            0f, 0f, 0f, Space.WORLD)));
 
     private static final MapCodec<Spawn> PARAMS_SPAWN = RecordCodecBuilder.mapCodec(i -> i.group(
         Codec.FLOAT.optionalFieldOf("offset_x", 0f).forGetter(Spawn::offsetX),
@@ -145,8 +149,36 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
 
     public static void fireBurst(Entity owner, ServerLevel level, Config cfg) {
         playSound(owner, level, cfg.params());
-        int count = Math.max(1, cfg.params().count());
+        int count = Math.max(1, cfg.params().count().evalInt(owner));
         for (int n = 0; n < count; n++) fireOne(owner, level, cfg);
+    }
+
+    public static void fireVolley(Entity owner, ServerLevel level, Config cfg) {
+        Params p = cfg.params();
+        int startDelay = Math.max(0, p.startDelay());
+        int interval = Math.max(0, p.interval());
+        if (startDelay <= 0 && interval <= 0) {
+            fireBurst(owner, level, cfg);
+            return;
+        }
+        int count = Math.max(1, p.count().evalInt(owner));
+        int shots = interval <= 0 ? 1 : count;
+        for (int n = 0; n < shots; n++) {
+            int delay = startDelay + n * interval;
+            int remaining = interval <= 0 ? count : 1;
+            if (delay <= 0) {
+                volleyStep(owner, level, cfg, remaining);
+            } else {
+                DelayedActionQueue.schedule(delay,
+                    () -> dev.overgrown.apoli.action.ActionLiveness.alive(owner, level),
+                    () -> volleyStep(owner, level, cfg, remaining));
+            }
+        }
+    }
+
+    private static void volleyStep(Entity owner, ServerLevel level, Config cfg, int shots) {
+        playSound(owner, level, cfg.params());
+        for (int n = 0; n < shots; n++) fireOne(owner, level, cfg);
     }
 
     private record StateKey(UUID entity, ResourceLocation power) {}
@@ -211,6 +243,11 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
     }
 
     @Override
+    public void tickStored(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+        tick(powerId, cfg, holder);
+    }
+
+    @Override
     public void tick(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         StateKey k = new StateKey(holder.rawOwner().getUUID(), powerId);
         FireState st = states.get(k);
@@ -235,7 +272,8 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
 
         if (p.interval() <= 0) {
             playSound(owner, level, p);
-            while (st.shotProjectiles < Math.max(1, p.count())) {
+            int total = Math.max(1, p.count().evalInt(owner));
+            while (st.shotProjectiles < total) {
                 fireOne(owner, level, cfg);
                 st.shotProjectiles++;
             }
@@ -244,7 +282,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
             playSound(owner, level, p);
             fireOne(owner, level, cfg);
             st.shotProjectiles++;
-            if (st.shotProjectiles >= Math.max(1, p.count())) reset(st);
+            if (st.shotProjectiles >= Math.max(1, p.count().evalInt(owner))) reset(st);
         }
     }
 
@@ -281,7 +319,14 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         Entity projectile;
         if (p.textureLocation().isPresent()) {
             CustomProjectileEntity custom = new CustomProjectileEntity(ApoliEntities.customProjectile(), owner, level);
-            custom.setTexture(p.textureLocation().get());
+            ResourceLocation declared = p.textureLocation().get();
+            dev.overgrown.apoli.data.TextureRef.Kind kind = dev.overgrown.apoli.data.TextureRef.kindOf(declared);
+            if (kind != null && kind.isItem() && owner instanceof LivingEntity holder) {
+                custom.setItem(kind == dev.overgrown.apoli.data.TextureRef.Kind.HELD_ITEM
+                    ? holder.getMainHandItem() : holder.getOffhandItem());
+            } else {
+                custom.setTexture(declared);
+            }
             projectile = custom;
         } else if (p.entityType().isPresent()) {
             EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.getOptional(p.entityType().get()).orElse(null);
@@ -294,6 +339,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
 
         if (projectile instanceof ProjectileHitActions hooks) {
             hooks.apoli$setFireConfig(cfg);
+            hooks.apoli$setMaxRange(p.maxDistance().eval(owner));
         }
 
         float yaw = owner.getYRot();
@@ -302,9 +348,11 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
             .add(p.space().toGlobal(owner, new Vec3(p.offsetX(), p.offsetY(), p.offsetZ())));
         projectile.moveTo(spawn.x, spawn.y, spawn.z, yaw, pitch);
 
+        float speed = (float) p.speed().eval(owner);
+        float divergence = (float) p.divergence().eval(owner);
         if (projectile instanceof Projectile proj) {
             proj.setOwner(owner);
-            proj.shootFromRotation(owner, pitch, yaw, 0.0F, p.speed(), p.divergence());
+            proj.shootFromRotation(owner, pitch, yaw, 0.0F, speed, divergence);
         } else {
             float f = 0.017453292F;
             double g = 0.0075;
@@ -312,10 +360,10 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
             double dy = -Math.sin(pitch * f);
             double dz = Math.cos(yaw * f) * Math.cos(pitch * f);
             Vec3 v = new Vec3(dx, dy, dz).normalize().add(
-                level.random.nextGaussian() * g * p.divergence(),
-                level.random.nextGaussian() * g * p.divergence(),
-                level.random.nextGaussian() * g * p.divergence()
-            ).scale(p.speed());
+                level.random.nextGaussian() * g * divergence,
+                level.random.nextGaussian() * g * divergence,
+                level.random.nextGaussian() * g * divergence
+            ).scale(speed);
             projectile.setDeltaMovement(v);
         }
 

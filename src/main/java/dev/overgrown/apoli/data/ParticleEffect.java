@@ -35,6 +35,14 @@ public final class ParticleEffect {
         return this.raw;
     }
 
+    public @Nullable ParticleOptions resolve(net.minecraft.world.level.Level level, @Nullable net.minecraft.world.entity.Entity actor) {
+        ParticleOptions options = resolve(level);
+        if (options instanceof dev.overgrown.apoli.particle.CustomParticleOptions custom && custom.dynamic()) {
+            return custom.bake(actor);
+        }
+        return options;
+    }
+
     public @Nullable ParticleOptions resolve(net.minecraft.world.level.Level level) {
         Resolved hit = this.resolved;
         if (hit != null) return hit.options();

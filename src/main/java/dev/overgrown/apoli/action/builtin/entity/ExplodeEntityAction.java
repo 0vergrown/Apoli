@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
+import dev.overgrown.apoli.condition.BiEntityCondition;
 import dev.overgrown.apoli.condition.BlockCondition;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.DestructionType;
@@ -17,9 +18,11 @@ public final class ExplodeEntityAction implements ActionType<EntityCtx, ExplodeE
         float power,
         DestructionType destructionType,
         boolean damageSelf,
+        boolean damageTargets,
         Optional<BlockCondition> indestructible,
         Optional<BlockCondition> destructible,
-        boolean createFire
+        boolean createFire,
+        Optional<BiEntityCondition> bientityCondition
     ) {}
 
     @Override
@@ -28,9 +31,11 @@ public final class ExplodeEntityAction implements ActionType<EntityCtx, ExplodeE
             Codec.FLOAT.fieldOf("power").forGetter(Cfg::power),
             DestructionType.CODEC.optionalFieldOf("destruction_type", DestructionType.BREAK).forGetter(Cfg::destructionType),
             Codec.BOOL.optionalFieldOf("damage_self", true).forGetter(Cfg::damageSelf),
+            Codec.BOOL.optionalFieldOf("damage_targets", true).forGetter(Cfg::damageTargets),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("indestructible", BlockCondition.CODEC).forGetter(Cfg::indestructible),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("destructible", BlockCondition.CODEC).forGetter(Cfg::destructible),
-            Codec.BOOL.optionalFieldOf("create_fire", false).forGetter(Cfg::createFire)
+            Codec.BOOL.optionalFieldOf("create_fire", false).forGetter(Cfg::createFire),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Cfg::bientityCondition)
         ).apply(i, Cfg::new));
     }
 
@@ -43,7 +48,7 @@ public final class ExplodeEntityAction implements ActionType<EntityCtx, ExplodeE
             ExplosionHelper.detonate(
                 ctx.level(), holder, holder.position(),
                 cfg.power, cfg.createFire, cfg.destructionType,
-                cfg.indestructible, cfg.destructible
+                cfg.indestructible, cfg.destructible, cfg.damageTargets, cfg.bientityCondition
             );
         } finally {
             if (!cfg.damageSelf) holder.setInvulnerable(wasInvulnerable);

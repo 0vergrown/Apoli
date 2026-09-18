@@ -131,10 +131,10 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
 
     private static final MapCodec<Base> BASE_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
         Mode.CODEC.optionalFieldOf("mode", Mode.TEXTURE).forGetter(Base::mode),
-        IdCodecs.ID.optionalFieldOf("wide_texture_location").forGetter(Base::wideTexture),
-        IdCodecs.ID.optionalFieldOf("slim_texture_location").forGetter(Base::slimTexture),
+        dev.overgrown.apoli.data.TextureRef.ID_CODEC.optionalFieldOf("wide_texture_location").forGetter(Base::wideTexture),
+        dev.overgrown.apoli.data.TextureRef.ID_CODEC.optionalFieldOf("slim_texture_location").forGetter(Base::slimTexture),
         IdCodecs.ID.optionalFieldOf("model_location").forGetter(Base::model),
-        IdCodecs.ID.optionalFieldOf("texture_location").forGetter(Base::texture),
+        dev.overgrown.apoli.data.TextureRef.ID_CODEC.optionalFieldOf("texture_location").forGetter(Base::texture),
         Codec.BOOL.optionalFieldOf("render_as_overlay", false).forGetter(Base::renderAsOverlay),
         Codec.BOOL.optionalFieldOf("hide_cape", false).forGetter(Base::hideCape),
         EquipmentSlot.CODEC.listOf().optionalFieldOf("hidden_slots", List.of()).forGetter(Base::hiddenSlots),

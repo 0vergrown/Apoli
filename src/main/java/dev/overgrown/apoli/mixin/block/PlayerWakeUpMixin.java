@@ -19,6 +19,6 @@ public abstract class PlayerWakeUpMixin {
         Player self = (Player) (Object) this;
         Optional<BlockPos> bed = self.getSleepingPos();
         if (bed.isEmpty()) return;
-        WakeUpHandler.fire(self, bed.get());
+        WakeUpHandler.fire(self, bed.get(), wakeImmediately, updateLevelForSleepingPlayers);
     }
 }

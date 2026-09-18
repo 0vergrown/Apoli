@@ -32,6 +32,7 @@ public final class EntitySetPower extends PowerType<EntitySetPower.Cfg> {
 
     private static final Map<StateKey, State> STATES = new HashMap<>();
     private static final Map<UUID, Set<StateKey>> MEMBERSHIPS = new HashMap<>();
+    private static final Map<StateKey, List<UUID>> LAST_SENT = new HashMap<>();
 
     @Override
     public MapCodec<Cfg> configCodec() {
@@ -146,6 +147,42 @@ public final class EntitySetPower extends PowerType<EntitySetPower.Cfg> {
         if (owners == null) return List.of();
         if (reverse) Collections.reverse(owners);
         return owners;
+    }
+
+    public static void flushSync(MinecraftServer server) {
+        for (Map.Entry<StateKey, State> entry : STATES.entrySet()) {
+            StateKey key = entry.getKey();
+            List<UUID> members = List.copyOf(entry.getValue().uuids);
+            if (members.equals(LAST_SENT.get(key))) continue;
+            if (!send(server, key, members)) continue;
+            LAST_SENT.put(key, members);
+        }
+        if (LAST_SENT.isEmpty()) return;
+        for (java.util.Iterator<Map.Entry<StateKey, List<UUID>>> it = LAST_SENT.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<StateKey, List<UUID>> sent = it.next();
+            if (STATES.containsKey(sent.getKey())) continue;
+            send(server, sent.getKey(), List.of());
+            it.remove();
+        }
+    }
+
+    private static boolean send(MinecraftServer server, StateKey key, List<UUID> members) {
+        net.minecraft.server.level.ServerPlayer owner = server.getPlayerList().getPlayer(key.owner);
+        if (owner == null) return false;
+        dev.overgrown.apoli.ApoliNetwork.sendEntitySets(owner,
+            new dev.overgrown.apoli.network.payload.SyncEntitySetsS2C(key.powerId, members));
+        return true;
+    }
+
+    public static void syncAllTo(net.minecraft.server.level.ServerPlayer player) {
+        UUID uuid = player.getUUID();
+        for (Map.Entry<StateKey, State> entry : STATES.entrySet()) {
+            if (!entry.getKey().owner.equals(uuid)) continue;
+            List<UUID> members = List.copyOf(entry.getValue().uuids);
+            dev.overgrown.apoli.ApoliNetwork.sendEntitySets(player,
+                new dev.overgrown.apoli.network.payload.SyncEntitySetsS2C(entry.getKey().powerId, members));
+            LAST_SENT.put(entry.getKey(), members);
+        }
     }
 
     public static @Nullable Entity resolveEntity(MinecraftServer server, UUID uuid) {

@@ -84,8 +84,8 @@ public final class ApoliClient implements ClientModInitializer {
                 ? dev.overgrown.apoli.client.ClientPowerState.getCooldown(powerId)
                 : 0);
 
-        HeldKeys.setClientLookup((entity, key) ->
-            entity == Minecraft.getInstance().player && KeyPressWatcher.isLocalHeld(key));
+        HeldKeys.setClientLookup((entity, key, grace) ->
+            entity == Minecraft.getInstance().player && KeyPressWatcher.isLocalHeld(key, grace));
         KeyPressWatcher.setSender(keys -> {
             FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
             new KeyHeldC2S(keys).write(buf);
@@ -115,6 +115,20 @@ public final class ApoliClient implements ClientModInitializer {
             SyncEntityPowersS2C payload = SyncEntityPowersS2C.read(buf);
             mc.execute(() -> ClientPowerState.applyEntityPowersSync(payload));
         });
+
+        ClientPlayNetworking.registerGlobalReceiver(
+            dev.overgrown.apoli.network.payload.DevModeS2C.CHANNEL, (mc, handler, buf, sender) -> {
+                dev.overgrown.apoli.network.payload.DevModeS2C mode =
+                    dev.overgrown.apoli.network.payload.DevModeS2C.read(buf);
+                mc.execute(() -> dev.overgrown.apoli.client.ClientDevMode.set(mode.enabled()));
+            });
+
+        ClientPlayNetworking.registerGlobalReceiver(
+            dev.overgrown.apoli.network.payload.SyncEntitySetsS2C.CHANNEL, (mc, handler, buf, sender) -> {
+                dev.overgrown.apoli.network.payload.SyncEntitySetsS2C sets =
+                    dev.overgrown.apoli.network.payload.SyncEntitySetsS2C.read(buf);
+                mc.execute(() -> dev.overgrown.apoli.client.ClientEntitySets.apply(sets.powerId(), sets.members()));
+            });
 
         ClientPlayNetworking.registerGlobalReceiver(
             dev.overgrown.apoli.network.payload.SyncAuxIntsS2C.CHANNEL, (mc, handler, buf, sender) -> {
@@ -153,6 +167,14 @@ public final class ApoliClient implements ClientModInitializer {
             holder == net.minecraft.client.Minecraft.getInstance().player
                 ? dev.overgrown.apoli.client.ClientPowerState.powerInventory(powerId)
                 : null);
+
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.TickRateS2C.CHANNEL,
+            (client, handler, buf, sender) -> {
+                dev.overgrown.apoli.network.payload.TickRateS2C payload =
+                    dev.overgrown.apoli.network.payload.TickRateS2C.read(buf);
+                client.execute(() -> dev.overgrown.apoli.client.ClientTickRates.set(
+                    payload.entityId(), payload.rate(), payload.baseRate()));
+            });
 
         ClientPlayNetworking.registerGlobalReceiver(ApplyVelocityS2C.CHANNEL, (mc, handler, buf, sender) -> {
             ApplyVelocityS2C payload = ApplyVelocityS2C.read(buf);
@@ -248,6 +270,8 @@ public final class ApoliClient implements ClientModInitializer {
             mc.execute(() -> {
                 DynamicKeyMappingManager.unregisterAll();
                 ClientPowerState.clear();
+                dev.overgrown.apoli.client.ClientEntitySets.clear();
+                dev.overgrown.apoli.client.ClientDevMode.clear();
                 dev.overgrown.apoli.mount.MountOffsets.clearAll();
                 dev.overgrown.apoli.client.ShaderPowerState.clear();
                 dev.overgrown.apoli.client.render.BlockRenderRules.clear();
@@ -256,6 +280,7 @@ public final class ApoliClient implements ClientModInitializer {
                 dev.overgrown.apoli.client.ClientLabelState.clear();
                 RopeClientManager.clear();
                 KeyPressWatcher.reset();
+                dev.overgrown.apoli.client.ApoliKeyMappings.reset();
                 dev.overgrown.apoli.client.ForcedKeys.clear();
                 dev.overgrown.apoli.client.BlockedKeys.clear();
                 dev.overgrown.apoli.client.CursorSpeedState.reset();
@@ -294,12 +319,16 @@ public final class ApoliClient implements ClientModInitializer {
             dev.overgrown.apoli.compat.ears.EarsCompat.init();
         }
 
+        ClientTickEvents.START_CLIENT_TICK.register(mc -> {
+            if (mc.player != null && !mc.isPaused()) ApoliKeyHandler.onClientTick();
+        });
+
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             dev.overgrown.apoli.client.CursorSpeedState.tick(mc);
+            dev.overgrown.apoli.client.MouseMovementWatcher.clientTick(mc);
             dev.overgrown.apoli.client.render.ClientRenderFlags.clientTick(mc);
             dev.overgrown.apoli.client.render.BlockRenderRules.clientTick(mc);
             if (mc.player != null && !mc.isPaused()) {
-                ApoliKeyHandler.onClientTick();
                 while (SKILL_TREE_KEY.consumeClick()) {
                     if (mc.screen == null && dev.overgrown.apoli.client.skill.ClientSkillState.hasAnyTree()) {
                         if (net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.canSend(dev.overgrown.apoli.network.payload.RequestSkillStateC2S.CHANNEL)) {
@@ -329,5 +358,6 @@ public final class ApoliClient implements ClientModInitializer {
         HudRenderCallback.EVENT.register(PowerHudRenderer::render);
         HudRenderCallback.EVENT.register(dev.overgrown.apoli.client.TextOverlayRenderer::render);
         HudRenderCallback.EVENT.register(OverlayRenderer::renderAboveHud);
+        HudRenderCallback.EVENT.register(dev.overgrown.apoli.client.DevHudRenderer::render);
     }
 }

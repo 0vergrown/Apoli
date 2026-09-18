@@ -21,6 +21,7 @@ public final class PowerTypes {
     private static final AttributePower ATTRIBUTE = new AttributePower();
     public static final ActionOnKeyPressPower ACTION_ON_KEY_PRESS = new ActionOnKeyPressPower();
     public static final ActionOnUsePower ACTION_ON_USE = new ActionOnUsePower();
+    public static final PreventUsePower PREVENT_USE = new PreventUsePower();
     public static final ActionOnHitPower ACTION_ON_HIT = new ActionOnHitPower();
     public static final ActionWhenHitPower ACTION_WHEN_HIT = new ActionWhenHitPower();
     public static final ModifyDamagePower MODIFY_DAMAGE = new ModifyDamagePower();
@@ -186,13 +187,14 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("modify_player_spawn"), new ModifyPlayerSpawnPower());
         PowerTypeRegistry.register(Apoli.id("modify_projectile_damage"), new ModifyProjectileDamagePower());
         PowerTypeRegistry.register(Apoli.id("modify_slipperiness"), new ModifySlipperinessPower());
+        PowerTypeRegistry.register(Apoli.id("modify_use_slowdown"), new ModifyUseSlowdownPower());
         PowerTypeRegistry.register(Apoli.id("modify_swim_speed"), new ModifySwimSpeedPower());
         PowerTypeRegistry.register(Apoli.id("modify_velocity"), new ModifyVelocityPower());
         PowerTypeRegistry.register(Apoli.id("modify_xp_gain"), new ModifyXpGainPower());
 
         PowerTypeRegistry.register(
             Apoli.id("prevent_use"),
-            new PreventUsePower(),
+            PREVENT_USE,
             AliasingOptions.builder()
                 .addTypeAlias(Apoli.id("prevent_entity_use"))
                 .addTypeAlias(Apoli.id("prevent_being_used"))
@@ -273,6 +275,8 @@ public final class PowerTypes {
                 .build());
 
         PowerTypeRegistry.register(Apoli.id("inventory"), new InventoryPower());
+        PowerTypeRegistry.register(Apoli.id("power_storage"),
+            new dev.overgrown.apoli.power.builtin.PowerStoragePower());
         PowerTypeRegistry.register(Apoli.id("recipe"), new RecipePower());
         PowerTypeRegistry.register(Apoli.id("modify_crafting"), new ModifyCraftingPower());
         PowerTypeRegistry.register(Apoli.id("modify_grindstone"), new ModifyGrindstonePower());
@@ -281,6 +285,9 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("modify_food"), new dev.overgrown.apoli.power.builtin.ModifyFoodPower());
 
         PowerTypeRegistry.register(Apoli.id("fire_projectile"), new FireProjectilePower());
+        PowerTypeRegistry.register(Apoli.id("modify_tick_rate"), new dev.overgrown.apoli.power.builtin.ModifyTickRatePower());
+        PowerTypeRegistry.register(Apoli.id("action_on_mouse_movement"),
+            new dev.overgrown.apoli.power.builtin.ActionOnMouseMovementPower());
         PowerTypeRegistry.register(Apoli.id("game_event_listener"), new GameEventListenerPower());
 
         if (ModCompat.ICARUS) {

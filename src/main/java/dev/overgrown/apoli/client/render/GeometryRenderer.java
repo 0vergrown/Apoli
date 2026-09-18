@@ -10,6 +10,7 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -26,6 +27,18 @@ public final class GeometryRenderer {
 
     public static void syncPlayer(CustomModel custom, PlayerModel<AbstractClientPlayer> live,
                                   PlayerModel<AbstractClientPlayer> rest) {
+        resetAll(custom);
+        syncBone(custom, ModelParts.HEAD, live.head, rest.head);
+        syncBone(custom, ModelParts.HAT, live.hat, rest.hat);
+        syncBone(custom, ModelParts.BODY, live.body, rest.body);
+        syncBone(custom, ModelParts.RIGHT_ARM, live.rightArm, rest.rightArm);
+        syncBone(custom, ModelParts.LEFT_ARM, live.leftArm, rest.leftArm);
+        syncBone(custom, ModelParts.RIGHT_LEG, live.rightLeg, rest.rightLeg);
+        syncBone(custom, ModelParts.LEFT_LEG, live.leftLeg, rest.leftLeg);
+    }
+
+    public static void syncHumanoid(CustomModel custom, net.minecraft.client.model.HumanoidModel<?> live) {
+        PlayerModel<AbstractClientPlayer> rest = PlayerRestPose.get();
         resetAll(custom);
         syncBone(custom, ModelParts.HEAD, live.head, rest.head);
         syncBone(custom, ModelParts.HAT, live.hat, rest.hat);
@@ -86,7 +99,13 @@ public final class GeometryRenderer {
     }
 
     public static void draw(GeometryRender render, CustomModel model, PoseStack pose, MultiBufferSource buffers, int light) {
-        VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(render.mode(), render.texture()));
+        draw(render, model, pose, buffers, light, null);
+    }
+
+    public static void draw(GeometryRender render, CustomModel model, PoseStack pose, MultiBufferSource buffers,
+                            int light, @Nullable Entity subject) {
+        VertexConsumer consumer = buffers.getBuffer(
+            OverlayRenderTypes.forMode(render.mode(), DynamicTextures.resolve(render.texture(), subject)));
         boolean scaled = render.scale() != 1.0F;
         if (scaled) {
             pose.pushPose();
@@ -101,11 +120,17 @@ public final class GeometryRenderer {
 
     public static void drawSlot(GeometryRender render, CustomModel model, String normalizedName, float alphaScale,
                                 PoseStack pose, MultiBufferSource buffers, int light) {
+        drawSlot(render, model, normalizedName, alphaScale, pose, buffers, light, null);
+    }
+
+    public static void drawSlot(GeometryRender render, CustomModel model, String normalizedName, float alphaScale,
+                                PoseStack pose, MultiBufferSource buffers, int light, @Nullable Entity subject) {
         CustomModel.Bone[] bound = model.bones(normalizedName);
         if (bound.length == 0) {
             return;
         }
-        VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(render.mode(), render.texture()));
+        VertexConsumer consumer = buffers.getBuffer(
+            OverlayRenderTypes.forMode(render.mode(), DynamicTextures.resolve(render.texture(), subject)));
         boolean scaled = render.scale() != 1.0F;
         if (scaled) {
             pose.pushPose();

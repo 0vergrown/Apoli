@@ -221,7 +221,7 @@ public final class GameEventListenerPower extends PowerType<GameEventListenerPow
             if (actionSource instanceof LivingEntity actor && entity instanceof LivingEntity target) {
                 cfg.bientityAction().ifPresent(a -> a.run(new BiEntityCtx(actor, target, level)));
             }
-            cfg.blockAction().ifPresent(a -> a.run(new BlockCtx(BlockPos.containing(pos), level.getBlockState(BlockPos.containing(pos)), level)));
+            cfg.blockAction().ifPresent(a -> a.run(new BlockCtx(BlockPos.containing(pos), level.getBlockState(BlockPos.containing(pos)), level, actionSource)));
             return true;
         }
 

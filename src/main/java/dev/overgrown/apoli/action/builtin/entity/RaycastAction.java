@@ -255,11 +255,11 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
                     if (blockHit == null) blockHit = hit;
                     BlockPos pos = hit.getBlockPos();
                     BlockState state = level.getBlockState(pos);
-                    if (cfg.hooks.blockCondition.isEmpty()
-                        || cfg.hooks.blockCondition.get().test(new BlockCtx(pos, state, level))) {
+                    BlockCtx blockCtx = new BlockCtx(pos, state, level, source, hit.getLocation());
+                    if (cfg.hooks.blockCondition.isEmpty() || cfg.hooks.blockCondition.get().test(blockCtx)) {
                         if (cfg.hooks.blockAction.isPresent()) {
                             try (Scope scope = new Scope(origin, hit.getLocation(), 1, guard)) {
-                                cfg.hooks.blockAction.get().run(new BlockCtx(pos, state, level));
+                                cfg.hooks.blockAction.get().run(blockCtx);
                             }
                         }
                     }
@@ -350,15 +350,21 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
             rayEnd = origin.add(dir.scale(blockDist));
         }
 
+        if (dev.overgrown.apoli.dev.DevMode.any() && level instanceof ServerLevel devLevel) {
+            dev.overgrown.apoli.dev.DevParticles.outlineRay(devLevel, origin, rayEnd,
+                cfg.params.radius.map(r -> Math.max(r.x(), Math.max(r.y(), r.z()))).orElse(0f),
+                cfg.params.coneAngle.orElse(0f));
+        }
+
         boolean anyHit = anyEntityHit || blockHit != null;
         if (blockHit != null && !entityStops && !pierceBlocks) {
             BlockPos pos = blockHit.getBlockPos();
             BlockState state = level.getBlockState(pos);
-            if (cfg.hooks.blockCondition.isEmpty()
-                || cfg.hooks.blockCondition.get().test(new BlockCtx(pos, state, level))) {
+            BlockCtx blockCtx = new BlockCtx(pos, state, level, source, blockHit.getLocation());
+            if (cfg.hooks.blockCondition.isEmpty() || cfg.hooks.blockCondition.get().test(blockCtx)) {
                 if (cfg.hooks.blockAction.isPresent()) {
                     try (Scope scope = new Scope(origin, blockHit.getLocation(), 1, 0)) {
-                        cfg.hooks.blockAction.get().run(new BlockCtx(pos, state, level));
+                        cfg.hooks.blockAction.get().run(blockCtx);
                     }
                 }
             }
@@ -372,7 +378,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         }
 
         if (level instanceof ServerLevel serverLevel && cfg.params.particle.isPresent()) {
-            ParticleOptions opts = cfg.params.particle.get().resolve(level);
+            ParticleOptions opts = cfg.params.particle.get().resolve(level, ctx.raw());
             if (opts != null) {
                 double total = origin.distanceTo(rayEnd);
                 double step = Math.max(0.1, cfg.params.spacing);

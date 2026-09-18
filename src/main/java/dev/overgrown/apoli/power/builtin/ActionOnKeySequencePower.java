@@ -8,6 +8,7 @@ import dev.overgrown.apoli.action.EntityAction;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.FunctionalKey;
 import dev.overgrown.apoli.data.HudRender;
+import dev.overgrown.apoli.data.SequenceStep;
 import dev.overgrown.apoli.keybind.HeldKeys;
 import dev.overgrown.apoli.network.payload.PowerActivatedS2C;
 import dev.overgrown.apoli.power.ApoliIds;
@@ -44,7 +45,10 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
         int timeout,
         HudRender hudRender,
         List<FunctionalKey> keys,
-        List<String> keySequence,
+        List<SequenceStep> keySequence,
+        List<String> atomKeys,
+        int[] atomHold,
+        int[] atomGap,
         int[] prefixFunction
     ) {}
 
@@ -52,6 +56,8 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
         int progress;
         int cooldown;
         int idle;
+        int sinceAdvance;
+        int holdLeft;
         boolean pending;
         boolean completedNow;
     }
@@ -79,10 +85,21 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
             Codec.INT.optionalFieldOf("timeout", 20).forGetter(Config::timeout),
             HudRender.CODEC.optionalFieldOf("hud_render", HudRender.DONT_RENDER).forGetter(Config::hudRender),
             Codec.list(FunctionalKey.CODEC).fieldOf("keys").forGetter(Config::keys),
-            Codec.list(Codec.STRING).fieldOf("key_sequence").forGetter(Config::keySequence)
-        ).apply(i, (successAction, failAction, cooldown, timeout, hudRender, keys, keySequence) ->
-            new Config(successAction, failAction, cooldown, timeout, hudRender, keys, keySequence,
-                computePrefix(keySequence))));
+            Codec.list(SequenceStep.CODEC).fieldOf("key_sequence").forGetter(Config::keySequence)
+        ).apply(i, ActionOnKeySequencePower::assemble));
+    }
+
+    private static Config assemble(Optional<EntityAction> successAction, Optional<EntityAction> failAction,
+                                   Expression cooldown, int timeout, HudRender hudRender,
+                                   List<FunctionalKey> keys, List<SequenceStep> steps) {
+        int atoms = SequenceStep.atomCount(steps);
+        List<String> atomKeys = new ArrayList<>(atoms);
+        int[] hold = new int[atoms];
+        int[] gap = new int[atoms];
+        SequenceStep.expand(steps, atomKeys, hold, gap);
+        List<String> frozen = List.copyOf(atomKeys);
+        return new Config(successAction, failAction, cooldown, timeout, hudRender, keys, steps,
+            frozen, hold, gap, computePrefix(frozen));
     }
 
     @Override
@@ -178,7 +195,30 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
                 if (fk.key().continuous() ? down : edge) fk.action().ifPresent(a -> a.run(ctx));
             }
 
-            if (cfg.keySequence.isEmpty()) continue;
+            if (cfg.atomKeys.isEmpty()) continue;
+            if (st.progress > 0 || st.holdLeft > 0) st.sinceAdvance++;
+
+            if (st.holdLeft > 0) {
+                if (!held.contains(cfg.atomKeys.get(st.progress - 1))) {
+                    breakRun(cfg, st, ctx);
+                    continue;
+                }
+                st.idle = 0;
+                if (--st.holdLeft == 0) {
+                    st.sinceAdvance = 0;
+                    if (st.progress == cfg.atomKeys.size()) {
+                        st.progress = 0;
+                        st.pending = true;
+                        st.completedNow = true;
+                    }
+                }
+                continue;
+            }
+
+            if (st.progress > 0 && st.progress < cfg.atomKeys.size()) {
+                int gap = cfg.atomGap[st.progress];
+                if (gap > 0 && st.sinceAdvance > gap) breakRun(cfg, st, ctx);
+            }
 
             if (edges == null) {
                 if (st.progress > 0 || st.pending) {
@@ -186,6 +226,7 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
                     if (cfg.timeout > 0 && st.idle >= cfg.timeout) {
                         st.progress = 0;
                         st.idle = 0;
+                        st.sinceAdvance = 0;
                         if (st.pending) fire(player, id, cfg, st, ctx);
                     }
                 }
@@ -194,6 +235,7 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
 
             st.idle = 0;
             for (int e = 0; e < edges.size(); e++) {
+                if (st.holdLeft > 0) break;
                 if (feed(edges.get(e), cfg, st, ctx)) {
                     st.pending = true;
                     st.completedNow = true;
@@ -203,6 +245,14 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
         }
 
         arbitrate(player, ps, ctx);
+    }
+
+    private static void breakRun(Config cfg, SeqState st, EntityCtx ctx) {
+        st.progress = 0;
+        st.holdLeft = 0;
+        st.idle = 0;
+        st.sinceAdvance = 0;
+        cfg.failAction.ifPresent(a -> a.run(ctx));
     }
 
     private void arbitrate(ServerPlayer player, PlayerState ps, EntityCtx ctx) {
@@ -227,19 +277,20 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
             if (other.equals(self)) continue;
             SeqState st = ps.seqs.get(other);
             if (st == null || !st.completedNow) continue;
-            if (isProperInfix(cfg.keySequence, ps.configs.get(other).keySequence)) return true;
+            if (isProperInfix(cfg.atomKeys, ps.configs.get(other).atomKeys)) return true;
         }
         return false;
     }
 
     private static boolean blockedByViableExtension(PlayerState ps, ResourceLocation self, Config cfg) {
-        int len = cfg.keySequence.size();
+        int len = cfg.atomKeys.size();
         for (int i = 0; i < ps.ids.size(); i++) {
             ResourceLocation other = ps.ids.get(i);
             if (other.equals(self)) continue;
             SeqState st = ps.seqs.get(other);
-            if (st == null || st.cooldown > 0 || st.progress < len) continue;
-            if (isProperInfix(cfg.keySequence, ps.configs.get(other).keySequence)) return true;
+            if (st == null || st.cooldown > 0) continue;
+            if (st.progress < len && st.holdLeft == 0) continue;
+            if (isProperInfix(cfg.atomKeys, ps.configs.get(other).atomKeys)) return true;
         }
         return false;
     }
@@ -261,7 +312,9 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
     private void fire(ServerPlayer player, ResourceLocation powerId, Config cfg, SeqState st, EntityCtx ctx) {
         st.pending = false;
         st.progress = 0;
+        st.holdLeft = 0;
         st.idle = 0;
+        st.sinceAdvance = 0;
         int ticks = Math.max(PowerResources.cooldownTicks(cfg.cooldown, PowerContainer.of(player)), 0);
         st.cooldown = ticks;
         cfg.successAction.ifPresent(a -> a.run(ctx));
@@ -281,7 +334,7 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
     }
 
     private boolean feed(String key, Config cfg, SeqState state, EntityCtx ctx) {
-        List<String> seq = cfg.keySequence;
+        List<String> seq = cfg.atomKeys;
         int m = seq.size();
         int before = state.progress;
         int q = before;
@@ -290,6 +343,13 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
 
         if (q < before) {
             cfg.failAction.ifPresent(a -> a.run(ctx));
+        }
+        if (q != before) state.sinceAdvance = 0;
+
+        if (q > 0 && cfg.atomHold[q - 1] > 0) {
+            state.progress = q;
+            state.holdLeft = cfg.atomHold[q - 1];
+            return false;
         }
         if (q == m) {
             state.progress = 0;

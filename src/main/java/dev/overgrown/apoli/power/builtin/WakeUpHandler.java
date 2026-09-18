@@ -12,15 +12,23 @@ import net.minecraft.world.level.block.state.BlockState;
 public final class WakeUpHandler {
     private WakeUpHandler() {}
 
-    public static void fire(Player player, BlockPos bedPos) {
+    public static void fire(Player player, BlockPos bedPos, boolean wakeImmediately, boolean updateSleepingPlayers) {
         Level level = player.level();
         if (level.isClientSide()) return;
+        boolean fullSleep = sleptThroughNight(player, wakeImmediately, updateSleepingPlayers);
         BlockState state = level.getBlockState(bedPos);
-        BlockCtx blockCtx = new BlockCtx(bedPos, state, level);
+        BlockCtx blockCtx = new BlockCtx(bedPos, state, level, player);
         PowerLookup.forEach(player, ApoliIds.ACTION_ON_WAKE_UP, ActionOnWakeUpPower.Config.class, cfg -> {
+            if (cfg.requireFullSleep() && !fullSleep) return;
             if (cfg.blockCondition().isPresent() && !cfg.blockCondition().get().test(blockCtx)) return;
             cfg.entityAction().ifPresent(action -> action.run(new EntityCtx(player, level)));
             cfg.blockAction().ifPresent(action -> action.run(blockCtx));
         });
+    }
+
+    private static boolean sleptThroughNight(Player player, boolean wakeImmediately, boolean updateSleepingPlayers) {
+        if (wakeImmediately) return false;
+        if (!updateSleepingPlayers) return true;
+        return player.isSleepingLongEnough() && player.level().isDay();
     }
 }

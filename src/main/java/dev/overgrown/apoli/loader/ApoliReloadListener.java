@@ -11,6 +11,7 @@ import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.ApoliNetwork;
 import dev.overgrown.apoli.alias.AliasDefault;
 import dev.overgrown.apoli.alias.NamespaceAlias;
+import dev.overgrown.apoli.condition.StaticCondition;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.LegacyPowerShapes;
@@ -51,7 +52,9 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
         for (Map.Entry<ResourceLocation, JsonElement> e : data.entrySet()) {
             ResourceLocation id = e.getKey();
             try {
-                expandMultiples(id, new Dynamic<>(JsonOps.INSTANCE, e.getValue()), expanded);
+                Dynamic<JsonElement> power = new Dynamic<>(JsonOps.INSTANCE, e.getValue());
+                if (!loadConditionPasses(power, id)) continue;
+                expandMultiples(id, power, expanded);
             } catch (Exception ex) {
                 LOG.error("[Apoli] Failed to expand power {}: {}", id, ex.getMessage());
             }
@@ -71,6 +74,7 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
             }
         }
         ApoliPowers.replaceAll(loaded);
+        dev.overgrown.apoli.data.MacroArguments.resetWarnings();
         LOG.info("[Apoli] Loaded {} power(s).", loaded.size());
 
         Map<ResourceLocation, dev.overgrown.apoli.skill.Skill> powerSkills = new HashMap<>();
@@ -109,6 +113,8 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
                 continue;
             }
             if (value.getMapValues().result().isEmpty()) {
+                LOG.warn("[Apoli] '{}' on {} is not a recognized field of apoli:multiple and is not an object, "
+                    + "so it cannot be a sub-power either - it is being ignored.", key, id);
                 continue;
             }
             ResourceLocation subId = subPowerId(id, key);
@@ -125,6 +131,7 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
                 LOG.error("[Apoli] Nested apoli:multiple is not allowed (sub-power '{}' of {}) — skipping.", key, id);
                 continue;
             }
+            if (!loadConditionPasses(substituted, subId)) continue;
             if (out.containsKey(subId)) {
                 LOG.warn("[Apoli] Sub-power id {} (from {}/{}) collides with an existing power — overwriting.", subId, id, key);
             }
@@ -171,6 +178,18 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
             if (encoded != null) out = out.set(def.field(), new Dynamic<>(ops, encoded));
         }
         return out;
+    }
+
+    public static <T> boolean loadConditionPasses(Dynamic<T> power, ResourceLocation id) {
+        Dynamic<T> declared = power.get("load_condition").result().orElse(null);
+        if (declared == null) return true;
+        StaticCondition condition = StaticCondition.CODEC.parse(declared)
+            .resultOrPartial(err -> LOG.error("[Apoli] Ignoring the load_condition on {}: {}", id, err))
+            .orElse(null);
+        if (condition == null) return true;
+        if (condition.test()) return true;
+        LOG.debug("[Apoli] Skipping power {} — its load_condition does not hold on this installation.", id);
+        return false;
     }
 
     private static <T> ResourceLocation declaredType(Dynamic<T> power) {

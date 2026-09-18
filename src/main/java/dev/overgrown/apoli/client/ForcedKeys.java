@@ -14,6 +14,7 @@ public final class ForcedKeys {
     private static final class Entry {
         int ticks;
         int clicks;
+        int localClicks;
     }
 
     private static final Map<String, Entry> BY_NAME = new HashMap<>();
@@ -36,6 +37,7 @@ public final class ForcedKeys {
             int ticks = Math.max(1, duration);
             if (ticks > entry.ticks) entry.ticks = ticks;
             entry.clicks++;
+            entry.localClicks++;
         }
         needsResolve = true;
         rebuild();
@@ -71,6 +73,14 @@ public final class ForcedKeys {
         Entry entry = resolved.get(mapping);
         if (entry == null || entry.clicks <= 0) return false;
         entry.clicks--;
+        return true;
+    }
+
+    public static boolean consumeLocalForcedClick(KeyMapping mapping) {
+        if (!any) return false;
+        Entry entry = resolved.get(mapping);
+        if (entry == null || entry.localClicks <= 0) return false;
+        entry.localClicks--;
         return true;
     }
 

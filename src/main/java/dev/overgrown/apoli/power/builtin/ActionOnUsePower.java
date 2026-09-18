@@ -85,7 +85,7 @@ public final class ActionOnUsePower extends PowerType<ActionOnUsePower.Config> {
         return false;
     }
 
-    private static void giveResultStack(LivingEntity actor, InteractionHand hand, ItemStack result) {
+    static void giveResultStack(LivingEntity actor, InteractionHand hand, ItemStack result) {
         ItemStack held = actor.getItemInHand(hand);
         if (held.isEmpty()) {
             actor.setItemInHand(hand, result);

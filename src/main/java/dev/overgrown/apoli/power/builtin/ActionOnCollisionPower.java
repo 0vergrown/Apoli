@@ -74,13 +74,16 @@ public final class ActionOnCollisionPower extends PowerType<ActionOnCollisionPow
         long now = level.getGameTime();
         if (!HitActionHandler.ready(impl, powerId, now)) return;
 
-        AABB box = cfg.radius() > 0.0F ? owner.getBoundingBox().inflate(cfg.radius()) : owner.getBoundingBox();
-        List<Entity> hits = level.getEntities(owner, box, other -> !other.isSpectator() && other.isAlive());
-        if (hits.isEmpty()) return;
-
         Power loaded = ApoliPowers.get(powerId);
         EntityCtx selfCtx = new EntityCtx(owner, level);
         if (loaded != null && loaded.condition().isPresent() && !loaded.condition().get().test(selfCtx)) return;
+
+        AABB box = cfg.radius() > 0.0F ? owner.getBoundingBox().inflate(cfg.radius()) : owner.getBoundingBox();
+        if (dev.overgrown.apoli.dev.DevParticles.due(level)) {
+            dev.overgrown.apoli.dev.DevParticles.outlineBox(level, box);
+        }
+        List<Entity> hits = level.getEntities(owner, box, other -> !other.isSpectator() && other.isAlive());
+        if (hits.isEmpty()) return;
 
         for (int i = 0; i < hits.size(); i++) {
             Entity other = hits.get(i);

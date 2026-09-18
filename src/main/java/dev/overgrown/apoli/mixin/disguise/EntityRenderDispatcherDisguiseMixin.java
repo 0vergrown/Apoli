@@ -28,6 +28,8 @@ public abstract class EntityRenderDispatcherDisguiseMixin {
         Entity dummy = ClientDisguiseManager.syncedDummy(entity.getId(), entity);
         if (dummy == null) return;
 
+        ClientDisguiseManager.ensureCustomModelLayer((EntityRenderDispatcher) (Object) this, dummy);
+        ClientDisguiseManager.ensureCustomModelLayer((EntityRenderDispatcher) (Object) this, dummy);
         Entity previous = ClientDisguiseManager.beginDisguiseRender(entity);
         try {
             ((EntityRenderDispatcher) (Object) this).render(dummy, x, y, z, yaw, partialTick, pose, buffers, light);

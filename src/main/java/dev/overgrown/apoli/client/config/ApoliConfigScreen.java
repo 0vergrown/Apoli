@@ -4,6 +4,7 @@ import dev.overgrown.apoli.client.ApoliClientConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
@@ -15,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.function.IntConsumer;
 
 @Environment(EnvType.CLIENT)
 public class ApoliConfigScreen extends Screen {
@@ -22,12 +24,17 @@ public class ApoliConfigScreen extends Screen {
     private static final List<String> SPEECH_SOURCES = List.of("auto", "microphone", "voicechat");
 
     private static final int ROW_HEIGHT = 24;
+    private static final int OFFSET_RANGE = 64;
     private static final int WIDGET_WIDTH = 260;
 
     @Nullable
     private final Screen parent;
     @Nullable
     private EditBox inputDevice;
+    @Nullable
+    private Integer hudOffsetX;
+    @Nullable
+    private Integer hudOffsetY;
 
     public ApoliConfigScreen(@Nullable Screen parent) {
         super(Component.translatable("apoli.config.title"));
@@ -38,7 +45,7 @@ public class ApoliConfigScreen extends Screen {
     protected void init() {
         ApoliClientConfig config = ApoliClientConfig.get();
         int x = this.width / 2 - WIDGET_WIDTH / 2;
-        int y = Math.max(40, this.height / 2 - ROW_HEIGHT * 4);
+        int y = Math.max(20, this.height / 2 - ROW_HEIGHT * 5);
 
         this.addRenderableWidget(toggle("speech_to_action", config.speechToAction(), x, y, config::setSpeechToAction));
         y += ROW_HEIGHT;
@@ -65,6 +72,16 @@ public class ApoliConfigScreen extends Screen {
         this.inputDevice.setHint(Component.translatable("apoli.config.speech_input_device.hint"));
         this.inputDevice.setTooltip(Tooltip.create(Component.translatable("apoli.config.speech_input_device.tooltip")));
         this.addRenderableWidget(this.inputDevice);
+        y += ROW_HEIGHT;
+
+        this.addRenderableWidget(toggle("hud_auto_stack", config.hudAutoStack(), x, y, config::setHudAutoStack));
+        y += ROW_HEIGHT;
+
+        int half = (WIDGET_WIDTH - 8) / 2;
+        this.addRenderableWidget(new OffsetSlider(x, y, half, "apoli.config.hud_offset_x",
+            this.hudOffsetX == null ? config.hudOffsetX() : this.hudOffsetX, value -> this.hudOffsetX = value));
+        this.addRenderableWidget(new OffsetSlider(x + half + 8, y, half, "apoli.config.hud_offset_y",
+            this.hudOffsetY == null ? config.hudOffsetY() : this.hudOffsetY, value -> this.hudOffsetY = value));
         y += ROW_HEIGHT + 8;
 
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> this.onClose())
@@ -92,8 +109,15 @@ public class ApoliConfigScreen extends Screen {
 
     @Override
     public void onClose() {
+        ApoliClientConfig config = ApoliClientConfig.get();
         if (this.inputDevice != null) {
-            ApoliClientConfig.get().setSpeechInputDevice(this.inputDevice.getValue().trim());
+            config.setSpeechInputDevice(this.inputDevice.getValue().trim());
+        }
+        if (this.hudOffsetX != null) {
+            config.setHudOffsetX(this.hudOffsetX);
+        }
+        if (this.hudOffsetY != null) {
+            config.setHudOffsetY(this.hudOffsetY);
         }
         if (this.minecraft != null) {
             this.minecraft.setScreen(this.parent);
@@ -103,5 +127,34 @@ public class ApoliConfigScreen extends Screen {
     @FunctionalInterface
     private interface BooleanSetter {
         void set(boolean value);
+    }
+
+    private static final class OffsetSlider extends AbstractSliderButton {
+
+        private final String key;
+        private final IntConsumer sink;
+
+        private OffsetSlider(int x, int y, int width, String key, int offset, IntConsumer sink) {
+            super(x, y, width, 20, Component.empty(),
+                Math.max(0.0, Math.min(1.0, (offset + OFFSET_RANGE) / (double) (OFFSET_RANGE * 2))));
+            this.key = key;
+            this.sink = sink;
+            this.setTooltip(Tooltip.create(Component.translatable(key + ".tooltip")));
+            this.updateMessage();
+        }
+
+        private int offset() {
+            return (int) Math.round(this.value * (OFFSET_RANGE * 2)) - OFFSET_RANGE;
+        }
+
+        @Override
+        protected void updateMessage() {
+            this.setMessage(Component.translatable(this.key, this.offset()));
+        }
+
+        @Override
+        protected void applyValue() {
+            this.sink.accept(this.offset());
+        }
     }
 }

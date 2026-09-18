@@ -13,6 +13,7 @@ public final class ApoliIds {
     public static final ResourceLocation DISABLE_REGEN = Apoli.id("disable_regen");
     public static final ResourceLocation MODIFY_HARVEST = Apoli.id("modify_harvest");
     public static final ResourceLocation PREVENT_TELEPORT = Apoli.id("prevent_teleport");
+    public static final ResourceLocation PREVENT_USE = Apoli.id("prevent_use");
     public static final ResourceLocation ENTITY_GLOW = Apoli.id("entity_glow");
     public static final ResourceLocation RESTRICT_ARMOR = Apoli.id("restrict_armor");
     public static final ResourceLocation PREVENT_GAME_EVENT = Apoli.id("prevent_game_event");
@@ -42,6 +43,7 @@ public final class ApoliIds {
     public static final ResourceLocation ACTION_ON_SPEECH = Apoli.id("action_on_speech");
     public static final ResourceLocation ACTION_ON_KEY_SEQUENCE = Apoli.id("action_on_key_sequence");
     public static final ResourceLocation ACTION_ON_SCROLL_WHEEL = Apoli.id("action_on_scroll_wheel");
+    public static final ResourceLocation ACTION_ON_MOUSE_MOVEMENT = Apoli.id("action_on_mouse_movement");
     public static final ResourceLocation SHOW_BOTH_ARMS = Apoli.id("show_both_arms");
     public static final ResourceLocation EMISSIVE = Apoli.id("emissive");
     public static final ResourceLocation CREATIVE_FLIGHT = Apoli.id("creative_flight");
@@ -71,6 +73,7 @@ public final class ApoliIds {
     public static final ResourceLocation ITEM_ON_ITEM = Apoli.id("item_on_item");
     public static final ResourceLocation PREVENT_KEY_PRESS = Apoli.id("prevent_key_press");
     public static final ResourceLocation MODIFY_BOUNCINESS = Apoli.id("modify_bounciness");
+    public static final ResourceLocation POWER_STORAGE = Apoli.id("power_storage");
 
     private ApoliIds() {}
 }

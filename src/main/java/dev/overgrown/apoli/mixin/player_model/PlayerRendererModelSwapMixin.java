@@ -1,22 +1,31 @@
 package dev.overgrown.apoli.mixin.player_model;
 
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.overgrown.apoli.client.disguise.ClientDisguiseManager;
 import dev.overgrown.apoli.client.render.ApoliPlayerModels;
+import dev.overgrown.apoli.client.render.DynamicTextures;
+import dev.overgrown.apoli.client.render.PlayerModelExtraTextureLayer;
+import dev.overgrown.apoli.power.builtin.CustomModelRenderPower;
+import dev.overgrown.apoli.power.builtin.ModifyPlayerModelPower;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
+import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(PlayerRenderer.class)
 @Environment(EnvType.CLIENT)
@@ -36,6 +45,7 @@ public abstract class PlayerRendererModelSwapMixin extends LivingEntityRenderer<
     private void apoli$bakeModels(EntityRendererProvider.Context ctx, boolean slim, CallbackInfo ci) {
         this.apoli$slimVariant = slim;
         ApoliPlayerModels.bake(ctx, slim);
+        this.addLayer(new PlayerModelExtraTextureLayer(this));
     }
 
     @Inject(
@@ -55,6 +65,28 @@ public abstract class PlayerRendererModelSwapMixin extends LivingEntityRenderer<
     private void apoli$swapModelPost(AbstractClientPlayer player, float yaw, float partialTick, PoseStack pose,
                                      MultiBufferSource buffers, int light, CallbackInfo ci) {
         this.model = this.apoli$cachedModel;
+    }
+
+    @Inject(method = "getTextureLocation", at = @At("HEAD"), cancellable = true)
+    private void apoli$modelTexture(AbstractClientPlayer player, CallbackInfoReturnable<ResourceLocation> cir) {
+        ResourceLocation texture = apoli$textureOverride(player);
+        if (texture != null) cir.setReturnValue(texture);
+    }
+
+    @ModifyExpressionValue(method = "renderHand",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/AbstractClientPlayer;getSkinTextureLocation()Lnet/minecraft/resources/ResourceLocation;"))
+    private ResourceLocation apoli$modelHandTexture(ResourceLocation original, PoseStack pose, MultiBufferSource buffers,
+                                                    int light, AbstractClientPlayer player, ModelPart arm, ModelPart sleeve) {
+        ResourceLocation texture = apoli$textureOverride(player);
+        return texture != null ? texture : original;
+    }
+
+    @Unique
+    private ResourceLocation apoli$textureOverride(AbstractClientPlayer player) {
+        if (ClientDisguiseManager.get(player.getId()) != null) return null;
+        if (CustomModelRenderPower.firstReplace(player) != null) return null;
+        ResourceLocation texture = ModifyPlayerModelPower.firstActiveTexture(player);
+        return texture == null ? null : DynamicTextures.resolve(texture, player);
     }
 
     @WrapMethod(method = "renderRightHand")

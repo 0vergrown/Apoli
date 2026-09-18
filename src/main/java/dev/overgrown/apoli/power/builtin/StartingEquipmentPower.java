@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.data.PositionedItemStack;
+import dev.overgrown.apoli.item.ConjuredItems;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
@@ -48,6 +49,7 @@ public final class StartingEquipmentPower extends PowerType<StartingEquipmentPow
 
     private static void give(Player player, PositionedItemStack pis) {
         ItemStack stack = pis.stack().copy();
+        if (pis.lock()) ConjuredItems.mark(stack, true);
         OptionalInt slot = pis.slot();
         if (slot.isPresent()) {
             int s = slot.getAsInt();

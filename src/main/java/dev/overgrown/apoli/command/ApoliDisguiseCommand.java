@@ -46,6 +46,13 @@ public final class ApoliDisguiseCommand {
         (ctx, builder) -> SharedSuggestionProvider.suggest(
             ctx.getSource().getServer().getPlayerList().getPlayers().stream().map(p -> p.getGameProfile().getName()), builder);
 
+    private static final SuggestionProvider<CommandSourceStack> ENTITY_TYPES_OR_PLAYERS =
+        (ctx, builder) -> {
+            SharedSuggestionProvider.suggest(ctx.getSource().getServer().getPlayerList().getPlayers().stream()
+                .map(p -> p.getGameProfile().getName().toLowerCase(java.util.Locale.ROOT)), builder);
+            return SharedSuggestionProvider.suggestResource(BuiltInRegistries.ENTITY_TYPE.keySet(), builder);
+        };
+
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("apoli:disguise")
             .requires(ApoliPermissions.require("apoli.command.disguise", 2));
@@ -74,6 +81,13 @@ public final class ApoliDisguiseCommand {
                 .then(Commands.literal("any")
                     .executes(ctx -> disguiseRandom(ctx, RandomKind.ANY)))));
 
+        root.then(Commands.argument("targets", EntityArgument.entities())
+            .then(Commands.argument("disguise", ResourceLocationArgument.id())
+                .suggests(ENTITY_TYPES_OR_PLAYERS)
+                .executes(ctx -> disguiseAsAny(ctx, null))
+                .then(Commands.argument("nbt", CompoundTagArgument.compoundTag())
+                    .executes(ctx -> disguiseAsAny(ctx, CompoundTagArgument.getCompoundTag(ctx, "nbt"))))));
+
         root.then(Commands.literal("clear")
             .then(Commands.argument("targets", EntityArgument.entities())
                 .executes(ApoliDisguiseCommand::clear)));
@@ -98,6 +112,28 @@ public final class ApoliDisguiseCommand {
             return 0;
         }
         DisguiseData data = new DisguiseData(typeId, Optional.empty(), Optional.ofNullable(nbt), Optional.empty());
+        int count = 0;
+        for (Entity target : EntityArgument.getEntities(ctx, "targets")) {
+            DisguiseManager.apply(target, data, true);
+            count++;
+        }
+        feedback(ctx, count, "as " + typeId);
+        return count;
+    }
+
+    private static int disguiseAsAny(CommandContext<CommandSourceStack> ctx, CompoundTag nbt) throws CommandSyntaxException {
+        ResourceLocation typeId = ResourceLocationArgument.getId(ctx, "disguise");
+        DisguiseData data = null;
+        if (BuiltInRegistries.ENTITY_TYPE.getOptional(typeId).isPresent()) {
+            data = new DisguiseData(typeId, Optional.empty(), Optional.ofNullable(nbt), Optional.empty());
+        } else if (typeId.getNamespace().equals(PLAYER_TYPE.getNamespace())) {
+            Optional<GameProfile> profile = resolveProfile(ctx.getSource().getServer(), typeId.getPath());
+            if (profile.isPresent()) data = playerData(profile.get());
+        }
+        if (data == null) {
+            ctx.getSource().sendFailure(Component.literal("Unknown entity type or player: " + typeId));
+            return 0;
+        }
         int count = 0;
         for (Entity target : EntityArgument.getEntities(ctx, "targets")) {
             DisguiseManager.apply(target, data, true);

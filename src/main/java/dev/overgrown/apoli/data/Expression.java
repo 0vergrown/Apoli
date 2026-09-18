@@ -13,7 +13,9 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Map;
 import java.util.OptionalDouble;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class Expression {
 
@@ -79,6 +81,22 @@ public final class Expression {
         } catch (IllegalArgumentException e) {
             return DataResult.error(e::getMessage);
         }
+    }
+
+    private static final int CACHE_LIMIT = 256;
+    private static final Map<String, Expression> CACHE = new ConcurrentHashMap<>();
+
+    public static Expression cached(String src) {
+        Expression hit = CACHE.get(src);
+        if (hit != null) return hit;
+        Expression built;
+        try {
+            built = of(src);
+        } catch (IllegalArgumentException e) {
+            built = constant(0.0);
+        }
+        if (CACHE.size() < CACHE_LIMIT) CACHE.putIfAbsent(src, built);
+        return built;
     }
 
     public static Expression constant(double value) {

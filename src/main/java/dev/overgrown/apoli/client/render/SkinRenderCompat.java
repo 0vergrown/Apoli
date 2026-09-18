@@ -28,7 +28,7 @@ public final class SkinRenderCompat {
         if (PreventFeatureRenderPower.prevents(source, featureKeys, net.minecraft.client.Minecraft.getInstance().player)) return true;
         if (!(source instanceof LivingEntity living)) return false;
         return CustomModelRenderPower.replacesSkin(living)
-            || ModifyPlayerModelPower.firstActiveModel(living) != null;
+            || ModifyPlayerModelPower.replacesAppearance(living);
     }
 
     public static int tint(int color, @Nullable LivingEntity entity, @Nullable ModelPart part) {

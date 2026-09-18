@@ -44,6 +44,13 @@ public class PerFaceCube extends ModelPart.Cube {
             sizeX, sizeY, sizeZ, grow, mirror, texWidth, texHeight);
     }
 
+    public static PerFaceCube of(float[][] faces,
+                                 float originX, float originY, float originZ,
+                                 float sizeX, float sizeY, float sizeZ,
+                                 float grow, boolean mirror, float texWidth, float texHeight) {
+        return new PerFaceCube(faces, originX, originY, originZ, sizeX, sizeY, sizeZ, grow, mirror, texWidth, texHeight);
+    }
+
     private PerFaceCube(float[][] faces,
                         float originX, float originY, float originZ,
                         float sizeX, float sizeY, float sizeZ,

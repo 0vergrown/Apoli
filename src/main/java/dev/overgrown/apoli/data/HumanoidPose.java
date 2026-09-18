@@ -1,7 +1,5 @@
 package dev.overgrown.apoli.data;
 
-import dev.overgrown.apoli.power.PowerLookup;
-import dev.overgrown.apoli.power.builtin.ModifyModelPartsPower;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
@@ -10,10 +8,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.UseAnim;
 
-import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
 
 public final class HumanoidPose {
 
@@ -47,9 +42,7 @@ public final class HumanoidPose {
     private static final int POSE_BOW = 3;
     private static final int POSE_SPEAR = 4;
 
-    private static final int STALE_TIMELINE_LIMIT = 128;
-
-    private static final Map<LivingEntity, Map<ModelPartTransformation, Integer>> TIMELINES = new WeakHashMap<>();
+    private static final ModelPartTimeline TIMELINE = new ModelPartTimeline();
 
     private final float[] parts = new float[PART_COUNT * STRIDE];
 
@@ -344,30 +337,17 @@ public final class HumanoidPose {
     }
 
     private void applyPowers(LivingEntity entity) {
-        if (!ModifyModelPartsPower.has(entity)) {
-            if (!TIMELINES.isEmpty()) TIMELINES.remove(entity);
-            return;
+        List<ModelPartTimeline.Slot> slots = TIMELINE.update(entity, entity.tickCount);
+        for (int i = 0; i < slots.size(); i++) {
+            ModelPartTimeline.Slot slot = slots.get(i);
+            float weight = slot.weight();
+            if (weight <= 0.0F) continue;
+            if (!slot.rendersIn(false)) continue;
+            ModelPartTransformation transformation = slot.transformation();
+            int part = indexOf(transformation.normalizedPart());
+            if (part < 0) continue;
+            apply(part, transformation, slot.value(), weight);
         }
-        Map<ModelPartTransformation, Integer> starts =
-            TIMELINES.computeIfAbsent(entity, key -> new IdentityHashMap<>(4));
-        int now = entity.tickCount;
-        PowerLookup.forEach(entity, ModifyModelPartsPower.CANONICAL, ModifyModelPartsPower.Config.class, config -> {
-            List<ModelPartTransformation> transformations = config.transformations();
-            for (int i = 0; i < transformations.size(); i++) {
-                ModelPartTransformation transformation = transformations.get(i);
-                int mask = transformation.perspectiveMask();
-                if (mask == Perspective.MASK_INHERIT) mask = config.perspectiveMask();
-                if (!Perspective.masked(mask, false)) continue;
-                int part = indexOf(transformation.normalizedPart());
-                if (part < 0) continue;
-                int start = starts.computeIfAbsent(transformation, key -> now);
-                float value = transformation.sample(now - start, entity);
-                float weight = weight(transformation, now - start);
-                if (weight <= 0.0F) continue;
-                apply(part, transformation, value, weight);
-            }
-        });
-        if (starts.size() > STALE_TIMELINE_LIMIT) starts.clear();
     }
 
     private void apply(int part, ModelPartTransformation transformation, float value, float weight) {
@@ -392,19 +372,8 @@ public final class HumanoidPose {
         }
     }
 
-    private static float weight(ModelPartTransformation transformation, float elapsed) {
-        float duration = transformation.duration();
-        if (duration <= 0.0F || elapsed >= duration) return 1.0F;
-        return transformation.easing().apply(elapsed / duration);
-    }
-
     public static boolean overridesPose(LivingEntity entity) {
-        if (!ModifyModelPartsPower.has(entity)) return false;
-        boolean[] overridden = {false};
-        PowerLookup.forEach(entity, ModifyModelPartsPower.CANONICAL, ModifyModelPartsPower.Config.class, config -> {
-            if (ModifyModelPartsPower.masked(config.overridePoseMask(), entity.getPose())) overridden[0] = true;
-        });
-        return overridden[0];
+        return TIMELINE.overridesPose(entity, entity.tickCount);
     }
 
     public static int indexOf(String normalizedPart) {

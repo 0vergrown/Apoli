@@ -27,10 +27,42 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
     private @Nullable FireProjectilePower.Config apoli$fireConfig;
     @Unique
     private boolean apoli$missFired;
+    @Unique
+    private double apoli$maxRangeSq;
+    @Unique
+    private boolean apoli$originSet;
+    @Unique
+    private double apoli$originX;
+    @Unique
+    private double apoli$originY;
+    @Unique
+    private double apoli$originZ;
 
     @Override
     public void apoli$setFireConfig(FireProjectilePower.Config config) {
         this.apoli$fireConfig = config;
+    }
+
+    @Override
+    public void apoli$setMaxRange(double blocks) {
+        this.apoli$maxRangeSq = blocks > 0.0 ? blocks * blocks : 0.0;
+    }
+
+    @Inject(method = "tick()V", at = @At("HEAD"))
+    private void apoli$enforceMaxRange(CallbackInfo ci) {
+        if (this.apoli$maxRangeSq <= 0.0) return;
+        Projectile self = (Projectile) (Object) this;
+        if (self.level().isClientSide()) return;
+        if (!this.apoli$originSet) {
+            this.apoli$originSet = true;
+            this.apoli$originX = self.getX();
+            this.apoli$originY = self.getY();
+            this.apoli$originZ = self.getZ();
+            return;
+        }
+        if (self.distanceToSqr(this.apoli$originX, this.apoli$originY, this.apoli$originZ) > this.apoli$maxRangeSq) {
+            self.discard();
+        }
     }
 
     @Inject(method = "canHitEntity(Lnet/minecraft/world/entity/Entity;)Z", at = @At("HEAD"), cancellable = true)
@@ -87,7 +119,8 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
         boolean blockActionRan = false;
         if (hooks.blockActionOnHit().isPresent() && result instanceof BlockHitResult blockHit) {
             BlockPos pos = blockHit.getBlockPos();
-            BlockCtx blockCtx = new BlockCtx(pos.immutable(), level.getBlockState(pos), level);
+            BlockCtx blockCtx = new BlockCtx(pos.immutable(), level.getBlockState(pos), level,
+                self.getOwner() != null ? self.getOwner() : self, blockHit.getLocation());
             if (hooks.blockCondition().isEmpty() || hooks.blockCondition().get().test(blockCtx)) {
                 hooks.blockActionOnHit().get().run(blockCtx);
                 blockActionRan = true;

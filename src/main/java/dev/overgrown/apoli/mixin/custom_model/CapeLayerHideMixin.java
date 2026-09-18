@@ -2,6 +2,7 @@ package dev.overgrown.apoli.mixin.custom_model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower;
+import dev.overgrown.apoli.power.builtin.ElytraFlightPower;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.player.AbstractClientPlayer;
@@ -19,7 +20,7 @@ public abstract class CapeLayerHideMixin {
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void apoli$hideCape(PoseStack pose, MultiBufferSource buffers, int light, AbstractClientPlayer player,
                                 float f, float g, float h, float j, float k, float l, CallbackInfo ci) {
-        if (CustomModelRenderPower.shouldHideCape(player)) {
+        if (CustomModelRenderPower.shouldHideCape(player) || ElytraFlightPower.shouldRenderElytra(player)) {
             ci.cancel();
         }
     }

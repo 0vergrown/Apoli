@@ -38,4 +38,22 @@ public final class ModCompat {
     public static final boolean BETTER_COMBAT = FabricLoader.getInstance().isModLoaded("bettercombat");
 
     public static final boolean PUFFISH_SKILLS = FabricLoader.getInstance().isModLoaded("puffish_skills");
+
+    public static final boolean LEDGER = classPresent("com.github.quiltservertools.ledger.database.ActionQueueService");
+
+    public static final boolean INDEXOR = classPresent("ledger.core.LedgerManager");
+
+    public static boolean classPresent(String binaryName) {
+        return ModCompat.class.getClassLoader().getResource(binaryName.replace('.', '/') + ".class") != null;
+    }
+
+    public static boolean isLoaded(String modId) {
+        return FabricLoader.getInstance().isModLoaded(modId);
+    }
+
+    public static String versionOf(String modId) {
+        return FabricLoader.getInstance().getModContainer(modId)
+            .map(container -> container.getMetadata().getVersion().getFriendlyString())
+            .orElse(null);
+    }
 }

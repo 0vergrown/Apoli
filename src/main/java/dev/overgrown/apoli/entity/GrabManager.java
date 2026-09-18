@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.entity;
 
+import dev.overgrown.apoli.data.Expression;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,7 +17,7 @@ import java.util.UUID;
 
 public final class GrabManager {
 
-    private record Grab(UUID grabber, UUID grabbed, double distance, long expiryTick,
+    private record Grab(UUID grabber, UUID grabbed, Expression distance, long expiryTick,
                         boolean disableGrabber, boolean disableGrabbed,
                         boolean horizontalOnly, boolean verticalOnly, float lockedYaw) {}
 
@@ -26,7 +27,7 @@ public final class GrabManager {
 
     private GrabManager() {}
 
-    public static void start(Entity grabber, Entity grabbed, int duration, double distance,
+    public static void start(Entity grabber, Entity grabbed, int duration, Expression distance,
                              boolean disableGrabber, boolean disableGrabbed,
                              boolean horizontalOnly, boolean verticalOnly) {
         if (grabber.level().isClientSide() || grabber == grabbed) return;
@@ -66,18 +67,19 @@ public final class GrabManager {
                 changed = true;
                 continue;
             }
+            double distance = grab.distance().eval(grabberEntity);
             float yaw = grab.verticalOnly() ? grab.lockedYaw() : grabberEntity.getYRot();
             float pitch = grab.horizontalOnly() ? 0.0f : grabberEntity.getXRot();
             Vec3 look = Vec3.directionFromRotation(pitch, yaw);
             Vec3 eye = grabberEntity.getEyePosition();
             Vec3 current = grabbedEntity.position();
             double holdY = Math.max(
-                eye.y + look.y * grab.distance() - grabbedEntity.getBbHeight() / 2.0,
+                eye.y + look.y * distance - grabbedEntity.getBbHeight() / 2.0,
                 grabberEntity.getY() + MIN_HOLD_CLEARANCE);
             Vec3 delta = new Vec3(
-                eye.x + look.x * grab.distance() - current.x,
+                eye.x + look.x * distance - current.x,
                 holdY - current.y,
-                eye.z + look.z * grab.distance() - current.z);
+                eye.z + look.z * distance - current.z);
             Vec3 allowed = Entity.collideBoundingBox(grabbedEntity, delta, grabbedEntity.getBoundingBox(),
                 grabbedEntity.level(), List.of());
             double x = current.x + allowed.x;

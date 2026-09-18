@@ -29,6 +29,12 @@ public final class BlockInRadiusCondition implements ConditionType<EntityCtx, Bl
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
         BlockPos center = ctx.entity().blockPosition();
+        if (dev.overgrown.apoli.dev.DevParticles.due(ctx.level())
+            && ctx.level() instanceof net.minecraft.server.level.ServerLevel devLevel) {
+            dev.overgrown.apoli.dev.DevParticles.outlineCondition(devLevel,
+                net.minecraft.world.phys.Vec3.atCenterOf(center), cfg.shape,
+                cfg.radius.x(), cfg.radius.y(), cfg.radius.z());
+        }
         int count = 0;
         for (BlockPos pos : cfg.shape.positions(center,
                 (int) Math.ceil(cfg.radius.x()), (int) Math.ceil(cfg.radius.y()), (int) Math.ceil(cfg.radius.z()))) {

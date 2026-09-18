@@ -13,7 +13,8 @@ public final class ActionOnWakeUpPower extends PowerType<ActionOnWakeUpPower.Con
     public record Config(
         Optional<EntityAction> entityAction,
         Optional<BlockAction> blockAction,
-        Optional<BlockCondition> blockCondition
+        Optional<BlockCondition> blockCondition,
+        boolean requireFullSleep
     ) {}
 
     @Override
@@ -21,7 +22,8 @@ public final class ActionOnWakeUpPower extends PowerType<ActionOnWakeUpPower.Con
         return RecordCodecBuilder.mapCodec(i -> i.group(
             dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Config::entityAction),
             dev.overgrown.apoli.codec.LoggedOptionalField.of("block_action", BlockAction.CODEC).forGetter(Config::blockAction),
-            dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Config::blockCondition)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Config::blockCondition),
+            com.mojang.serialization.Codec.BOOL.optionalFieldOf("require_full_sleep", true).forGetter(Config::requireFullSleep)
         ).apply(i, Config::new));
     }
 }

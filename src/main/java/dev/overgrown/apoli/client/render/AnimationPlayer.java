@@ -4,20 +4,26 @@ import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.client.model.BedrockAnimation;
 import dev.overgrown.apoli.client.model.CustomModel;
 import dev.overgrown.apoli.data.ModelAnimation;
+import dev.overgrown.apoli.data.ModelParts;
+import net.minecraft.client.model.HumanoidModel;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.GeometryRender;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public final class AnimationPlayer {
 
     private static final float DEG_TO_RAD = (float) (Math.PI / 180.0);
+    private static final String ROOT_BONE = "root";
     private static final ThreadLocal<float[]> SCRATCH = ThreadLocal.withInitial(() -> new float[3]);
+    private static final ThreadLocal<List<ModelPart>> PARTS = ThreadLocal.withInitial(() -> new ArrayList<>(2));
     private static final Map<ResourceLocation, Set<String>> WARNED = new HashMap<>();
 
     private AnimationPlayer() {}
@@ -73,28 +79,70 @@ public final class AnimationPlayer {
         for (int i = 0; i < bones.length; i++) {
             BedrockAnimation.Bone bone = bones[i];
             CustomModel.Bone[] bound = model.bones(bone.name);
-            if (bound.length == 0) continue;
             for (int j = 0; j < bound.length; j++) {
-                ModelPart part = bound[j].part;
-                if (bone.position != null) {
-                    bone.position.sample(time, scratch);
+                applyTo(bound[j].part, bone, time, scratch);
+            }
+        }
+    }
+
+    public static void apply(HumanoidModel<?> model, Entity entity, ModelAnimation animations,
+                             ResourceLocation slot, float partialTick) {
+        ModelAnimation.Entry entry = animations.select(entity);
+        if (entry == null) return;
+        BedrockAnimation animation = AnimationManager.get(entry.animation(), entry.name().orElse(null));
+        if (animation == null) return;
+        float elapsed = AnimationPlayback.elapsed(entity.getId(), slot, entry, entity.tickCount, partialTick);
+        float time = animation.timeFor(elapsed, entry.loop().orElse(null));
+        if (time < 0.0F) return;
+        apply(model, animation, time);
+    }
+
+    public static void apply(HumanoidModel<?> model, BedrockAnimation animation, float time) {
+        BedrockAnimation.Bone[] bones = animation.bones();
+        float[] scratch = SCRATCH.get();
+        List<ModelPart> parts = PARTS.get();
+        for (int i = 0; i < bones.length; i++) {
+            BedrockAnimation.Bone bone = bones[i];
+            String normalized = ModelParts.normalize(bone.name);
+            parts.clear();
+            if (ROOT_BONE.equals(normalized)) {
+                if (bone.position == null) continue;
+                bone.position.sample(time, scratch);
+                ModelPartLookup.allPartsInto(model, parts);
+                for (int j = 0; j < parts.size(); j++) {
+                    ModelPart part = parts.get(j);
                     part.x += scratch[0];
                     part.y -= scratch[1];
                     part.z += scratch[2];
                 }
-                if (bone.rotation != null) {
-                    bone.rotation.sample(time, scratch);
-                    part.xRot += scratch[0] * DEG_TO_RAD;
-                    part.yRot += scratch[1] * DEG_TO_RAD;
-                    part.zRot += scratch[2] * DEG_TO_RAD;
-                }
-                if (bone.scale != null) {
-                    bone.scale.sample(time, scratch);
-                    part.xScale *= scratch[0];
-                    part.yScale *= scratch[1];
-                    part.zScale *= scratch[2];
-                }
+                continue;
             }
+            ModelPartLookup.resolveInto(model, normalized, parts);
+            for (int j = 0; j < parts.size(); j++) {
+                applyTo(parts.get(j), bone, time, scratch);
+            }
+        }
+        parts.clear();
+    }
+
+    private static void applyTo(ModelPart part, BedrockAnimation.Bone bone, float time, float[] scratch) {
+        if (bone.position != null) {
+            bone.position.sample(time, scratch);
+            part.x += scratch[0];
+            part.y -= scratch[1];
+            part.z += scratch[2];
+        }
+        if (bone.rotation != null) {
+            bone.rotation.sample(time, scratch);
+            part.xRot += scratch[0] * DEG_TO_RAD;
+            part.yRot += scratch[1] * DEG_TO_RAD;
+            part.zRot += scratch[2] * DEG_TO_RAD;
+        }
+        if (bone.scale != null) {
+            bone.scale.sample(time, scratch);
+            part.xScale *= scratch[0];
+            part.yScale *= scratch[1];
+            part.zScale *= scratch[2];
         }
     }
 }

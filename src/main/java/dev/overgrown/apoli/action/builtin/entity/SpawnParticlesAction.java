@@ -9,6 +9,7 @@ import dev.overgrown.apoli.condition.BiEntityCondition;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Expression;
+import dev.overgrown.apoli.data.ExprVector;
 import dev.overgrown.apoli.data.ModelParts;
 import dev.overgrown.apoli.data.ParticleEffect;
 import dev.overgrown.apoli.data.ParticlePlacement;
@@ -28,37 +29,39 @@ public final class SpawnParticlesAction implements ActionType<EntityCtx, SpawnPa
     public record Cfg(
         ParticleEffect particle,
         Optional<BiEntityCondition> bientityCondition,
-        int count,
-        Either<Expression, Vector> speed,
+        Expression count,
+        Either<Expression, ExprVector> speed,
         boolean force,
-        Vector spread,
-        float offsetX,
-        float offsetY,
-        float offsetZ,
-        float velocityX,
-        float velocityY,
-        float velocityZ,
+        ExprVector spread,
+        Expression offsetX,
+        Expression offsetY,
+        Expression offsetZ,
+        Expression velocityX,
+        Expression velocityY,
+        Expression velocityZ,
         Optional<Space> space,
         Optional<String> modelPart
     ) {}
 
-    private static final Vector DEFAULT_SPREAD = new Vector(0.5f, 0.5f, 0.5f);
+    private static final ExprVector DEFAULT_SPREAD = ExprVector.of(0.5f, 0.5f, 0.5f);
+    private static final Expression ZERO = Expression.constant(0.0);
+    private static final Expression HALF = Expression.constant(0.5);
 
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             ParticleEffect.CODEC.fieldOf("particle").forGetter(Cfg::particle),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Cfg::bientityCondition),
-            Codec.INT.fieldOf("count").forGetter(Cfg::count),
+            Expression.INT_OR_EXPR.fieldOf("count").forGetter(Cfg::count),
             ParticlePlacement.SPEED_CODEC.optionalFieldOf("speed", ParticlePlacement.NO_SPEED).forGetter(Cfg::speed),
             Codec.BOOL.optionalFieldOf("force", false).forGetter(Cfg::force),
-            Vector.CODEC.optionalFieldOf("spread", DEFAULT_SPREAD).forGetter(Cfg::spread),
-            Codec.FLOAT.optionalFieldOf("offset_x", 0f).forGetter(Cfg::offsetX),
-            Codec.FLOAT.optionalFieldOf("offset_y", 0.5f).forGetter(Cfg::offsetY),
-            Codec.FLOAT.optionalFieldOf("offset_z", 0f).forGetter(Cfg::offsetZ),
-            Codec.FLOAT.optionalFieldOf("velocity_x", 0f).forGetter(Cfg::velocityX),
-            Codec.FLOAT.optionalFieldOf("velocity_y", 0f).forGetter(Cfg::velocityY),
-            Codec.FLOAT.optionalFieldOf("velocity_z", 0f).forGetter(Cfg::velocityZ),
+            ExprVector.SCALAR_OR_VECTOR.optionalFieldOf("spread", DEFAULT_SPREAD).forGetter(Cfg::spread),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("offset_x", ZERO).forGetter(Cfg::offsetX),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("offset_y", HALF).forGetter(Cfg::offsetY),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("offset_z", ZERO).forGetter(Cfg::offsetZ),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("velocity_x", ZERO).forGetter(Cfg::velocityX),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("velocity_y", ZERO).forGetter(Cfg::velocityY),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("velocity_z", ZERO).forGetter(Cfg::velocityZ),
             Space.CODEC.optionalFieldOf("space").forGetter(Cfg::space),
             ModelParts.NAME_CODEC.optionalFieldOf("model_part").forGetter(Cfg::modelPart)
         ).apply(i, Cfg::new));
@@ -69,13 +72,19 @@ public final class SpawnParticlesAction implements ActionType<EntityCtx, SpawnPa
         if (!(ctx.level() instanceof ServerLevel level)) return;
         Entity e = ctx.raw();
         if (e == null) return;
-        ParticleOptions opts = cfg.particle.resolve(level);
+        ParticleOptions opts = cfg.particle.resolve(level, e);
         if (opts == null) return;
 
         dev.overgrown.apoli.data.ModelPartAnchor.Frame frame = ParticlePlacement.frame(e, cfg.modelPart);
-        Vec3 origin = ParticlePlacement.origin(e, frame, cfg.space, cfg.offsetX, cfg.offsetY, cfg.offsetZ);
-        Vec3 velocity = ParticlePlacement.velocity(e, frame, cfg.space, cfg.velocityX, cfg.velocityY, cfg.velocityZ,
-            cfg.speed);
+        Vec3 origin = ParticlePlacement.origin(e, frame, cfg.space,
+            (float) cfg.offsetX.eval(e), (float) cfg.offsetY.eval(e), (float) cfg.offsetZ.eval(e));
+        Vector speedVector = ParticlePlacement.speedVector(e, cfg.speed);
+        Vec3 velocity = ParticlePlacement.velocity(e, frame, cfg.space,
+            (float) cfg.velocityX.eval(e), (float) cfg.velocityY.eval(e), (float) cfg.velocityZ.eval(e),
+            speedVector);
+        int count = Math.max(0, cfg.count.evalInt(e));
+        Vector spread = cfg.spread.resolve(e);
+        float scalarSpeed = ParticlePlacement.scalarSpeed(e, cfg.speed);
         List<Packet<?>> packets = null;
         List<ServerPlayer> players = level.players();
         for (int i = 0; i < players.size(); i++) {
@@ -84,8 +93,8 @@ public final class SpawnParticlesAction implements ActionType<EntityCtx, SpawnPa
             if (cfg.bientityCondition.isPresent()
                 && !cfg.bientityCondition.get().test(BiEntityCtx.of(e, player, level))) continue;
             if (packets == null) {
-                packets = ParticlePlacement.packets(opts, cfg.force, origin, velocity, cfg.count, cfg.spread,
-                    ParticlePlacement.scalarSpeed(e, cfg.speed), level);
+                packets = ParticlePlacement.packets(opts, cfg.force, origin, velocity, count, spread,
+                    scalarSpeed, level, e, frame, cfg.space);
             }
             for (int p = 0; p < packets.size(); p++) {
                 dev.overgrown.apoli.data.ParticleBroadcast.send(level, player, packets.get(p));

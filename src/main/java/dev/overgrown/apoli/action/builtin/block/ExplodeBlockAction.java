@@ -16,6 +16,7 @@ public final class ExplodeBlockAction implements ActionType<BlockCtx, ExplodeBlo
     public record Cfg(
         float power,
         DestructionType destructionType,
+        boolean damageTargets,
         Optional<BlockCondition> indestructible,
         Optional<BlockCondition> destructible,
         boolean createFire
@@ -26,6 +27,7 @@ public final class ExplodeBlockAction implements ActionType<BlockCtx, ExplodeBlo
         return RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.FLOAT.fieldOf("power").forGetter(Cfg::power),
             DestructionType.CODEC.optionalFieldOf("destruction_type", DestructionType.BREAK).forGetter(Cfg::destructionType),
+            Codec.BOOL.optionalFieldOf("damage_targets", true).forGetter(Cfg::damageTargets),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("indestructible", BlockCondition.CODEC).forGetter(Cfg::indestructible),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("destructible", BlockCondition.CODEC).forGetter(Cfg::destructible),
             Codec.BOOL.optionalFieldOf("create_fire", false).forGetter(Cfg::createFire)
@@ -38,7 +40,7 @@ public final class ExplodeBlockAction implements ActionType<BlockCtx, ExplodeBlo
             ctx.level(), null,
             Vec3.atCenterOf(ctx.pos()),
             cfg.power, cfg.createFire, cfg.destructionType,
-            cfg.indestructible, cfg.destructible
+            cfg.indestructible, cfg.destructible, cfg.damageTargets, Optional.empty()
         );
     }
 }

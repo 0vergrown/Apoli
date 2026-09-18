@@ -15,14 +15,19 @@ import java.nio.file.Path;
 public final class ApoliClientConfig {
     private static final com.google.gson.Gson PRINTER = new GsonBuilder().setPrettyPrinting().create();
 
+    private static final int OFFSET_LIMIT = 512;
+
     private static final Codec<ApoliClientConfig> CODEC = RecordCodecBuilder.create(i -> i.group(
         Codec.BOOL.optionalFieldOf("speechToAction", false).forGetter(c -> c.speechToAction),
         Codec.BOOL.optionalFieldOf("speechPushToTalk", true).forGetter(c -> c.speechPushToTalk),
         Codec.BOOL.optionalFieldOf("speechEcho", false).forGetter(c -> c.speechEcho),
         Codec.STRING.optionalFieldOf("speechInputDevice", "").forGetter(c -> c.speechInputDevice),
         Codec.BOOL.optionalFieldOf("speechInstant", true).forGetter(c -> c.speechInstant),
-        Codec.STRING.optionalFieldOf("speechSource", "auto").forGetter(ApoliClientConfig::speechSource)
-    ).apply(i, (toAction, pushToTalk, echo, device, instant, source) -> {
+        Codec.STRING.optionalFieldOf("speechSource", "auto").forGetter(ApoliClientConfig::speechSource),
+        Codec.BOOL.optionalFieldOf("hudAutoStack", true).forGetter(c -> c.hudAutoStack),
+        Codec.INT.optionalFieldOf("hudOffsetX", 0).forGetter(ApoliClientConfig::hudOffsetX),
+        Codec.INT.optionalFieldOf("hudOffsetY", 0).forGetter(ApoliClientConfig::hudOffsetY)
+    ).apply(i, (toAction, pushToTalk, echo, device, instant, source, autoStack, offsetX, offsetY) -> {
         ApoliClientConfig config = new ApoliClientConfig();
         config.speechToAction = toAction;
         config.speechPushToTalk = pushToTalk;
@@ -30,6 +35,9 @@ public final class ApoliClientConfig {
         config.speechInputDevice = device;
         config.speechInstant = instant;
         config.speechSource = source;
+        config.hudAutoStack = autoStack;
+        config.hudOffsetX = clampOffset(offsetX);
+        config.hudOffsetY = clampOffset(offsetY);
         return config;
     }));
 
@@ -95,6 +103,41 @@ public final class ApoliClientConfig {
     public void setSpeechPushToTalk(boolean value) {
         speechPushToTalk = value;
         save();
+    }
+
+    private boolean hudAutoStack = true;
+    private int hudOffsetX = 0;
+    private int hudOffsetY = 0;
+
+    public boolean hudAutoStack() {
+        return hudAutoStack;
+    }
+
+    public void setHudAutoStack(boolean value) {
+        hudAutoStack = value;
+        save();
+    }
+
+    public int hudOffsetX() {
+        return hudOffsetX;
+    }
+
+    public void setHudOffsetX(int value) {
+        hudOffsetX = clampOffset(value);
+        save();
+    }
+
+    public int hudOffsetY() {
+        return hudOffsetY;
+    }
+
+    public void setHudOffsetY(int value) {
+        hudOffsetY = clampOffset(value);
+        save();
+    }
+
+    private static int clampOffset(int value) {
+        return Math.max(-OFFSET_LIMIT, Math.min(OFFSET_LIMIT, value));
     }
 
     public static ApoliClientConfig get() {
