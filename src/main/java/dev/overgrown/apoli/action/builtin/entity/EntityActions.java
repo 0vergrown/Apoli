@@ -152,6 +152,12 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("radial_menu"), new RadialMenuAction(),
             AliasingOptions.builder().addTypeAlias("sync:radial_menu").build());
 
+        ActionTypes.ENTITY.register(Apoli.id("print"), new PrintAction(),
+                AliasingOptions.builder()
+                        .addTypeAlias(Apoli.id("log"))
+                        .addTypeAlias(Apoli.id("logger"))
+                        .build());
+
         ActionTypes.ENTITY.register(Apoli.id("add_skill_points"), new AddSkillPointsAction());
         ActionTypes.ENTITY.register(Apoli.id("grant_skill_tree"), new GrantSkillTreeAction());
         ActionTypes.ENTITY.register(Apoli.id("revoke_skill_tree"), new RevokeSkillTreeAction());
