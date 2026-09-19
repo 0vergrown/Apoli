@@ -2,6 +2,7 @@ package dev.overgrown.apoli.client.render;
 
 import dev.overgrown.apoli.data.ModelPartTimeline;
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
@@ -22,7 +23,11 @@ public final class ModelPartAnimator {
         return TIMELINE.overridesPose(entity, now(entity));
     }
 
-    private static double now(LivingEntity entity) {
+    public static float ageInTicks(@Nullable Entity entity) {
+        return entity == null ? 0.0F : (float) now(entity);
+    }
+
+    private static double now(Entity entity) {
         return entity.tickCount + (double) Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(true);
     }
 }

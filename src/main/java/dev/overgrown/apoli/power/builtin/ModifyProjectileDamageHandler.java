@@ -68,7 +68,7 @@ public final class ModifyProjectileDamageHandler {
         for (ModifyProjectileDamagePower.Config cfg : matches) {
             allMods.addAll(AttributeModifierHelper.flatten(cfg.modifier(), cfg.modifiers()));
         }
-        float modified = AttributeModifierHelper.apply(amount, allMods, shooter);
+        float modified = (float) AttributeModifierHelper.apply(amount, allMods, shooter, container, shooter, target);
 
         if (runActions) {
             final LivingEntity finalShooter = shooter;

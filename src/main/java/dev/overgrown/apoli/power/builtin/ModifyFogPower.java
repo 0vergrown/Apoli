@@ -17,8 +17,8 @@ public final class ModifyFogPower extends PowerType<ModifyFogPower.Config> {
             Optional<Expression> g,
             Optional<Expression> b,
 
-            Expression fade_in,
-            Expression fade_out,
+            Expression fadeIn,
+            Expression fadeOut,
 
             int priority
     ) {}
@@ -33,8 +33,8 @@ public final class ModifyFogPower extends PowerType<ModifyFogPower.Config> {
                 Expression.FLOAT_OR_EXPR.optionalFieldOf("g").forGetter(Config::g),
                 Expression.FLOAT_OR_EXPR.optionalFieldOf("b").forGetter(Config::b),
 
-                Expression.FLOAT_OR_EXPR.optionalFieldOf("fade_in", Expression.constant(0f)).forGetter(Config::fade_in),
-                Expression.FLOAT_OR_EXPR.optionalFieldOf("fade_out", Expression.constant(0f)).forGetter(Config::fade_out),
+                Expression.FLOAT_OR_EXPR.optionalFieldOf("fade_in", Expression.constant(0f)).forGetter(Config::fadeIn),
+                Expression.FLOAT_OR_EXPR.optionalFieldOf("fade_out", Expression.constant(0f)).forGetter(Config::fadeOut),
 
                 Codec.INT.optionalFieldOf("priority", 0).forGetter(Config::priority)
         ).apply(i, Config::new));

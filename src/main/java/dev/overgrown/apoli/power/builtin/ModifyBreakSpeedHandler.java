@@ -33,10 +33,11 @@ public final class ModifyBreakSpeedHandler {
 
     public static float modifySpeed(float speed, Player player, BlockGetter level,
                                     BlockPos pos, BlockState state) {
-        if (hasNone(player)) return speed;
+        float scaled = dev.overgrown.apoli.scale.ScaleEffects.miningSpeed(player, speed);
+        if (hasNone(player)) return scaled;
         List<AttributeModifier> mods = collect(player, level, pos, state, false);
-        if (mods.isEmpty()) return speed;
-        return AttributeModifierHelper.apply(speed, mods, player);
+        if (mods.isEmpty()) return scaled;
+        return AttributeModifierHelper.apply(scaled, mods, player);
     }
 
     private static List<AttributeModifier> collect(Player player, BlockGetter level, BlockPos pos,

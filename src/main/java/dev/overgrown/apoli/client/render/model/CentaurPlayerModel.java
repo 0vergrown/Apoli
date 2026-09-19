@@ -149,13 +149,13 @@ public class CentaurPlayerModel<T extends LivingEntity> extends PlayerModel<T>
             case "frontrightleg" -> parts.add(this.frontRightLeg);
             case "backleftleg", "hindleftleg" -> parts.add(this.backLeftLeg);
             case "backrightleg", "hindrightleg" -> parts.add(this.backRightLeg);
-            case "horselegs" -> {
+            case "horselegs", "legs" -> {
                 parts.add(this.frontLeftLeg);
                 parts.add(this.frontRightLeg);
                 parts.add(this.backLeftLeg);
                 parts.add(this.backRightLeg);
             }
-            case "horse" -> parts.addAll(this.horseParts);
+            case "horse", "lower" -> parts.addAll(this.horseParts);
             default -> {}
         }
     }

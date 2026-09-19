@@ -1,20 +1,14 @@
 package dev.overgrown.apoli.client.summon;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import dev.overgrown.apoli.client.render.ModelPartLookup;
-import dev.overgrown.apoli.client.render.OverlayRenderTypes;
-import dev.overgrown.apoli.data.ModelParts;
+import dev.overgrown.apoli.client.render.TextureOverlays;
 import dev.overgrown.apoli.entity.summon.CloneEntity;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.ResolvedLayer;
-import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.FastColor;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.List;
@@ -34,25 +28,10 @@ public class CloneTextureOverlayLayer extends RenderLayer<CloneEntity, CloneMode
 
         boolean slim = CloneRenderer.resolveSlim(clone);
         CloneModel model = this.getParentModel();
-        for (ResolvedLayer layer : layers) {
+        for (int i = 0; i < layers.size(); i++) {
+            ResolvedLayer layer = layers.get(i);
             ResourceLocation texture = dev.overgrown.apoli.client.render.DynamicTextures.resolve(layer.texture(slim), owner);
-            int color = FastColor.ARGB32.colorFromFloat(layer.alpha(), layer.red(), layer.green(), layer.blue());
-            VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(layer.mode(), texture));
-            boolean scaled = layer.scale() != 1.0F;
-            if (scaled) {
-                pose.pushPose();
-                pose.scale(layer.scale(), layer.scale(), layer.scale());
-            }
-            if (layer.wholeModel()) {
-                model.renderToBuffer(pose, consumer, light, OverlayTexture.NO_OVERLAY, color);
-            } else {
-                for (String partName : layer.bodyParts()) {
-                    for (ModelPart part : ModelPartLookup.resolve(model, ModelParts.normalize(partName))) {
-                        part.render(pose, consumer, light, OverlayTexture.NO_OVERLAY, color);
-                    }
-                }
-            }
-            if (scaled) pose.popPose();
+            TextureOverlays.render(model, layer, texture, 1.0F, ageInTicks, owner, pose, buffers, light);
         }
     }
 }

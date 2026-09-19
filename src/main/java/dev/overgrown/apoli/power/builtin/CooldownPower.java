@@ -57,4 +57,10 @@ public final class CooldownPower extends ResourcePower {
         writeValue(holder, powerId, max);
         return true;
     }
+
+    @Override
+    public boolean isCooldown() {
+        return true;
+    }
+
 }

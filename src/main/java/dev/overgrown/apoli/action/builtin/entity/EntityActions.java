@@ -28,6 +28,8 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("conjure_equipment"), new ConjureEquipmentAction());
         ActionTypes.ENTITY.register(Apoli.id("release_grab"), new ReleaseGrabAction());
         ActionTypes.ENTITY.register(Apoli.id("execute_command"), new ExecuteCommandAction());
+        ActionTypes.ENTITY.register(Apoli.id("scale"), new ScaleAction(),
+            AliasingOptions.builder().renameField("scale_type", "scale_types").build());
         ActionTypes.ENTITY.register(Apoli.id("run_stored_power"), new RunStoredPowerAction());
         ActionTypes.ENTITY.register(Apoli.id("store_power"),
             new dev.overgrown.apoli.action.builtin.bientity.StorePowerAction.Self());
@@ -71,6 +73,13 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("set_fall_distance"), new SetFallDistanceAction());
         ActionTypes.ENTITY.register(Apoli.id("emit_game_event"), new EmitGameEventAction());
         ActionTypes.ENTITY.register(Apoli.id("play_sound"), new PlaySoundAction());
+
+        ActionTypes.ENTITY.register(Apoli.id("print"), new PrintAction(),
+                AliasingOptions.builder()
+                        .addTypeAlias(Apoli.id("log"))
+                        .addTypeAlias(Apoli.id("logger"))
+                        .build());
+
         ActionTypes.ENTITY.register(Apoli.id("swing_hand"), new SwingHandAction());
         ActionTypes.ENTITY.register(Apoli.id("force_key_pressed"), new ForceKeyPressedAction(),
             AliasingOptions.builder()
@@ -78,6 +87,7 @@ public final class EntityActions {
                 .addTypeAlias(Apoli.id("force_key"))
                 .build());
 
+        ActionTypes.ENTITY.register(Apoli.id("freeze"), new FreezeAction());
         ActionTypes.ENTITY.register(Apoli.id("grant_power"), new GrantPowerAction());
         ActionTypes.ENTITY.register(Apoli.id("grant_all_powers"), new GrantAllPowersAction());
         ActionTypes.ENTITY.register(Apoli.id("revoke_power"), new RevokePowerAction());
@@ -85,6 +95,7 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("remove_power"), new RemovePowerAction());
         ActionTypes.ENTITY.register(Apoli.id("suppress_power"), new SuppressPowerAction(),
             AliasingOptions.builder().renameField("powers", "power").renameField("sources", "source").build());
+        ActionTypes.ENTITY.register(Apoli.id("unfreeze"), new UnfreezeAction());
         ActionTypes.ENTITY.register(Apoli.id("unsuppress_power"), new UnsuppressPowerAction(),
             AliasingOptions.builder().renameField("powers", "power").renameField("sources", "source").build());
         ActionTypes.ENTITY.register(Apoli.id("modify_stat"), new ModifyStatAction(),

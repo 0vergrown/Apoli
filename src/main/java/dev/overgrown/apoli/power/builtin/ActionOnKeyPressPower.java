@@ -76,6 +76,15 @@ public final class ActionOnKeyPressPower extends PowerType<ActionOnKeyPressPower
     }
 
     @Override
+
+    public boolean isCooldown() {
+
+        return true;
+
+    }
+
+
+    @Override
     public OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         Entity owner = holder.rawOwner();
         if (owner.level().isClientSide()) {

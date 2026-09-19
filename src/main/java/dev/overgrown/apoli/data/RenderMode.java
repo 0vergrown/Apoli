@@ -14,7 +14,8 @@ public enum RenderMode {
     CUTOUT_NO_CULL,
     SOLID,
     EMISSIVE,
-    EYES;
+    EYES,
+    ENERGY_SWIRL;
 
     private static final Map<String, RenderMode> BY_NAME = new HashMap<>();
 
@@ -26,6 +27,7 @@ public enum RenderMode {
         BY_NAME.put(ModelParts.normalize("translucent_emissive"), EMISSIVE);
         BY_NAME.put(ModelParts.normalize("glowing"), EMISSIVE);
         BY_NAME.put(ModelParts.normalize("eyes_emissive"), EYES);
+        BY_NAME.put(ModelParts.normalize("swirl"), ENERGY_SWIRL);
     }
 
     public static final Codec<RenderMode> CODEC = Codec.STRING.comapFlatMap(

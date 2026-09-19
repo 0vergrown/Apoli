@@ -98,6 +98,7 @@ public final class KeyDispatch {
         for (int i = 0; i < candidates.size(); i++) {
             ResourceLocation id = candidates.get(i);
             if (container.isSuppressed(id)) continue;
+            if (dev.overgrown.apoli.power.builtin.PowerStoragePower.keyMuted(container, id)) continue;
             Power loaded = ApoliPowers.get(id);
             if (loaded == null) continue;
             if (loaded.condition().isPresent() && !loaded.condition().get().test(ctx)) continue;
@@ -109,6 +110,17 @@ public final class KeyDispatch {
     private static boolean activate(PowerContainer container, @Nullable ServerPlayer player,
                                     ResourceLocation id, Power loaded,
                                     @Nullable String key, boolean continuousOnly) {
+        boolean attributed = dev.overgrown.apoli.attribution.PowerCause.push(container.rawOwner(), id);
+        try {
+            return activateTyped(container, player, id, loaded, key, continuousOnly);
+        } finally {
+            if (attributed) dev.overgrown.apoli.attribution.PowerCause.pop();
+        }
+    }
+
+    private static boolean activateTyped(PowerContainer container, @Nullable ServerPlayer player,
+                                         ResourceLocation id, Power loaded,
+                                         @Nullable String key, boolean continuousOnly) {
         PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
         Object cfg = loaded.config();
 
@@ -138,8 +150,7 @@ public final class KeyDispatch {
         if (type instanceof TogglePower && cfg instanceof TogglePower.Config c) {
             if (continuousOnly) return false;
             if (key != null && !c.key().key().equals(key)) return false;
-            TogglePower.toggle(container, id);
-            return true;
+            return TogglePower.toggleByKey(container, id, c);
         }
         if (type instanceof InventoryPower inventory && cfg instanceof InventoryPower.Config c) {
             if (continuousOnly) return false;

@@ -54,6 +54,8 @@ public final class ApoliNetwork {
         PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.TickRateS2C.TYPE,
             dev.overgrown.apoli.network.payload.TickRateS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(DisguiseUpdateS2C.TYPE, DisguiseUpdateS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.ScaleSyncS2C.TYPE,
+            dev.overgrown.apoli.network.payload.ScaleSyncS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.TextDisplayS2C.TYPE,
             dev.overgrown.apoli.network.payload.TextDisplayS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.LabelUpdateS2C.TYPE,
@@ -192,6 +194,18 @@ public final class ApoliNetwork {
             && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.SyncShaderS2C.TYPE)) {
             ServerPlayNetworking.send(recipient, payload);
         }
+    }
+
+    public static void sendScale(ServerPlayer recipient, dev.overgrown.apoli.network.payload.ScaleSyncS2C payload) {
+        if (connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.ScaleSyncS2C.TYPE)) {
+            ServerPlayNetworking.send(recipient, payload);
+        }
+    }
+
+    public static void broadcastScale(Entity entity, dev.overgrown.apoli.network.payload.ScaleSyncS2C payload) {
+        for (ServerPlayer viewer : PlayerLookup.tracking(entity)) sendScale(viewer, payload);
+        if (entity instanceof ServerPlayer self) sendScale(self, payload);
     }
 
     public static void broadcastTickRate(MinecraftServer server, dev.overgrown.apoli.network.payload.TickRateS2C payload) {

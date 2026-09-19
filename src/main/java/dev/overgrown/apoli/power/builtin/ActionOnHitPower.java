@@ -75,6 +75,15 @@ public final class ActionOnHitPower extends PowerType<ActionOnHitPower.Config> {
     }
 
     @Override
+
+    public boolean isCooldown() {
+
+        return true;
+
+    }
+
+
+    @Override
     public OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         return PowerResources.readDeadline(holder, powerId);
     }

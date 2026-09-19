@@ -60,6 +60,12 @@ public final class LegacyPowerShapes {
                 return exhaust(power);
             }
         });
+        register(Apoli.id("freeze"), new Shape() {
+            @Override
+            public <T> Dynamic<T> reshape(Dynamic<T> power) {
+                return freeze(power);
+            }
+        });
         register(Apoli.id("modify_attribute"), new Shape() {
             @Override
             public <T> Dynamic<T> reshape(Dynamic<T> power) {
@@ -145,6 +151,17 @@ public final class LegacyPowerShapes {
 
         return power.remove("exhaustion")
             .set("interval", power.createInt(interval))
+            .set("entity_action", action);
+    }
+
+    private static <T> Dynamic<T> freeze(Dynamic<T> power) {
+        if (power.get("entity_action").result().isPresent()) return power;
+
+        Dynamic<T> action = power.emptyMap()
+            .set("type", power.createString("apoli:freeze"));
+
+        return power
+            .set("interval", power.createInt(1))
             .set("entity_action", action);
     }
 

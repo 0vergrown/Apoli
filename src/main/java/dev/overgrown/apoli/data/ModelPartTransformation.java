@@ -60,8 +60,8 @@ public final class ModelPartTransformation {
         }
     }
 
-    private final String part;
-    private final String normalizedPart;
+    private final BodyPart bodyPart;
+    private final Optional<Vector> pivot;
     private final Type type;
     private final Optional<Expression> rawValue;
     private final Expression value;
@@ -77,12 +77,12 @@ public final class ModelPartTransformation {
     private final float timelineStart;
     private final float timelineEnd;
 
-    public ModelPartTransformation(String part, Type type, Optional<Expression> value, boolean overrideAnimation,
+    public ModelPartTransformation(BodyPart bodyPart, Type type, Optional<Expression> value, boolean overrideAnimation,
                                    List<Keyframe> keyframes, boolean loop, float duration,
                                    Optional<Float> fadeOutDuration, Easing easing,
-                                   Optional<List<Perspective>> perspectives) {
-        this.part = part;
-        this.normalizedPart = ModelParts.normalize(part);
+                                   Optional<List<Perspective>> perspectives, Optional<Vector> pivot) {
+        this.bodyPart = bodyPart;
+        this.pivot = pivot;
         this.type = type;
         this.rawValue = value;
         this.value = value.orElse(Expression.constant(0.0));
@@ -106,12 +106,12 @@ public final class ModelPartTransformation {
         return List.copyOf(sorted);
     }
 
-    public String part() {
-        return part;
+    public BodyPart bodyPart() {
+        return bodyPart;
     }
 
-    public String normalizedPart() {
-        return normalizedPart;
+    public Optional<Vector> pivot() {
+        return pivot;
     }
 
     public Type type() {
@@ -213,16 +213,16 @@ public final class ModelPartTransformation {
 
     private DataResult<ModelPartTransformation> validate() {
         if (rawValue.isEmpty() && keyframes.isEmpty()) {
-            return DataResult.error(() -> "Model part transformation for '" + part + "' needs either a 'value' or a non-empty 'keyframes' list");
+            return DataResult.error(() -> "Model part transformation for '" + bodyPart + "' needs either a 'value' or a non-empty 'keyframes' list");
         }
         if (duration < 0.0F || fadeOutDuration < 0.0F) {
-            return DataResult.error(() -> "Model part transformation for '" + part + "' has a negative duration");
+            return DataResult.error(() -> "Model part transformation for '" + bodyPart + "' has a negative duration");
         }
         return DataResult.success(this);
     }
 
     public static final Codec<ModelPartTransformation> CODEC = RecordCodecBuilder.<ModelPartTransformation>create(instance -> instance.group(
-        Codec.STRING.fieldOf("model_part").forGetter(ModelPartTransformation::part),
+        BodyPart.CODEC.fieldOf("model_part").forGetter(ModelPartTransformation::bodyPart),
         Type.CODEC.fieldOf("type").forGetter(ModelPartTransformation::type),
         Expression.FLOAT_OR_EXPR.optionalFieldOf("value").forGetter(ModelPartTransformation::rawValue),
         Codec.BOOL.optionalFieldOf("override_animation", false).forGetter(ModelPartTransformation::overrideAnimation),
@@ -231,6 +231,7 @@ public final class ModelPartTransformation {
         Codec.FLOAT.optionalFieldOf("duration", 0.0F).forGetter(ModelPartTransformation::duration),
         Codec.FLOAT.optionalFieldOf("fade_out_duration").forGetter(ModelPartTransformation::rawFadeOutDuration),
         Easing.CODEC.optionalFieldOf("easing", Easing.LINEAR).forGetter(ModelPartTransformation::easing),
-        Perspective.LIST_CODEC.optionalFieldOf("perspectives").forGetter(ModelPartTransformation::perspectives)
+        Perspective.LIST_CODEC.optionalFieldOf("perspectives").forGetter(ModelPartTransformation::perspectives),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("pivot", Vector.CODEC).forGetter(ModelPartTransformation::pivot)
     ).apply(instance, ModelPartTransformation::new)).comapFlatMap(ModelPartTransformation::validate, Function.identity());
 }

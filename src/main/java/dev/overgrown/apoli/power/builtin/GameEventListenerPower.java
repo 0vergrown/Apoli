@@ -119,6 +119,15 @@ public final class GameEventListenerPower extends PowerType<GameEventListenerPow
     }
 
     @Override
+
+    public boolean isCooldown() {
+
+        return true;
+
+    }
+
+
+    @Override
     public java.util.OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         return dev.overgrown.apoli.power.PowerResources.readDeadline(holder, powerId);
     }

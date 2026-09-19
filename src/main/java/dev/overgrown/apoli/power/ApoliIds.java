@@ -10,6 +10,9 @@ public final class ApoliIds {
     public static final ResourceLocation PHASING = Apoli.id("phasing");
     public static final ResourceLocation INVISIBILITY = Apoli.id("invisibility");
     public static final ResourceLocation ELYTRA_FLIGHT = Apoli.id("elytra_flight");
+    public static final ResourceLocation PREVENT_ELYTRA_FLIGHT = Apoli.id("prevent_elytra_flight");
+    public static final ResourceLocation SCALE = Apoli.id("scale");
+    public static final ResourceLocation SOLID_HITBOX = Apoli.id("solid_hitbox");
     public static final ResourceLocation DISABLE_REGEN = Apoli.id("disable_regen");
     public static final ResourceLocation MODIFY_HARVEST = Apoli.id("modify_harvest");
     public static final ResourceLocation PREVENT_TELEPORT = Apoli.id("prevent_teleport");
@@ -28,6 +31,7 @@ public final class ApoliIds {
     public static final ResourceLocation NIGHT_VISION = Apoli.id("night_vision");
     public static final ResourceLocation FLUID_VISION = Apoli.id("fluid_vision");
     public static final ResourceLocation MODIFY_CAMERA_SUBMERSION = Apoli.id("modify_camera_submersion");
+    public static final ResourceLocation MODIFY_FOG = Apoli.id("modify_fog");
     public static final ResourceLocation MODIFY_VELOCITY = Apoli.id("modify_velocity");
     public static final ResourceLocation MODIFY_EXHAUSTION = Apoli.id("modify_exhaustion");
     public static final ResourceLocation MODIFY_DAMAGE = Apoli.id("modify_damage");
@@ -74,6 +78,8 @@ public final class ApoliIds {
     public static final ResourceLocation PREVENT_KEY_PRESS = Apoli.id("prevent_key_press");
     public static final ResourceLocation MODIFY_BOUNCINESS = Apoli.id("modify_bounciness");
     public static final ResourceLocation POWER_STORAGE = Apoli.id("power_storage");
+    public static final ResourceLocation PREVENT_ENTITY_COLLISION = Apoli.id("prevent_entity_collision");
+    public static final ResourceLocation KEEP_INVENTORY = Apoli.id("keep_inventory");
 
     private ApoliIds() {}
 }

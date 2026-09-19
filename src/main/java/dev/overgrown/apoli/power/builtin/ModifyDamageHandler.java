@@ -30,9 +30,9 @@ public final class ModifyDamageHandler {
         if (attacker != null) {
             collect(matches, attacker, attacker, target, damageCtx, false);
         }
-        if (matches.isEmpty()) return amount;
+        if (matches.isEmpty()) return dev.overgrown.apoli.scale.ScaleEffects.damage(attacker, target, amount);
 
-        float modified = applyModifiers(amount, matches);
+        float modified = dev.overgrown.apoli.scale.ScaleEffects.damage(attacker, target, applyModifiers(amount, matches));
         for (Match m : matches) runActions(m, attacker, target, level);
         return modified;
     }
@@ -45,8 +45,8 @@ public final class ModifyDamageHandler {
         if (attacker != null) {
             collect(matches, attacker, attacker, target, damageCtx, false);
         }
-        if (matches.isEmpty()) return amount;
-        return applyModifiers(amount, matches);
+        if (matches.isEmpty()) return dev.overgrown.apoli.scale.ScaleEffects.damage(attacker, target, amount);
+        return dev.overgrown.apoli.scale.ScaleEffects.damage(attacker, target, applyModifiers(amount, matches));
     }
 
     public static boolean shouldApplyArmor(LivingEntity target, @Nullable LivingEntity attacker,
@@ -103,15 +103,23 @@ public final class ModifyDamageHandler {
             if (cfg.damageCondition().isPresent()
                 && !cfg.damageCondition().get().test(damageCtx)) continue;
 
-            out.add(new Match(cfg, bientityActor, bientityTarget, targetUsedSide));
+            out.add(new Match(cfg, holder, container, bientityActor, bientityTarget, targetUsedSide));
         }
     }
 
     private static float applyModifiers(float amount, List<Match> matches) {
-        List<AttributeModifier> allMods = new ArrayList<>();
-        for (Match m : matches) allMods.addAll(m.cfg.allModifiers());
-        if (allMods.isEmpty()) return amount;
-        return Math.max(0f, AttributeModifierHelper.apply(amount, allMods, matches.get(0).bientityTarget));
+        List<AttributeModifierHelper.Owned> owned = null;
+        for (int i = 0, n = matches.size(); i < n; i++) {
+            Match m = matches.get(i);
+            List<AttributeModifier> mods = m.cfg.allModifiers();
+            for (int j = 0, k = mods.size(); j < k; j++) {
+                if (owned == null) owned = new ArrayList<>(4);
+                owned.add(new AttributeModifierHelper.Owned(mods.get(j), m.holder, m.container,
+                    m.bientityActor, m.bientityTarget));
+            }
+        }
+        if (owned == null) return amount;
+        return Math.max(0f, (float) AttributeModifierHelper.applyOwned(amount, owned));
     }
 
     private static void runActions(Match m, @Nullable LivingEntity attacker, LivingEntity target, Level level) {
@@ -131,6 +139,7 @@ public final class ModifyDamageHandler {
         }
     }
 
-    private record Match(ModifyDamagePower.Config cfg, @Nullable LivingEntity bientityActor,
+    private record Match(ModifyDamagePower.Config cfg, LivingEntity holder, PowerContainer container,
+                         @Nullable LivingEntity bientityActor,
                          LivingEntity bientityTarget, boolean targetUsedSide) {}
 }

@@ -42,6 +42,7 @@ public final class PowerTypes {
                 .addTypeAlias(Apoli.id("damage_over_time"))
                 .addTypeAlias(Apoli.id("burn"))
                 .addTypeAlias(Apoli.id("exhaust"))
+                .addTypeAlias(Apoli.id("freeze"))
                 .build()
         );
         PowerTypeRegistry.register(
@@ -190,6 +191,7 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("water_breathing"), new WaterBreathingPower());
         PowerTypeRegistry.register(Apoli.id("modify_player_spawn"), new ModifyPlayerSpawnPower());
         PowerTypeRegistry.register(Apoli.id("modify_projectile_damage"), new ModifyProjectileDamagePower());
+        PowerTypeRegistry.register(Apoli.id("modify_resource_change"), new ModifyResourceChangePower());
         PowerTypeRegistry.register(Apoli.id("modify_slipperiness"), new ModifySlipperinessPower());
         PowerTypeRegistry.register(Apoli.id("modify_use_slowdown"), new ModifyUseSlowdownPower());
         PowerTypeRegistry.register(Apoli.id("modify_swim_speed"), new ModifySwimSpeedPower());
@@ -221,6 +223,9 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("prevent_sleep"), new PreventSleepPower());
         PowerTypeRegistry.register(Apoli.id("prevent_key_press"), new PreventKeyPressPower());
         PowerTypeRegistry.register(Apoli.id("prevent_sprinting"), new PreventSprintingPower());
+        PowerTypeRegistry.register(Apoli.id("scale"), new ScalePower(),
+            AliasingOptions.builder().renameField("scale_type", "scale_types").build());
+        PowerTypeRegistry.register(Apoli.id("solid_hitbox"), new SolidHitboxPower());
 
         PowerTypeRegistry.register(Apoli.id("action_on_block_break"), new ActionOnBlockBreakPower());
         PowerTypeRegistry.register(Apoli.id("action_on_block_place"), new ActionOnBlockPlacePower());
@@ -241,7 +246,6 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("replace_sound_reception"), new ReplaceSoundReceptionPower());
         PowerTypeRegistry.register(Apoli.id("action_on_wake_up"), new ActionOnWakeUpPower());
 
-        PowerTypeRegistry.register(Apoli.id("freeze"), new FreezePower());
         PowerTypeRegistry.register(Apoli.id("shaking"), new ShakingPower());
 
         PowerTypeRegistry.register(Apoli.id("effect_immunity"), new EffectImmunityPower());
@@ -259,8 +263,25 @@ public final class PowerTypes {
 
         PowerTypeRegistry.register(Apoli.id("model_color"), new ModelColorPower());
         PowerTypeRegistry.register(Apoli.id("modify_model_parts"), new ModifyModelPartsPower());
-        PowerTypeRegistry.register(Apoli.id("custom_model_render"), new CustomModelRenderPower());
+        PowerTypeRegistry.register(
+            Apoli.id("custom_model_render"),
+            new CustomModelRenderPower(),
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("energy_swirl"))
+                .build()
+        );
+        PowerTypeRegistry.registerAliasFieldRenames(Apoli.id("energy_swirl"),
+            java.util.Map.of("size", "scale", "speed", "scroll_speed"));
+        PowerTypeRegistry.registerAliasDefaults(Apoli.id("energy_swirl"),
+            AliasDefault.of("render_as_overlay", Codec.BOOL, true),
+            AliasDefault.of("render_type", dev.overgrown.apoli.data.RenderMode.CODEC, dev.overgrown.apoli.data.RenderMode.ENERGY_SWIRL),
+            AliasDefault.of("texture_location", Codec.STRING, "minecraft:textures/entity/wither/wither_armor.png"),
+            AliasDefault.of("scroll_speed", Codec.FLOAT, 0.01F),
+            AliasDefault.of("red", Codec.FLOAT, 0.5F),
+            AliasDefault.of("green", Codec.FLOAT, 0.5F),
+            AliasDefault.of("blue", Codec.FLOAT, 0.5F));
         PowerTypeRegistry.register(Apoli.id("modify_hearing_range"), new ModifyHearingRangePower());
+        PowerTypeRegistry.register(Apoli.id("modify_speaking_range"), new ModifySpeakingRangePower());
         PowerTypeRegistry.register(Apoli.id("action_on_speak"), new ActionOnSpeakPower());
         PowerTypeRegistry.register(Apoli.id("action_on_reply"), new ActionOnReplyPower());
         PowerTypeRegistry.register(Apoli.id("action_on_sending_message"), new ActionOnSendingMessagePower());

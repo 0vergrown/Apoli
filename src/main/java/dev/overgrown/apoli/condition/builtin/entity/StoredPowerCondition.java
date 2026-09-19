@@ -46,7 +46,7 @@ public final class StoredPowerCondition implements ConditionType<EntityCtx, Stor
         int[] matches = new int[1];
         PowerLookup.forEachEntry(ctx.raw(), ApoliIds.POWER_STORAGE, PowerStoragePower.Config.class, (storageId, storage) -> {
             if (cfg.storage().isPresent() && !cfg.storage().get().equals(storageId)) return;
-            List<ResourceLocation> powers = PowerStoragePower.stored(container, storageId);
+            List<ResourceLocation> powers = PowerStoragePower.live(container, storageId);
             for (int i = 0; i < powers.size(); i++) {
                 ResourceLocation id = powers.get(i);
                 if (cfg.power().isPresent() && !cfg.power().get().equals(id)) continue;
