@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Expression;
+import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
 
 public final class FreezeAction implements ActionType<EntityCtx, FreezeAction.Cfg> {
     public record Cfg(Expression duration) {
