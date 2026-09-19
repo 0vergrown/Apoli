@@ -86,6 +86,7 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("unfreeze"), new UnfreezeAction());
         ActionTypes.ENTITY.register(Apoli.id("unsuppress_power"), new UnsuppressPowerAction(),
             AliasingOptions.builder().renameField("powers", "power").renameField("sources", "source").build());
+
         ActionTypes.ENTITY.register(Apoli.id("modify_stat"), new ModifyStatAction(),
             AliasingOptions.builder()
                 .addTypeAlias(Apoli.id("change_stat"))
@@ -120,6 +121,12 @@ public final class EntityActions {
                 .addTypeAlias(Apoli.id("replace_inventory"), java.util.Map.of("operation", "replace"))
                 .addTypeAlias(Apoli.id("drop_inventory"), java.util.Map.of("operation", "drop"))
                 .build());
+
+        ActionTypes.ENTITY.register(Apoli.id("print"), new PrintAction(),
+                AliasingOptions.builder()
+                        .addTypeAlias(Apoli.id("log"))
+                        .addTypeAlias(Apoli.id("logger"))
+                        .build());
 
         ActionTypes.ENTITY.register(Apoli.id("change_slot"), new ChangeSlotAction(),
             AliasingOptions.builder()
