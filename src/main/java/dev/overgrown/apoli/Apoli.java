@@ -95,6 +95,7 @@ public final class Apoli {
 
         PowerContainerAttachment.register(modBus);
         dev.overgrown.apoli.skill.SkillDataAttachment.register(modBus);
+        dev.overgrown.apoli.advancement.ApoliCriteria.register(modBus);
         dev.overgrown.apoli.entity.ApoliEntities.register(modBus);
         dev.overgrown.apoli.particle.ApoliParticles.register(modBus);
         modBus.addListener(dev.overgrown.apoli.entity.ApoliEntities::registerAttributes);
@@ -566,11 +567,12 @@ public final class Apoli {
         Power loaded = ApoliPowers.get(payload.power());
         if (loaded == null) return;
         if (!(PowerTypeRegistry.get(loaded.typeId()) instanceof TogglePower)) return;
+        if (!(loaded.config() instanceof TogglePower.Config cfg)) return;
         if (loaded.condition().isPresent()
             && !loaded.condition().get().test(new EntityCtx(player, player.serverLevel()))) {
             return;
         }
-        TogglePower.toggle(c, payload.power());
+        if (!TogglePower.toggleByKey(c, payload.power(), cfg)) return;
         sendEntitySync(player);
     }
 }

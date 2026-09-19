@@ -1,98 +1,126 @@
 package dev.overgrown.apoli.power.builtin;
 
-import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.power.ApoliIds;
 import dev.overgrown.apoli.power.PowerLookup;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.Objects;
 
 public final class ModifyFogHandler {
-    static FogData getFog(Entity entity) {
-        var result = FogData.empty();
-        Map<Integer, Optional<Integer>> priorities = new HashMap<>(Map.of(0, Optional.empty(), 1, Optional.empty(), 2, Optional.empty(), 3, Optional.empty(), 4, Optional.empty(), 5, Optional.empty(), 6, Optional.empty()));
 
-        PowerLookup.forEach(entity, Apoli.id("modify_fog"), ModifyFogPower.Config.class, cfg -> priorities.forEach((i, p) -> {
-            if ((p.isEmpty() || cfg.priority() > p.get())) {
-                switch (i) { //0 -> s, 1 -> v, 2 -> r, 3 -> g, 4 -> b, 5 -> fade_in, 6 -> fade_out
-                    case 0:
-                        if (cfg.s().isPresent()) result.s = (float) cfg.s().get().eval(entity);
-                        break;
-                    case 1:
-                        if (cfg.v().isPresent()) result.v = (float) cfg.v().get().eval(entity);
-                        break;
-                    case 2:
-                        if (cfg.r().isPresent()) result.color = new Vec3((float) cfg.r().get().eval(entity), result.color.y, result.color.z);
-                        break;
-                    case 3:
-                        if (cfg.g().isPresent()) result.color = new Vec3(result.color.x, (float) cfg.g().get().eval(entity), result.color.z);
-                        break;
-                    case 4:
-                        if (cfg.b().isPresent()) result.color = new Vec3(result.color.x, result.color.y, (float) cfg.b().get().eval(entity));
-                        break;
-                    case 5:
-                        result.fade_in = (float) cfg.fade_in().eval(entity);
-                        break;
-                    case 6:
-                        result.fade_out = (float) cfg.fade_out().eval(entity);
-                        break;
-                }
-                priorities.replace(i, Optional.of(cfg.priority()));
+    private static final int START = 0;
+    private static final int END = 1;
+    private static final int RED = 2;
+    private static final int GREEN = 3;
+    private static final int BLUE = 4;
+    private static final int FADE = 5;
+    private static final int SLOTS = 6;
+
+    private ModifyFogHandler() {}
+
+    private static final class Fold {
+        private final float[] values = new float[SLOTS];
+        private final int[] priorities = new int[SLOTS];
+        private final boolean[] claimed = new boolean[SLOTS];
+        private float fadeIn;
+        private float fadeOut;
+
+        private void reset() {
+            for (int i = 0; i < SLOTS; i++) claimed[i] = false;
+            fadeIn = 0f;
+            fadeOut = 0f;
+        }
+
+        private void offer(int slot, int priority, float value) {
+            if (claimed[slot] && priority <= priorities[slot]) return;
+            claimed[slot] = true;
+            priorities[slot] = priority;
+            values[slot] = value;
+        }
+
+        private float valueOr(int slot, float fallback) {
+            return claimed[slot] ? values[slot] : fallback;
+        }
+    }
+
+    private static final ThreadLocal<Fold> FOLD = ThreadLocal.withInitial(Fold::new);
+
+    public static FogData getFog(@Nullable Entity entity) {
+        Fold fold = FOLD.get();
+        fold.reset();
+
+        PowerLookup.forEach(entity, ApoliIds.MODIFY_FOG, ModifyFogPower.Config.class, cfg -> {
+            int priority = cfg.priority();
+            if (cfg.s().isPresent()) fold.offer(START, priority, (float) cfg.s().get().eval(entity));
+            if (cfg.v().isPresent()) fold.offer(END, priority, (float) cfg.v().get().eval(entity));
+            if (cfg.r().isPresent()) fold.offer(RED, priority, (float) cfg.r().get().eval(entity));
+            if (cfg.g().isPresent()) fold.offer(GREEN, priority, (float) cfg.g().get().eval(entity));
+            if (cfg.b().isPresent()) fold.offer(BLUE, priority, (float) cfg.b().get().eval(entity));
+            if (!fold.claimed[FADE] || priority > fold.priorities[FADE]) {
+                fold.offer(FADE, priority, 0f);
+                fold.fadeIn = (float) cfg.fadeIn().eval(entity);
+                fold.fadeOut = (float) cfg.fadeOut().eval(entity);
             }
-        }));
+        });
 
-        return result;
+        float unset = FogData.UNSET;
+        Vec3 color = fold.claimed[RED] || fold.claimed[GREEN] || fold.claimed[BLUE]
+            ? new Vec3(fold.valueOr(RED, unset), fold.valueOr(GREEN, unset), fold.valueOr(BLUE, unset))
+            : FogData.UNSET_COLOR;
+
+        return new FogData(fold.valueOr(START, unset), fold.valueOr(END, unset), color,
+            fold.fadeIn, fold.fadeOut);
     }
 
     public static final class FogData {
-        public float s;
-        public float v;
+        public static final float UNSET = -1f;
+        public static final Vec3 UNSET_COLOR = new Vec3(UNSET, UNSET, UNSET);
 
-        public Vec3 color;
+        public final float s;
+        public final float v;
+        public final Vec3 color;
+        public final float fadeIn;
+        public final float fadeOut;
 
-        float fade_in;
-        float fade_out;
-
-        public FogData(float s, float v, Vec3 color, float fade_in, float fade_out) {
+        public FogData(float s, float v, Vec3 color, float fadeIn, float fadeOut) {
             this.s = s;
             this.v = v;
             this.color = color;
-            this.fade_in = fade_in;
-            this.fade_out = fade_out;
+            this.fadeIn = fadeIn;
+            this.fadeOut = fadeOut;
         }
-
-        public FogData lerp(FogData target, float progress, @Nullable Float default_s, @Nullable Float default_v, @Nullable Vec3 default_color) {
-            var fade_duration = this.fade_out + target.fade_in;
-            var percent = fade_duration <= 0 ? 1f : Math.min(1f, progress / fade_duration);
-
-            var new_start = new FogData(s == -1f ? Objects.requireNonNullElse(default_s, target.s * 10) : s,
-                    v == -1f ? Objects.requireNonNullElse(default_v, target.v * 10) : v,
-                    color.equals(FogData.EMPTY.color) ? Objects.requireNonNullElse(default_color, Vec3.ZERO) : color,
-                    target.fade_in, target.fade_out);
-            var new_target = new FogData(target.s == -1f && percent != 1f ? Objects.requireNonNullElse(default_s, s * 10) : target.s,
-                    target.v == -1f && percent != 1f ? Objects.requireNonNullElse(default_v, v * 10) : target.v,
-                    target.color.equals(FogData.EMPTY.color) && percent != 1f ? Objects.requireNonNullElse(default_color, Vec3.ZERO) : target.color,
-                    0f, 0f);
-
-
-            FogData difference = new FogData((new_target.s - new_start.s) * percent, (new_target.v - new_start.v) * percent, new_target.color.subtract(new_start.color).scale(percent), 0, 0);
-
-            return new_start.add(difference);
-        }
-
-        public FogData add(FogData f) {
-            return new FogData(s + f.s, v + f.v, color.add(f.color), fade_in, fade_out);
-        }
-
-        public static final FogData EMPTY = FogData.empty();
 
         public static FogData empty() {
-            return new FogData(-1f, -1f, new Vec3(-1f, -1f, -1f), 0f, 0f);
+            return new FogData(UNSET, UNSET, UNSET_COLOR, 0f, 0f);
         }
 
-        public boolean equals(FogData other) {
+        public boolean sameAs(FogData other) {
             return s == other.s && v == other.v && color.equals(other.color);
+        }
+
+        public FogData lerp(FogData target, float progress,
+                            @Nullable Float defaultS, @Nullable Float defaultV, @Nullable Vec3 defaultColor) {
+            float span = this.fadeOut + target.fadeIn;
+            float percent = span <= 0f ? 1f : Math.min(1f, progress / span);
+            if (percent >= 1f) return target;
+
+            float fromS = s == UNSET ? Objects.requireNonNullElse(defaultS, target.s) : s;
+            float fromV = v == UNSET ? Objects.requireNonNullElse(defaultV, target.v) : v;
+            Vec3 fromColor = color.equals(UNSET_COLOR)
+                ? Objects.requireNonNullElse(defaultColor, target.color) : color;
+
+            float toS = target.s == UNSET ? Objects.requireNonNullElse(defaultS, fromS) : target.s;
+            float toV = target.v == UNSET ? Objects.requireNonNullElse(defaultV, fromV) : target.v;
+            Vec3 toColor = target.color.equals(UNSET_COLOR)
+                ? Objects.requireNonNullElse(defaultColor, fromColor) : target.color;
+
+            return new FogData(
+                fromS + (toS - fromS) * percent,
+                fromV + (toV - fromV) * percent,
+                fromColor.add(toColor.subtract(fromColor).scale(percent)),
+                target.fadeIn, target.fadeOut);
         }
     }
 }

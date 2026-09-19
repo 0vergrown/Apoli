@@ -91,8 +91,8 @@ public final class ApoliVoicechatPlugin implements VoicechatPlugin {
         ServerPlayer speaker = connection.getPlayer();
         if (speaker == null) return;
         float base = event.getDistance();
-        float widened = VoiceHearing.broadcastDistance(speaker.getUuid(), base, event.getPacket().isWhispering());
-        if (widened > base) event.setDistance(widened);
+        float reach = VoiceHearing.broadcastDistance(speaker.getUuid(), base, event.getPacket().isWhispering());
+        if (reach != base) event.setDistance(reach);
     }
 
     private void onEntitySound(EntitySoundPacketEvent event) {
@@ -108,7 +108,7 @@ public final class ApoliVoicechatPlugin implements VoicechatPlugin {
         boolean whispering = packet.isWhispering();
         float sent = packet.getDistance();
         float base = VoiceHearing.originalDistance(packet.getEntityUuid(), sent);
-        double effective = VoiceHearing.rangeFor(listener.getUuid(), whispering, base);
+        double effective = VoiceHearing.rangeFor(listener.getUuid(), packet.getEntityUuid(), whispering, base);
         if (effective == sent) return;
         VoicechatConnection senderConnection = event.getSenderConnection();
         ServerPlayer speaker = senderConnection == null ? null : senderConnection.getPlayer();

@@ -167,6 +167,7 @@ public final class PowerContainerImpl implements PowerContainer {
         if (added) {
             markStructureDirty();
             refreshSuppression();
+            dev.overgrown.apoli.advancement.ApoliCriteria.powerGranted(owner, power, source);
         }
         if (wasEmpty && !bySources.isEmpty()) PoweredEntities.register(owner);
         return added;

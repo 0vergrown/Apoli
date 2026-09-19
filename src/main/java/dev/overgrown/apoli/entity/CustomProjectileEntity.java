@@ -73,7 +73,7 @@ public class CustomProjectileEntity extends ThrowableProjectile {
     @Override
     protected void onHit(HitResult result) {
         super.onHit(result);
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide && !((ProjectileHitActions) this).apoli$bouncedThisHit()) {
             this.discard();
         }
     }

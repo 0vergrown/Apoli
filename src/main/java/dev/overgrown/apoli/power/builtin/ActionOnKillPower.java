@@ -102,6 +102,15 @@ public final class ActionOnKillPower extends PowerType<ActionOnKillPower.Config>
     }
 
     @Override
+
+    public boolean isCooldown() {
+
+        return true;
+
+    }
+
+
+    @Override
     public OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         return PowerResources.readDeadline(holder, powerId);
     }

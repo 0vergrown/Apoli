@@ -49,7 +49,17 @@ public final class PowerResources {
         if (loaded == null) return OptionalInt.empty();
         PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
         if (type == null) return OptionalInt.empty();
-        return invokeWrite(type, powerId, loaded.config(), holder, value);
+        int target = value;
+        if (dev.overgrown.apoli.power.builtin.ModifyResourceChangePower.inUse()) {
+            OptionalInt current = invokeRead(type, powerId, loaded.config(), holder);
+            int before = current.orElseGet(() -> holder.getAuxIntOr(powerId, value));
+            target = dev.overgrown.apoli.power.builtin.ModifyResourceChangePower.adjust(holder, powerId, before, value);
+        }
+        OptionalInt written = invokeWrite(type, powerId, loaded.config(), holder, target);
+        if (written.isPresent()) {
+            dev.overgrown.apoli.advancement.ApoliCriteria.resourceChanged(holder.rawOwner(), powerId, written.getAsInt());
+        }
+        return written;
     }
 
     public static OptionalInt readAt(@Nullable PowerContainer holder, ResourceLocation powerId, int slot) {
@@ -69,7 +79,17 @@ public final class PowerResources {
         if (loaded == null) return OptionalInt.empty();
         PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
         if (type == null) return OptionalInt.empty();
-        return invokeWriteAt(type, powerId, loaded.config(), holder, slot, value);
+        int target = value;
+        if (dev.overgrown.apoli.power.builtin.ModifyResourceChangePower.inUse()) {
+            OptionalInt current = invokeReadAt(type, powerId, loaded.config(), holder, slot);
+            int before = current.orElseGet(() -> holder.getAuxIntOr(powerId, value));
+            target = dev.overgrown.apoli.power.builtin.ModifyResourceChangePower.adjust(holder, powerId, before, value);
+        }
+        OptionalInt written = invokeWriteAt(type, powerId, loaded.config(), holder, slot, target);
+        if (written.isPresent()) {
+            dev.overgrown.apoli.advancement.ApoliCriteria.resourceChanged(holder.rawOwner(), powerId, written.getAsInt());
+        }
+        return written;
     }
 
     public static int size(@Nullable PowerContainer holder, ResourceLocation powerId) {

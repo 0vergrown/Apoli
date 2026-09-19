@@ -120,6 +120,15 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
     }
 
     @Override
+
+    public boolean isCooldown() {
+
+        return true;
+
+    }
+
+
+    @Override
     public OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         LivingEntity owner = holder.owner();
         if (owner == null) return OptionalInt.of(0);
