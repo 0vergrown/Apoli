@@ -8,6 +8,7 @@ import dev.overgrown.apoli.command.ApoliPowerCommand;
 import dev.overgrown.apoli.command.ApoliResourceCommand;
 import dev.overgrown.apoli.condition.ConditionTypes;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.effects.CustomEffectLoader;
 import dev.overgrown.apoli.loader.ApoliKeybindLoader;
 import dev.overgrown.apoli.loader.ApoliReloadListener;
 import dev.overgrown.apoli.network.payload.PowerActivatedS2C;
@@ -17,6 +18,8 @@ import dev.overgrown.apoli.network.payload.SyncEntityPowersS2C;
 import dev.overgrown.apoli.network.payload.SyncKeybindsS2C;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
+import dev.overgrown.apoli.power.PowerLookup;
+import dev.overgrown.apoli.power.PowerSources;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerContainerImpl;
 import dev.overgrown.apoli.power.PoweredEntities;
@@ -34,7 +37,6 @@ import dev.overgrown.apoli.power.builtin.ModifyDamageHandler;
 import dev.overgrown.apoli.power.builtin.ModifyProjectileDamageHandler;
 import dev.overgrown.apoli.power.builtin.TogglePower;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
@@ -127,6 +129,7 @@ public final class Apoli {
         event.addListener(skillLoader);
         event.addListener(new dev.overgrown.apoli.global.GlobalPowerLoader());
         event.addListener(new dev.overgrown.apoli.script.ScriptLoader());
+        event.addListener(new CustomEffectLoader());
     }
 
     @SubscribeEvent
