@@ -7,6 +7,7 @@ import dev.overgrown.apoli.command.ApoliPowerCommand;
 import dev.overgrown.apoli.command.ApoliResourceCommand;
 import dev.overgrown.apoli.condition.ConditionTypes;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.effects.CustomEffectNetworking;
 import dev.overgrown.apoli.loader.ApoliKeybindLoader;
 import dev.overgrown.apoli.loader.ApoliReloadListener;
 import dev.overgrown.apoli.keybind.HeldKeys;
@@ -43,10 +44,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
-import net.fabricmc.fabric.api.networking.v1.EntityTrackingEvents;
-import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.*;
 import net.minecraft.world.InteractionResult;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
@@ -133,6 +131,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
             ApoliNetwork.broadcastPowers(server);
             ApoliNetwork.broadcastKeybinds(server, SyncKeybindsS2C.fromCurrent());
+            dev.overgrown.apoli.effects.CustomEffectRegistry.update(server);
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(server);
             dev.overgrown.apoli.compat.voicechat.VoiceState.setServer(server);
             dev.overgrown.apoli.compat.voicechat.VoiceState.setCallbacks(
@@ -143,10 +142,14 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(server);
             dev.overgrown.apoli.global.GlobalPowers.reapplyAll(server);
+            dev.overgrown.apoli.effects.CustomEffectRegistry.update(server);
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 dev.overgrown.apoli.skill.SkillTrees.grantOnJoin(player);
                 ApoliNetwork.sendSkillDefs(player);
                 ApoliNetwork.sendSkillState(player);
+                if (ServerPlayNetworking.canSend(player, CustomEffectNetworking.SyncCustomEffectsPayload.TYPE)) {
+                    CustomEffectNetworking.sync(player, null, server.isSingleplayerOwner(player.getGameProfile()));
+                }
             }
         });
         ServerLifecycleEvents.SERVER_STOPPING.register(server ->
@@ -164,6 +167,12 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.compat.voicechat.VoiceState.clear();
             dev.overgrown.apoli.compat.voicechat.VoiceHearing.reset();
             dev.overgrown.apoli.tick.TickRates.clear();
+        });
+
+        ServerConfigurationConnectionEvents.CONFIGURE.register((handler, server) -> {
+            if (ServerConfigurationNetworking.canSend(handler, CustomEffectNetworking.SyncCustomEffectsPayload.TYPE)) {
+                CustomEffectNetworking.sync(null, handler, server.isSingleplayerOwner(handler.getOwner()));
+            }
         });
 
         net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register(
@@ -269,6 +278,9 @@ public final class Apoli implements ModInitializer {
             context.server().execute(() ->
                 dev.overgrown.apoli.compat.voicechat.ActionOnSpeechPower.fireTrigger(sender, payload.power()));
         });
+
+        PayloadTypeRegistry.configurationS2C().register(CustomEffectNetworking.SyncCustomEffectsPayload.TYPE, CustomEffectNetworking.SyncCustomEffectsPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(CustomEffectNetworking.SyncCustomEffectsPayload.TYPE, CustomEffectNetworking.SyncCustomEffectsPayload.CODEC);
 
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             HeldKeys.clearServer(handler.player.getUUID());

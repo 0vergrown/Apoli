@@ -16,8 +16,8 @@ public class MobEffectTextureManagerCustomEffectSpriteMixin {
     TextureAtlasSprite apoli$getCustomSprite(Holder<MobEffect> holder, Operation<TextureAtlasSprite> original) {
         if (holder.value() instanceof CustomMobEffect effect) {
 
-            if (effect.effect.icon().isPresent()) {
-                return ((TextureAtlasHolderInvoker) this).apoli$invokeGetSprite(effect.effect.icon().get());
+            if (effect.icon.isPresent()) {
+                return ((TextureAtlasHolderInvoker) this).apoli$invokeGetSprite(effect.icon.get());
             }
         }
 

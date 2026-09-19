@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.client;
 
 import dev.overgrown.apoli.PowerContainerAttachment;
+import dev.overgrown.apoli.effects.CustomEffectNetworking;
 import dev.overgrown.apoli.keybind.HeldKeys;
 import dev.overgrown.apoli.network.payload.KeyHeldC2S;
 import dev.overgrown.apoli.client.rope.RopeClientManager;
@@ -16,6 +17,7 @@ import dev.overgrown.apoli.network.payload.SyncKeybindsS2C;
 import dev.overgrown.apoli.network.payload.SyncPowersS2C;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationNetworking;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -73,6 +75,9 @@ public final class ApoliClient implements ClientModInitializer {
         HeldKeys.setClientLookup((entity, key, grace) ->
             entity == net.minecraft.client.Minecraft.getInstance().player && KeyPressWatcher.isLocalHeld(key, grace));
         KeyPressWatcher.setSender(keys -> ClientPlayNetworking.send(new KeyHeldC2S(keys)));
+
+        ClientPlayNetworking.registerGlobalReceiver(CustomEffectNetworking.SyncCustomEffectsPayload.TYPE, (payload, context) -> SyncCustomEffectRegistry.sync(payload));
+        ClientConfigurationNetworking.registerGlobalReceiver(CustomEffectNetworking.SyncCustomEffectsPayload.TYPE, (payload, context) -> SyncCustomEffectRegistry.sync(payload));
 
         ClientPlayNetworking.registerGlobalReceiver(SyncPowersS2C.TYPE, (payload, context) ->
             context.client().execute(() -> ClientPowerState.applyPowersSync(payload)));

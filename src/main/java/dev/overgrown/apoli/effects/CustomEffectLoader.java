@@ -45,7 +45,7 @@ public final class CustomEffectLoader extends SimpleJsonResourceReloadListener {
                     });
         }
         List<CustomEffect> loaded = new ArrayList<>(byId.values());
-        CustomEffectRegistry.replaceAll(loaded);
+        CustomEffectRegistry.commit(loaded);
         if (!loaded.isEmpty()) {
             LOG.info("[Apoli] Loaded {} custom effect(s).", loaded.size());
         }
