@@ -85,6 +85,7 @@ public final class Apoli implements ModInitializer {
         PowerTypes.bootstrap();
         dev.overgrown.apoli.scale.ScaleTypes.bootstrap();
         dev.overgrown.apoli.power.PowerSources.bootstrap();
+        dev.overgrown.apoli.advancement.ApoliCriteria.register();
         dev.overgrown.apoli.attribution.PowerCause.bootstrap();
         dev.overgrown.apoli.compat.accessory.AccessoryCompat.init();
         if (dev.overgrown.apoli.compat.ModCompat.HARDCORE_REVIVAL) {
@@ -637,11 +638,12 @@ public final class Apoli implements ModInitializer {
         Power loaded = ApoliPowers.get(payload.power());
         if (loaded == null) return;
         if (!(PowerTypeRegistry.get(loaded.typeId()) instanceof TogglePower)) return;
+        if (!(loaded.config() instanceof TogglePower.Config cfg)) return;
         if (loaded.condition().isPresent()
             && !loaded.condition().get().test(new EntityCtx(player, player.serverLevel()))) {
             return;
         }
-        TogglePower.toggle(c, payload.power());
+        if (!TogglePower.toggleByKey(c, payload.power(), cfg)) return;
         sendEntitySync(player);
     }
 

@@ -158,6 +158,15 @@ public final class ActionOnMouseMovementPower extends PowerType<ActionOnMouseMov
     }
 
     @Override
+
+    public boolean isCooldown() {
+
+        return true;
+
+    }
+
+
+    @Override
     public OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         Entity owner = holder.rawOwner();
         if (owner.level().isClientSide()) {

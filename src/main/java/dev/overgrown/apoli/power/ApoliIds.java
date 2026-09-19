@@ -31,6 +31,7 @@ public final class ApoliIds {
     public static final ResourceLocation NIGHT_VISION = Apoli.id("night_vision");
     public static final ResourceLocation FLUID_VISION = Apoli.id("fluid_vision");
     public static final ResourceLocation MODIFY_CAMERA_SUBMERSION = Apoli.id("modify_camera_submersion");
+    public static final ResourceLocation MODIFY_FOG = Apoli.id("modify_fog");
     public static final ResourceLocation MODIFY_VELOCITY = Apoli.id("modify_velocity");
     public static final ResourceLocation MODIFY_EXHAUSTION = Apoli.id("modify_exhaustion");
     public static final ResourceLocation MODIFY_DAMAGE = Apoli.id("modify_damage");
