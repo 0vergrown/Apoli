@@ -10,6 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +28,7 @@ public final class CustomEffectLoader extends SimpleJsonResourceReloadListener {
     }
 
     @Override
-    protected void apply(Map<ResourceLocation, JsonElement> object, ResourceManager resourceManager, ProfilerFiller profilerFiller) {
+    protected void apply(Map<ResourceLocation, JsonElement> object, @NotNull ResourceManager resourceManager, @NotNull ProfilerFiller profilerFiller) {
         Map<ResourceLocation, CustomEffect> byId = new HashMap<>(object.size());
         for (Map.Entry<ResourceLocation, JsonElement> entry : object.entrySet()) {
             ResourceLocation id = entry.getKey();
@@ -45,7 +46,7 @@ public final class CustomEffectLoader extends SimpleJsonResourceReloadListener {
                     });
         }
         List<CustomEffect> loaded = new ArrayList<>(byId.values());
-        CustomEffectRegistry.replaceAll(loaded);
+        CustomEffectRegistry.commit(loaded);
         if (!loaded.isEmpty()) {
             LOG.info("[Apoli] Loaded {} custom effect(s).", loaded.size());
         }

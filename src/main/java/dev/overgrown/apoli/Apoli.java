@@ -4,11 +4,14 @@ import com.mojang.logging.LogUtils;
 import dev.overgrown.apoli.action.ActionTypes;
 import dev.overgrown.apoli.action.DelayedActionQueue;
 import dev.overgrown.apoli.alias.ApoliAliases;
+import dev.overgrown.apoli.client.SyncCustomEffectRegistry;
 import dev.overgrown.apoli.command.ApoliPowerCommand;
 import dev.overgrown.apoli.command.ApoliResourceCommand;
 import dev.overgrown.apoli.condition.ConditionTypes;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.effects.CustomEffectNetworking;
 import dev.overgrown.apoli.effects.CustomEffectLoader;
+import dev.overgrown.apoli.effects.CustomEffectRegistry;
 import dev.overgrown.apoli.loader.ApoliKeybindLoader;
 import dev.overgrown.apoli.loader.ApoliReloadListener;
 import dev.overgrown.apoli.network.payload.PowerActivatedS2C;
@@ -18,8 +21,6 @@ import dev.overgrown.apoli.network.payload.SyncEntityPowersS2C;
 import dev.overgrown.apoli.network.payload.SyncKeybindsS2C;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
-import dev.overgrown.apoli.power.PowerLookup;
-import dev.overgrown.apoli.power.PowerSources;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerContainerImpl;
 import dev.overgrown.apoli.power.PoweredEntities;
@@ -49,6 +50,9 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.network.event.RegisterConfigurationTasksEvent;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.neoforged.neoforge.server.permission.events.PermissionGatherEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
@@ -103,6 +107,8 @@ public final class Apoli {
         modBus.addListener(dev.overgrown.apoli.entity.ApoliEntities::registerAttributes);
         modBus.addListener(ApoliNetwork::register);
         modBus.addListener(dev.overgrown.apoli.item.ApoliLootFunctions::register);
+        modBus.addListener(Apoli::onConfigTasks);
+        modBus.addListener(Apoli::registerPayloads);
 
         NeoForge.EVENT_BUS.register(this);
 
@@ -119,6 +125,34 @@ public final class Apoli {
         }
 
         LOGGER.info("[Apoli] Ready. {} power type(s).", PowerTypeRegistry.view().size());
+    }
+
+    static void onConfigTasks(RegisterConfigurationTasksEvent event) {
+        var listener = event.getListener();
+        if (listener.hasChannel(CustomEffectNetworking.SyncCustomEffectsPayload.TYPE)
+                && !listener.getConnection().isMemoryConnection()) {
+            event.register(new CustomEffectNetworking.SyncCustomEffectConfigurationTask(new CustomEffectNetworking.SyncCustomEffectsPayload()));
+        }
+    }
+
+    static void registerPayloads(RegisterPayloadHandlersEvent event) {
+        PayloadRegistrar registrar = event.registrar("1");
+
+        registrar.configurationToClient(CustomEffectNetworking.SyncCustomEffectsPayload.TYPE, CustomEffectNetworking.SyncCustomEffectsPayload.CODEC, SyncCustomEffectRegistry::sync);
+
+        registrar.configurationToServer(CustomEffectNetworking.SyncCustomEffectsResponsePayload.TYPE, CustomEffectNetworking.SyncCustomEffectsResponsePayload.CODEC,
+                (payload, context) -> context.finishCurrentTask(CustomEffectNetworking.SyncCustomEffectConfigurationTask.TYPE));
+
+
+        registrar.playToClient(CustomEffectNetworking.SyncCustomEffectsPayload.TYPE, CustomEffectNetworking.SyncCustomEffectsPayload.CODEC, SyncCustomEffectRegistry::sync);
+
+        registrar.playToServer(CustomEffectNetworking.SyncCustomEffectsResponsePayload.TYPE, CustomEffectNetworking.SyncCustomEffectsResponsePayload.CODEC, (payload, context) -> {
+            CustomEffectRegistry.waiting.remove(context.player().getUUID());
+
+            if (!payload.success()) {
+                Apoli.LOGGER.warn("Custom Effect Sync failed for Player: {}", context.player().getDisplayName());
+            }
+        });
     }
 
     @SubscribeEvent
@@ -200,11 +234,14 @@ public final class Apoli {
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(event.getPlayerList().getServer());
             dev.overgrown.apoli.global.GlobalPowers.reapplyAll(event.getPlayerList().getServer());
             dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
+            CustomEffectRegistry.update(event.getPlayerList().getServer());
             for (ServerPlayer player : event.getPlayerList().getPlayers()) {
                 dev.overgrown.apoli.skill.SkillTrees.grantOnJoin(player);
                 ApoliNetwork.sendSkillDefs(player);
                 ApoliNetwork.sendSkillState(player);
+                CustomEffectNetworking.sync(player);
             }
+            CustomEffectRegistry.reloading = false;
         }
     }
 
@@ -223,6 +260,7 @@ public final class Apoli {
         dev.overgrown.apoli.compat.voicechat.VoiceState.setCallbacks(
             dev.overgrown.apoli.compat.voicechat.VoicePowerHandler::onSpeakStart,
             dev.overgrown.apoli.compat.voicechat.VoicePowerHandler::onSpeakStop);
+        CustomEffectRegistry.update(event.getServer());
     }
 
     @SubscribeEvent
@@ -376,6 +414,7 @@ public final class Apoli {
         dev.overgrown.apoli.power.builtin.InventoryPower.onPlayerLeave(event.getEntity().getUUID());
         dev.overgrown.apoli.compat.voicechat.VoiceHearing.forget(event.getEntity().getUUID());
         dev.overgrown.apoli.compat.voicechat.VoiceState.forget(event.getEntity().getUUID());
+        CustomEffectRegistry.waiting.remove(event.getEntity().getUUID());
     }
 
     @SubscribeEvent
