@@ -84,8 +84,8 @@ public final class ApoliClient implements ClientModInitializer {
                 ? dev.overgrown.apoli.client.ClientPowerState.getCooldown(powerId)
                 : 0);
 
-        HeldKeys.setClientLookup((entity, key) ->
-            entity == Minecraft.getInstance().player && KeyPressWatcher.isLocalHeld(key));
+        HeldKeys.setClientLookup((entity, key, grace) ->
+            entity == Minecraft.getInstance().player && KeyPressWatcher.isLocalHeld(key, grace));
         KeyPressWatcher.setSender(keys -> {
             FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
             new KeyHeldC2S(keys).write(buf);
@@ -167,6 +167,18 @@ public final class ApoliClient implements ClientModInitializer {
             holder == net.minecraft.client.Minecraft.getInstance().player
                 ? dev.overgrown.apoli.client.ClientPowerState.powerInventory(powerId)
                 : null);
+
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.ScaleSyncS2C.CHANNEL,
+            (client, handler, buf, sender) -> {
+                dev.overgrown.apoli.network.payload.ScaleSyncS2C payload =
+                    dev.overgrown.apoli.network.payload.ScaleSyncS2C.read(buf);
+                client.execute(() -> {
+                    if (client.level == null) return;
+                    net.minecraft.world.entity.Entity entity = client.level.getEntity(payload.entityId());
+                    if (entity == null) return;
+                    dev.overgrown.apoli.scale.ScaleSync.decode(entity, payload.data());
+                });
+            });
 
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.TickRateS2C.CHANNEL,
             (client, handler, buf, sender) -> {
@@ -349,6 +361,7 @@ public final class ApoliClient implements ClientModInitializer {
             dev.overgrown.apoli.client.PlayerModelTypeReporter.tick(mc);
             dev.overgrown.apoli.client.CameraPerspectiveReporter.tick(mc);
             dev.overgrown.apoli.client.ForcedKeys.tick();
+            dev.overgrown.apoli.power.builtin.ModifyFogInterpolator.tick(mc.player);
         });
 
         WorldRenderEvents.AFTER_ENTITIES.register(RopeRenderer::render);

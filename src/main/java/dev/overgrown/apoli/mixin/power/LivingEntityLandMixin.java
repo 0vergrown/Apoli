@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.mixin.power;
 
 import dev.overgrown.apoli.power.builtin.ActionOnLandPower;
+import dev.overgrown.apoli.power.builtin.ModifyFallingHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -17,7 +18,8 @@ public abstract class LivingEntityLandMixin {
         at = @At("HEAD"))
     private void apoli$actionOnLand(double y, boolean onGround, BlockState state, BlockPos pos, CallbackInfo ci) {
         LivingEntity self = (LivingEntity) (Object) this;
-        if (!onGround || self.fallDistance <= 0.0F || self.level().isClientSide()) return;
-        ActionOnLandPower.onLand(self);
+        if (!onGround || self.fallDistance <= 0.0F) return;
+        if (!self.level().isClientSide()) ActionOnLandPower.onLand(self);
+        ModifyFallingHandler.applyLandingImmunity(self);
     }
 }

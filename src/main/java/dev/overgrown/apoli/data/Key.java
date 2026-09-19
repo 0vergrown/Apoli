@@ -13,9 +13,16 @@ public record Key(String key, boolean continuous) {
 
     public static final Key DEFAULT_PRIMARY = new Key(PRIMARY_ACTIVE, false);
 
+    private static final Codec<String> WRAPPED_NAME = RecordCodecBuilder.create(i -> i.group(
+        Codec.STRING.fieldOf("key").forGetter(name -> name)
+    ).apply(i, name -> name));
+
+    public static final Codec<String> NAME_CODEC = Codec.either(Codec.STRING, WRAPPED_NAME)
+        .xmap(either -> either.map(name -> name, name -> name), Either::left);
+
     public static final MapCodec<Key> MAP_CODEC = AliasingMapCodec.wrap(
         RecordCodecBuilder.<Key>mapCodec(i -> i.group(
-            Codec.STRING.fieldOf("key").forGetter(Key::key),
+            NAME_CODEC.fieldOf("key").forGetter(Key::key),
             Codec.BOOL.optionalFieldOf("continuous", false).forGetter(Key::continuous)
         ).apply(i, Key::new)),
         Map.of("continous", "continuous"));

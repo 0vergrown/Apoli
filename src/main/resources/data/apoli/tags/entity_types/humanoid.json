@@ -1,0 +1,22 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:player",
+    "minecraft:armor_stand",
+    "minecraft:zombie",
+    "minecraft:husk",
+    "minecraft:drowned",
+    "minecraft:zombie_villager",
+    "minecraft:giant",
+    "minecraft:skeleton",
+    "minecraft:stray",
+    "minecraft:wither_skeleton",
+    "minecraft:piglin",
+    "minecraft:piglin_brute",
+    "minecraft:zombified_piglin",
+    {
+      "id": "apoli:clone",
+      "required": false
+    }
+  ]
+}

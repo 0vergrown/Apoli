@@ -44,7 +44,7 @@ public class CustomParticle extends SingleQuadParticle {
         super(level, x, y, z);
         this.options = options;
         net.minecraft.resources.ResourceLocation texture = ParticleTextures.resolve(options.texture());
-        this.renderType = ApoliParticleRenderTypes.of(texture, options.blend());
+        this.renderType = ApoliParticleRenderTypes.of(ParticleTextures.bound(texture, options.alphaBleed()), options.blend());
         this.sheet = ParticleSheet.of(texture, options.frameLayout(), options.frames(), options.frameTime());
         this.loopFrames = options.loopFrames().orElseGet(this.sheet::loopsByDefault);
         this.lifetime = Math.max(1, options.lifetime() + (options.lifetimeVariation() > 0

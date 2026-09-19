@@ -19,10 +19,12 @@ public final class DamageConditions {
                 .build()
         );
         ConditionTypes.DAMAGE.register(Apoli.id("attacker"), new AttackerDamageCondition());
+        ConditionTypes.DAMAGE.register(Apoli.id("body_part"), new BodyPartDamageCondition());
         ConditionTypes.DAMAGE.register(Apoli.id("critical"), new CriticalDamageCondition());
         ConditionTypes.DAMAGE.register(Apoli.id("in_tag"), new InTagDamageCondition());
         ConditionTypes.DAMAGE.register(Apoli.id("name"), new NameDamageCondition());
         ConditionTypes.DAMAGE.register(Apoli.id("projectile"), new ProjectileDamageCondition());
+        ConditionTypes.DAMAGE.register(Apoli.id("source"), new SourceDamageCondition());
         ConditionTypes.DAMAGE.register(Apoli.id("type"), new TypeDamageCondition());
 
         ConditionTypes.DAMAGE.register(Apoli.id("bypasses_armor"), new FixedTagDamageCondition(DamageTypeTags.BYPASSES_ARMOR));

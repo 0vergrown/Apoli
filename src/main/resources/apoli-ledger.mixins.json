@@ -1,0 +1,14 @@
+{
+  "required": false,
+  "package": "dev.overgrown.apoli.compat.ledger.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "plugin": "dev.overgrown.apoli.compat.ledger.mixin.LedgerCompatMixinPlugin",
+  "mixins": [
+    "ActionQueueServiceMixin",
+    "LedgerManagerMixin",
+    "LogEntryMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

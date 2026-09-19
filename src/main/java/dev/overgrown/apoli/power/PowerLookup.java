@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.power;
 
+import dev.overgrown.apoli.attribution.PowerCause;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
@@ -79,7 +80,12 @@ public final class PowerLookup {
                 if (ctx == null) ctx = EntityCtx.of(entity, entity.level());
                 if (!power.condition().get().test(ctx)) continue;
             }
-            consumer.accept(powerId, (C) cfg);
+            boolean attributed = PowerCause.push(entity, powerId);
+            try {
+                consumer.accept(powerId, (C) cfg);
+            } finally {
+                if (attributed) PowerCause.pop();
+            }
         }
     }
 
@@ -103,7 +109,61 @@ public final class PowerLookup {
                 if (ctx == null) ctx = EntityCtx.of(entity, entity.level());
                 if (!power.condition().get().test(ctx)) continue;
             }
-            consumer.accept((C) cfg);
+            boolean attributed = PowerCause.push(entity, powerId);
+            try {
+                consumer.accept((C) cfg);
+            } finally {
+                if (attributed) PowerCause.pop();
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <C> boolean anyActive(@Nullable Entity entity, ResourceLocation canonicalId, Class<C> configClass,
+                                        java.util.function.Predicate<C> test) {
+        if (entity == null) return false;
+        PowerContainer container = PowerContainer.of(entity);
+        if (container == null || container.isEmpty()) return false;
+        List<ResourceLocation> powers = container.powersOfType(canonicalId);
+        if (powers.isEmpty()) return false;
+        EntityCtx ctx = null;
+        for (int i = 0; i < powers.size(); i++) {
+            ResourceLocation powerId = powers.get(i);
+            if (container.isSuppressed(powerId)) continue;
+            Power power = ApoliPowers.get(powerId);
+            if (power == null) continue;
+            Object cfg = power.config();
+            if (!configClass.isInstance(cfg) || !test.test((C) cfg)) continue;
+            if (power.condition().isPresent()) {
+                if (ctx == null) ctx = EntityCtx.of(entity, entity.level());
+                if (!power.condition().get().test(ctx)) continue;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <C> void collect(@Nullable Entity entity, ResourceLocation canonicalId, Class<C> configClass,
+                                   List<C> out) {
+        if (entity == null) return;
+        PowerContainer container = PowerContainer.of(entity);
+        if (container == null || container.isEmpty()) return;
+        List<ResourceLocation> powers = container.powersOfType(canonicalId);
+        if (powers.isEmpty()) return;
+        EntityCtx ctx = null;
+        for (int i = 0; i < powers.size(); i++) {
+            ResourceLocation powerId = powers.get(i);
+            if (container.isSuppressed(powerId)) continue;
+            Power power = ApoliPowers.get(powerId);
+            if (power == null) continue;
+            Object cfg = power.config();
+            if (!configClass.isInstance(cfg)) continue;
+            if (power.condition().isPresent()) {
+                if (ctx == null) ctx = EntityCtx.of(entity, entity.level());
+                if (!power.condition().get().test(ctx)) continue;
+            }
+            out.add((C) cfg);
         }
     }
 

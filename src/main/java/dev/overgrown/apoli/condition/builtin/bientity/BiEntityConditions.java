@@ -16,6 +16,14 @@ public final class BiEntityConditions {
             AliasingOptions.builder().addTypeAlias(Apoli.id("allied")).build()
         );
         ConditionTypes.BI_ENTITY.register(Apoli.id("can_see"), new CanSeeCondition());
+        ConditionTypes.BI_ENTITY.register(
+            Apoli.id("same_equipped_item"),
+            new SameEquippedItemCondition(),
+            AliasingOptions.builder()
+                .renameField("compare_components", "compare_tag")
+                .renameField("compare_nbt", "compare_tag")
+                .build()
+        );
         ConditionTypes.BI_ENTITY.register(Apoli.id("damage_would_kill"), new DamageWouldKillBiEntityCondition());
         ConditionTypes.BI_ENTITY.register(Apoli.id("actor_condition"), new ActorCondition());
         ConditionTypes.BI_ENTITY.register(Apoli.id("target_condition"), new TargetCondition());

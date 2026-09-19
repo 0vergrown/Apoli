@@ -32,28 +32,10 @@ public class CustomModelRenderLayer extends RenderLayer<AbstractClientPlayer, Pl
         PlayerModel<AbstractClientPlayer> model = this.getParentModel();
 
         List<ResolvedLayer> layers = CustomModelRenderPower.collectTextureOverlays(player);
-        for (ResolvedLayer layer : layers) {
+        for (int i = 0; i < layers.size(); i++) {
+            ResolvedLayer layer = layers.get(i);
             ResourceLocation texture = DynamicTextures.resolve(layer.texture(slim), player);
-            VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(layer.mode(), texture));
-            boolean scaled = layer.scale() != 1.0F;
-            if (scaled) {
-                pose.pushPose();
-                pose.scale(layer.scale(), layer.scale(), layer.scale());
-            }
-            if (layer.wholeModel()) {
-                model.renderToBuffer(pose, consumer, light, OverlayTexture.NO_OVERLAY,
-                    layer.red(), layer.green(), layer.blue(), layer.alpha());
-            } else {
-                for (String partName : layer.bodyParts()) {
-                    for (ModelPart part : ModelPartLookup.resolve(model, ModelParts.normalize(partName))) {
-                        part.render(pose, consumer, light, OverlayTexture.NO_OVERLAY,
-                            layer.red(), layer.green(), layer.blue(), layer.alpha());
-                    }
-                }
-            }
-            if (scaled) {
-                pose.popPose();
-            }
+            TextureOverlays.render(model, layer, texture, 1.0F, ageInTicks, player, pose, buffers, light);
         }
 
         List<GeometryRender> geometry = CustomModelRenderPower.collectGeometry(player);

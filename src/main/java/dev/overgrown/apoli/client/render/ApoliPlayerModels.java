@@ -4,6 +4,7 @@ import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.client.render.model.CentaurPlayerModel;
 import dev.overgrown.apoli.client.render.model.DigiLegsPlayerModel;
 import dev.overgrown.apoli.client.render.model.FourArmsPlayerModel;
+import dev.overgrown.apoli.client.render.model.SixArmsPlayerModel;
 import dev.overgrown.apoli.client.render.model.StinkFlyPlayerModel;
 import dev.overgrown.apoli.power.builtin.ModifyPlayerModelPower;
 import net.minecraft.client.model.PlayerModel;
@@ -25,6 +26,7 @@ public final class ApoliPlayerModels {
     public static final ResourceLocation FOUR_ARMS = Apoli.id("four_arms");
     public static final ResourceLocation STINKFLY = Apoli.id("stinkfly");
     public static final ResourceLocation DIGI_LEGS = Apoli.id("digi_legs");
+    public static final ResourceLocation SIX_ARMS = Apoli.id("six_arms");
     public static final ResourceLocation CENTAUR = Apoli.id("centaur");
 
     private static final Map<ResourceLocation, ModelFactory> FACTORIES = new HashMap<>();
@@ -34,6 +36,8 @@ public final class ApoliPlayerModels {
     static {
         register(FOUR_ARMS, (ctx, slim) ->
             new FourArmsPlayerModel<>(FourArmsPlayerModel.createLayer(slim).bakeRoot(), slim));
+        register(SIX_ARMS, (ctx, slim) ->
+            new SixArmsPlayerModel<>(SixArmsPlayerModel.createLayer(slim).bakeRoot(), slim));
         register(STINKFLY, (ctx, slim) ->
             new StinkFlyPlayerModel<>(StinkFlyPlayerModel.createLayer(slim).bakeRoot(), slim));
         register(DIGI_LEGS, (ctx, slim) ->

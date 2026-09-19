@@ -10,7 +10,7 @@ import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.data.ExprVector;
-import dev.overgrown.apoli.data.ModelParts;
+import dev.overgrown.apoli.data.BodyPart;
 import dev.overgrown.apoli.data.ParticleEffect;
 import dev.overgrown.apoli.data.ParticlePlacement;
 import dev.overgrown.apoli.data.Space;
@@ -48,7 +48,7 @@ public final class ParticlePower extends PowerType<ParticlePower.Config> {
         Expression velocityY,
         Expression velocityZ,
         Optional<Space> space,
-        Optional<String> modelPart
+        Optional<BodyPart> modelPart
     ) {
         Config withMotion(Motion motion) {
             return new Config(particle, bientityCondition, count, speed, force, spread, offsetX, offsetY, offsetZ,
@@ -58,7 +58,7 @@ public final class ParticlePower extends PowerType<ParticlePower.Config> {
     }
 
     private record Motion(Expression velocityX, Expression velocityY, Expression velocityZ, Optional<Space> space,
-                          Optional<String> modelPart) {}
+                          Optional<BodyPart> modelPart) {}
 
     private static final ExprVector DEFAULT_SPREAD = ExprVector.of(0.5f, 0.5f, 0.5f);
     private static final Expression ZERO = Expression.constant(0.0);
@@ -88,7 +88,7 @@ public final class ParticlePower extends PowerType<ParticlePower.Config> {
         Expression.FLOAT_OR_EXPR.optionalFieldOf("velocity_y", ZERO).forGetter(Motion::velocityY),
         Expression.FLOAT_OR_EXPR.optionalFieldOf("velocity_z", ZERO).forGetter(Motion::velocityZ),
         Space.CODEC.optionalFieldOf("space").forGetter(Motion::space),
-        ModelParts.NAME_CODEC.optionalFieldOf("model_part").forGetter(Motion::modelPart)
+        BodyPart.CODEC.optionalFieldOf("model_part").forGetter(Motion::modelPart)
     ).apply(i, Motion::new));
 
     private static final MapCodec<Config> CODEC = Codec.mapPair(BODY, MOTION).xmap(

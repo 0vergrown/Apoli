@@ -43,7 +43,8 @@ public record CustomParticleOptions(
     Easing easing,
     ParticleFrameLayout frameLayout,
     Expression colorVariationExpr,
-    Expression hueVariationExpr
+    Expression hueVariationExpr,
+    boolean alphaBleed
 ) implements ParticleOptions {
 
     private static final Expression NO_ROLL = Expression.constant(0.0);
@@ -68,10 +69,11 @@ public record CustomParticleOptions(
     private static final int FLAG_LOOP_SET = 32;
     private static final int LAYOUT_SHIFT = 6;
     private static final int LAYOUT_MASK = 3;
+    private static final int FLAG_ALPHA_BLEED = 256;
 
     private record Extra(ParticleBlend blend, ParticleFacing facing, Easing easing,
                          ParticleFrameLayout frameLayout, Expression sizeVariation,
-                         Expression colorVariation, Expression hueVariation) {}
+                         Expression colorVariation, Expression hueVariation, boolean alphaBleed) {}
 
     private static final MapCodec<CustomParticleOptions> BODY_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
         IdCodecs.ID.fieldOf("texture").forGetter(CustomParticleOptions::texture),
@@ -94,7 +96,8 @@ public record CustomParticleOptions(
                        roll, rollSpeed, frames, frameTime, loopFrames, physics, emissive) ->
         new CustomParticleOptions(texture, lifetime, lifetimeVariation, size, ZERO, endSize, color, endColor, gravity,
             friction, roll, rollSpeed, frames, frameTime, loopFrames, physics, emissive,
-            ParticleBlend.TRANSLUCENT, ParticleFacing.CAMERA, Easing.LINEAR, ParticleFrameLayout.AUTO, ZERO, ZERO)));
+            ParticleBlend.TRANSLUCENT, ParticleFacing.CAMERA, Easing.LINEAR, ParticleFrameLayout.AUTO, ZERO, ZERO,
+            false)));
 
     private static final MapCodec<Extra> EXTRA_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
         ParticleBlend.CODEC.optionalFieldOf("blend", ParticleBlend.TRANSLUCENT).forGetter(Extra::blend),
@@ -103,14 +106,15 @@ public record CustomParticleOptions(
         ParticleFrameLayout.CODEC.optionalFieldOf("frame_layout", ParticleFrameLayout.AUTO).forGetter(Extra::frameLayout),
         Expression.FLOAT_OR_EXPR.optionalFieldOf("size_variation", ZERO).forGetter(Extra::sizeVariation),
         Expression.FLOAT_OR_EXPR.optionalFieldOf("color_variation", ZERO).forGetter(Extra::colorVariation),
-        Expression.FLOAT_OR_EXPR.optionalFieldOf("hue_variation", ZERO).forGetter(Extra::hueVariation)
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("hue_variation", ZERO).forGetter(Extra::hueVariation),
+        Codec.BOOL.optionalFieldOf("alpha_bleed", false).forGetter(Extra::alphaBleed)
     ).apply(instance, Extra::new));
 
     public static final Codec<CustomParticleOptions> CODEC = Codec.mapPair(BODY_CODEC, EXTRA_CODEC).xmap(
         pair -> pair.getFirst().withExtra(pair.getSecond()),
         options -> Pair.of(options, new Extra(options.blend(), options.facing(), options.easing(),
             options.frameLayout(), options.sizeVariationExpr(), options.colorVariationExpr(),
-            options.hueVariationExpr()))).codec();
+            options.hueVariationExpr(), options.alphaBleed()))).codec();
 
     public static final Deserializer<CustomParticleOptions> DESERIALIZER = new Deserializer<>() {
         @Override
@@ -130,14 +134,14 @@ public record CustomParticleOptions(
         return new CustomParticleOptions(texture, DEFAULT_LIFETIME, ZERO, DEFAULT_SIZE, ZERO, Optional.empty(),
             0xFFFFFFFF, Optional.empty(), ZERO, DEFAULT_FRICTION, NO_ROLL, NO_ROLL, ZERO, ZERO, Optional.empty(),
             false, false, ParticleBlend.TRANSLUCENT, ParticleFacing.CAMERA, Easing.LINEAR,
-            ParticleFrameLayout.AUTO, ZERO, ZERO);
+            ParticleFrameLayout.AUTO, ZERO, ZERO, false);
     }
 
     private CustomParticleOptions withExtra(Extra extra) {
         return new CustomParticleOptions(texture, lifetimeExpr, lifetimeVariationExpr, sizeExpr, extra.sizeVariation(),
             endSizeExpr, color, endColor, gravityExpr, frictionExpr, roll, rollSpeed, framesExpr, frameTimeExpr,
             loopFrames, physics, emissive, extra.blend(), extra.facing(), extra.easing(), extra.frameLayout(),
-            extra.colorVariation(), extra.hueVariation());
+            extra.colorVariation(), extra.hueVariation(), extra.alphaBleed());
     }
 
     public int lifetime() {
@@ -203,7 +207,7 @@ public record CustomParticleOptions(
             bake(sizeExpr, actor), bake(sizeVariationExpr, actor), endSizeExpr.map(e -> bake(e, actor)), color,
             endColor, bake(gravityExpr, actor), bake(frictionExpr, actor), roll, rollSpeed, bake(framesExpr, actor),
             bake(frameTimeExpr, actor), loopFrames, physics, emissive, blend, facing, easing, frameLayout,
-            bake(colorVariationExpr, actor), bake(hueVariationExpr, actor));
+            bake(colorVariationExpr, actor), bake(hueVariationExpr, actor), alphaBleed);
     }
 
     private static boolean varies(Expression expression) {
@@ -236,8 +240,9 @@ public record CustomParticleOptions(
             | (blend == ParticleBlend.ADDITIVE ? FLAG_ADDITIVE : 0)
             | (facing == ParticleFacing.VERTICAL ? FLAG_FACING_VERTICAL : 0)
             | (loopFrames.isPresent() ? FLAG_LOOP_SET : 0)
+            | (alphaBleed ? FLAG_ALPHA_BLEED : 0)
             | (frameLayout.ordinal() << LAYOUT_SHIFT);
-        buf.writeByte(flags);
+        buf.writeVarInt(flags);
         buf.writeByte(easing.ordinal());
         buf.writeFloat(colorVariation());
         buf.writeFloat(hueVariation());
@@ -258,7 +263,7 @@ public record CustomParticleOptions(
         Expression rollSpeed = Expression.cached(buf.readUtf(MAX_ROLL_SOURCE));
         Expression frames = Expression.constant(buf.readVarInt());
         Expression frameTime = Expression.constant(buf.readVarInt());
-        int flags = buf.readByte() & 0xFF;
+        int flags = buf.readVarInt();
         Easing[] easings = Easing.values();
         int easingIndex = buf.readByte();
         Easing easing = easingIndex >= 0 && easingIndex < easings.length ? easings[easingIndex] : Easing.LINEAR;
@@ -274,7 +279,7 @@ public record CustomParticleOptions(
             loopFrames, (flags & FLAG_PHYSICS) != 0, (flags & FLAG_EMISSIVE) != 0,
             (flags & FLAG_ADDITIVE) != 0 ? ParticleBlend.ADDITIVE : ParticleBlend.TRANSLUCENT,
             (flags & FLAG_FACING_VERTICAL) != 0 ? ParticleFacing.VERTICAL : ParticleFacing.CAMERA,
-            easing, layout, colorVariation, hueVariation);
+            easing, layout, colorVariation, hueVariation, (flags & FLAG_ALPHA_BLEED) != 0);
     }
 
     @Override

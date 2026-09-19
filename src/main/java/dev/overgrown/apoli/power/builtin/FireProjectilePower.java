@@ -63,16 +63,22 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         float offsetX,
         float offsetY,
         float offsetZ,
-        Space space
+        Space space,
+        boolean reflective,
+        int maxBounces,
+        float bounceSpeed
     ) {
-        Params withSpawn(Spawn spawn) {
+        Params withExtras(Spawn spawn, Bounce bounce) {
             return new Params(entityType, textureLocation, cooldown, hudRender, count, interval, startDelay,
                 speed, divergence, maxDistance, sound, tag, allowConditionalCancelling,
-                blockActionCancelsMissAction, key, spawn.offsetX(), spawn.offsetY(), spawn.offsetZ(), spawn.space());
+                blockActionCancelsMissAction, key, spawn.offsetX(), spawn.offsetY(), spawn.offsetZ(), spawn.space(),
+                bounce.reflective(), bounce.maxBounces(), bounce.bounceSpeed());
         }
     }
 
     private record Spawn(float offsetX, float offsetY, float offsetZ, Space space) {}
+
+    private record Bounce(boolean reflective, int maxBounces, float bounceSpeed) {}
 
     public record Hooks(
         Optional<EntityAction> entityActionBeforeFiring,
@@ -86,7 +92,8 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         Optional<BiEntityCondition> bientityCondition,
         Optional<BiEntityCondition> ownerBientityCondition,
         Optional<EntityAction> projectileAction,
-        Optional<EntityAction> shooterAction
+        Optional<EntityAction> shooterAction,
+        Optional<BiEntityAction> bientityActionOnBounce
     ) {}
 
     private static final MapCodec<Params> PARAMS_BODY = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -109,7 +116,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
                 maxDistance, sound, tag, allowConditionalCancelling, blockActionCancelsMissAction, key) ->
         new Params(entityType, textureLocation, cooldown, hudRender, count, interval, startDelay, speed, divergence,
             maxDistance, sound, tag, allowConditionalCancelling, blockActionCancelsMissAction, key,
-            0f, 0f, 0f, Space.WORLD)));
+            0f, 0f, 0f, Space.WORLD, false, 0, 1.0f)));
 
     private static final MapCodec<Spawn> PARAMS_SPAWN = RecordCodecBuilder.mapCodec(i -> i.group(
         Codec.FLOAT.optionalFieldOf("offset_x", 0f).forGetter(Spawn::offsetX),
@@ -118,9 +125,18 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         Space.CODEC.optionalFieldOf("space", Space.WORLD).forGetter(Spawn::space)
     ).apply(i, Spawn::new));
 
-    private static final MapCodec<Params> PARAMS = Codec.mapPair(PARAMS_BODY, PARAMS_SPAWN).xmap(
-        pair -> pair.getFirst().withSpawn(pair.getSecond()),
-        params -> Pair.of(params, new Spawn(params.offsetX(), params.offsetY(), params.offsetZ(), params.space())));
+    private static final MapCodec<Bounce> PARAMS_BOUNCE = RecordCodecBuilder.mapCodec(i -> i.group(
+        Codec.BOOL.optionalFieldOf("reflective", false).forGetter(Bounce::reflective),
+        Codec.INT.optionalFieldOf("max_bounces", 4).forGetter(Bounce::maxBounces),
+        Codec.FLOAT.optionalFieldOf("bounce_speed", 1.0f).forGetter(Bounce::bounceSpeed)
+    ).apply(i, Bounce::new));
+
+    private static final MapCodec<Params> PARAMS =
+        Codec.mapPair(Codec.mapPair(PARAMS_BODY, PARAMS_SPAWN), PARAMS_BOUNCE).xmap(
+            pair -> pair.getFirst().getFirst().withExtras(pair.getFirst().getSecond(), pair.getSecond()),
+            params -> Pair.of(
+                Pair.of(params, new Spawn(params.offsetX(), params.offsetY(), params.offsetZ(), params.space())),
+                new Bounce(params.reflective(), params.maxBounces(), params.bounceSpeed())));
 
     private static final MapCodec<Hooks> HOOKS = RecordCodecBuilder.mapCodec(i -> i.group(
         dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action_before_firing", EntityAction.CODEC).forGetter(Hooks::entityActionBeforeFiring),
@@ -134,7 +150,8 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Hooks::bientityCondition),
         dev.overgrown.apoli.codec.LoggedOptionalField.strict("owner_bientity_condition", BiEntityCondition.CODEC).forGetter(Hooks::ownerBientityCondition),
         dev.overgrown.apoli.codec.LoggedOptionalField.of("projectile_action", EntityAction.CODEC).forGetter(Hooks::projectileAction),
-        dev.overgrown.apoli.codec.LoggedOptionalField.of("shooter_action", EntityAction.CODEC).forGetter(Hooks::shooterAction)
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("shooter_action", EntityAction.CODEC).forGetter(Hooks::shooterAction),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action_on_bounce", BiEntityAction.CODEC).forGetter(Hooks::bientityActionOnBounce)
     ).apply(i, Hooks::new));
 
     public static final MapCodec<Config> CONFIG_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -215,6 +232,15 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
     }
 
     @Override
+
+    public boolean isCooldown() {
+
+        return true;
+
+    }
+
+
+    @Override
     public OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         Entity owner = holder.rawOwner();
         if (owner.level().isClientSide()) {
@@ -240,6 +266,11 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
     @Override
     public OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
         return OptionalInt.of(max ? Math.max(PowerResources.cooldownTicks(cfg.params().cooldown(), holder), 0) : 0);
+    }
+
+    @Override
+    public void tickStored(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+        tick(powerId, cfg, holder);
     }
 
     @Override
@@ -335,6 +366,8 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         if (projectile instanceof ProjectileHitActions hooks) {
             hooks.apoli$setFireConfig(cfg);
             hooks.apoli$setMaxRange(p.maxDistance().eval(owner));
+            hooks.apoli$setFireCause(dev.overgrown.apoli.attribution.PowerCause.holder(),
+                dev.overgrown.apoli.attribution.PowerCause.powerId());
         }
 
         float yaw = owner.getYRot();
