@@ -29,6 +29,10 @@ public abstract class PowerType<C> {
         return false;
     }
 
+    public boolean isCooldown() {
+        return false;
+    }
+
     public OptionalInt readResource(ResourceLocation powerId, C cfg, PowerContainer holder) {
         return OptionalInt.empty();
     }

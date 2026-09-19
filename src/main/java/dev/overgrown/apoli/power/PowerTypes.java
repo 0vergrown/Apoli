@@ -42,6 +42,7 @@ public final class PowerTypes {
                 .addTypeAlias(Apoli.id("damage_over_time"))
                 .addTypeAlias(Apoli.id("burn"))
                 .addTypeAlias(Apoli.id("exhaust"))
+                .addTypeAlias(Apoli.id("freeze"))
                 .build()
         );
         PowerTypeRegistry.register(
@@ -190,6 +191,7 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("water_breathing"), new WaterBreathingPower());
         PowerTypeRegistry.register(Apoli.id("modify_player_spawn"), new ModifyPlayerSpawnPower());
         PowerTypeRegistry.register(Apoli.id("modify_projectile_damage"), new ModifyProjectileDamagePower());
+        PowerTypeRegistry.register(Apoli.id("modify_resource_change"), new ModifyResourceChangePower());
         PowerTypeRegistry.register(Apoli.id("modify_slipperiness"), new ModifySlipperinessPower());
         PowerTypeRegistry.register(Apoli.id("modify_use_slowdown"), new ModifyUseSlowdownPower());
         PowerTypeRegistry.register(Apoli.id("modify_swim_speed"), new ModifySwimSpeedPower());
@@ -244,7 +246,6 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("replace_sound_reception"), new ReplaceSoundReceptionPower());
         PowerTypeRegistry.register(Apoli.id("action_on_wake_up"), new ActionOnWakeUpPower());
 
-        PowerTypeRegistry.register(Apoli.id("freeze"), new FreezePower());
         PowerTypeRegistry.register(Apoli.id("shaking"), new ShakingPower());
 
         PowerTypeRegistry.register(Apoli.id("effect_immunity"), new EffectImmunityPower());
@@ -280,6 +281,7 @@ public final class PowerTypes {
             AliasDefault.of("green", Codec.FLOAT, 0.5F),
             AliasDefault.of("blue", Codec.FLOAT, 0.5F));
         PowerTypeRegistry.register(Apoli.id("modify_hearing_range"), new ModifyHearingRangePower());
+        PowerTypeRegistry.register(Apoli.id("modify_speaking_range"), new ModifySpeakingRangePower());
         PowerTypeRegistry.register(Apoli.id("action_on_speak"), new ActionOnSpeakPower());
         PowerTypeRegistry.register(Apoli.id("action_on_reply"), new ActionOnReplyPower());
         PowerTypeRegistry.register(Apoli.id("action_on_sending_message"), new ActionOnSendingMessagePower());

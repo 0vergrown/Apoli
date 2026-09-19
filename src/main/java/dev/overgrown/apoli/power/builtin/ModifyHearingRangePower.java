@@ -4,6 +4,8 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.condition.BiEntityCondition;
+import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.AttributeModifier;
 import dev.overgrown.apoli.data.AttributeModifierHelper;
@@ -24,7 +26,8 @@ public final class ModifyHearingRangePower extends PowerType<ModifyHearingRangeP
     public record Config(Optional<AttributeModifier> modifier,
                          Optional<List<AttributeModifier>> modifiers,
                          boolean sounds,
-                         boolean voice) {
+                         boolean voice,
+                         Optional<BiEntityCondition> bientityCondition) {
         public List<AttributeModifier> flattened() {
             return AttributeModifierHelper.flatten(modifier, modifiers);
         }
@@ -36,7 +39,9 @@ public final class ModifyHearingRangePower extends PowerType<ModifyHearingRangeP
             AttributeModifier.CODEC.optionalFieldOf("modifier").forGetter(Config::modifier),
             AttributeModifier.LIST_OR_SINGLE.optionalFieldOf("modifiers").forGetter(Config::modifiers),
             Codec.BOOL.optionalFieldOf("sounds", true).forGetter(Config::sounds),
-            Codec.BOOL.optionalFieldOf("voice", true).forGetter(Config::voice)
+            Codec.BOOL.optionalFieldOf("voice", true).forGetter(Config::voice),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC)
+                .forGetter(Config::bientityCondition)
         ).apply(i, Config::new));
     }
 
@@ -66,6 +71,7 @@ public final class ModifyHearingRangePower extends PowerType<ModifyHearingRangeP
             Power power = ApoliPowers.get(powerId);
             if (power == null) continue;
             if (!(power.config() instanceof Config cfg) || !cfg.sounds()) continue;
+            if (cfg.bientityCondition().isPresent()) continue;
             List<AttributeModifier> mods = cfg.flattened();
             if (mods.isEmpty()) continue;
             if (power.condition().isPresent()) {
@@ -77,7 +83,23 @@ public final class ModifyHearingRangePower extends PowerType<ModifyHearingRangeP
         return range;
     }
 
-    public static double[] voiceRanges(@Nullable Entity listener, double normalBase, double whisperBase) {
+    public static boolean hearsDifferently(@Nullable Entity listener) {
+        if (listener == null) return false;
+        PowerContainer container = PowerContainer.of(listener);
+        if (container == null || container.isEmpty()) return false;
+        List<ResourceLocation> powers = container.powersOfType(CANONICAL);
+        for (int i = 0, n = powers.size(); i < n; i++) {
+            ResourceLocation powerId = powers.get(i);
+            if (container.isSuppressed(powerId)) continue;
+            Power power = ApoliPowers.get(powerId);
+            if (power == null || !(power.config() instanceof Config cfg)) continue;
+            if (cfg.voice() && !cfg.flattened().isEmpty()) return true;
+        }
+        return false;
+    }
+
+    public static double @Nullable [] voiceRanges(@Nullable Entity listener, @Nullable Entity speaker,
+                                                  double normalBase, double whisperBase) {
         if (listener == null) return null;
         PowerContainer container = PowerContainer.of(listener);
         if (container == null || container.isEmpty()) return null;
@@ -95,6 +117,11 @@ public final class ModifyHearingRangePower extends PowerType<ModifyHearingRangeP
             if (!(power.config() instanceof Config cfg) || !cfg.voice()) continue;
             List<AttributeModifier> mods = cfg.flattened();
             if (mods.isEmpty()) continue;
+            if (cfg.bientityCondition().isPresent()) {
+                if (speaker == null) continue;
+                if (!cfg.bientityCondition().get().test(
+                    BiEntityCtx.of(listener, speaker, listener.level()))) continue;
+            }
             if (power.condition().isPresent()) {
                 if (ctx == null) ctx = new EntityCtx(listener, listener.level());
                 if (!power.condition().get().test(ctx)) continue;

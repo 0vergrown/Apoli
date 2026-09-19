@@ -31,6 +31,16 @@ public final class PowerCause {
 
     private static int depth;
 
+    private static volatile boolean tracking = ACTIVE;
+
+    public static void armAttribution() {
+        tracking = true;
+    }
+
+    public static boolean tracking() {
+        return tracking;
+    }
+
     private PowerCause() {}
 
     public static void bootstrap() {
@@ -45,7 +55,7 @@ public final class PowerCause {
     }
 
     public static boolean push(@Nullable Entity holder, @Nullable ResourceLocation powerId) {
-        if (!ACTIVE) return false;
+        if (!tracking) return false;
         if (holder == null || powerId == null || depth >= DEPTH_LIMIT) return false;
         if (!(holder.level() instanceof ServerLevel)) return false;
         HOLDERS[depth] = holder;
@@ -55,14 +65,13 @@ public final class PowerCause {
     }
 
     public static void pop() {
-        if (!ACTIVE || depth == 0) return;
+        if (depth == 0) return;
         depth--;
         HOLDERS[depth] = null;
         POWERS[depth] = null;
     }
 
     public static void clear() {
-        if (!ACTIVE) return;
         while (depth > 0) pop();
     }
 
