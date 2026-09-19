@@ -68,6 +68,13 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("set_fall_distance"), new SetFallDistanceAction());
         ActionTypes.ENTITY.register(Apoli.id("emit_game_event"), new EmitGameEventAction());
         ActionTypes.ENTITY.register(Apoli.id("play_sound"), new PlaySoundAction());
+
+        ActionTypes.ENTITY.register(Apoli.id("print"), new PrintAction(),
+                AliasingOptions.builder()
+                        .addTypeAlias(Apoli.id("log"))
+                        .addTypeAlias(Apoli.id("logger"))
+                        .build());
+
         ActionTypes.ENTITY.register(Apoli.id("swing_hand"), new SwingHandAction());
         ActionTypes.ENTITY.register(Apoli.id("force_key_pressed"), new ForceKeyPressedAction(),
             AliasingOptions.builder()
