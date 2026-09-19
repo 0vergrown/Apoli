@@ -31,7 +31,7 @@ public final class CustomEffectLoader extends SimpleJsonResourceReloadListener {
         Map<ResourceLocation, CustomEffect> byId = new HashMap<>(object.size());
         for (Map.Entry<ResourceLocation, JsonElement> entry : object.entrySet()) {
             ResourceLocation id = entry.getKey();
-            CustomEffect.codec(id).parse(IdWildcards.apply(new Dynamic<>(dev.overgrown.apoli.codec.ApoliOps.of(JsonOps.INSTANCE), entry.getValue()), id))
+            CustomEffect.codec(id).parse(IdWildcards.apply(new Dynamic<>(JsonOps.INSTANCE, entry.getValue()), id))
                     .resultOrPartial(err -> LOG.error("[Apoli] Failed to parse custom power {}: {}", id, err))
                     .ifPresent(set -> {
                         if(set.id().getNamespace().equals("minecraft")) {
@@ -45,7 +45,7 @@ public final class CustomEffectLoader extends SimpleJsonResourceReloadListener {
                     });
         }
         List<CustomEffect> loaded = new ArrayList<>(byId.values());
-        CustomEffectRegistry.replaceAll(loaded);
+        CustomEffectRegistry.commit(loaded);
         if (!loaded.isEmpty()) {
             LOG.info("[Apoli] Loaded {} custom effect(s).", loaded.size());
         }

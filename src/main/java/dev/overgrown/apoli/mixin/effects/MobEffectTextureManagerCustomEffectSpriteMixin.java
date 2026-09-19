@@ -5,7 +5,6 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import dev.overgrown.apoli.effects.CustomMobEffect;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.MobEffectTextureManager;
-import net.minecraft.core.Holder;
 import net.minecraft.world.effect.MobEffect;
 import org.spongepowered.asm.mixin.Mixin;
 
@@ -13,14 +12,14 @@ import org.spongepowered.asm.mixin.Mixin;
 public class MobEffectTextureManagerCustomEffectSpriteMixin {
 
     @WrapMethod(method = "get")
-    TextureAtlasSprite apoli$getCustomSprite(Holder<MobEffect> holder, Operation<TextureAtlasSprite> original) {
-        if (holder.value() instanceof CustomMobEffect effect) {
+    TextureAtlasSprite apoli$getCustomSprite(MobEffect mobEffect, Operation<TextureAtlasSprite> original) {
+        if (mobEffect instanceof CustomMobEffect effect) {
 
-            if (effect.effect.icon().isPresent()) {
-                return ((TextureAtlasHolderInvoker) this).apoli$invokeGetSprite(effect.effect.icon().get());
+            if (effect.icon.isPresent()) {
+                return ((TextureAtlasHolderInvoker) this).apoli$invokeGetSprite(effect.icon.get());
             }
         }
 
-        return original.call(holder);
+        return original.call(mobEffect);
     }
 }

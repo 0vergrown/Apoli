@@ -5,11 +5,10 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.effects.CustomEffect;
 import dev.overgrown.apoli.effects.RuntimeMobEffectRegistry;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.ObjectList;
-import it.unimi.dsi.fastutil.objects.Reference2IntMap;
 import net.minecraft.core.Holder;
 import net.minecraft.core.MappedRegistry;
-import net.minecraft.core.RegistrationInfo;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -35,7 +34,7 @@ public abstract class MobEffectRegistryCustomEffectMixin<T> implements RuntimeMo
     private ObjectList<Holder.Reference<T>> byId;
     @Final
     @Shadow
-    private Reference2IntMap<T> toId;
+    private Object2IntMap<T> toId;
     @Final
     @Shadow
     private Map<ResourceLocation, Holder.Reference<T>> byLocation;
@@ -45,9 +44,7 @@ public abstract class MobEffectRegistryCustomEffectMixin<T> implements RuntimeMo
     @Final
     @Shadow
     private Map<T, Holder.Reference<T>> byValue;
-    @Final
-    @Shadow
-    private Map<ResourceKey<T>, RegistrationInfo> registrationInfos;
+
 
     @Unique
     private volatile boolean allowWrite = false;
@@ -103,7 +100,6 @@ public abstract class MobEffectRegistryCustomEffectMixin<T> implements RuntimeMo
             if (h == null) continue;
             byKey.remove(h.key());
             byLocation.remove(h.key().location());
-            registrationInfos.remove(h.key());
             byValue.remove(h.value());
             toId.removeInt(h.value());
         }

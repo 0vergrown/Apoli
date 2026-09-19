@@ -1,14 +1,8 @@
 package dev.overgrown.apoli;
 
-import dev.overgrown.apoli.client.ApoliKeyHandler;
-import dev.overgrown.apoli.client.ClientPowerContainer;
-import dev.overgrown.apoli.client.ClientPowerState;
-import dev.overgrown.apoli.client.DynamicKeyMappingManager;
-import dev.overgrown.apoli.client.KeyPressWatcher;
+import dev.overgrown.apoli.client.*;
+import dev.overgrown.apoli.effects.CustomEffectNetworking;
 import dev.overgrown.apoli.keybind.HeldKeys;
-import dev.overgrown.apoli.client.OverlayRenderer;
-import dev.overgrown.apoli.client.PhasingRenderState;
-import dev.overgrown.apoli.client.PowerHudRenderer;
 import dev.overgrown.apoli.client.rope.RopeClientManager;
 import dev.overgrown.apoli.client.rope.RopeRenderer;
 import dev.overgrown.apoli.client.rope.VerletRopeState;
@@ -91,6 +85,8 @@ public final class ApoliClient implements ClientModInitializer {
             new KeyHeldC2S(keys).write(buf);
             ClientPlayNetworking.send(KeyHeldC2S.CHANNEL, buf);
         });
+
+        ClientPlayNetworking.registerGlobalReceiver(CustomEffectNetworking.SyncCustomEffectsPacket.CHANNEL, (mc, listener, byteBuf, sender) -> SyncCustomEffectRegistry.sync(byteBuf, sender));
 
         ClientPlayNetworking.registerGlobalReceiver(SyncPowersS2C.CHANNEL, (mc, handler, buf, sender) -> {
             SyncPowersS2C payload = SyncPowersS2C.read(buf);
