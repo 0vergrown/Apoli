@@ -8,6 +8,7 @@ import dev.overgrown.apoli.command.ApoliResourceCommand;
 import dev.overgrown.apoli.condition.ConditionTypes;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.effects.CustomEffectNetworking;
+import dev.overgrown.apoli.effects.CustomEffectRegistry;
 import dev.overgrown.apoli.loader.ApoliKeybindLoader;
 import dev.overgrown.apoli.loader.ApoliReloadListener;
 import dev.overgrown.apoli.keybind.HeldKeys;
@@ -59,6 +60,7 @@ import net.minecraft.world.entity.Entity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
@@ -138,6 +140,10 @@ public final class Apoli implements ModInitializer {
                 dev.overgrown.apoli.compat.voicechat.VoicePowerHandler::onSpeakStart,
                 dev.overgrown.apoli.compat.voicechat.VoicePowerHandler::onSpeakStop);
         });
+        ServerLifecycleEvents.START_DATA_PACK_RELOAD.register(((server, resourceManager) -> {
+            CustomEffectRegistry.reloading = true;
+            CustomEffectRegistry.purge(server);
+        }));
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> {
             dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(server);
@@ -151,6 +157,7 @@ public final class Apoli implements ModInitializer {
                     CustomEffectNetworking.sync(player, null, server.isSingleplayerOwner(player.getGameProfile()));
                 }
             }
+            CustomEffectRegistry.timeout = server.getTickCount();
         });
         ServerLifecycleEvents.SERVER_STOPPING.register(server ->
             dev.overgrown.apoli.block.GhostBlocks.restoreAll(server));
@@ -281,6 +288,17 @@ public final class Apoli implements ModInitializer {
 
         PayloadTypeRegistry.configurationS2C().register(CustomEffectNetworking.SyncCustomEffectsPayload.TYPE, CustomEffectNetworking.SyncCustomEffectsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(CustomEffectNetworking.SyncCustomEffectsPayload.TYPE, CustomEffectNetworking.SyncCustomEffectsPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(CustomEffectNetworking.SyncCustomEffectsResponsePayload.TYPE, CustomEffectNetworking.SyncCustomEffectsResponsePayload.CODEC);
+
+        ServerPlayNetworking.registerGlobalReceiver(CustomEffectNetworking.SyncCustomEffectsResponsePayload.TYPE, ((payload, context) -> {
+            CustomEffectRegistry.waiting.remove(context.player().getUUID());
+
+            Apoli.LOGGER.debug("Response Packet Received with success = {}", payload.success());
+
+            if (!payload.success()) {
+                Apoli.LOGGER.warn("Reload failed for Player {}.", context.player().getTabListDisplayName());
+            }
+        }));
 
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             HeldKeys.clearServer(handler.player.getUUID());
@@ -296,6 +314,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.power.builtin.ShaderPower.forget(handler.player.getUUID());
             dev.overgrown.apoli.entity.GrabManager.release(handler.player.getUUID());
             dev.overgrown.apoli.entity.CameraPerspectives.remove(handler.player.getUUID());
+            CustomEffectRegistry.waiting.remove(handler.player.getUUID());
         });
 
         ServerPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.ProtocolVersionPayload.TYPE, (payload, context) ->
@@ -516,6 +535,10 @@ public final class Apoli implements ModInitializer {
         dev.overgrown.apoli.power.builtin.ShaderPower.tick(server);
         dev.overgrown.apoli.power.builtin.EntitySetPower.flushPendingRemovals();
         dev.overgrown.apoli.power.builtin.EntitySetPower.flushSync(server);
+        if (server.getTickCount() > CustomEffectRegistry.timeout + 100 && !CustomEffectRegistry.waiting.isEmpty()) {
+            Apoli.LOGGER.warn("Sync timed out for players: {}", CustomEffectRegistry.waiting.stream().map(uuid -> Objects.requireNonNull(server.getPlayerList().getPlayer(uuid)).getTabListDisplayName()));
+            CustomEffectRegistry.waiting.clear();
+        }
     }
 
     private static SyncEntityPowersS2C fullPayload(Entity entity, PowerContainerImpl impl) {

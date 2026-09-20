@@ -10,14 +10,15 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 public final class CustomEffectRegistry {
     public static final HashMap<ResourceLocation, CustomEffect> byId = new HashMap<>();
     public static final HashMap<CustomEffect, ResourceLocation> byEffect = new HashMap<>();
     public static List<CustomEffect> committed = List.of();
+    public static volatile boolean reloading = false;
+    public static final List<UUID> waiting = new ArrayList<>();
+    public static int timeout;
 
     public static void register(CustomEffect effect) {
         byId.put(effect.id(), effect);
@@ -62,5 +63,7 @@ public final class CustomEffectRegistry {
         committed.forEach(CustomEffectRegistry::register);
 
         committed = List.of();
+
+        reloading = false;
     }
 }

@@ -3,6 +3,7 @@ package dev.overgrown.apoli.effects;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.JsonOps;
 import dev.overgrown.apoli.loader.IdWildcards;
@@ -11,7 +12,6 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 public final class CustomEffectLoader extends SimpleJsonResourceReloadListener {
-    private static final Logger LOG = LoggerFactory.getLogger("CustomEffectLoader");
+    private static final Logger LOG = LogUtils.getLogger();
     private static final Gson GSON = new GsonBuilder().setLenient().create();
 
     public CustomEffectLoader() {
