@@ -63,5 +63,7 @@ public final class CustomEffectRegistry {
         committed.forEach(CustomEffectRegistry::register);
 
         committed = List.of();
+
+        reloading = false;
     }
 }
