@@ -22,6 +22,7 @@
     "damage.PlayerCriticalHitMixin",
     "damage.PlayerZeroDamageMixin",
     "effects.FabricRegistrySyncCustomEffectMixin",
+    "effects.LivingEntityReloadGateMixin",
     "effects.MobEffectRegistryCustomEffectMixin",
     "effects.OnEffectRemoveCustomEffectMixin",
     "entityset.MobConvertToMixin",

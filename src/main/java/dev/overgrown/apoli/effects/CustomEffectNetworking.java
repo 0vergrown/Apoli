@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.effects;
 
 import dev.overgrown.apoli.Apoli;
+import io.netty.buffer.ByteBuf;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationNetworking;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.FriendlyByteBuf;
@@ -38,6 +39,16 @@ public final class CustomEffectNetworking {
         }
     }
 
+    public record SyncCustomEffectsResponsePayload(boolean success) implements CustomPacketPayload {
+        public static final StreamCodec<ByteBuf, SyncCustomEffectsResponsePayload> CODEC = ByteBufCodecs.BOOL.map(SyncCustomEffectsResponsePayload::new, SyncCustomEffectsResponsePayload::success);
+
+        public static final Type<SyncCustomEffectsResponsePayload> TYPE = new Type<>(Apoli.id("sync_custom_effects_response"));
+        @Override
+        public @NotNull Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
     public static void sync(@Nullable ServerPlayer player, @Nullable ServerConfigurationPacketListenerImpl config, boolean isSinglePlayer) {
         var payload = new SyncCustomEffectsPayload(CustomEffectRegistry.byEffect.keySet().stream().sorted(Comparator.comparing(CustomEffect::id)).map(effect -> new ClientEffectData(effect.id(), effect.name(), effect.icon(), effect.colorInt())).toList());
 
@@ -48,12 +59,14 @@ public final class CustomEffectNetworking {
         if (config != null) {
             ServerConfigurationNetworking.send(config, payload);
 
-            Apoli.LOGGER.info("Configuration Packet send for {} Effects.", payload.effects.size());
+            Apoli.LOGGER.debug("Configuration Packet send for {} Effects.", payload.effects.size());
         }
         else if (player != null) {
             ServerPlayNetworking.send(player, payload);
 
-            Apoli.LOGGER.info("Play Packet send for {} Effects.", payload.effects.size());
+            CustomEffectRegistry.waiting.add(player.getUUID());
+
+            Apoli.LOGGER.debug("Play Packet send for {} Effects.", payload.effects.size());
         }
     }
 }

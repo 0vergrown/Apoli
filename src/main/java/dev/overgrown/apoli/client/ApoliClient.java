@@ -76,8 +76,8 @@ public final class ApoliClient implements ClientModInitializer {
             entity == net.minecraft.client.Minecraft.getInstance().player && KeyPressWatcher.isLocalHeld(key, grace));
         KeyPressWatcher.setSender(keys -> ClientPlayNetworking.send(new KeyHeldC2S(keys)));
 
-        ClientPlayNetworking.registerGlobalReceiver(CustomEffectNetworking.SyncCustomEffectsPayload.TYPE, (payload, context) -> SyncCustomEffectRegistry.sync(payload));
-        ClientConfigurationNetworking.registerGlobalReceiver(CustomEffectNetworking.SyncCustomEffectsPayload.TYPE, (payload, context) -> SyncCustomEffectRegistry.sync(payload));
+        ClientPlayNetworking.registerGlobalReceiver(CustomEffectNetworking.SyncCustomEffectsPayload.TYPE, SyncCustomEffectRegistry::sync);
+        ClientConfigurationNetworking.registerGlobalReceiver(CustomEffectNetworking.SyncCustomEffectsPayload.TYPE, (payload, context) -> SyncCustomEffectRegistry.sync(payload, null));
 
         ClientPlayNetworking.registerGlobalReceiver(SyncPowersS2C.TYPE, (payload, context) ->
             context.client().execute(() -> ClientPowerState.applyPowersSync(payload)));
