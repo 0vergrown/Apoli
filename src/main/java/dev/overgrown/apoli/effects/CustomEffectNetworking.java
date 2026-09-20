@@ -67,7 +67,7 @@ public final class CustomEffectNetworking {
     }
 
     public static void sync(ServerPlayer player, boolean isSinglePlayer) {
-        if (isSinglePlayer) {
+        if (isSinglePlayer || !EffectConfig.get().enabled()) {
             return;
         }
 
@@ -79,6 +79,4 @@ public final class CustomEffectNetworking {
 
         Apoli.LOGGER.debug("Play Packet send for {} Effects.", packet.effects.size());
     }
-
-
 }
