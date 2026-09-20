@@ -7,6 +7,7 @@ import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.JsonOps;
 import dev.overgrown.apoli.loader.IdWildcards;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
@@ -34,8 +35,9 @@ public final class CustomEffectLoader extends SimpleJsonResourceReloadListener {
             CustomEffect.codec(id).parse(IdWildcards.apply(new Dynamic<>(dev.overgrown.apoli.codec.ApoliOps.of(JsonOps.INSTANCE), entry.getValue()), id))
                     .resultOrPartial(err -> LOG.error("[Apoli] Failed to parse custom power {}: {}", id, err))
                     .ifPresent(set -> {
-                        if(set.id().getNamespace().equals("minecraft")) {
-                            LOG.error("[Apoli] Failed to parse custom power {}: Namespace can't be \"minecraft\"", id);
+                        if (BuiltInRegistries.MOB_EFFECT.containsKey(id) && !CustomEffectRegistry.byId.containsKey(id)) {
+                            LOG.error("[Apoli] Failed to parse custom power {}: Identifier was already present in Registry!", id);
+                            return;
                         }
 
                         CustomEffect existing = byId.get(id);

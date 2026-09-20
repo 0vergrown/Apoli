@@ -9,6 +9,7 @@ import dev.overgrown.apoli.condition.ConditionTypes;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.effects.CustomEffectNetworking;
 import dev.overgrown.apoli.effects.CustomEffectRegistry;
+import dev.overgrown.apoli.effects.EffectConfig;
 import dev.overgrown.apoli.loader.ApoliKeybindLoader;
 import dev.overgrown.apoli.loader.ApoliReloadListener;
 import dev.overgrown.apoli.keybind.HeldKeys;
@@ -115,7 +116,7 @@ public final class Apoli implements ModInitializer {
             new IdentifiedReloader(id("skill_trees_reloader"), skillLoader));
         ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(
             new IdentifiedReloader(id("global_powers_reloader"), new dev.overgrown.apoli.global.GlobalPowerLoader()));
-        ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(
+        if (EffectConfig.get().enabled()) ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(
                 new IdentifiedReloader(id("custom_effect_reloader"), new dev.overgrown.apoli.effects.CustomEffectLoader()));
         ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(
             new IdentifiedReloader(id("scripts_reloader"), new dev.overgrown.apoli.script.ScriptLoader()));
@@ -133,7 +134,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
             ApoliNetwork.broadcastPowers(server);
             ApoliNetwork.broadcastKeybinds(server, SyncKeybindsS2C.fromCurrent());
-            dev.overgrown.apoli.effects.CustomEffectRegistry.update(server);
+            if (EffectConfig.get().enabled()) dev.overgrown.apoli.effects.CustomEffectRegistry.update(server);
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(server);
             dev.overgrown.apoli.compat.voicechat.VoiceState.setServer(server);
             dev.overgrown.apoli.compat.voicechat.VoiceState.setCallbacks(
@@ -141,14 +142,16 @@ public final class Apoli implements ModInitializer {
                 dev.overgrown.apoli.compat.voicechat.VoicePowerHandler::onSpeakStop);
         });
         ServerLifecycleEvents.START_DATA_PACK_RELOAD.register(((server, resourceManager) -> {
-            CustomEffectRegistry.reloading = true;
-            CustomEffectRegistry.purge(server);
+            if (EffectConfig.get().enabled()) {
+                CustomEffectRegistry.reloading = true;
+                CustomEffectRegistry.purge(server);
+            }
         }));
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> {
             dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(server);
             dev.overgrown.apoli.global.GlobalPowers.reapplyAll(server);
-            dev.overgrown.apoli.effects.CustomEffectRegistry.update(server);
+            if (EffectConfig.get().enabled()) dev.overgrown.apoli.effects.CustomEffectRegistry.update(server);
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 dev.overgrown.apoli.skill.SkillTrees.grantOnJoin(player);
                 ApoliNetwork.sendSkillDefs(player);

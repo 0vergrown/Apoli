@@ -50,11 +50,11 @@ public final class CustomEffectNetworking {
     }
 
     public static void sync(@Nullable ServerPlayer player, @Nullable ServerConfigurationPacketListenerImpl config, boolean isSinglePlayer) {
-        var payload = new SyncCustomEffectsPayload(CustomEffectRegistry.byEffect.keySet().stream().sorted(Comparator.comparing(CustomEffect::id)).map(effect -> new ClientEffectData(effect.id(), effect.name(), effect.icon(), effect.colorInt())).toList());
-
-        if (isSinglePlayer) {
+        if (isSinglePlayer || !EffectConfig.get().enabled()) {
             return;
         }
+
+        var payload = new SyncCustomEffectsPayload(CustomEffectRegistry.byEffect.keySet().stream().sorted(Comparator.comparing(CustomEffect::id)).map(effect -> new ClientEffectData(effect.id(), effect.name(), effect.icon(), effect.colorInt())).toList());
 
         if (config != null) {
             ServerConfigurationNetworking.send(config, payload);

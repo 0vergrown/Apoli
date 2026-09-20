@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.effects;
 
+import dev.overgrown.apoli.Apoli;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -21,6 +22,11 @@ public final class CustomEffectRegistry {
     public static int timeout;
 
     public static void register(CustomEffect effect) {
+        if (BuiltInRegistries.MOB_EFFECT.containsKey(effect.id())) {
+            Apoli.LOGGER.warn("Tried writing duplicate Key into Registry!");
+            return;
+        }
+
         byId.put(effect.id(), effect);
         byEffect.put(effect, effect.id());
 
