@@ -2,6 +2,7 @@ package dev.overgrown.apoli.mixin.effects;
 
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import dev.overgrown.apoli.effects.CustomEffectRegistry;
+import dev.overgrown.apoli.effects.EffectConfig;
 import net.minecraft.server.MinecraftServer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -15,7 +16,7 @@ import java.util.concurrent.CompletableFuture;
 public class MinecraftServerReloadMixin {
     @Inject(method = "reloadResources", at = @At("HEAD"))
     private void apoli$beforeReload(Collection<String> selectedIds, CallbackInfoReturnable<CompletableFuture<Void>> cir) {
-        CustomEffectRegistry.beforeReload((MinecraftServer) (Object) this);
+        if (EffectConfig.get().enabled()) CustomEffectRegistry.beforeReload((MinecraftServer) (Object) this);
     }
 
     @ModifyReturnValue(method = "reloadResources", at = @At("RETURN"))

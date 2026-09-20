@@ -68,9 +68,9 @@ public final class CustomEffectNetworking {
     }
 
     public static void sync(ServerPlayer player) {
-        var payload = new SyncCustomEffectsPayload();
+        if (player.connection.getConnection().isMemoryConnection() || !EffectConfig.get().enabled()) return;
 
-        if (player.connection.getConnection().isMemoryConnection()) return;
+        var payload = new SyncCustomEffectsPayload();
 
         PacketDistributor.sendToPlayer(player, payload);
 

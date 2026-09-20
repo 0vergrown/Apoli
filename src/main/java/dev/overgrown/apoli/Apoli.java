@@ -12,6 +12,7 @@ import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.effects.CustomEffectNetworking;
 import dev.overgrown.apoli.effects.CustomEffectLoader;
 import dev.overgrown.apoli.effects.CustomEffectRegistry;
+import dev.overgrown.apoli.effects.EffectConfig;
 import dev.overgrown.apoli.loader.ApoliKeybindLoader;
 import dev.overgrown.apoli.loader.ApoliReloadListener;
 import dev.overgrown.apoli.network.payload.PowerActivatedS2C;
@@ -129,8 +130,7 @@ public final class Apoli {
 
     static void onConfigTasks(RegisterConfigurationTasksEvent event) {
         var listener = event.getListener();
-        if (listener.hasChannel(CustomEffectNetworking.SyncCustomEffectsPayload.TYPE)
-                && !listener.getConnection().isMemoryConnection()) {
+        if (EffectConfig.get().enabled() && listener.hasChannel(CustomEffectNetworking.SyncCustomEffectsPayload.TYPE) && !listener.getConnection().isMemoryConnection()) {
             event.register(new CustomEffectNetworking.SyncCustomEffectConfigurationTask(new CustomEffectNetworking.SyncCustomEffectsPayload()));
         }
     }
@@ -234,7 +234,7 @@ public final class Apoli {
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(event.getPlayerList().getServer());
             dev.overgrown.apoli.global.GlobalPowers.reapplyAll(event.getPlayerList().getServer());
             dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
-            CustomEffectRegistry.update(event.getPlayerList().getServer());
+            if (EffectConfig.get().enabled()) CustomEffectRegistry.update(event.getPlayerList().getServer());
             for (ServerPlayer player : event.getPlayerList().getPlayers()) {
                 dev.overgrown.apoli.skill.SkillTrees.grantOnJoin(player);
                 ApoliNetwork.sendSkillDefs(player);
@@ -260,7 +260,7 @@ public final class Apoli {
         dev.overgrown.apoli.compat.voicechat.VoiceState.setCallbacks(
             dev.overgrown.apoli.compat.voicechat.VoicePowerHandler::onSpeakStart,
             dev.overgrown.apoli.compat.voicechat.VoicePowerHandler::onSpeakStop);
-        CustomEffectRegistry.update(event.getServer());
+        if (EffectConfig.get().enabled()) CustomEffectRegistry.update(event.getServer());
     }
 
     @SubscribeEvent
