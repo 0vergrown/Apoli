@@ -7,18 +7,20 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.tree.LiteralCommandNode;
-import dev.overgrown.apoli.power.ApoliPowers;
-import dev.overgrown.apoli.power.Power;
-import dev.overgrown.apoli.power.PowerContainer;
-import dev.overgrown.apoli.power.PowerResources;
+import dev.overgrown.apoli.power.*;
+import dev.overgrown.apoli.power.builtin.ResourcePower;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.ObjectiveArgument;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.scores.Objective;
+import net.minecraft.world.scores.ScoreAccess;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +35,8 @@ public final class ApoliResourceCommand {
         List<ResourceLocation> held = heldResourcePowers(ctx);
         return SharedSuggestionProvider.suggestResource(held.isEmpty() ? loadedResourcePowers() : held, builder);
     };
+
+    private static final List<String> OPERATIONS = List.of("%=", "*=", "+=", "-=", "/=", "<", "=", ">", "><");
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("apoli:resource")
@@ -76,11 +80,113 @@ public final class ApoliResourceCommand {
                     .suggests(RESOURCE_POWERS)
                     .executes(ApoliResourceCommand::has))));
 
+        OPERATIONS.forEach(operation -> {
+            root.then(Commands.literal("operation")
+                    .then(Commands.argument("targets", EntityArgument.entities())
+                            .then(Commands.argument("power", ResourceLocationArgument.id())
+                                    .suggests(RESOURCE_POWERS)
+                                    .then(Commands.literal(operation)
+                                            .then(Commands.argument("source", EntityArgument.entity())
+                                                    .then(Commands.argument("objective", ObjectiveArgument.objective())
+                                                            .executes(ctx -> operation(ctx, operation))
+                                                    )
+                                            )
+                                    )
+                            )
+                    )
+            );
+            root.then(Commands.literal("operation")
+                    .then(Commands.argument("targets", EntityArgument.entities())
+                            .then(Commands.argument("power", ResourceLocationArgument.id())
+                                    .suggests(RESOURCE_POWERS)
+                                    .then(Commands.argument("position", IntegerArgumentType.integer(0))
+                                            .then(Commands.literal(operation)
+                                                    .then(Commands.argument("source", EntityArgument.entity())
+                                                            .then(Commands.argument("objective", ObjectiveArgument.objective())
+                                                                    .executes(ctx -> operation(ctx, operation))
+                                                            )
+                                                    )
+                                            )
+                                    )
+                            )
+                    )
+            );
+        });
+
         LiteralCommandNode<CommandSourceStack> node = dispatcher.register(root);
 
         dispatcher.register(Commands.literal("resource")
             .requires(ApoliPermissions.require("apoli.command.resource", 2))
             .redirect(node));
+    }
+
+    private static int operation(CommandContext<CommandSourceStack> ctx, String operation) throws CommandSyntaxException {
+        int affected = 0;
+        var server = ctx.getSource().getServer();
+
+        List<LivingEntity> targets = EntityArgument.getEntities(ctx, "targets").stream().filter(Entity::isAlive).map(entity -> (LivingEntity) entity).toList();
+        ResourceLocation power = ResourceLocationArgument.getId(ctx, "power");
+        int position = position(ctx);
+        Entity sourceEntity = EntityArgument.getEntity(ctx, "source");
+        Objective sourceObjective = ObjectiveArgument.getObjective(ctx, "objective");
+
+        ScoreAccess sourceScore = server.getScoreboard().getOrCreatePlayerScore(sourceEntity, sourceObjective);
+
+        for(var target : targets) {
+            PowerContainer c = PowerContainer.of(target);
+            if (c == null) continue;
+
+            var optionalValue = ResourcePower.readValue(c, power);
+            if (optionalValue.isEmpty()) continue;
+            var value = optionalValue.getAsInt();
+
+            switch (operation) { //"%=", "*=", "+=", "-=", "/=", "<", "=", ">", "><"
+                case "%=":
+                    value %= sourceScore.get();
+                    break;
+                case "*=":
+                    value *= sourceScore.get();
+                    break;
+                case "+=":
+                    value += sourceScore.get();
+                    break;
+                case "-=":
+                    value -= sourceScore.get();
+                    break;
+                case "/=":
+                    value /= sourceScore.get();
+                    break;
+                case "<":
+                    value = Math.min(value, sourceScore.get());
+                    break;
+                case "=":
+                    value = sourceScore.get();
+                    break;
+                case ">":
+                    value = Math.max(value, sourceScore.get());
+                    break;
+                case "><":
+                    var newValue = sourceScore.get();
+                    sourceScore.set(value);
+                    value = newValue;
+                    break;
+            }
+
+            OptionalInt written = position < 0
+                    ? writeAll(c, power, value)
+                    : PowerResources.writeAt(c, power, position, value);
+            if (written.isEmpty()) continue;
+            int w = written.getAsInt();
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    target.getName().getString() + " — " + power + " changed from " + optionalValue.getAsInt() + " to " + w), true);
+            affected++;
+        }
+
+        if (affected == 0) {
+            ctx.getSource().sendFailure(Component.literal("No target holds the resource power " + power));
+        }
+
+        return affected;
     }
 
     private static int position(CommandContext<CommandSourceStack> ctx) {
