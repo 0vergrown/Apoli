@@ -15,6 +15,7 @@ import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.ObjectiveArgument;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.commands.arguments.ScoreHolderArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
@@ -86,7 +87,8 @@ public final class ApoliResourceCommand {
                             .then(Commands.argument("power", ResourceLocationArgument.id())
                                     .suggests(RESOURCE_POWERS)
                                     .then(Commands.literal(operation)
-                                            .then(Commands.argument("source", EntityArgument.entity())
+                                            .then(Commands.argument("source", ScoreHolderArgument.scoreHolder())
+                                                    .suggests(ScoreHolderArgument.SUGGEST_SCORE_HOLDERS)
                                                     .then(Commands.argument("objective", ObjectiveArgument.objective())
                                                             .executes(ctx -> operation(ctx, operation))
                                                     )
@@ -101,7 +103,8 @@ public final class ApoliResourceCommand {
                                     .suggests(RESOURCE_POWERS)
                                     .then(Commands.argument("position", IntegerArgumentType.integer(0))
                                             .then(Commands.literal(operation)
-                                                    .then(Commands.argument("source", EntityArgument.entity())
+                                                    .then(Commands.argument("source", ScoreHolderArgument.scoreHolder())
+                                                            .suggests(ScoreHolderArgument.SUGGEST_SCORE_HOLDERS)
                                                             .then(Commands.argument("objective", ObjectiveArgument.objective())
                                                                     .executes(ctx -> operation(ctx, operation))
                                                             )
@@ -127,10 +130,10 @@ public final class ApoliResourceCommand {
         List<LivingEntity> targets = EntityArgument.getEntities(ctx, "targets").stream().filter(Entity::isAlive).map(entity -> (LivingEntity) entity).toList();
         ResourceLocation power = ResourceLocationArgument.getId(ctx, "power");
         int position = position(ctx);
-        Entity sourceEntity = EntityArgument.getEntity(ctx, "source");
+        String scoreHolder = ScoreHolderArgument.getName(ctx, "source");
         Objective sourceObjective = ObjectiveArgument.getObjective(ctx, "objective");
 
-        Score sourceScore = server.getScoreboard().getOrCreatePlayerScore(sourceEntity.getScoreboardName(), sourceObjective);
+        Score sourceScore = server.getScoreboard().getOrCreatePlayerScore(scoreHolder, sourceObjective);
 
         for(var target : targets) {
             PowerContainer c = PowerContainer.of(target);
