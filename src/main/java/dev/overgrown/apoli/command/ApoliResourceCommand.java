@@ -32,7 +32,7 @@ public final class ApoliResourceCommand {
 
     private ApoliResourceCommand() {}
 
-    private static final SuggestionProvider<CommandSourceStack> RESOURCE_POWERS = (ctx, builder) -> {
+    public static final SuggestionProvider<CommandSourceStack> RESOURCE_POWERS = (ctx, builder) -> {
         List<ResourceLocation> held = heldResourcePowers(ctx);
         return SharedSuggestionProvider.suggestResource(held.isEmpty() ? loadedResourcePowers() : held, builder);
     };
@@ -322,7 +322,7 @@ public final class ApoliResourceCommand {
         return count;
     }
 
-    private static OptionalInt writeAll(PowerContainer container, ResourceLocation power, int value) {
+    public static OptionalInt writeAll(PowerContainer container, ResourceLocation power, int value) {
         int size = PowerResources.size(container, power);
         if (size <= 1) return PowerResources.write(container, power, value);
         OptionalInt last = OptionalInt.empty();
