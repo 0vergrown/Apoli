@@ -227,6 +227,15 @@ public final class PowerTypes {
             AliasingOptions.builder().renameField("scale_type", "scale_types").build());
         PowerTypeRegistry.register(Apoli.id("solid_hitbox"), new SolidHitboxPower());
 
+        PowerTypeRegistry.register(
+                Apoli.id("sprinting"),
+                new SprintingPower(),
+                AliasingOptions.builder()
+                        .addTypeAlias(Apoli.id("force_sprint"))
+                        .addTypeAlias(Apoli.id("forced_sprinting"))
+                        .build()
+        );
+
         PowerTypeRegistry.register(Apoli.id("action_on_block_break"), new ActionOnBlockBreakPower());
         PowerTypeRegistry.register(Apoli.id("action_on_block_place"), new ActionOnBlockPlacePower());
         PowerTypeRegistry.register(Apoli.id("action_on_block_use"), new ActionOnBlockUsePower());
