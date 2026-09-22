@@ -20,6 +20,8 @@ public final class ItemActions {
         ActionTypes.ITEM.register(Apoli.id("store_data"), new StoreDataItemAction());
         ActionTypes.ITEM.register(Apoli.id("remove_enchantment"), new RemoveEnchantmentItemAction());
 
+        ActionTypes.ITEM.register(Apoli.id("cooldown"), new CooldownItemAction());
+
         ActionTypes.ITEM.register(Apoli.id("script"), new ScriptItemAction());
 
         ActionTypes.ITEM.register(Apoli.id("send_action"),
