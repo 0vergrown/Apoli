@@ -15,12 +15,14 @@ import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.ObjectiveArgument;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.commands.arguments.ScoreHolderArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.ScoreAccess;
+import net.minecraft.world.scores.ScoreHolder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -86,7 +88,7 @@ public final class ApoliResourceCommand {
                             .then(Commands.argument("power", ResourceLocationArgument.id())
                                     .suggests(RESOURCE_POWERS)
                                     .then(Commands.literal(operation)
-                                            .then(Commands.argument("source", EntityArgument.entity())
+                                            .then(Commands.argument("source", ScoreHolderArgument.scoreHolder())
                                                     .then(Commands.argument("objective", ObjectiveArgument.objective())
                                                             .executes(ctx -> operation(ctx, operation))
                                                     )
@@ -127,10 +129,10 @@ public final class ApoliResourceCommand {
         List<LivingEntity> targets = EntityArgument.getEntities(ctx, "targets").stream().filter(Entity::isAlive).map(entity -> (LivingEntity) entity).toList();
         ResourceLocation power = ResourceLocationArgument.getId(ctx, "power");
         int position = position(ctx);
-        Entity sourceEntity = EntityArgument.getEntity(ctx, "source");
+        ScoreHolder scoreHolder = ScoreHolderArgument.getName(ctx, "source");
         Objective sourceObjective = ObjectiveArgument.getObjective(ctx, "objective");
 
-        ScoreAccess sourceScore = server.getScoreboard().getOrCreatePlayerScore(sourceEntity, sourceObjective);
+        ScoreAccess sourceScore = server.getScoreboard().getOrCreatePlayerScore(scoreHolder, sourceObjective);
 
         for(var target : targets) {
             PowerContainer c = PowerContainer.of(target);
