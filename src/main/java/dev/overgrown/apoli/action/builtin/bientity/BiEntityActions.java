@@ -15,6 +15,9 @@ public final class BiEntityActions {
         ActionTypes.BI_ENTITY.register(Apoli.id("modify_resource"), new ModifyResourceBiEntityAction(),
             AliasingOptions.builder().addTypeAlias(Apoli.id("change_resource"))
                 .addTypeAlias("origins:change_resource").build());
+
+        ActionTypes.BI_ENTITY.register(Apoli.id("aggro_at"), new AggroAtAction());
+
         ActionTypes.BI_ENTITY.register(Apoli.id("punch"), new PunchBiEntityAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("teleport_to"), new TeleportToBiEntityAction(false));
         ActionTypes.BI_ENTITY.register(Apoli.id("swap"), new TeleportToBiEntityAction(true));

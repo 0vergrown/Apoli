@@ -21,6 +21,7 @@ import dev.overgrown.apoli.network.payload.RopeVerletLengthS2C;
 import dev.overgrown.apoli.network.payload.SyncEntityPowersS2C;
 import dev.overgrown.apoli.network.payload.SyncKeybindsS2C;
 import dev.overgrown.apoli.network.payload.SyncPowersS2C;
+import dev.overgrown.apoli.power.builtin.SprintingPower;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -374,5 +375,15 @@ public final class ApoliClient implements ClientModInitializer {
         HudRenderCallback.EVENT.register(dev.overgrown.apoli.client.TextOverlayRenderer::render);
         HudRenderCallback.EVENT.register(OverlayRenderer::renderAboveHud);
         HudRenderCallback.EVENT.register(dev.overgrown.apoli.client.DevHudRenderer::render);
+
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client.player != null && SprintingPower.isSprinting(client.player)) {
+                boolean isPressingUp = client.player.input.up;
+
+                if (isPressingUp) {
+                    client.player.setSprinting(true);
+                }
+            }
+        });
     }
 }
