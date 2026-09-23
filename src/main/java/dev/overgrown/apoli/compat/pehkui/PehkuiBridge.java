@@ -2,6 +2,7 @@ package dev.overgrown.apoli.compat.pehkui;
 
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.compat.ModCompat;
+import dev.overgrown.apoli.scale.ScaleState;
 import dev.overgrown.apoli.scale.ScaleType;
 import dev.overgrown.apoli.scale.ScaleTypes;
 import dev.overgrown.apoli.scale.Scales;
@@ -58,19 +59,22 @@ public final class PehkuiBridge {
         return !failed;
     }
 
-    public static void push(Entity entity) {
+    public static void push(Entity entity, ScaleState state) {
         if (!ownsGeometry()) return;
         if (entity.level().isClientSide()) return;
+        float[] own = Scales.ownAll(entity, state);
+        if (!state.pushedScalesChanged(own)) return;
         for (Map.Entry<ScaleType, Object> entry : MAPPED.entrySet()) {
-            float own = Scales.own(entity, entry.getKey());
+            float value = own[entry.getKey().index()];
             try {
                 Object data = getScaleData.invoke(entry.getValue(), entity);
                 if (data == null) continue;
                 float current = (Float) getBaseScale.invoke(data);
-                if (Math.abs(current - own) < 1.0E-5F) continue;
-                setScale.invoke(data, own);
+                if (Math.abs(current - value) < 1.0E-5F) continue;
+                setScale.invoke(data, value);
             } catch (ReflectiveOperationException | RuntimeException e) {
                 failed = true;
+                state.forgetDimensions();
                 Apoli.LOGGER.warn("[Apoli] Pehkui scale bridge failed, falling back to Apoli scaling ({})",
                     e.toString());
                 return;

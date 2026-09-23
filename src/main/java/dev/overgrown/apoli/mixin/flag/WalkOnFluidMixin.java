@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.mixin.flag;
 
 import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.builtin.WalkOnFluidPower;
 import dev.overgrown.apoli.power.ApoliIds;
@@ -17,6 +18,9 @@ public abstract class WalkOnFluidMixin {
     @Inject(method = "canStandOnFluid", at = @At("HEAD"), cancellable = true)
     private void apoli$canStandOnFluid(FluidState fluid, CallbackInfoReturnable<Boolean> cir) {
         LivingEntity self = (LivingEntity) (Object) this;
+        PowerContainer container = PowerContainer.of(self);
+        if (container == null || container.isEmpty()) return;
+        if (container.powersOfType(ApoliIds.WALK_ON_FLUID).isEmpty()) return;
         boolean[] stand = new boolean[]{false};
         PowerLookup.forEach(self, ApoliIds.WALK_ON_FLUID, WalkOnFluidPower.Config.class, cfg -> {
             if (stand[0]) return;

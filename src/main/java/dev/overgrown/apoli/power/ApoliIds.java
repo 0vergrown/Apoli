@@ -11,6 +11,7 @@ public final class ApoliIds {
     public static final ResourceLocation INVISIBILITY = Apoli.id("invisibility");
     public static final ResourceLocation ELYTRA_FLIGHT = Apoli.id("elytra_flight");
     public static final ResourceLocation PREVENT_ELYTRA_FLIGHT = Apoli.id("prevent_elytra_flight");
+    public static final ResourceLocation PREVENT_SPRINTING = Apoli.id("prevent_sprinting");
     public static final ResourceLocation SCALE = Apoli.id("scale");
     public static final ResourceLocation SOLID_HITBOX = Apoli.id("solid_hitbox");
     public static final ResourceLocation DISABLE_REGEN = Apoli.id("disable_regen");

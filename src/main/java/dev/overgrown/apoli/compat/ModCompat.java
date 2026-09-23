@@ -31,6 +31,8 @@ public final class ModCompat {
 
     public static final boolean SKIN_LAYERS_3D = FabricLoader.getInstance().isModLoaded("skinlayers3d");
 
+    public static final boolean ENTITY_MODEL_FEATURES = FabricLoader.getInstance().isModLoaded("entity_model_features");
+
     public static final boolean BETTER_COMBAT = FabricLoader.getInstance().isModLoaded("bettercombat");
 
     public static final boolean WALKERS = FabricLoader.getInstance().isModLoaded("walkers");

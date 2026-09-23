@@ -1,20 +1,17 @@
 package dev.overgrown.apoli.mixin.flag;
 
-import com.mojang.blaze3d.vertex.PoseStack;
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.sugar.Local;
 import dev.overgrown.apoli.power.builtin.ElytraFlightPower;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.layers.ElytraLayer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
-import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(ElytraLayer.class)
 @Environment(EnvType.CLIENT)
@@ -22,16 +19,11 @@ public abstract class ElytraLayerRenderMixin {
     @Unique
     private LivingEntity apoli$entity;
 
-    @Redirect(method = "render", at = @At(value = "INVOKE",
+    @ModifyExpressionValue(method = "render", at = @At(value = "INVOKE",
         target = "Lnet/minecraft/world/item/ItemStack;is(Lnet/minecraft/world/item/Item;)Z"))
-    private boolean apoli$forceElytraRender(ItemStack stack, Item item,
-                                            PoseStack poseStack, MultiBufferSource buffer, int light,
-                                            LivingEntity entity, float f, float g, float h, float j, float k, float l) {
+    private boolean apoli$forceElytraRender(boolean original, @Local(argsOnly = true) LivingEntity entity) {
         this.apoli$entity = entity;
-        if (!entity.isInvisible() && ElytraFlightPower.shouldRenderElytra(entity)) {
-            return true;
-        }
-        return stack.is(item);
+        return original || (!entity.isInvisible() && ElytraFlightPower.shouldRenderElytra(entity));
     }
 
     @ModifyArg(method = "render", at = @At(value = "INVOKE",

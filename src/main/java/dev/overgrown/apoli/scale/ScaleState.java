@@ -34,6 +34,7 @@ public final class ScaleState {
 
     private float appliedWidth = Float.NaN;
     private float appliedHeight = Float.NaN;
+    private float[] pushed;
 
     public ScaleState(Entity owner) {
         this.owner = owner;
@@ -201,9 +202,27 @@ public final class ScaleState {
         return true;
     }
 
+    public boolean pushedScalesChanged(float[] current) {
+        float[] last = this.pushed;
+        if (last == null || last.length != current.length) {
+            last = new float[current.length];
+            java.util.Arrays.fill(last, Float.NaN);
+            this.pushed = last;
+        }
+        boolean changed = false;
+        for (int i = 0; i < current.length; i++) {
+            if (last[i] != current[i]) {
+                last[i] = current[i];
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
     public void forgetDimensions() {
         appliedWidth = Float.NaN;
         appliedHeight = Float.NaN;
+        pushed = null;
     }
 
     public static float clamp(float raw) {

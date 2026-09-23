@@ -8,7 +8,6 @@ import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.scale.ScaleEasing;
 import dev.overgrown.apoli.scale.ScaleOperation;
-import dev.overgrown.apoli.scale.ScaleState;
 import dev.overgrown.apoli.scale.ScaleType;
 import dev.overgrown.apoli.scale.ScaleTypeCodec;
 import dev.overgrown.apoli.scale.ScaleTypes;
@@ -39,13 +38,6 @@ public final class ScaleAction implements ActionType<EntityCtx, ScaleAction.Cfg>
         if (entity == null || entity.level().isClientSide()) return;
         float argument = (float) cfg.scale.eval(entity);
         int ticks = Math.max(0, cfg.ticks.evalInt(entity));
-        List<ScaleType> types = cfg.types;
-        for (int i = 0, n = types.size(); i < n; i++) {
-            ScaleType type = types.get(i);
-            float current = Scales.stateOf(entity) == null
-                ? ScaleState.DEFAULT
-                : Scales.stateOf(entity).target(type);
-            Scales.set(entity, type, cfg.operation.apply(current, argument), ticks, cfg.easing);
-        }
+        Scales.setAll(entity, cfg.types, cfg.operation, argument, ticks, cfg.easing);
     }
 }
