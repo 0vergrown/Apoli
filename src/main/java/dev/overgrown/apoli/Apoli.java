@@ -7,6 +7,9 @@ import dev.overgrown.apoli.command.ApoliPowerCommand;
 import dev.overgrown.apoli.command.ApoliResourceCommand;
 import dev.overgrown.apoli.condition.ConditionTypes;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.effects.CustomEffectNetworking;
+import dev.overgrown.apoli.effects.CustomEffectRegistry;
+import dev.overgrown.apoli.effects.EffectConfig;
 import dev.overgrown.apoli.loader.ApoliKeybindLoader;
 import dev.overgrown.apoli.loader.ApoliReloadListener;
 import dev.overgrown.apoli.keybind.HeldKeys;
@@ -20,7 +23,6 @@ import dev.overgrown.apoli.network.payload.RopeChangeLengthC2S;
 import dev.overgrown.apoli.network.payload.RopeSwingC2S;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
-import dev.overgrown.apoli.power.ApoliIds;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerSources;
 import dev.overgrown.apoli.power.PowerContainer;
@@ -44,26 +46,22 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
-import net.fabricmc.fabric.api.networking.v1.EntityTrackingEvents;
-import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.*;
 import net.minecraft.world.InteractionResult;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
@@ -118,6 +116,8 @@ public final class Apoli implements ModInitializer {
             new IdentifiedReloader(id("skill_trees_reloader"), skillLoader));
         ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(
             new IdentifiedReloader(id("global_powers_reloader"), new dev.overgrown.apoli.global.GlobalPowerLoader()));
+        if (EffectConfig.get().enabled()) ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(
+                new IdentifiedReloader(id("custom_effect_reloader"), new dev.overgrown.apoli.effects.CustomEffectLoader()));
         ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(
             new IdentifiedReloader(id("scripts_reloader"), new dev.overgrown.apoli.script.ScriptLoader()));
 
@@ -134,21 +134,34 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
             ApoliNetwork.broadcastPowers(server);
             ApoliNetwork.broadcastKeybinds(server, SyncKeybindsS2C.fromCurrent());
+            if (EffectConfig.get().enabled()) dev.overgrown.apoli.effects.CustomEffectRegistry.update(server);
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(server);
             dev.overgrown.apoli.compat.voicechat.VoiceState.setServer(server);
             dev.overgrown.apoli.compat.voicechat.VoiceState.setCallbacks(
                 dev.overgrown.apoli.compat.voicechat.VoicePowerHandler::onSpeakStart,
                 dev.overgrown.apoli.compat.voicechat.VoicePowerHandler::onSpeakStop);
         });
+        ServerLifecycleEvents.START_DATA_PACK_RELOAD.register(((server, resourceManager) -> {
+            if (EffectConfig.get().enabled()) {
+                CustomEffectRegistry.reloading = true;
+                CustomEffectRegistry.purge(server);
+            }
+        }));
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> {
             dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(server);
             dev.overgrown.apoli.global.GlobalPowers.reapplyAll(server);
+            if (EffectConfig.get().enabled()) dev.overgrown.apoli.effects.CustomEffectRegistry.update(server);
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 dev.overgrown.apoli.skill.SkillTrees.grantOnJoin(player);
                 ApoliNetwork.sendSkillDefs(player);
                 ApoliNetwork.sendSkillState(player);
+                if (ServerPlayNetworking.canSend(player, CustomEffectNetworking.SyncCustomEffectsPayload.TYPE)) {
+                    CustomEffectNetworking.sync(player, null, server.isSingleplayerOwner(player.getGameProfile()));
+                }
             }
+            CustomEffectRegistry.timeout = server.getTickCount();
+            CustomEffectRegistry.reloading = false;
         });
         ServerLifecycleEvents.SERVER_STOPPING.register(server ->
             dev.overgrown.apoli.block.GhostBlocks.restoreAll(server));
@@ -165,6 +178,12 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.compat.voicechat.VoiceState.clear();
             dev.overgrown.apoli.compat.voicechat.VoiceHearing.reset();
             dev.overgrown.apoli.tick.TickRates.clear();
+        });
+
+        ServerConfigurationConnectionEvents.CONFIGURE.register((handler, server) -> {
+            if (ServerConfigurationNetworking.canSend(handler, CustomEffectNetworking.SyncCustomEffectsPayload.TYPE)) {
+                CustomEffectNetworking.sync(null, handler, server.isSingleplayerOwner(handler.getOwner()));
+            }
         });
 
         net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register(
@@ -271,6 +290,20 @@ public final class Apoli implements ModInitializer {
                 dev.overgrown.apoli.compat.voicechat.ActionOnSpeechPower.fireTrigger(sender, payload.power()));
         });
 
+        PayloadTypeRegistry.configurationS2C().register(CustomEffectNetworking.SyncCustomEffectsPayload.TYPE, CustomEffectNetworking.SyncCustomEffectsPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(CustomEffectNetworking.SyncCustomEffectsPayload.TYPE, CustomEffectNetworking.SyncCustomEffectsPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(CustomEffectNetworking.SyncCustomEffectsResponsePayload.TYPE, CustomEffectNetworking.SyncCustomEffectsResponsePayload.CODEC);
+
+        ServerPlayNetworking.registerGlobalReceiver(CustomEffectNetworking.SyncCustomEffectsResponsePayload.TYPE, ((payload, context) -> {
+            CustomEffectRegistry.waiting.remove(context.player().getUUID());
+
+            Apoli.LOGGER.debug("Response Packet Received with success = {}", payload.success());
+
+            if (!payload.success()) {
+                Apoli.LOGGER.warn("Reload failed for Player {}.", context.player().getTabListDisplayName());
+            }
+        }));
+
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             HeldKeys.clearServer(handler.player.getUUID());
             dev.overgrown.apoli.dev.DevMode.forget(handler.player.getUUID());
@@ -285,6 +318,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.power.builtin.ShaderPower.forget(handler.player.getUUID());
             dev.overgrown.apoli.entity.GrabManager.release(handler.player.getUUID());
             dev.overgrown.apoli.entity.CameraPerspectives.remove(handler.player.getUUID());
+            CustomEffectRegistry.waiting.remove(handler.player.getUUID());
         });
 
         ServerPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.ProtocolVersionPayload.TYPE, (payload, context) ->
@@ -505,6 +539,10 @@ public final class Apoli implements ModInitializer {
         dev.overgrown.apoli.power.builtin.ShaderPower.tick(server);
         dev.overgrown.apoli.power.builtin.EntitySetPower.flushPendingRemovals();
         dev.overgrown.apoli.power.builtin.EntitySetPower.flushSync(server);
+        if (server.getTickCount() > CustomEffectRegistry.timeout + 100 && !CustomEffectRegistry.waiting.isEmpty()) {
+            Apoli.LOGGER.warn("Sync timed out for players: {}", CustomEffectRegistry.waiting.stream().map(uuid -> Objects.requireNonNull(server.getPlayerList().getPlayer(uuid)).getTabListDisplayName()));
+            CustomEffectRegistry.waiting.clear();
+        }
     }
 
     private static SyncEntityPowersS2C fullPayload(Entity entity, PowerContainerImpl impl) {
