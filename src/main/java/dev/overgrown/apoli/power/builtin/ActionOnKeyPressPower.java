@@ -41,6 +41,7 @@ public final class ActionOnKeyPressPower extends PowerType<ActionOnKeyPressPower
 
     @Override
     public void tick(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+        if (cooldowns.isEmpty()) return;
         CooldownKey key = new CooldownKey(holder.rawOwner().getUUID(), powerId);
         Integer remaining = cooldowns.get(key);
         if (remaining == null) return;
