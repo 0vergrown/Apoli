@@ -17,7 +17,7 @@ import java.util.Set;
 public final class MultiplePower extends PowerType<MultiplePower.Cfg> {
     public static final Set<String> RESERVED_FIELDS = Set.of(
         "type", "loading_priority", "name", "description", "hidden", "condition", "tags", "sub_powers", "skill",
-        "load_condition"
+        "load_condition", "badges"
     );
 
     public record Cfg(List<ResourceLocation> subPowerIds) {}

@@ -330,6 +330,9 @@ public final class ApoliClient implements ClientModInitializer {
         if (dev.overgrown.apoli.compat.ModCompat.EARS) {
             dev.overgrown.apoli.compat.ears.EarsCompat.init();
         }
+        if (dev.overgrown.apoli.compat.ModCompat.ENTITY_MODEL_FEATURES) {
+            dev.overgrown.apoli.compat.entitymodelfeatures.EntityModelFeaturesCompat.init();
+        }
 
         ClientTickEvents.START_CLIENT_TICK.register(mc -> {
             if (mc.player != null && !mc.isPaused()) ApoliKeyHandler.onClientTick();

@@ -1,7 +1,9 @@
 package dev.overgrown.apoli.mixin.pose;
 
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import dev.overgrown.apoli.access.ModifiedPoseHolder;
 import dev.overgrown.apoli.client.ArmPoseReferenceClient;
 import dev.overgrown.apoli.client.render.ModelPartAnimator;
@@ -17,7 +19,6 @@ import net.minecraft.world.entity.Pose;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(PlayerRenderer.class)
@@ -38,17 +39,17 @@ public abstract class PlayerRendererPoseMixin {
         }
     }
 
-    @Redirect(method = SETUP_ROTATIONS, at = @At(value = "INVOKE",
+    @ModifyExpressionValue(method = SETUP_ROTATIONS, at = @At(value = "INVOKE",
         target = "Lnet/minecraft/client/player/AbstractClientPlayer;isFallFlying()Z"))
-    private boolean apoli$forceFallFlyingPose(AbstractClientPlayer player) {
+    private boolean apoli$forceFallFlyingPose(boolean original, @Local(argsOnly = true) AbstractClientPlayer player) {
         if (ModelPartAnimator.overridesPose(player)) return false;
-        return player.isFallFlying() || PosePower.hasEntityPose(player, Pose.FALL_FLYING);
+        return original || PosePower.hasEntityPose(player, Pose.FALL_FLYING);
     }
 
-    @Redirect(method = SETUP_ROTATIONS, at = @At(value = "INVOKE",
+    @ModifyExpressionValue(method = SETUP_ROTATIONS, at = @At(value = "INVOKE",
         target = "Lnet/minecraft/client/player/AbstractClientPlayer;isAutoSpinAttack()Z"))
-    private boolean apoli$forceRiptidePose(AbstractClientPlayer player) {
-        return player.isAutoSpinAttack() || PosePower.hasEntityPose(player, Pose.SPIN_ATTACK);
+    private boolean apoli$forceRiptidePose(boolean original, @Local(argsOnly = true) AbstractClientPlayer player) {
+        return original || PosePower.hasEntityPose(player, Pose.SPIN_ATTACK);
     }
 
     @WrapOperation(method = SETUP_ROTATIONS, at = @At(value = "INVOKE",

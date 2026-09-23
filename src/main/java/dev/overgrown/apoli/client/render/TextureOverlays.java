@@ -3,6 +3,7 @@ package dev.overgrown.apoli.client.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.overgrown.apoli.client.render.model.ExtraModelParts;
+import dev.overgrown.apoli.compat.entitymodelfeatures.EntityModelFeaturesCompat;
 import dev.overgrown.apoli.data.BodyPart;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.ResolvedLayer;
 import net.minecraft.client.model.EntityModel;
@@ -34,15 +35,20 @@ public final class TextureOverlays {
             pose.scale(layer.scale(), layer.scale(), layer.scale());
         }
         List<ModelPart> parts = layer.wholeModel() ? null : partsOf(model, layer.bodyParts(), subject);
-        if (parts == null) {
-            model.renderToBuffer(pose, consumer, light, OverlayTexture.NO_OVERLAY, layer.red(), layer.green(), layer.blue(), alpha);
-        } else {
-            for (int i = 0; i < parts.size(); i++) {
-                ModelPart part = parts.get(i);
-                if (parts.indexOf(part) != i) continue;
-                part.render(pose, consumer, light, OverlayTexture.NO_OVERLAY, layer.red(), layer.green(), layer.blue(), alpha);
+        EntityModelFeaturesCompat.holdPose();
+        try {
+            if (parts == null) {
+                model.renderToBuffer(pose, consumer, light, OverlayTexture.NO_OVERLAY, layer.red(), layer.green(), layer.blue(), alpha);
+            } else {
+                for (int i = 0; i < parts.size(); i++) {
+                    ModelPart part = parts.get(i);
+                    if (parts.indexOf(part) != i) continue;
+                    part.render(pose, consumer, light, OverlayTexture.NO_OVERLAY, layer.red(), layer.green(), layer.blue(), alpha);
+                }
+                parts.clear();
             }
-            parts.clear();
+        } finally {
+            EntityModelFeaturesCompat.releasePose();
         }
         if (scaled) {
             pose.popPose();
@@ -78,8 +84,13 @@ public final class TextureOverlays {
             pose.pushPose();
             pose.scale(layer.scale(), layer.scale(), layer.scale());
         }
-        arm.render(pose, consumer, light, OverlayTexture.NO_OVERLAY, layer.red(), layer.green(), layer.blue(), alpha);
-        sleeve.render(pose, consumer, light, OverlayTexture.NO_OVERLAY, layer.red(), layer.green(), layer.blue(), alpha);
+        EntityModelFeaturesCompat.holdPose();
+        try {
+            arm.render(pose, consumer, light, OverlayTexture.NO_OVERLAY, layer.red(), layer.green(), layer.blue(), alpha);
+            sleeve.render(pose, consumer, light, OverlayTexture.NO_OVERLAY, layer.red(), layer.green(), layer.blue(), alpha);
+        } finally {
+            EntityModelFeaturesCompat.releasePose();
+        }
         if (scaled) {
             pose.popPose();
         }
