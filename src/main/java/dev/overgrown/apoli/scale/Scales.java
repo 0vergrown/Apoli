@@ -85,6 +85,18 @@ public final class Scales {
         onChanged(entity, state);
     }
 
+    public static void setAll(Entity entity, java.util.List<ScaleType> types, ScaleOperation operation,
+                              float argument, int overTicks, ScaleEasing easing) {
+        int n = types.size();
+        if (n == 0) return;
+        ScaleState state = stateOrCreate(entity);
+        for (int i = 0; i < n; i++) {
+            ScaleType type = types.get(i);
+            state.set(type, operation.apply(state.target(type), argument), overTicks, easing);
+        }
+        onChanged(entity, state);
+    }
+
     public static void reset(Entity entity) {
         ScaleState state = stateOf(entity);
         if (state == null) return;
@@ -130,15 +142,20 @@ public final class Scales {
         refreshDimensions(entity, state);
     }
 
+    public static float[] ownAll(Entity entity, ScaleState state) {
+        resolve(entity, state, 1.0F);
+        return state.ownSlot();
+    }
+
     public static void refreshDimensions(Entity entity, ScaleState state) {
+        if (PehkuiBridge.ownsGeometry()) {
+            PehkuiBridge.push(entity, state);
+            return;
+        }
         float width = value(entity, ScaleTypes.HITBOX_WIDTH);
         float height = value(entity, ScaleTypes.HITBOX_HEIGHT);
         if (!state.dimensionsChanged(width, height)) return;
-        if (PehkuiBridge.ownsGeometry()) {
-            PehkuiBridge.push(entity);
-        } else {
-            entity.refreshDimensions();
-        }
+        entity.refreshDimensions();
     }
 
     private static float[] resolve(Entity entity, ScaleState state, float partial) {

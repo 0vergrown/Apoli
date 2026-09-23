@@ -15,6 +15,8 @@ public final class ModCompat {
 
     public static final boolean SKIN_LAYERS_3D = ModList.get().isLoaded("skinlayers3d");
 
+    public static final boolean ENTITY_MODEL_FEATURES = ModList.get().isLoaded("entity_model_features");
+
     public static final boolean ICARUS = ModList.get().isLoaded("icarus");
 
     public static final boolean FIGURA = ModList.get().isLoaded("figura");

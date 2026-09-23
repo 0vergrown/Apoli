@@ -49,6 +49,8 @@ public final class ParticleEffect {
         Resolved hit = this.resolved;
         if (hit != null && hit.registries() == registries) return hit.options();
         ParticleOptions built = parse(level, registries);
+        if (built == null) dev.overgrown.apoli.Apoli.LOGGER.warn(
+            "[Apoli] Could not read the particle {} — no particle will be spawned where it is used.", this.raw);
         this.resolved = new Resolved(registries, built);
         return built;
     }

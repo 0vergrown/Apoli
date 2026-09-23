@@ -4,8 +4,9 @@
   "compatibilityLevel": "JAVA_21",
   "plugin": "dev.overgrown.apoli.compat.sable.mixin.SableCompatMixinPlugin",
   "mixins": [
+    "BlockStateCollisionShapeMixin",
     "EntityMoveScopeMixin",
-    "BlockStateCollisionShapeMixin"
+    "LiquidBlockCollisionShapeMixin"
   ],
   "injectors": {
     "defaultRequire": 1
