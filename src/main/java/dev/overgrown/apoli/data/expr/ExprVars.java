@@ -420,6 +420,7 @@ public final class ExprVars {
         register("air", (e, c, l, v) -> e != null ? e.getAirSupply() : 0);
         register("max_air", (e, c, l, v) -> e != null ? e.getMaxAirSupply() : 0);
         register("fall_distance", (e, c, l, v) -> e != null ? e.fallDistance : 0);
+        register("attack_charge", (e, c, l, v) -> (e instanceof ServerPlayer) ? ((ServerPlayer) e).getAttackStrengthScale(0.0f) : 0.0f);
 
         register("x", (e, c, l, v) -> e != null ? e.getX() : 0);
         register("y", (e, c, l, v) -> e != null ? e.getY() : 0);
