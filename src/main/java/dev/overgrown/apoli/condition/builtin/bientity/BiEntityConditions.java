@@ -32,6 +32,8 @@ public final class BiEntityConditions {
         ConditionTypes.BI_ENTITY.register(Apoli.id("either"), new EitherCondition());
         ConditionTypes.BI_ENTITY.register(Apoli.id("equal"), new EqualCondition());
         ConditionTypes.BI_ENTITY.register(Apoli.id("undirected"), new UndirectedCondition());
+        ConditionTypes.BI_ENTITY.register(Apoli.id("grabbed"), new GrabbedBiEntityCondition());
+        ConditionTypes.BI_ENTITY.register(Apoli.id("raycast"), new RaycastBiEntityCondition());
         ConditionTypes.BI_ENTITY.register(
             Apoli.id("in_entity_set"),
             new InEntitySetCondition(),

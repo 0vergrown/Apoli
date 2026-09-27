@@ -1,7 +1,9 @@
 package dev.overgrown.apoli.mixin.projectile;
 
+import dev.overgrown.apoli.action.BiEntityAction;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.BlockCtx;
+import dev.overgrown.apoli.entity.CustomProjectileEntity;
 import dev.overgrown.apoli.entity.ProjectileHitActions;
 import dev.overgrown.apoli.power.builtin.FireProjectilePower;
 import dev.overgrown.apoli.power.builtin.ModifyProjectileDamageHandler;
@@ -23,6 +25,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.util.Optional;
 
 @Mixin(Projectile.class)
 public abstract class ProjectileHitActionsMixin implements ProjectileHitActions {
@@ -49,6 +53,10 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
     private int apoli$bounces;
     @Unique
     private boolean apoli$bounced;
+    @Unique
+    private int apoli$flightTicks;
+    @Unique
+    private int apoli$lastHit = -1;
 
     @Override
     public void apoli$setFireConfig(FireProjectilePower.Config config) {
@@ -71,11 +79,28 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
         return this.apoli$bounced;
     }
 
+    @Override
+    public void apoli$caught() {
+        FireProjectilePower.Config config = this.apoli$fireConfig;
+        if (config == null) return;
+        FireProjectilePower.Return ret = config.returning().orElse(null);
+        if (ret != null) apoli$runOwnerAction((Projectile) (Object) this, ret.bientityActionOnCatch());
+    }
+
     @Inject(method = "tick()V", at = @At("HEAD"))
-    private void apoli$enforceMaxRange(CallbackInfo ci) {
-        if (this.apoli$maxRangeSq <= 0.0) return;
+    private void apoli$tickFired(CallbackInfo ci) {
+        FireProjectilePower.Config config = this.apoli$fireConfig;
+        if (config == null) return;
         Projectile self = (Projectile) (Object) this;
-        if (self.level().isClientSide()) return;
+        if (self.level().isClientSide() || self.isRemoved()) return;
+        CustomProjectileEntity custom = self instanceof CustomProjectileEntity projectile ? projectile : null;
+        if (custom != null && custom.isReturning()) return;
+        FireProjectilePower.Return ret = custom == null ? null : config.returning().orElse(null);
+        if (ret != null && ret.after() > 0 && ++this.apoli$flightTicks >= ret.after()
+            && apoli$startReturn(self, custom, ret, null)) {
+            return;
+        }
+        if (this.apoli$maxRangeSq <= 0.0) return;
         if (!this.apoli$originSet) {
             this.apoli$originSet = true;
             this.apoli$originX = self.getX();
@@ -83,7 +108,8 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
             this.apoli$originZ = self.getZ();
             return;
         }
-        if (self.distanceToSqr(this.apoli$originX, this.apoli$originY, this.apoli$originZ) > this.apoli$maxRangeSq) {
+        if (self.distanceToSqr(this.apoli$originX, this.apoli$originY, this.apoli$originZ) > this.apoli$maxRangeSq
+            && (ret == null || !apoli$startReturn(self, custom, ret, null))) {
             self.discard();
         }
     }
@@ -92,12 +118,21 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
     private void apoli$filterHitTargets(Entity target, CallbackInfoReturnable<Boolean> cir) {
         FireProjectilePower.Config config = apoli$fireConfig;
         if (config == null) return;
-        FireProjectilePower.Hooks hooks = config.hooks();
-        if (hooks.bientityCondition().isEmpty() && hooks.ownerBientityCondition().isEmpty()) return;
-
         Projectile self = (Projectile) (Object) this;
         Level level = self.level();
         if (level.isClientSide()) return;
+
+        if (self instanceof CustomProjectileEntity custom && custom.isReturning()) {
+            FireProjectilePower.Return ret = config.returning().orElse(null);
+            if (ret == null || !ret.hitWhileReturning() || target == self.getOwner()
+                || target.getId() == this.apoli$lastHit) {
+                cir.setReturnValue(false);
+                return;
+            }
+        }
+
+        FireProjectilePower.Hooks hooks = config.hooks();
+        if (hooks.bientityCondition().isEmpty() && hooks.ownerBientityCondition().isEmpty()) return;
 
         if (hooks.bientityCondition().isPresent()
             && !hooks.bientityCondition().get().test(BiEntityCtx.of(self, target, level))) {
@@ -120,13 +155,15 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
         if (level.isClientSide()) return;
 
         FireProjectilePower.Hooks hooks = config.hooks();
+        boolean entityHit = result.getType() == HitResult.Type.ENTITY;
         ModifyProjectileDamageHandler.beginProjectileContext(self);
         boolean attributed = dev.overgrown.apoli.attribution.PowerCause.push(
             this.apoli$causeHolder, this.apoli$causePower);
         try {
-            if (result.getType() == HitResult.Type.ENTITY) {
+            if (entityHit) {
                 Entity target = ((EntityHitResult) result).getEntity();
                 if (target != null) {
+                    this.apoli$lastHit = target.getId();
                     hooks.bientityActionOnHit().ifPresent(a -> a.run(BiEntityCtx.of(self, target, level)));
                     hooks.ownerTargetBientityActionOnHit().ifPresent(a ->
                         a.run(BiEntityCtx.of(self.getOwner(), target, level)));
@@ -140,7 +177,56 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
             if (attributed) dev.overgrown.apoli.attribution.PowerCause.pop();
             ModifyProjectileDamageHandler.endProjectileContext();
         }
-        if (this.apoli$bounced) ci.cancel();
+        if (this.apoli$bounced) {
+            ci.cancel();
+            return;
+        }
+        if (self instanceof CustomProjectileEntity custom && !custom.isReturning()) {
+            FireProjectilePower.Return ret = config.returning().orElse(null);
+            if (ret == null) return;
+            if (entityHit ? ret.onHitEntity() : ret.onHitBlock() && result instanceof BlockHitResult) {
+                apoli$startReturn(self, custom, ret, entityHit ? null : (BlockHitResult) result);
+            }
+        }
+    }
+
+    @Unique
+    private boolean apoli$startReturn(Projectile self, CustomProjectileEntity custom, FireProjectilePower.Return ret,
+                                      @Nullable BlockHitResult blockHit) {
+        Entity owner = self.getOwner();
+        if (owner == null) return false;
+        float pull = (float) ret.speed().eval(owner);
+        if (!(pull > 0.0F)) return false;
+        if (blockHit != null) {
+            apoli$standOff(self, blockHit);
+            self.setDeltaMovement(Vec3.ZERO);
+        }
+        custom.startReturning(pull);
+        self.hasImpulse = true;
+        apoli$runOwnerAction(self, ret.bientityActionOnReturn());
+        return true;
+    }
+
+    @Unique
+    private void apoli$runOwnerAction(Projectile self, Optional<BiEntityAction> action) {
+        if (action.isEmpty()) return;
+        boolean attributed = dev.overgrown.apoli.attribution.PowerCause.push(
+            this.apoli$causeHolder, this.apoli$causePower);
+        try {
+            action.get().run(BiEntityCtx.of(self.getOwner(), self, self.level()));
+        } finally {
+            if (attributed) dev.overgrown.apoli.attribution.PowerCause.pop();
+        }
+    }
+
+    @Unique
+    private static void apoli$standOff(Projectile self, BlockHitResult blockHit) {
+        Direction face = blockHit.getDirection();
+        Vec3 landing = blockHit.getLocation();
+        double clearance = Math.max(self.getBbWidth(), self.getBbHeight()) * 0.5 + 0.01;
+        self.setPos(landing.x + face.getStepX() * clearance,
+            landing.y + face.getStepY() * clearance,
+            landing.z + face.getStepZ() * clearance);
     }
 
     @Unique
@@ -172,11 +258,7 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
         if (reflected.lengthSqr() < 1.0E-6) return false;
 
         this.apoli$bounces++;
-        Vec3 landing = blockHit.getLocation();
-        double clearance = Math.max(self.getBbWidth(), self.getBbHeight()) * 0.5 + 0.01;
-        self.setPos(landing.x + face.getStepX() * clearance,
-            landing.y + face.getStepY() * clearance,
-            landing.z + face.getStepZ() * clearance);
+        apoli$standOff(self, blockHit);
         self.setDeltaMovement(reflected);
         double horizontal = reflected.horizontalDistance();
         self.setYRot((float) (Mth.atan2(reflected.x, reflected.z) * (180.0 / Math.PI)));

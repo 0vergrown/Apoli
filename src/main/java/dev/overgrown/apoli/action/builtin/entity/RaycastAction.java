@@ -17,6 +17,7 @@ import dev.overgrown.apoli.data.ParticleEffect;
 import dev.overgrown.apoli.data.ShapeType;
 import dev.overgrown.apoli.data.Space;
 import dev.overgrown.apoli.data.Vector;
+import dev.overgrown.apoli.util.InteractionRange;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
@@ -218,6 +219,23 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         cast(cfg, ctx, target, ctx.entity().getEyePosition(), null, null, 0);
     }
 
+    public static @Nullable Vec3 entityHit(Entity candidate, Vec3 origin, Vec3 dir, Vec3 end, double range,
+                                           double rx, double ry, double rz, boolean cone, double coneCos) {
+        if (cone) {
+            Vec3 center = candidate.getBoundingBox().getCenter();
+            Vec3 toEntity = center.subtract(origin);
+            double dist = toEntity.length();
+            if (dist > range) return null;
+            if (dist > 1.0e-4 && toEntity.scale(1.0 / dist).dot(dir) < coneCos) return null;
+            return center;
+        }
+        AABB targetBox = Math.max(rx, Math.max(ry, rz)) > 0
+            ? candidate.getBoundingBox().inflate(rx, ry, rz)
+            : candidate.getBoundingBox();
+        if (targetBox.contains(origin)) return origin;
+        return targetBox.clip(origin, end).orElse(null);
+    }
+
     private static void cast(Cfg cfg, EntityCtx ctx, @Nullable Entity aimTarget, Vec3 origin,
                              @Nullable Vec3 incomingDir, @Nullable Vec3 incomingNormal, int depth) {
         if (depth > MAX_CHAIN_DEPTH) return;
@@ -234,8 +252,8 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         double gap = aiming ? dir.length() : 0.0;
         dir = dir.normalize();
 
-        float baseBlockDist = cfg.params.blockDistance.orElseGet(() -> cfg.params.distance.orElse(20f));
-        float baseEntityDist = cfg.params.entityDistance.orElseGet(() -> cfg.params.distance.orElse(baseBlockDist));
+        float baseBlockDist = InteractionRange.block(source, cfg.params.blockDistance, cfg.params.distance);
+        float baseEntityDist = InteractionRange.entity(source, cfg.params.entityDistance, cfg.params.distance);
         boolean clampToTarget = aiming && cfg.aim.stopAtTarget;
         float blockDist = clampToTarget ? (float) gap : baseBlockDist;
         float entityDist = clampToTarget ? (float) gap : baseEntityDist;
@@ -295,28 +313,9 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
                 e != source && e.isPickable());
             List<EntityHit> hits = new ArrayList<>();
             for (Entity cand : candidates) {
-                Vec3 hitPos;
-                double dSq;
-                if (coneMode) {
-                    Vec3 center = cand.getBoundingBox().getCenter();
-                    Vec3 toEntity = center.subtract(origin);
-                    double dist = toEntity.length();
-                    if (dist > entityDist) continue;
-                    if (dist > 1.0e-4 && toEntity.scale(1.0 / dist).dot(dir) < coneCos) continue;
-                    hitPos = center;
-                    dSq = dist * dist;
-                } else {
-                    AABB targetBox = maxRadius > 0 ? cand.getBoundingBox().inflate(rx, ry, rz) : cand.getBoundingBox();
-                    if (targetBox.contains(origin)) {
-                        hitPos = origin;
-                        dSq = 0.0;
-                    } else {
-                        Optional<Vec3> inter = targetBox.clip(origin, endE);
-                        if (inter.isEmpty()) continue;
-                        hitPos = inter.get();
-                        dSq = origin.distanceToSqr(hitPos);
-                    }
-                }
+                Vec3 hitPos = entityHit(cand, origin, dir, endE, entityDist, rx, ry, rz, coneMode, coneCos);
+                if (hitPos == null) continue;
+                double dSq = origin.distanceToSqr(hitPos);
                 if (!pierceBlocks && dSq > blockHitDistSq) continue;
                 hits.add(new EntityHit(cand, hitPos, dSq));
             }

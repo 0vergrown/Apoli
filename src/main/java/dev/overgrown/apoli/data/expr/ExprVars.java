@@ -1,6 +1,8 @@
 package dev.overgrown.apoli.data.expr;
 
 import dev.overgrown.apoli.compat.voicechat.VoiceState;
+import dev.overgrown.apoli.condition.builtin.entity.SimpleFlagConditions;
+import dev.overgrown.apoli.data.AttackStrengthContext;
 import dev.overgrown.apoli.data.EnchantmentLevels;
 import dev.overgrown.apoli.data.ItemSlot;
 import dev.overgrown.apoli.data.NbtPathValue;
@@ -8,12 +10,13 @@ import dev.overgrown.apoli.data.NbtSources;
 import dev.overgrown.apoli.data.SlotStacks;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerResources;
+import dev.overgrown.apoli.power.builtin.NightVisionPower;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LightLayer;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -421,7 +424,7 @@ public final class ExprVars {
         register("air", (e, c, l, v) -> e != null ? e.getAirSupply() : 0);
         register("max_air", (e, c, l, v) -> e != null ? e.getMaxAirSupply() : 0);
         register("fall_distance", (e, c, l, v) -> e != null ? e.fallDistance : 0);
-        register("attack_charge", (e, c, l, v) -> (e instanceof ServerPlayer) ? ((ServerPlayer) e).getAttackStrengthScale(0.0f) : 0.0f);
+        register("attack_charge", (e, c, l, v) -> AttackStrengthContext.charge(e));
 
         register("x", (e, c, l, v) -> e != null ? e.getX() : 0);
         register("y", (e, c, l, v) -> e != null ? e.getY() : 0);
@@ -469,5 +472,18 @@ public final class ExprVars {
             Level level = levelOf(e, l);
             return level != null ? level.getMoonPhase() : 0;
         });
+
+        register("biome_temperature", (e, c, l, v) ->
+            e != null ? e.level().getBiome(e.blockPosition()).value().getBaseTemperature() : 0);
+        register("brightness", (e, c, l, v) ->
+            e != null ? SimpleFlagConditions.syncedSky(e.level()).getLightLevelDependentMagicValue(e.blockPosition()) : 0);
+        register("light", (e, c, l, v) ->
+            e != null ? SimpleFlagConditions.syncedSky(e.level()).getMaxLocalRawBrightness(e.blockPosition()) : 0);
+        register("block_light", (e, c, l, v) ->
+            e != null ? e.level().getBrightness(LightLayer.BLOCK, e.blockPosition()) : 0);
+        register("sky_light", (e, c, l, v) ->
+            e != null ? e.level().getBrightness(LightLayer.SKY, e.blockPosition()) : 0);
+        register("night_vision", (e, c, l, v) ->
+            e instanceof LivingEntity le ? NightVisionPower.effectScale(le) : 0);
     }
 }

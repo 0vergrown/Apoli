@@ -27,9 +27,12 @@ public final class ModifyHearingRangePower extends PowerType<ModifyHearingRangeP
                          Optional<List<AttributeModifier>> modifiers,
                          boolean sounds,
                          boolean voice,
-                         Optional<BiEntityCondition> bientityCondition) {
-        public List<AttributeModifier> flattened() {
-            return AttributeModifierHelper.flatten(modifier, modifiers);
+                         Optional<BiEntityCondition> bientityCondition,
+                         List<AttributeModifier> flattened) {
+        Config(Optional<AttributeModifier> modifier, Optional<List<AttributeModifier>> modifiers,
+               boolean sounds, boolean voice, Optional<BiEntityCondition> bientityCondition) {
+            this(modifier, modifiers, sounds, voice, bientityCondition,
+                AttributeModifierHelper.flatten(modifier, modifiers));
         }
     }
 

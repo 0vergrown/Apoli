@@ -47,21 +47,15 @@ public final class ModifyPlayerModelPower extends PowerType<ModifyPlayerModelPow
         return config == null ? null : config.model();
     }
 
-    @Nullable
-    public static ResourceLocation firstActiveTexture(@Nullable Entity entity) {
-        Config config = firstActive(entity);
-        return config == null ? null : config.texture().orElse(null);
-    }
-
     public static boolean replacesAppearance(@Nullable Entity entity) {
         Config config = firstActive(entity);
-        return config != null && (config.texture().isPresent() || !VANILLA_MODEL.equals(config.model()));
+        return config != null && !VANILLA_MODEL.equals(config.model());
     }
 
     @Nullable
     public static ResourceLocation firstActiveModelTexture(@Nullable Entity entity) {
         Config config = firstActive(entity);
-        return config == null ? null : config.modelTexture().orElse(null);
+        return config == null ? null : config.modelTexture().orElse(config.texture().orElse(null));
     }
 
     @Nullable

@@ -13,4 +13,6 @@ public interface ProjectileHitActions {
     void apoli$setFireCause(@Nullable Entity holder, @Nullable ResourceLocation powerId);
 
     boolean apoli$bouncedThisHit();
+
+    void apoli$caught();
 }

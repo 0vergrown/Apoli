@@ -42,7 +42,27 @@ import java.util.OptionalInt;
 import java.util.UUID;
 
 public final class FireProjectilePower extends PowerType<FireProjectilePower.Config> {
-    public record Config(Params params, Hooks hooks) {}
+    public record Config(Params params, Hooks hooks, Optional<Return> returning) {}
+
+    public record Return(
+        boolean onHitEntity,
+        boolean onHitBlock,
+        int after,
+        Expression speed,
+        boolean hitWhileReturning,
+        Optional<BiEntityAction> bientityActionOnReturn,
+        Optional<BiEntityAction> bientityActionOnCatch
+    ) {
+        public static final Codec<Return> CODEC = RecordCodecBuilder.create(i -> i.group(
+            Codec.BOOL.optionalFieldOf("on_hit_entity", true).forGetter(Return::onHitEntity),
+            Codec.BOOL.optionalFieldOf("on_hit_block", true).forGetter(Return::onHitBlock),
+            Codec.INT.optionalFieldOf("after", 0).forGetter(Return::after),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("speed", Expression.constant(2.0)).forGetter(Return::speed),
+            Codec.BOOL.optionalFieldOf("hit_while_returning", false).forGetter(Return::hitWhileReturning),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action_on_return", BiEntityAction.CODEC).forGetter(Return::bientityActionOnReturn),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action_on_catch", BiEntityAction.CODEC).forGetter(Return::bientityActionOnCatch)
+        ).apply(i, Return::new));
+    }
 
     public record Params(
         Optional<ResourceLocation> entityType,
@@ -156,7 +176,8 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
 
     public static final MapCodec<Config> CONFIG_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
         PARAMS.forGetter(Config::params),
-        HOOKS.forGetter(Config::hooks)
+        HOOKS.forGetter(Config::hooks),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("return", Return.CODEC).forGetter(Config::returning)
     ).apply(i, Config::new));
 
     @Override

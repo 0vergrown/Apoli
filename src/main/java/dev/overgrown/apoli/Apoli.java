@@ -165,6 +165,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.codec.ApoliOps.setRegistries(null);
             dev.overgrown.apoli.codec.ApoliOps.setLoadingRegistries(null);
             PoweredEntities.clear();
+            dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.clearServer();
             dev.overgrown.apoli.block.GhostBlocks.clear();
             DelayedActionQueue.clear();
             dev.overgrown.apoli.rope.RopeManager.clear();
@@ -369,8 +370,14 @@ public final class Apoli implements ModInitializer {
             return ActionOnUseHandler.fireOncePerTick(player, target, hand);
         });
 
+        ServerEntityEvents.EQUIPMENT_CHANGE.register((living, slot, previous, next) ->
+            dev.overgrown.apoli.item.ItemPowerHandler.onEquipmentChange(living, slot));
+
         ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
             dev.overgrown.apoli.global.GlobalPowers.applyTo(entity);
+            if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
+                dev.overgrown.apoli.item.ItemPowerHandler.onLoad(living);
+            }
             PowerContainer c = PowerContainer.of(entity);
             if (c != null && !c.isEmpty()) {
                 PoweredEntities.register(entity);
@@ -513,10 +520,12 @@ public final class Apoli implements ModInitializer {
         dev.overgrown.apoli.entity.ProjectileTickManager.tick(server);
         dev.overgrown.apoli.tick.TickRates.serverTick(server);
         boolean forcedKeys = dev.overgrown.apoli.keybind.HeldKeys.anyForced();
+        dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.beginScan();
         PoweredEntities.forEach(entity -> {
             PowerContainer c = PowerContainer.of(entity);
             if (!(c instanceof PowerContainerImpl impl)) return;
             impl.tickActive();
+            dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.scan(entity, impl);
             if (forcedKeys) dev.overgrown.apoli.keybind.KeyDispatch.tickForcedNonPlayer(entity);
             if (impl.isStructureDirty()) {
                 syncEntityToTrackers(entity, impl);
@@ -533,6 +542,7 @@ public final class Apoli implements ModInitializer {
             }
             if (impl.isEmpty()) PoweredEntities.unregister(entity);
         });
+        dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.endScan();
         dev.overgrown.apoli.block.GhostBlocks.tick(server);
         dev.overgrown.apoli.power.builtin.ShaderPower.tick(server);
         dev.overgrown.apoli.power.builtin.EntitySetPower.flushPendingRemovals();

@@ -266,6 +266,7 @@ public final class ApoliClient implements ClientModInitializer {
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
+            dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.clientTick(mc.player);
             CursorSpeedState.tick(mc);
             dev.overgrown.apoli.client.MouseMovementWatcher.clientTick(mc);
             dev.overgrown.apoli.client.render.ClientRenderFlags.clientTick(mc);
