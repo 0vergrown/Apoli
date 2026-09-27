@@ -7,6 +7,7 @@ import dev.overgrown.apoli.action.EntityAction;
 import dev.overgrown.apoli.alias.AliasingMapCodec;
 import dev.overgrown.apoli.codec.LoggedOptionalField;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.Comparison;
 import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.data.HudRender;
 import dev.overgrown.apoli.power.ApoliPowers;
@@ -45,22 +46,24 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
     private record ValueAction (
         List<Expression> values,
         Optional<Expression> value,
-        Optional<EntityAction> action
+        Optional<EntityAction> action,
+        Comparison comparison
     ) {
         public static final Codec<ValueAction> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.list(Expression.INT_OR_EXPR).optionalFieldOf("values", List.of()).forGetter(ValueAction::values),
             Expression.INT_OR_EXPR.optionalFieldOf("value").forGetter(ValueAction::value),
-            LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(ValueAction::action)
+            LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(ValueAction::action),
+            Comparison.CODEC.optionalFieldOf("comparison", Comparison.EQUAL).forGetter(ValueAction::comparison)
         ).apply(i, ValueAction::new));
 
-        public boolean test(int comp, Entity entity) {
+        public boolean test(int input, Entity entity) {
             if (action.isEmpty()) return false;
             if (values.isEmpty() && value.isEmpty()) return true;
 
-            if(value.isPresent() && value.get().evalInt(entity) == comp) return true;
+            if(value.isPresent() && comparison.compare(input, value.get().evalInt(entity))) return true;
 
             for (var val : values) {
-                if(val.evalInt(entity) == comp) return true;
+                if(comparison.compare(input, val.evalInt(entity))) return true;
             }
 
             return false;
