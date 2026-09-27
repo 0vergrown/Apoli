@@ -5,7 +5,9 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.EntityAction;
 import dev.overgrown.apoli.alias.AliasingMapCodec;
+import dev.overgrown.apoli.codec.LoggedOptionalField;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.Comparison;
 import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.data.HudRender;
 import dev.overgrown.apoli.power.ApoliPowers;
@@ -19,9 +21,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Map;
-import java.util.Optional;
-import java.util.OptionalInt;
+import java.util.*;
 
 public class ResourcePower extends PowerType<ResourcePower.Cfg> {
 
@@ -38,9 +38,37 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         boolean retainValue,
         Optional<EntityAction> minAction,
         Optional<EntityAction> maxAction,
+        List<ValueAction> valueActions,
         boolean persistent,
         int size
     ) {}
+
+    private record ValueAction (
+        List<Expression> values,
+        Optional<Expression> value,
+        Optional<EntityAction> action,
+        Comparison comparison
+    ) {
+        public static final Codec<ValueAction> CODEC = RecordCodecBuilder.create(i -> i.group(
+            Codec.list(Expression.INT_OR_EXPR).optionalFieldOf("values", List.of()).forGetter(ValueAction::values),
+            Expression.INT_OR_EXPR.optionalFieldOf("value").forGetter(ValueAction::value),
+            LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(ValueAction::action),
+            Comparison.CODEC.optionalFieldOf("comparison", Comparison.EQUAL).forGetter(ValueAction::comparison)
+        ).apply(i, ValueAction::new));
+
+        public boolean test(int input, Entity entity) {
+            if (action.isEmpty()) return false;
+            if (values.isEmpty() && value.isEmpty()) return true;
+
+            if(value.isPresent() && comparison.compare(input, value.get().evalInt(entity))) return true;
+
+            for (var val : values) {
+                if(comparison.compare(input, val.evalInt(entity))) return true;
+            }
+
+            return false;
+        }
+    }
 
     private static final MapCodec<Cfg> INNER = RecordCodecBuilder.mapCodec(i -> i.group(
         Expression.INT_OR_EXPR.optionalFieldOf("min").forGetter(Cfg::min),
@@ -51,6 +79,7 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         Codec.BOOL.optionalFieldOf("retain_value", false).forGetter(Cfg::retainValue),
         dev.overgrown.apoli.codec.LoggedOptionalField.of("min_action", EntityAction.CODEC).forGetter(Cfg::minAction),
         dev.overgrown.apoli.codec.LoggedOptionalField.of("max_action", EntityAction.CODEC).forGetter(Cfg::maxAction),
+        LoggedOptionalField.of("on_change", Codec.list(ValueAction.CODEC), List.of()).forGetter(Cfg::valueActions),
         Codec.BOOL.optionalFieldOf("persistent", true).forGetter(Cfg::persistent),
         Codec.intRange(1, Integer.MAX_VALUE).optionalFieldOf("size", 1).forGetter(Cfg::size)
     ).apply(i, Cfg::new));
@@ -281,13 +310,21 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
 
     private void fireBoundaryActions(Cfg cfg, Entity owner, int prev, int newVal, int min, int max) {
         if (owner == null) return;
-        if (cfg.minAction.isEmpty() && cfg.maxAction.isEmpty()) return;
+        if (cfg.minAction.isEmpty() && cfg.maxAction.isEmpty() && cfg.valueActions.isEmpty()) return;
         if (!(owner.level() instanceof ServerLevel level)) return;
         if (newVal == min && prev != min) {
             cfg.minAction.ifPresent(a -> a.run(new EntityCtx(owner, level)));
         }
         if (newVal == max && prev != max) {
             cfg.maxAction.ifPresent(a -> a.run(new EntityCtx(owner, level)));
+        }
+
+        if(newVal == prev) return;
+
+        for (var action : cfg.valueActions) {
+            if (action.test(newVal, owner)) {
+                action.action().ifPresent(a -> a.run(EntityCtx.of(owner, level)));
+            }
         }
     }
 }
