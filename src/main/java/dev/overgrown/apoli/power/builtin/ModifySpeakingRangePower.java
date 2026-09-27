@@ -4,6 +4,8 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.condition.BiEntityCondition;
+import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.AttributeModifier;
 import dev.overgrown.apoli.data.AttributeModifierHelper;
@@ -24,9 +26,13 @@ public final class ModifySpeakingRangePower extends PowerType<ModifySpeakingRang
     public record Config(Optional<AttributeModifier> modifier,
                          Optional<List<AttributeModifier>> modifiers,
                          boolean normal,
-                         boolean whisper) {
-        public List<AttributeModifier> flattened() {
-            return AttributeModifierHelper.flatten(modifier, modifiers);
+                         boolean whisper,
+                         Optional<BiEntityCondition> bientityCondition,
+                         List<AttributeModifier> flattened) {
+        Config(Optional<AttributeModifier> modifier, Optional<List<AttributeModifier>> modifiers,
+               boolean normal, boolean whisper, Optional<BiEntityCondition> bientityCondition) {
+            this(modifier, modifiers, normal, whisper, bientityCondition,
+                AttributeModifierHelper.flatten(modifier, modifiers));
         }
     }
 
@@ -36,7 +42,9 @@ public final class ModifySpeakingRangePower extends PowerType<ModifySpeakingRang
             AttributeModifier.CODEC.optionalFieldOf("modifier").forGetter(Config::modifier),
             AttributeModifier.LIST_OR_SINGLE.optionalFieldOf("modifiers").forGetter(Config::modifiers),
             Codec.BOOL.optionalFieldOf("normal", true).forGetter(Config::normal),
-            Codec.BOOL.optionalFieldOf("whisper", true).forGetter(Config::whisper)
+            Codec.BOOL.optionalFieldOf("whisper", true).forGetter(Config::whisper),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC)
+                .forGetter(Config::bientityCondition)
         ).apply(i, Config::new));
     }
 
@@ -53,6 +61,31 @@ public final class ModifySpeakingRangePower extends PowerType<ModifySpeakingRang
     }
 
     public static double @Nullable [] ranges(@Nullable Entity speaker, double normalBase, double whisperBase) {
+        return apply(speaker, null, normalBase, whisperBase);
+    }
+
+    public static double @Nullable [] rangesToward(@Nullable Entity speaker, Entity listener,
+                                                   double normalBase, double whisperBase) {
+        return apply(speaker, listener, normalBase, whisperBase);
+    }
+
+    public static boolean targetsListeners(@Nullable Entity speaker) {
+        if (speaker == null) return false;
+        PowerContainer container = PowerContainer.of(speaker);
+        if (container == null || container.isEmpty()) return false;
+        List<ResourceLocation> powers = container.powersOfType(CANONICAL);
+        for (int i = 0, n = powers.size(); i < n; i++) {
+            ResourceLocation powerId = powers.get(i);
+            if (container.isSuppressed(powerId)) continue;
+            Power power = ApoliPowers.get(powerId);
+            if (power == null || !(power.config() instanceof Config cfg)) continue;
+            if (cfg.bientityCondition().isPresent() && !cfg.flattened().isEmpty()) return true;
+        }
+        return false;
+    }
+
+    private static double @Nullable [] apply(@Nullable Entity speaker, @Nullable Entity listener,
+                                             double normalBase, double whisperBase) {
         if (speaker == null) return null;
         PowerContainer container = PowerContainer.of(speaker);
         if (container == null || container.isEmpty()) return null;
@@ -67,8 +100,11 @@ public final class ModifySpeakingRangePower extends PowerType<ModifySpeakingRang
             if (container.isSuppressed(powerId)) continue;
             Power power = ApoliPowers.get(powerId);
             if (power == null || !(power.config() instanceof Config cfg)) continue;
+            if (cfg.bientityCondition().isPresent() != (listener != null)) continue;
             List<AttributeModifier> mods = cfg.flattened();
             if (mods.isEmpty()) continue;
+            if (listener != null && !cfg.bientityCondition().get().test(
+                BiEntityCtx.of(speaker, listener, speaker.level()))) continue;
             if (power.condition().isPresent()) {
                 if (ctx == null) ctx = new EntityCtx(speaker, speaker.level());
                 if (!power.condition().get().test(ctx)) continue;

@@ -90,7 +90,7 @@ public record CustomParticleOptions(
         Expression.INT_OR_EXPR.optionalFieldOf("frames", ZERO).forGetter(CustomParticleOptions::framesExpr),
         Expression.INT_OR_EXPR.optionalFieldOf("frame_time", ZERO).forGetter(CustomParticleOptions::frameTimeExpr),
         Codec.BOOL.optionalFieldOf("loop_frames").forGetter(CustomParticleOptions::loopFrames),
-        Codec.BOOL.optionalFieldOf("physics", false).forGetter(CustomParticleOptions::physics),
+        Codec.BOOL.optionalFieldOf("physics", true).forGetter(CustomParticleOptions::physics),
         Codec.BOOL.optionalFieldOf("emissive", false).forGetter(CustomParticleOptions::emissive)
     ).apply(instance, (texture, lifetime, lifetimeVariation, size, endSize, color, endColor, gravity, friction,
                        roll, rollSpeed, frames, frameTime, loopFrames, physics, emissive) ->

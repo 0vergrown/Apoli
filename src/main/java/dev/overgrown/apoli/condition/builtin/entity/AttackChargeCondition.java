@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.builtin.damage.AttackChargeDamageCondition;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.AttackStrengthContext;
 import dev.overgrown.apoli.data.Comparison;
 import dev.overgrown.apoli.data.Expression;
 import net.minecraft.world.entity.player.Player;
@@ -26,7 +27,7 @@ public final class AttackChargeCondition implements ConditionType<EntityCtx, Att
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
         if (!(ctx.entity() instanceof Player player)) return false;
-        float scale = player.getAttackStrengthScale(0.5f);
+        float scale = AttackStrengthContext.charge(player);
         return cfg.comparison.compare(scale, cfg.compareTo.eval(player, scale));
     }
 }

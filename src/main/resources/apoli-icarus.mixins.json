@@ -8,7 +8,8 @@
   ],
   "client": [
     "client.IcarusClientMixin",
-    "client.WingEntityModelMixin"
+    "client.WingEntityModelMixin",
+    "client.FixedWingEntityModelMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -59,6 +59,7 @@ public final class ApoliIds {
     public static final ResourceLocation ACTION_ON_BLOCK_PLACE = Apoli.id("action_on_block_place");
     public static final ResourceLocation PREVENT_BLOCK_PLACE = Apoli.id("prevent_block_place");
     public static final ResourceLocation MODIFY_BREAK_SPEED = Apoli.id("modify_break_speed");
+    public static final ResourceLocation MODIFY_ENCHANTMENT_LEVEL = Apoli.id("modify_enchantment_level");
     public static final ResourceLocation MODIFY_JUMP = Apoli.id("modify_jump");
     public static final ResourceLocation MODIFY_BLOCK_STUCK_SPEED = Apoli.id("modify_block_stuck_speed");
     public static final ResourceLocation MODIFY_HEALING = Apoli.id("modify_healing");

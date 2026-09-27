@@ -82,6 +82,7 @@ dependencies {
 	// and its mixins are gated on Icarus being present (ModCompat.ICARUS / IcarusCompatMixinPlugin),
 	// so Apoli runs fine without it. Adjust icarus_version per the Icarus file you target.
 	modCompileOnly "maven.modrinth:icarus:${project.icarus_version}"
+	modCompileOnly "maven.modrinth:icarus-rewinged:${project.icarus_rewinged_version}"
 
 	// Figura (compile-only, optional at runtime) — modify_player_model equips Figura avatars.
 	// Gated at runtime by ModCompat.FIGURA / FiguraCompatMixinPlugin, so Apoli runs fine without it.

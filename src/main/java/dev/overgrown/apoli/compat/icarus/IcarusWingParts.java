@@ -21,10 +21,29 @@ public final class IcarusWingParts {
     private static final int RIGHT = BodyAttachments.index(BodyAttachments.RIGHT_WING) * AttachmentParts.STRIDE;
     private static final int LEFT = BodyAttachments.index(BodyAttachments.LEFT_WING) * AttachmentParts.STRIDE;
 
-    private IcarusWingParts() {}
+    private float[] rightOriginal;
+    private float[] leftOriginal;
+    private boolean edited;
 
-    public static boolean edit(LivingEntity entity, ModelPart rightWing, ModelPart leftWing,
-                               float[] rightOriginal, float[] leftOriginal) {
+    public void restore(ModelPart rightWing, ModelPart leftWing) {
+        if (!edited) return;
+        ModelPartEdits.restore(rightWing, rightOriginal);
+        ModelPartEdits.restore(leftWing, leftOriginal);
+        edited = false;
+    }
+
+    public void edit(LivingEntity entity, ModelPart rightWing, ModelPart leftWing) {
+        if (rightOriginal == null) {
+            rightOriginal = ModelPartEdits.snapshot(rightWing);
+            leftOriginal = ModelPartEdits.snapshot(leftWing);
+        }
+        if (apply(entity, rightWing, leftWing, rightOriginal, leftOriginal)) {
+            edited = true;
+        }
+    }
+
+    private static boolean apply(LivingEntity entity, ModelPart rightWing, ModelPart leftWing,
+                                 float[] rightOriginal, float[] leftOriginal) {
         boolean edited = false;
         List<ModelPartTimeline.Slot> slots = ModelPartAnimator.update(entity);
         if (!slots.isEmpty()) {

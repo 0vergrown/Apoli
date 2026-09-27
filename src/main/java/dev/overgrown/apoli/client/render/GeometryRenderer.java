@@ -127,7 +127,7 @@ public final class GeometryRenderer {
 
     public static void draw(GeometryRender render, CustomModel model, PoseStack pose, MultiBufferSource buffers,
                             int light, @Nullable Entity subject) {
-        VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(render.mode(),
+        VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forGeometry(render.mode(),
             DynamicTextures.resolve(render.texture(), subject), ModelPartAnimator.ageInTicks(subject), render.scrollSpeed()));
         boolean scaled = render.scale() != 1.0F;
         if (scaled) {
@@ -152,7 +152,7 @@ public final class GeometryRenderer {
         if (bound.length == 0) {
             return;
         }
-        VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forMode(render.mode(),
+        VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forGeometry(render.mode(),
             DynamicTextures.resolve(render.texture(), subject), ModelPartAnimator.ageInTicks(subject), render.scrollSpeed()));
         boolean scaled = render.scale() != 1.0F;
         if (scaled) {

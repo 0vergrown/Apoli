@@ -25,6 +25,14 @@ public final class OverlayRenderTypes {
         };
     }
 
+    public static RenderType forGeometry(RenderMode mode, ResourceLocation texture, float ageInTicks, float scrollSpeed) {
+        return switch (mode) {
+            case EMISSIVE -> DepthWritingRenderTypes.emissive(texture);
+            case EYES -> DepthWritingRenderTypes.eyes(texture);
+            default -> forMode(mode, texture, ageInTicks, scrollSpeed);
+        };
+    }
+
     private static RenderType energySwirl(ResourceLocation texture, float ageInTicks, float scrollSpeed) {
         if (scrollSpeed == 0.0F) {
             return RenderType.energySwirl(texture, 0.0F, 0.0F);

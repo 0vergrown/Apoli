@@ -42,6 +42,9 @@ public final class ApoliVoicechatPlugin implements VoicechatPlugin {
     private void onServerStarted(VoicechatServerStartedEvent event) {
         VoicechatServerApi voicechat = event.getVoicechat();
         api = voicechat;
+        double distance = voicechat.getVoiceChatDistance();
+        double whisper = voicechat.getServerConfig().getDouble("whisper_distance", -1.0);
+        VoiceHearing.setBaseDistances(distance, whisper < 0.0 ? distance : whisper);
         VoiceState.setDisabledCheck(uuid -> {
             VoicechatConnection connection = voicechat.getConnectionOf(uuid);
             return connection != null && (connection.isDisabled() || !connection.isConnected());

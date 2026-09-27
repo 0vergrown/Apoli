@@ -13,6 +13,7 @@ import dev.overgrown.apoli.data.FluidHandling;
 import dev.overgrown.apoli.data.ShapeType;
 import dev.overgrown.apoli.data.Space;
 import dev.overgrown.apoli.data.Vector;
+import dev.overgrown.apoli.util.InteractionRange;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ClipContext;
@@ -69,8 +70,8 @@ public final class RaycastEntityCondition implements ConditionType<EntityCtx, Ra
             : source.getViewVector(1f);
         if (dir.lengthSqr() < 1.0e-6) dir = source.getViewVector(1f);
         dir = dir.normalize();
-        float blockDist = cfg.blockDistance.orElseGet(() -> cfg.distance.orElse(20f));
-        float entityDist = cfg.entityDistance.orElseGet(() -> cfg.distance.orElse(blockDist));
+        float blockDist = InteractionRange.block(source, cfg.blockDistance, cfg.distance);
+        float entityDist = InteractionRange.entity(source, cfg.entityDistance, cfg.distance);
 
         BlockHitResult blockHit = null;
         if (cfg.block) {

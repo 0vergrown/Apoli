@@ -45,19 +45,6 @@ public final class CooldownPower extends ResourcePower {
         super.tick(powerId, cfg, holder);
     }
 
-    public static boolean trigger(PowerContainer holder, ResourceLocation powerId) {
-        OptionalInt cur = readValue(holder, powerId);
-        if (cur.isEmpty() || cur.getAsInt() > 0) return false;
-        dev.overgrown.apoli.power.Power loaded = dev.overgrown.apoli.power.ApoliPowers.get(powerId);
-        if (loaded == null) return false;
-        dev.overgrown.apoli.power.PowerType<?> type = dev.overgrown.apoli.power.PowerTypeRegistry.get(loaded.typeId());
-        if (!(type instanceof CooldownPower cp)) return false;
-        if (!(loaded.config() instanceof Cfg cfg)) return false;
-        int max = cp.currentMax(cfg, holder, powerId);
-        writeValue(holder, powerId, max);
-        return true;
-    }
-
     @Override
     public boolean isCooldown() {
         return true;

@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.data;
 
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 
 public final class AttackStrengthContext {
@@ -38,5 +39,12 @@ public final class AttackStrengthContext {
         long current = CURRENT.get()[0];
         if ((int) (current >> 32) != attacker.getId()) return 0.0f;
         return Float.intBitsToFloat((int) current);
+    }
+
+    public static float charge(@Nullable Entity entity) {
+        if (!(entity instanceof Player player)) return 0.0f;
+        long current = CURRENT.get()[0];
+        if ((int) (current >> 32) == player.getId()) return Float.intBitsToFloat((int) current);
+        return player.getAttackStrengthScale(0.5f);
     }
 }

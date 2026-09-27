@@ -15,6 +15,7 @@ import net.minecraft.world.entity.projectile.ThrowableProjectile;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +27,8 @@ public class CustomProjectileEntity extends ThrowableProjectile {
         SynchedEntityData.defineId(CustomProjectileEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<net.minecraft.world.item.ItemStack> ITEM =
         SynchedEntityData.defineId(CustomProjectileEntity.class, EntityDataSerializers.ITEM_STACK);
+    private static final EntityDataAccessor<Float> RETURN_PULL =
+        SynchedEntityData.defineId(CustomProjectileEntity.class, EntityDataSerializers.FLOAT);
 
     public CustomProjectileEntity(EntityType<? extends CustomProjectileEntity> type, Level level) {
         super(type, level);
@@ -42,6 +45,7 @@ public class CustomProjectileEntity extends ThrowableProjectile {
         this.entityData.define(TEXTURE, "");
         this.entityData.define(MODEL_POWER, "");
         this.entityData.define(ITEM, net.minecraft.world.item.ItemStack.EMPTY);
+        this.entityData.define(RETURN_PULL, 0.0F);
     }
 
     public void setTexture(ResourceLocation texture) {
@@ -70,10 +74,53 @@ public class CustomProjectileEntity extends ThrowableProjectile {
         return s.isEmpty() ? null : ResourceLocation.tryParse(s);
     }
 
+    public boolean isReturning() {
+        return this.entityData.get(RETURN_PULL) > 0.0F;
+    }
+
+    public void startReturning(float pull) {
+        this.entityData.set(RETURN_PULL, pull);
+        this.setNoGravity(true);
+    }
+
+    @Override
+    public void tick() {
+        float pull = this.entityData.get(RETURN_PULL);
+        if (pull > 0.0F && !this.steerHome(pull)) return;
+        super.tick();
+    }
+
+    private boolean steerHome(float pull) {
+        Entity owner = this.getOwner();
+        boolean server = !this.level().isClientSide;
+        if (owner == null || !owner.isAlive() || owner.isSpectator() || owner.level() != this.level()) {
+            if (!server) return true;
+            this.discard();
+            return false;
+        }
+        Vec3 toOwner = owner.getEyePosition().subtract(this.position());
+        if (server && toOwner.lengthSqr() <= Math.max(1.0, this.getDeltaMovement().lengthSqr())) {
+            ((ProjectileHitActions) this).apoli$caught();
+            this.discard();
+            return false;
+        }
+        this.setPosRaw(this.getX(), this.getY() + toOwner.y * 0.015 * pull, this.getZ());
+        if (!server) this.yOld = this.getY();
+        this.setDeltaMovement(this.getDeltaMovement().scale(0.95).add(toOwner.normalize().scale(0.05 * pull)));
+        return true;
+    }
+
+    @Override
+    protected void checkInsideBlocks() {
+        if (!this.isReturning()) super.checkInsideBlocks();
+    }
+
     @Override
     protected void onHit(HitResult result) {
+        if (this.isReturning() && result.getType() == HitResult.Type.BLOCK) return;
         super.onHit(result);
-        if (!this.level().isClientSide && !((ProjectileHitActions) this).apoli$bouncedThisHit()) {
+        if (!this.level().isClientSide && !this.isReturning()
+            && !((ProjectileHitActions) this).apoli$bouncedThisHit()) {
             this.discard();
         }
     }

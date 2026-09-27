@@ -4,6 +4,7 @@ import dev.overgrown.apoli.power.builtin.ModifyHearingRangePower;
 import dev.overgrown.apoli.power.builtin.ModifySpeakingRangePower;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,11 @@ public final class VoiceHearing {
         return active;
     }
 
+    public static void setBaseDistances(double normal, double whisper) {
+        if (normal > 0.0) normalBase = normal;
+        if (whisper > 0.0) whisperBase = whisper;
+    }
+
     public static void tick(MinecraftServer server) {
         boolean hearing = ModifyHearingRangePower.inUse();
         boolean speaking = ModifySpeakingRangePower.inUse();
@@ -45,12 +51,15 @@ public final class VoiceHearing {
         boolean any = false;
 
         SPOKEN.clear();
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; speaking && i < count; i++) {
             ServerPlayer player = players.get(i);
-            double[] spoken = speaking ? ModifySpeakingRangePower.ranges(player, normal, whisper) : null;
-            if (spoken == null) continue;
-            SPOKEN.put(player.getUUID(), spoken);
-            any = true;
+            double[] spoken = ModifySpeakingRangePower.ranges(player, normal, whisper);
+            if (spoken != null) {
+                SPOKEN.put(player.getUUID(), spoken);
+                any = true;
+            } else if (!any && ModifySpeakingRangePower.targetsListeners(player)) {
+                any = true;
+            }
         }
 
         HEARD.clear();
@@ -64,17 +73,16 @@ public final class VoiceHearing {
             double widestNormal = spokenNormal;
             double widestWhisper = spokenWhisper;
             boolean talking = VoiceState.isSpeaking(speakerId);
-            if (hearing && talking && spokenNormal > 0.0) {
+            boolean targeted = talking && speaking && ModifySpeakingRangePower.targetsListeners(speaker);
+            if (talking && (hearing || targeted)) {
                 for (int j = 0; j < count; j++) {
                     if (i == j) continue;
                     ServerPlayer listener = players.get(j);
-                    if (!ModifyHearingRangePower.hearsDifferently(listener)) continue;
-                    double[] heard = ModifyHearingRangePower.voiceRanges(
-                        listener, speaker, spokenNormal, spokenWhisper);
-                    if (heard == null) continue;
-                    HEARD.put(new Pair(listener.getUUID(), speakerId), heard);
-                    if (heard[0] > widestNormal) widestNormal = heard[0];
-                    if (heard[1] > widestWhisper) widestWhisper = heard[1];
+                    double[] pair = pairRanges(speaker, listener, spokenNormal, spokenWhisper, hearing, targeted);
+                    if (pair == null) continue;
+                    HEARD.put(new Pair(listener.getUUID(), speakerId), pair);
+                    if (pair[0] > widestNormal) widestNormal = pair[0];
+                    if (pair[1] > widestWhisper) widestWhisper = pair[1];
                 }
             }
             if (spoken != null || widestNormal != normal || widestWhisper != whisper) {
@@ -93,6 +101,47 @@ public final class VoiceHearing {
 
         active = any;
         if (!any) ORIGINAL.clear();
+    }
+
+    private static double @Nullable [] pairRanges(ServerPlayer speaker, ServerPlayer listener, double spokenNormal,
+                                                  double spokenWhisper, boolean hearing, boolean targeted) {
+        double[] pair = targeted
+            ? ModifySpeakingRangePower.rangesToward(speaker, listener, spokenNormal, spokenWhisper)
+            : null;
+        double normal = pair == null ? spokenNormal : pair[0];
+        double whisper = pair == null ? spokenWhisper : pair[1];
+        if (hearing && ModifyHearingRangePower.hearsDifferently(listener)) {
+            double[] heard = ModifyHearingRangePower.voiceRanges(listener, speaker, normal, whisper);
+            if (heard != null) {
+                if (normal <= 0.0) heard[0] = 0.0;
+                if (whisper <= 0.0) heard[1] = 0.0;
+                pair = heard;
+            }
+        }
+        return pair;
+    }
+
+    public static double reach(ServerPlayer listener, ServerPlayer speaker, boolean whispering) {
+        double normal = normalBase;
+        double whisper = whisperBase;
+        boolean speaking = ModifySpeakingRangePower.inUse();
+        boolean hearing = ModifyHearingRangePower.inUse();
+        if (speaking) {
+            double[] spoken = ModifySpeakingRangePower.ranges(speaker, normal, whisper);
+            if (spoken != null) {
+                normal = spoken[0];
+                whisper = spoken[1];
+            }
+        }
+        if (speaking || hearing) {
+            double[] pair = pairRanges(speaker, listener, normal, whisper, hearing,
+                speaking && ModifySpeakingRangePower.targetsListeners(speaker));
+            if (pair != null) {
+                normal = pair[0];
+                whisper = pair[1];
+            }
+        }
+        return whispering ? whisper : normal;
     }
 
     public static void forget(UUID uuid) {
@@ -119,11 +168,10 @@ public final class VoiceHearing {
         double[] spoken = SPOKEN.get(speaker);
         float voice = spoken == null ? base : (float) (whispering ? spoken[1] : spoken[0]);
         ORIGINAL.put(speaker, voice);
-        if (voice <= 0.0F) return 0.0F;
         double[] widest = BROADCAST.get(speaker);
-        if (widest == null) return voice;
-        float reach = (float) (whispering ? widest[1] : widest[0]);
-        return reach > voice ? reach : voice;
+        float reach = widest == null ? voice : (float) (whispering ? widest[1] : widest[0]);
+        if (voice > reach) reach = voice;
+        return reach > 0.0F ? reach : 0.0F;
     }
 
     public static float originalDistance(UUID speaker, float sent) {

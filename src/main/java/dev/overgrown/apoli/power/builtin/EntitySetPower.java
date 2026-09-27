@@ -149,6 +149,17 @@ public final class EntitySetPower extends PowerType<EntitySetPower.Cfg> {
         return owners;
     }
 
+    public static int membershipCount(Entity member, @Nullable ResourceLocation powerId) {
+        Set<StateKey> keys = MEMBERSHIPS.get(member.getUUID());
+        if (keys == null) return 0;
+        if (powerId == null) return keys.size();
+        int count = 0;
+        for (StateKey key : keys) {
+            if (key.powerId.equals(powerId)) count++;
+        }
+        return count;
+    }
+
     public static void flushSync(MinecraftServer server) {
         for (Map.Entry<StateKey, State> entry : STATES.entrySet()) {
             StateKey key = entry.getKey();
