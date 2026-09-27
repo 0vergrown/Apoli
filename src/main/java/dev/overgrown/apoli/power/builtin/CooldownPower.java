@@ -8,6 +8,7 @@ import dev.overgrown.apoli.data.HudRender;
 import dev.overgrown.apoli.power.PowerContainer;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 
@@ -26,6 +27,7 @@ public final class CooldownPower extends ResourcePower {
         false,
         Optional.empty(),
         Optional.empty(),
+        List.of(),
         persistent,
         1
     )));
