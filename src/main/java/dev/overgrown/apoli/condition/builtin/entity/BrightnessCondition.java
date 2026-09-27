@@ -22,7 +22,7 @@ public final class BrightnessCondition implements ConditionType<EntityCtx, Brigh
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
         Entity e = ctx.raw();
-        float brightness = e.level().getLightLevelDependentMagicValue(e.blockPosition());
+        float brightness = SimpleFlagConditions.syncedSky(e.level()).getLightLevelDependentMagicValue(e.blockPosition());
         return cfg.comparison.compare(brightness, cfg.compareTo);
     }
 }

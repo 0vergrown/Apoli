@@ -49,6 +49,12 @@ public final class EntityConditions {
             new EntitySetSizeCondition(),
             AliasingOptions.builder().addTypeAlias(Apoli.id("set_size")).build()
         );
+        ConditionTypes.ENTITY.register(Apoli.id("grabbed"), new GrabbedCondition());
+        ConditionTypes.ENTITY.register(
+            Apoli.id("in_entity_set"),
+            new EntitySetMembershipCondition(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("in_set")).build()
+        );
         ConditionTypes.ENTITY.register(Apoli.id("resource"), new ResourceCondition());
         ConditionTypes.ENTITY.register(
             Apoli.id("in_team"),

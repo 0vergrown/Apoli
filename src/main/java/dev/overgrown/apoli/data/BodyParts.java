@@ -107,9 +107,11 @@ public final class BodyParts {
         BodyPart.POINT_FIXED, -1, 0, 24, 0, -1, 0, 0, 0,
         "any", "all");
 
-    public static final BodyPart RIGHT_WING = attachment("right_wing", BodyAttachments.RIGHT_WING, "wing_right");
-    public static final BodyPart LEFT_WING = attachment("left_wing", BodyAttachments.LEFT_WING, "wing_left");
-    public static final BodyPart WINGS = attachment("wings", BodyAttachments.WINGS);
+    public static final BodyPart RIGHT_WING = attachment("right_wing", BodyAttachments.RIGHT_WING, "wing_right",
+        "icarus_right_wing");
+    public static final BodyPart LEFT_WING = attachment("left_wing", BodyAttachments.LEFT_WING, "wing_left",
+        "icarus_left_wing");
+    public static final BodyPart WINGS = attachment("wings", BodyAttachments.WINGS, "icarus_wings");
     public static final BodyPart RIGHT_EAR = attachment("right_ear", BodyAttachments.RIGHT_EAR, "ear_right");
     public static final BodyPart LEFT_EAR = attachment("left_ear", BodyAttachments.LEFT_EAR, "ear_left");
     public static final BodyPart EARS = attachment("ears", BodyAttachments.EARS);
@@ -127,6 +129,12 @@ public final class BodyParts {
     public static final BodyPart CLAWS = attachment("claws", BodyAttachments.CLAWS);
     public static final BodyPart EARS_CHEST = attachment("ears_chest", BodyAttachments.CHEST);
     public static final BodyPart EARS_CAPE = attachment("ears_cape", BodyAttachments.CAPE);
+    public static final BodyPart HALO = attachment("halo", BodyAttachments.HALO);
+    public static final BodyPart RIGHT_DIGITIGRADE_LEG = attachment("right_digitigrade_leg",
+        BodyAttachments.RIGHT_DIGITIGRADE_LEG, "digitigrade_right_leg");
+    public static final BodyPart LEFT_DIGITIGRADE_LEG = attachment("left_digitigrade_leg",
+        BodyAttachments.LEFT_DIGITIGRADE_LEG, "digitigrade_left_leg");
+    public static final BodyPart DIGITIGRADE_LEGS = attachment("digitigrade_legs", BodyAttachments.DIGITIGRADE_LEGS);
 
     private static BodyPart limb(String name, int models, int limb, String bindKey, String... aliases) {
         return register(new BodyPart(name, ModelParts.normalize(name), models, 1 << limb, false, false, false,

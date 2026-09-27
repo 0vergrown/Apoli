@@ -6,6 +6,7 @@ import dev.overgrown.apoli.condition.context.ItemCtx;
 import dev.overgrown.apoli.mixin.recipe.CraftingMenuAccessAccessor;
 import dev.overgrown.apoli.power.ApoliIds;
 import dev.overgrown.apoli.power.PowerLookup;
+import dev.overgrown.apoli.recipe.ApoliPowerRecipes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
@@ -53,7 +54,7 @@ public final class ModifyCraftingHandler {
 
     private static boolean applies(ModifyCraftingPower.Config cfg, @Nullable ResourceLocation recipeId,
                                    ItemStack stack, Level level, Player player) {
-        if (cfg.recipe().isPresent() && !cfg.recipe().get().equals(recipeId)) return false;
+        if (cfg.recipe().isPresent() && !cfg.recipe().get().equals(ApoliPowerRecipes.declaredId(recipeId))) return false;
         return cfg.itemCondition().isEmpty() || cfg.itemCondition().get().test(new ItemCtx(stack, level, player));
     }
 

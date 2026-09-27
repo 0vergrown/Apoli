@@ -6,7 +6,7 @@ import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.alias.AliasingMapCodec;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.power.PowerContainer;
-import dev.overgrown.apoli.power.builtin.CooldownPower;
+import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 
@@ -27,8 +27,6 @@ public final class TriggerCooldownAction implements ActionType<EntityCtx, Trigge
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        PowerContainer container = PowerContainer.of(ctx.entity());
-        if (container == null) return;
-        CooldownPower.trigger(container, cfg.power);
+        PowerResources.triggerCooldown(PowerContainer.of(ctx.entity()), cfg.power);
     }
 }

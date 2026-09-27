@@ -136,6 +136,18 @@ public final class PowerResources {
         return invokeBound(type, powerId, loaded.config(), holder, max);
     }
 
+    public static boolean triggerCooldown(@Nullable PowerContainer holder, ResourceLocation powerId) {
+        if (holder == null || !holder.hasPower(powerId)) return false;
+        Power loaded = ApoliPowers.get(powerId);
+        if (loaded == null) return false;
+        PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
+        if (type == null || !type.isCooldown()) return false;
+        if (invokeRead(type, powerId, loaded.config(), holder).orElse(0) > 0) return false;
+        OptionalInt length = invokeBound(type, powerId, loaded.config(), holder, true);
+        if (length.isEmpty() || length.getAsInt() <= 0) return false;
+        return invokeWrite(type, powerId, loaded.config(), holder, length.getAsInt()).isPresent();
+    }
+
     public static boolean isResource(ResourceLocation powerId) {
         Power loaded = ApoliPowers.get(powerId);
         if (loaded == null) return false;

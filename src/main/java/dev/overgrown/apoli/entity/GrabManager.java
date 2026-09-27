@@ -47,6 +47,11 @@ public final class GrabManager {
         return BY_GRABBED.containsKey(entity);
     }
 
+    public static boolean isGrabbedBy(UUID grabbed, UUID grabber) {
+        Grab grab = BY_GRABBED.get(grabbed);
+        return grab != null && grab.grabber().equals(grabber);
+    }
+
     public static boolean keybindsDisabled(UUID entity) {
         return !KEYBINDS_DISABLED.isEmpty() && KEYBINDS_DISABLED.contains(entity);
     }

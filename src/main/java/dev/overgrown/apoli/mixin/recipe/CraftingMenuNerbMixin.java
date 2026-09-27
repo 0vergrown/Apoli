@@ -22,7 +22,7 @@ public abstract class CraftingMenuNerbMixin {
                                                                    Operation<Boolean> original) {
         if (original.call(container, level, player, holder)) return true;
         if (!ModCompat.NERB) return false;
-        if (ApoliPowerRecipes.powerFor(holder.id()) == null) return false;
+        if (!ApoliPowerRecipes.isPowerRecipe(holder.id())) return false;
         container.setRecipeUsed(holder);
         return true;
     }

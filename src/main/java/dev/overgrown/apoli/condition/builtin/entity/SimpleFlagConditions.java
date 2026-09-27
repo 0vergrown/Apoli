@@ -41,7 +41,7 @@ public final class SimpleFlagConditions {
 
     private static long clientSkyTick = Long.MIN_VALUE;
 
-    private static net.minecraft.world.level.Level syncedSky(net.minecraft.world.level.Level level) {
+    public static net.minecraft.world.level.Level syncedSky(net.minecraft.world.level.Level level) {
         if (level.isClientSide()) {
             long now = level.getGameTime();
             if (now != clientSkyTick) {

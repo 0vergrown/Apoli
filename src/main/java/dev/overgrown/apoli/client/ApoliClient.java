@@ -134,6 +134,7 @@ public final class ApoliClient {
         @SubscribeEvent
         public static void onClientTick(ClientTickEvent.Post event) {
             Minecraft mc = Minecraft.getInstance();
+            dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.clientTick(mc.player);
             CursorSpeedState.tick(mc);
             dev.overgrown.apoli.client.MouseMovementWatcher.clientTick(mc);
             dev.overgrown.apoli.client.render.ClientRenderFlags.clientTick(mc);

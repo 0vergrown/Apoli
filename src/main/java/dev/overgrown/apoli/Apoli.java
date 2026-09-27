@@ -363,9 +363,23 @@ public final class Apoli {
     }
 
     @SubscribeEvent
+    public void onGetEnchantmentLevel(net.neoforged.neoforge.event.enchanting.GetEnchantmentLevelEvent event) {
+        dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.onGetLevel(
+            event.getStack(), event.getEnchantments(), event.getTargetEnchant());
+    }
+
+    @SubscribeEvent
+    public void onLivingEquipmentChange(net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent event) {
+        dev.overgrown.apoli.item.ItemPowerHandler.onEquipmentChange(event.getEntity(), event.getSlot());
+    }
+
+    @SubscribeEvent
     public void onEntityJoinLevel(EntityJoinLevelEvent event) {
         if (event.getLevel().isClientSide()) return;
         dev.overgrown.apoli.global.GlobalPowers.applyTo(event.getEntity());
+        if (event.getEntity() instanceof net.minecraft.world.entity.LivingEntity living) {
+            dev.overgrown.apoli.item.ItemPowerHandler.onLoad(living);
+        }
         PowerContainer c = PowerContainer.of(event.getEntity());
         if (c == null || c.isEmpty()) return;
         PoweredEntities.register(event.getEntity());
@@ -439,6 +453,7 @@ public final class Apoli {
         dev.overgrown.apoli.codec.ApoliOps.setRegistries(null);
         dev.overgrown.apoli.codec.ApoliOps.setLoadingRegistries(null);
         PoweredEntities.clear();
+        dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.clearServer();
         dev.overgrown.apoli.block.GhostBlocks.clear();
         dev.overgrown.apoli.entity.PlayerModelTypes.clear();
             dev.overgrown.apoli.tick.TickRates.clear();
@@ -495,10 +510,12 @@ public final class Apoli {
         dev.overgrown.apoli.entity.ProjectileTickManager.tick(event.getServer());
         dev.overgrown.apoli.tick.TickRates.serverTick(event.getServer());
         boolean forcedKeys = dev.overgrown.apoli.keybind.HeldKeys.anyForced();
+        dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.beginScan();
         PoweredEntities.forEach(entity -> {
             PowerContainer c = PowerContainer.of(entity);
             if (!(c instanceof PowerContainerImpl impl)) return;
             impl.tickActive();
+            dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.scan(entity, impl);
             if (forcedKeys) dev.overgrown.apoli.keybind.KeyDispatch.tickForcedNonPlayer(entity);
             if (impl.isStructureDirty()) {
                 ApoliNetwork.sendEntityPowersToTrackersAndSelf(entity, new SyncEntityPowersS2C(
@@ -516,6 +533,7 @@ public final class Apoli {
             }
             if (impl.isEmpty()) PoweredEntities.unregister(entity);
         });
+        dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.endScan();
         dev.overgrown.apoli.block.GhostBlocks.tick(event.getServer());
         dev.overgrown.apoli.power.builtin.ShaderPower.tick(event.getServer());
         EntitySetPower.flushPendingRemovals();

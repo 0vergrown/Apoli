@@ -169,6 +169,7 @@ dependencies {
     // so Apoli runs fine without it. NeoForge artifacts ship in the official mappings, so no remap
     // is needed (plain compileOnly). Adjust icarus_version per the Icarus file you target.
     compileOnly "maven.modrinth:icarus:${project.icarus_version}"
+    compileOnly "maven.modrinth:icarus-rewinged:${project.icarus_rewinged_version}"
 
     // Figura — compiled against, never bundled. modify_player_model equips Figura avatars; the
     // compat code and its mixin are gated on Figura being present (ModCompat.FIGURA /

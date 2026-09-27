@@ -18,7 +18,7 @@ public class IcarusCompatMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        return ICARUS_PRESENT;
+        return ICARUS_PRESENT && classExists(targetClassName);
     }
 
     @Override

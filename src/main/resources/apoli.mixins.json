@@ -3,6 +3,8 @@
   "package": "dev.overgrown.apoli.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "enchantment.BlockDropsEnchantmentScopeMixin",
+    "enchantment.EnchantmentHelperModifyLevelMixin",
     "block.BeehiveBlockEntityMixin",
     "block.BeehiveBlockMixin",
     "block.BlockBehaviourBreakSpeedMixin",
@@ -150,6 +152,7 @@
     "flag.PlayerRendererModelColorMixin",
     "flag.ScreenEffectFluidVisionMixin",
     "flag.ScreenEffectPhasingMixin",
+    "hud.GuiGraphicsTooltipInvoker",
     "input.EntityTurnCursorSpeedMixin",
     "input.LocalPlayerUseSlowdownMixin",
     "input.MouseHandlerScrollMixin",
