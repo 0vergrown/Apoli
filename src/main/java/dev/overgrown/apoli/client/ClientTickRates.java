@@ -72,7 +72,9 @@ public final class ClientTickRates {
 
     public static int rateOf(Entity entity) {
         if (RATES.isEmpty()) return -1;
-        return RATES.get(root(entity).getId());
+        int own = RATES.get(entity.getId());
+        if (own >= 0 || !entity.isPassenger()) return own;
+        return RATES.get(entity.getRootVehicle().getId());
     }
 
     private static int rateOfRoot(Entity root) {
@@ -90,7 +92,16 @@ public final class ClientTickRates {
     private static boolean gated(Entity root, int rate) {
         if (rate < 0) return false;
         LocalPlayer self = Minecraft.getInstance().player;
-        return self == null || self == root || root(self) != root;
+        return self == null || self == root || rate == 0 || root(self) != root;
+    }
+
+    public static boolean holdsPassenger(Entity passenger) {
+        if (RATES.isEmpty()) return false;
+        if (passenger == Minecraft.getInstance().player) return false;
+        int rate = RATES.get(passenger.getId());
+        if (rate < 0) return false;
+        if (rate == 0) return true;
+        return !TickRates.gate(rate, baseRate, passenger.level().getGameTime());
     }
 
     public static boolean isGated(Entity entity) {

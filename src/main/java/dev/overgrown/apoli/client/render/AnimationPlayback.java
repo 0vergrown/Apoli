@@ -19,6 +19,10 @@ public final class AnimationPlayback {
 
     public static float elapsed(int entityId, ResourceLocation model, ModelAnimation.Entry entry,
                                 int tickCount, float partialTick) {
+        return elapsedSince(startTick(entityId, model, entry, tickCount), tickCount, partialTick, entry.speed());
+    }
+
+    public static int startTick(int entityId, ResourceLocation model, ModelAnimation.Entry entry, int tickCount) {
         long slot = ((long) entityId << 32) | (model.hashCode() & 0xFFFFFFFFL);
         int key = entry.key();
         State state = ACTIVE.get(slot);
@@ -31,7 +35,11 @@ public final class AnimationPlayback {
         }
         sweep(tickCount);
         state.lastSeen = tickCount;
-        return ((tickCount - state.startTick) + partialTick) / 20.0F * entry.speed();
+        return state.startTick;
+    }
+
+    public static float elapsedSince(int startTick, int tickCount, float partialTick, float speed) {
+        return ((tickCount - startTick) + partialTick) / 20.0F * speed;
     }
 
     public static void clear() {

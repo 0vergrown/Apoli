@@ -10,6 +10,7 @@ import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.GeometryRender;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,19 +34,32 @@ public final class AnimationPlayer {
     }
 
     public static void apply(Entity entity, GeometryRender render, CustomModel model, float partialTick) {
-        if (render.animations().isEmpty()) return;
-        ModelAnimation.Entry entry = render.animations().get().select(entity);
-        if (entry == null) {
-            if (warnOnce(render.model(), "")) {
-                Apoli.LOGGER.warn("[Apoli] No animation entry for the custom model '{}' matched, so it stays in its bind pose. "
-                    + "Every entry has a condition and none of them passed — add a last entry with no condition as the fallback.",
-                    render.model());
-            }
-            return;
-        }
-        BedrockAnimation animation = AnimationManager.get(entry.animation(), entry.name().orElse(null));
+        ModelAnimation.Entry entry = entry(entity, render);
+        if (entry == null) return;
+        BedrockAnimation animation = animation(entry);
         if (animation == null) return;
-        if (animation.length() <= 0.0F) {
+        float time = time(entry, animation,
+            AnimationPlayback.elapsed(entity.getId(), render.model(), entry, entity.tickCount, partialTick));
+        if (time < 0.0F) return;
+        apply(model, animation, time);
+    }
+
+    @Nullable
+    public static ModelAnimation.Entry entry(Entity entity, GeometryRender render) {
+        if (render.animations().isEmpty()) return null;
+        ModelAnimation.Entry entry = render.animations().get().select(entity);
+        if (entry == null && warnOnce(render.model(), "")) {
+            Apoli.LOGGER.warn("[Apoli] No animation entry for the custom model '{}' matched, so it stays in its bind pose. "
+                + "Every entry has a condition and none of them passed — add a last entry with no condition as the fallback.",
+                render.model());
+        }
+        return entry;
+    }
+
+    @Nullable
+    public static BedrockAnimation animation(ModelAnimation.Entry entry) {
+        BedrockAnimation animation = AnimationManager.get(entry.animation(), entry.name().orElse(null));
+        if (animation != null && animation.length() <= 0.0F) {
             String still = entry.name().orElse("");
             if (warnOnce(entry.animation(), "static:" + still)) {
                 Apoli.LOGGER.warn("[Apoli] The animation '{}'{} holds a single pose and never moves — every channel is one value with no timecode, "
@@ -54,7 +68,10 @@ public final class AnimationPlayer {
                     entry.animation(), still.isEmpty() ? "" : " ('" + still + "')");
             }
         }
-        float elapsed = AnimationPlayback.elapsed(entity.getId(), render.model(), entry, entity.tickCount, partialTick);
+        return animation;
+    }
+
+    public static float time(ModelAnimation.Entry entry, BedrockAnimation animation, float elapsed) {
         float time = animation.timeFor(elapsed, entry.loop().orElse(null));
         if (time < 0.0F) {
             String clip = entry.name().orElse("");
@@ -64,9 +81,8 @@ public final class AnimationPlayer {
                     + "set the clip to Loop in Blockbench, or put \"loop\": true on the animations entry.",
                     entry.animation(), clip.isEmpty() ? "" : " ('" + clip + "')");
             }
-            return;
         }
-        apply(model, animation, time);
+        return time;
     }
 
     private static boolean warnOnce(ResourceLocation id, String detail) {

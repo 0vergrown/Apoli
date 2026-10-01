@@ -119,6 +119,10 @@ public final class ApoliClient {
             if (dev.overgrown.apoli.compat.ModCompat.ENTITY_MODEL_FEATURES) {
                 dev.overgrown.apoli.compat.entitymodelfeatures.EntityModelFeaturesCompat.init();
             }
+            if (dev.overgrown.apoli.compat.ModCompat.FLYWHEEL) {
+                dev.overgrown.apoli.compat.flywheel.CustomProjectileVisualizer.register(
+                    dev.overgrown.apoli.entity.ApoliEntities.CUSTOM_PROJECTILE.get());
+            }
         });
     }
 
@@ -143,6 +147,9 @@ public final class ApoliClient {
             RopeClientManager.tick();
             TextOverlayRenderer.tick();
             dev.overgrown.apoli.client.disguise.ClientDisguiseManager.tick(mc);
+            if (dev.overgrown.apoli.compat.ModCompat.FLYWHEEL) {
+                dev.overgrown.apoli.compat.flywheel.FlywheelBridge.clientTick(mc);
+            }
             dev.overgrown.apoli.client.speech.SpeechClient.clientTick(mc);
             if (dev.overgrown.apoli.compat.ModCompat.FIGURA) {
                 dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.tick(mc);

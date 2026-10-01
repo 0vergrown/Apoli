@@ -24,12 +24,14 @@ public final class CustomModelManager implements ResourceManagerReloadListener {
     private static final String[] PREFIXES = {"geo/", "models/apoli/"};
     private static final String SUFFIX = ".geo.json";
     private static final Map<ResourceLocation, CustomModel> MODELS = new HashMap<>();
+    private static final Map<ResourceLocation, CustomModel> UNBOUND = new HashMap<>();
 
     private CustomModelManager() {}
 
     @Override
     public void onResourceManagerReload(ResourceManager manager) {
         MODELS.clear();
+        UNBOUND.clear();
         for (String prefix : PREFIXES) {
             String scanPath = prefix.substring(0, prefix.length() - 1);
             Map<ResourceLocation, Resource> found = manager.listResources(
@@ -48,7 +50,11 @@ public final class CustomModelManager implements ResourceManagerReloadListener {
                 try (InputStream stream = entry.getValue().open()) {
                     JsonElement raw = JsonParser.parseReader(new InputStreamReader(stream));
                     Dynamic<JsonElement> json = new Dynamic<>(JsonOps.INSTANCE, raw);
-                    MODELS.put(id, BedrockModelParser.parse(id, json));
+                    CustomModel[] variants = BedrockModelParser.parseVariants(id, json);
+                    MODELS.put(id, variants[0]);
+                    if (variants[1] != variants[0]) {
+                        UNBOUND.put(id, variants[1]);
+                    }
                 } catch (Exception e) {
                     Apoli.LOGGER.error("[Apoli] Failed to load custom model {}: {}", id, e.getMessage());
                 }
@@ -59,6 +65,17 @@ public final class CustomModelManager implements ResourceManagerReloadListener {
 
     @Nullable
     public static CustomModel get(ResourceLocation id) {
+        return MODELS.get(id);
+    }
+
+    @Nullable
+    public static CustomModel get(ResourceLocation id, boolean bindBodyParts) {
+        if (!bindBodyParts) {
+            CustomModel unbound = UNBOUND.get(id);
+            if (unbound != null) {
+                return unbound;
+            }
+        }
         return MODELS.get(id);
     }
 }

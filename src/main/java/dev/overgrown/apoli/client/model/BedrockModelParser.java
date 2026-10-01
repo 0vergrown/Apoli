@@ -4,6 +4,7 @@ import com.mojang.serialization.Dynamic;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.data.ModelParts;
 import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
@@ -25,7 +26,7 @@ public final class BedrockModelParser {
 
     private BedrockModelParser() {}
 
-    public static <T> CustomModel parse(ResourceLocation id, Dynamic<T> json) {
+    public static <T> CustomModel[] parseVariants(ResourceLocation id, Dynamic<T> json) {
         Dynamic<T> geo = json.get("minecraft:geometry").asStreamOpt().result()
             .flatMap(stream -> stream.findFirst())
             .orElseThrow(() -> new IllegalArgumentException("minecraft:geometry is empty"));
@@ -47,13 +48,28 @@ public final class BedrockModelParser {
             Bone parent = bone.parent == null ? null : byName.get(bone.parent);
             if (parent != null) {
                 parent.children.add(bone);
+                bone.linked = parent;
                 bone.attachment = parent;
             } else if (bone.parent != null) {
                 Apoli.LOGGER.warn("[Apoli] Custom model {} bone '{}' has unknown parent '{}'; treating it as a root bone.", id, bone.name, bone.parent);
             }
         }
+        CustomModel bound = assemble(id, ordered, texWidth, texHeight, true);
+        if (!bound.hoisted()) {
+            return new CustomModel[]{bound, bound};
+        }
         for (Bone bone : ordered) {
-            bone.hoist = bone.attachment != null && bone.slot != null;
+            bone.resetAssembly();
+        }
+        return new CustomModel[]{bound, assemble(id, ordered, texWidth, texHeight, false)};
+    }
+
+    private static CustomModel assemble(ResourceLocation id, List<Bone> ordered, int texWidth, int texHeight,
+                                        boolean bindBodyParts) {
+        boolean hoisted = false;
+        for (Bone bone : ordered) {
+            bone.hoist = bindBodyParts && bone.attachment != null && bone.slot != null;
+            hoisted |= bone.hoist;
             if (bone.hoist && hasRotatedAncestor(bone)) {
                 Apoli.LOGGER.warn("[Apoli] Custom model {} bone '{}' tracks the vanilla '{}' part, so it is lifted out of its rotated parent '{}'; the parent's rotation no longer applies to it.", id, bone.name, bone.slot, bone.parent);
             }
@@ -74,7 +90,9 @@ public final class BedrockModelParser {
         }
         for (Bone bone : ordered) {
             if (!built.contains(bone.name)) {
-                Apoli.LOGGER.warn("[Apoli] Custom model {} bone '{}' is part of a parent cycle; treating it as a root bone.", id, bone.name);
+                if (bindBodyParts) {
+                    Apoli.LOGGER.warn("[Apoli] Custom model {} bone '{}' is part of a parent cycle; treating it as a root bone.", id, bone.name);
+                }
                 children.put(unique(children, bone.name), build(bone, origin, built, texWidth, texHeight));
             }
         }
@@ -85,7 +103,7 @@ public final class BedrockModelParser {
             if (bone.part == null) {
                 continue;
             }
-            bone.handle = new CustomModel.Bone(bone.part);
+            bone.handle = new CustomModel.Bone(bone.part, ancestorsOf(bone));
             all.add(bone.handle);
             String normalized = ModelParts.normalize(bone.name);
             grouped.computeIfAbsent(normalized, key -> new ArrayList<>(1)).add(bone.handle);
@@ -99,7 +117,24 @@ public final class BedrockModelParser {
             lookup.put(entry.getKey(), entry.getValue().toArray(new CustomModel.Bone[0]));
         }
         return new CustomModel(new ModelPart(List.of(), children), lookup,
-            all.toArray(new CustomModel.Bone[0]));
+            all.toArray(new CustomModel.Bone[0]), hoisted);
+    }
+
+    private static ModelPart[] ancestorsOf(Bone bone) {
+        int depth = 0;
+        for (Bone parent = bone.builtParent; parent != null && depth < MAX_PARENT_DEPTH; parent = parent.builtParent) {
+            depth++;
+        }
+        if (depth == 0) {
+            return CustomModel.NO_PARTS;
+        }
+        ModelPart[] chain = new ModelPart[depth];
+        Bone parent = bone.builtParent;
+        for (int i = depth - 1; i >= 0; i--) {
+            chain[i] = parent.part;
+            parent = parent.builtParent;
+        }
+        return chain;
     }
 
     private static boolean hasRotatedAncestor(Bone bone) {
@@ -133,6 +168,7 @@ public final class BedrockModelParser {
             if (child.attachment != bone || built.contains(child.name)) {
                 continue;
             }
+            child.builtParent = bone;
             children.put(unique(children, child.name), build(child, bone.pivot, built, texWidth, texHeight));
         }
         bone.part = posed(new ModelPart(cubes, children),
@@ -142,8 +178,8 @@ public final class BedrockModelParser {
     }
 
     private static ModelPart posed(ModelPart part, float x, float y, float z, float xRot, float yRot, float zRot) {
-        part.setPos(x, y, z);
-        part.setRotation(xRot, yRot, zRot);
+        part.setInitialPose(PartPose.offsetAndRotation(x, y, z, xRot, yRot, zRot));
+        part.resetPose();
         return part;
     }
 
@@ -287,7 +323,11 @@ public final class BedrockModelParser {
         @Nullable
         String slot;
         @Nullable
+        Bone linked;
+        @Nullable
         Bone attachment;
+        @Nullable
+        Bone builtParent;
         boolean hoist;
         @Nullable
         ModelPart part;
@@ -299,6 +339,14 @@ public final class BedrockModelParser {
         float rotZ;
         final List<Bone> children = new ArrayList<>();
         final List<Cube> cubes = new ArrayList<>();
+
+        void resetAssembly() {
+            this.attachment = this.linked;
+            this.builtParent = null;
+            this.hoist = false;
+            this.part = null;
+            this.handle = null;
+        }
     }
 
     private static final class Cube {

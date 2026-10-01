@@ -21,6 +21,9 @@ public final class SubmergedInCondition implements ConditionType<EntityCtx, Subm
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        return ctx.raw().isEyeInFluid(cfg.fluid);
+        net.minecraft.world.entity.Entity entity = ctx.raw();
+        return dev.overgrown.apoli.entity.StagedLanding.isStaged(entity)
+            ? dev.overgrown.apoli.entity.StagedLanding.eyeInFluid(entity, cfg.fluid)
+            : entity.isEyeInFluid(cfg.fluid);
     }
 }

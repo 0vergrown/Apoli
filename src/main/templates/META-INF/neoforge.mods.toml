@@ -93,6 +93,12 @@ config="${mod_id}-walkers.mixins.json"
 [[mixins]]
 config="${mod_id}-sodium.mixins.json"
 
+# Optional Flywheel / Vanillin compatibility — entities Flywheel draws are handed back to the vanilla renderer
+# while an Apoli power changes how they render, and the item-colour accessor Vanillin 1.1.3 leaves unregistered
+# on NeoForge is supplied. Gated by FlywheelCompatMixinPlugin, inert without the mods.
+[[mixins]]
+config="${mod_id}-flywheel.mixins.json"
+
 # Optional Ledger / Indexor compatibility — labels logged block and container edits with the Apoli
 # power (and Origins origin) that caused them. Gated by LedgerCompatMixinPlugin, inert without them.
 [[mixins]]

@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.dev;
 
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -7,15 +8,21 @@ import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 public final class DevMode {
 
     private static final Set<UUID> ENABLED = new HashSet<>();
+    private static final Map<Topic, Long> LAST_REPORT = new HashMap<>();
+    private static final int MAX_TOPICS = 4096;
     private static volatile boolean any;
+
+    private record Topic(UUID subject, Object topic) {}
 
     private DevMode() {}
 
@@ -27,6 +34,7 @@ public final class DevMode {
         boolean enabled = !ENABLED.remove(player.getUUID());
         if (enabled) ENABLED.add(player.getUUID());
         any = !ENABLED.isEmpty();
+        if (!any) clearThrottles();
         dev.overgrown.apoli.ApoliNetwork.sendDevMode(player,
             new dev.overgrown.apoli.network.payload.DevModeS2C(enabled));
         return enabled;
@@ -57,8 +65,36 @@ public final class DevMode {
         }
     }
 
+    public static void reportEvery(@Nullable Entity subject, Object topic, int ticks, String message) {
+        if (!any || subject == null) return;
+        long now = subject.level().getGameTime();
+        Topic key = new Topic(subject.getUUID(), topic);
+        Long last = LAST_REPORT.get(key);
+        if (last != null && now >= last && now - last < ticks) return;
+        if (LAST_REPORT.size() >= MAX_TOPICS) LAST_REPORT.clear();
+        LAST_REPORT.put(key, now);
+        report(subject, message);
+    }
+
+    public static void announce(MinecraftServer server, List<Component> lines) {
+        if (!any || lines.isEmpty()) return;
+        for (UUID uuid : ENABLED) {
+            ServerPlayer player = server.getPlayerList().getPlayer(uuid);
+            if (player == null) continue;
+            for (int i = 0; i < lines.size(); i++) {
+                player.sendSystemMessage(lines.get(i));
+            }
+        }
+    }
+
     public static void forget(UUID uuid) {
         if (ENABLED.remove(uuid)) any = !ENABLED.isEmpty();
+        if (!any) clearThrottles();
+    }
+
+    private static void clearThrottles() {
+        LAST_REPORT.clear();
+        DevParticles.forget();
     }
 
     public static List<ServerPlayer> watchers(@Nullable ServerLevel level) {

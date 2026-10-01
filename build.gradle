@@ -56,6 +56,14 @@ repositories {
         url = "https://maven.twelveiterations.com/repository/maven-public/"
     }
     maven {
+        name = "CreateMod"
+        url = "https://maven.createmod.net"
+        content {
+            includeGroup "dev.engine-room.flywheel"
+            includeGroup "dev.engine-room.vanillin"
+        }
+    }
+    maven {
         name = "Henkel"
         url = "https://maven.maxhenkel.de/repository/public"
     }
@@ -203,6 +211,8 @@ dependencies {
     // instead of vanilla RenderChunkRegion, so apoli:modify_block_render needs a second hook there.
     // Gated by SodiumCompatMixinPlugin, so Apoli runs fine without it.
     compileOnly "maven.modrinth:sodium:${project.sodium_version}"
+    compileOnly "dev.engine-room.flywheel:flywheel-neoforge-1.21.1:${project.flywheel_version}"
+    compileOnly "dev.engine-room.vanillin:vanillin-neoforge-1.21.1:${project.vanillin_version}"
 
     // You're in Grave Danger and GraveStone Mod (compile-only, optional at runtime) — power inventories,
     // keep_inventory and the GraveInscriptions lines on the grave. Gated by ModCompat and GraveCompatMixinPlugin.

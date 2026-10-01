@@ -21,6 +21,10 @@ public final class ModCompat {
 
     public static final boolean FIGURA = ModList.get().isLoaded("figura");
 
+    public static final boolean FLYWHEEL = ModList.get().isLoaded("flywheel");
+
+    public static final boolean VANILLIN = ModList.get().isLoaded("vanillin");
+
     public static final boolean TRINKETS = ModList.get().isLoaded("trinkets");
 
     public static final boolean ACCESSORIES = ModList.get().isLoaded("accessories");

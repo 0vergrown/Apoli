@@ -25,7 +25,10 @@ public final class FluidHeightCondition implements ConditionType<EntityCtx, Flui
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        double h = ctx.raw().getFluidHeight(cfg.fluid);
+        net.minecraft.world.entity.Entity entity = ctx.raw();
+        double h = dev.overgrown.apoli.entity.StagedLanding.isStaged(entity)
+            ? dev.overgrown.apoli.entity.StagedLanding.fluidHeight(entity, cfg.fluid)
+            : entity.getFluidHeight(cfg.fluid);
         return cfg.comparison.compare((float) h, cfg.compareTo);
     }
 }
