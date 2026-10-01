@@ -245,28 +245,46 @@ public final class TickRates {
     }
 
     private static int resolveEntity(Entity entity) {
-        Entity root = entity.isPassenger() ? entity.getRootVehicle() : entity;
-        int rate = NORMAL;
-        TickState own = lookupEntity(root);
-        if (own != null && !own.isDefault()) {
-            rate = own.effectiveRate(baseRate);
-        } else if (anyChunkOrDimension) {
-            rate = resolveChunk(root.level(), root.chunkPosition().toLong());
-        }
+        int rate = entityRate(entity, baseRate, anyChunkOrDimension);
         pushToTrackers(entity, rate);
         return rate;
     }
 
-    public static int resolveChunk(Level level, long chunkPos) {
-        TickState own = lookupChunk(level.dimension(), chunkPos);
-        if (own != null && !own.isDefault()) return own.effectiveRate(baseRate);
-        return resolveDimension(level);
+    private static int entityRate(Entity entity, int base, boolean scopes) {
+        TickState own = lookupEntity(entity);
+        int rate;
+        if (own != null && !own.isDefault()) {
+            rate = own.effectiveRate(base);
+        } else {
+            Entity vehicle = entity.getVehicle();
+            if (vehicle != null) {
+                rate = entityRate(vehicle, base, scopes);
+            } else {
+                rate = scopes ? chunkRate(entity.level(), entity.chunkPosition().toLong(), base) : NORMAL;
+            }
+        }
+        return entity.isVehicle() ? withController(entity, rate, base) : rate;
     }
 
-    public static int resolveDimension(Level level) {
+    private static int withController(Entity vehicle, int rate, int base) {
+        Entity controller = vehicle.getControllingPassenger();
+        if (controller == null) return rate;
+        TickState own = lookupEntity(controller);
+        if (own == null || own.isDefault()) return rate;
+        int controlled = own.effectiveRate(base);
+        return controlled < (rate == NORMAL ? base : rate) ? controlled : rate;
+    }
+
+    private static int chunkRate(Level level, long chunkPos, int base) {
+        TickState own = lookupChunk(level.dimension(), chunkPos);
+        if (own != null && !own.isDefault()) return own.effectiveRate(base);
         if (DIMENSIONS.isEmpty()) return NORMAL;
-        TickState own = DIMENSIONS.get(level.dimension());
-        return own == null || own.isDefault() ? NORMAL : own.effectiveRate(baseRate);
+        TickState dimension = DIMENSIONS.get(level.dimension());
+        return dimension == null || dimension.isDefault() ? NORMAL : dimension.effectiveRate(base);
+    }
+
+    public static int resolveChunk(Level level, long chunkPos) {
+        return chunkRate(level, chunkPos, baseRate);
     }
 
     private static void pushToTrackers(Entity entity, int rate) {
@@ -314,10 +332,8 @@ public final class TickRates {
         int base = TickRateVanilla.rate(server);
         return switch (scope) {
             case ENTITY -> {
-                Entity root = entity.isPassenger() ? entity.getRootVehicle() : entity;
-                TickState own = lookupEntity(root);
-                if (own != null && !own.isDefault()) yield own.effectiveRate(base);
-                yield effectiveChunkRate(root.level(), root.chunkPosition().toLong(), base);
+                int rate = entityRate(entity, base, true);
+                yield rate == NORMAL ? base : rate;
             }
             case CHUNK -> effectiveChunkRate(entity.level(), entity.chunkPosition().toLong(), base);
             case DIMENSION -> effectiveDimensionRate(entity.level(), base);

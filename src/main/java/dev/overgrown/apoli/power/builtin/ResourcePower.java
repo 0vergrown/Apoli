@@ -10,6 +10,7 @@ import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Comparison;
 import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.data.HudRender;
+import dev.overgrown.apoli.dev.DevMode;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
@@ -21,11 +22,18 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalInt;
 
 public class ResourcePower extends PowerType<ResourcePower.Cfg> {
 
     public static final int WARN_SIZE = 65536;
+
+    private static final int MAX_ACTION_DEPTH = 64;
+    private static final int DEV_REPORT_TICKS = 20;
+    private static final ThreadLocal<int[]> ACTION_DEPTH = ThreadLocal.withInitial(() -> new int[1]);
 
     private static final java.util.Set<ResourceLocation> WARNED = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
@@ -38,34 +46,31 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         boolean retainValue,
         Optional<EntityAction> minAction,
         Optional<EntityAction> maxAction,
-        List<ValueAction> valueActions,
+        List<OnChange> onChange,
         boolean persistent,
         int size
     ) {}
 
-    private record ValueAction (
-        List<Expression> values,
+    public record OnChange(
         Optional<Expression> value,
-        Optional<EntityAction> action,
-        Comparison comparison
+        List<Expression> values,
+        Comparison comparison,
+        Optional<EntityAction> entityAction
     ) {
-        public static final Codec<ValueAction> CODEC = RecordCodecBuilder.create(i -> i.group(
-            Codec.list(Expression.INT_OR_EXPR).optionalFieldOf("values", List.of()).forGetter(ValueAction::values),
-            Expression.INT_OR_EXPR.optionalFieldOf("value").forGetter(ValueAction::value),
-            LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(ValueAction::action),
-            Comparison.CODEC.optionalFieldOf("comparison", Comparison.EQUAL).forGetter(ValueAction::comparison)
-        ).apply(i, ValueAction::new));
+        public static final Codec<OnChange> CODEC = RecordCodecBuilder.create(i -> i.group(
+            Expression.INT_OR_EXPR.optionalFieldOf("value").forGetter(OnChange::value),
+            Codec.list(Expression.INT_OR_EXPR).optionalFieldOf("values", List.of()).forGetter(OnChange::values),
+            Comparison.CODEC.optionalFieldOf("comparison", Comparison.EQUAL).forGetter(OnChange::comparison),
+            LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(OnChange::entityAction)
+        ).apply(i, OnChange::new));
 
-        public boolean test(int input, Entity entity) {
-            if (action.isEmpty()) return false;
-            if (values.isEmpty() && value.isEmpty()) return true;
-
-            if(value.isPresent() && comparison.compare(input, value.get().evalInt(entity))) return true;
-
-            for (var val : values) {
-                if(comparison.compare(input, val.evalInt(entity))) return true;
+        public boolean matches(int current, Entity owner) {
+            if (entityAction.isEmpty()) return false;
+            if (value.isEmpty() && values.isEmpty()) return true;
+            if (value.isPresent() && comparison.compare(current, value.get().evalInt(owner, current))) return true;
+            for (int i = 0; i < values.size(); i++) {
+                if (comparison.compare(current, values.get(i).evalInt(owner, current))) return true;
             }
-
             return false;
         }
     }
@@ -79,7 +84,7 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         Codec.BOOL.optionalFieldOf("retain_value", false).forGetter(Cfg::retainValue),
         dev.overgrown.apoli.codec.LoggedOptionalField.of("min_action", EntityAction.CODEC).forGetter(Cfg::minAction),
         dev.overgrown.apoli.codec.LoggedOptionalField.of("max_action", EntityAction.CODEC).forGetter(Cfg::maxAction),
-        LoggedOptionalField.of("on_change", Codec.list(ValueAction.CODEC), List.of()).forGetter(Cfg::valueActions),
+        LoggedOptionalField.of("on_change", Codec.list(OnChange.CODEC), List.of()).forGetter(Cfg::onChange),
         Codec.BOOL.optionalFieldOf("persistent", true).forGetter(Cfg::persistent),
         Codec.intRange(1, Integer.MAX_VALUE).optionalFieldOf("size", 1).forGetter(Cfg::size)
     ).apply(i, Cfg::new));
@@ -145,7 +150,7 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         int clamped = clamp(curVal, min, max, cfg);
         if (clamped != curVal) {
             impl.setAuxInt(powerId, clamped);
-            fireBoundaryActions(cfg, holder.rawOwner(), curVal, clamped, min, max);
+            fireBoundaryActions(powerId, cfg, holder.rawOwner(), curVal, clamped, min, max);
         }
     }
 
@@ -199,7 +204,7 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         if (target != prev) {
             table[slot] = target;
             impl.markDirty();
-            fireBoundaryActions(cfg, holder.rawOwner(), prev, target, min, max);
+            fireBoundaryActions(powerId, cfg, holder.rawOwner(), prev, target, min, max);
         }
         return OptionalInt.of(target);
     }
@@ -303,28 +308,50 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
             impl.setAuxInt(powerId, target);
             int[] table = impl.getAuxInts(powerId);
             if (table != null && table.length > 0) table[0] = target;
-            rp.fireBoundaryActions(cfg, holder.rawOwner(), prev, target, min, max);
+            rp.fireBoundaryActions(powerId, cfg, holder.rawOwner(), prev, target, min, max);
         }
         return OptionalInt.of(target);
     }
 
-    private void fireBoundaryActions(Cfg cfg, Entity owner, int prev, int newVal, int min, int max) {
-        if (owner == null) return;
-        if (cfg.minAction.isEmpty() && cfg.maxAction.isEmpty() && cfg.valueActions.isEmpty()) return;
+    private void fireBoundaryActions(ResourceLocation powerId, Cfg cfg, Entity owner, int prev, int newVal,
+                                     int min, int max) {
+        if (owner == null || newVal == prev) return;
+        if (cfg.minAction.isEmpty() && cfg.maxAction.isEmpty() && cfg.onChange.isEmpty()) return;
         if (!(owner.level() instanceof ServerLevel level)) return;
-        if (newVal == min && prev != min) {
-            cfg.minAction.ifPresent(a -> a.run(new EntityCtx(owner, level)));
-        }
-        if (newVal == max && prev != max) {
-            cfg.maxAction.ifPresent(a -> a.run(new EntityCtx(owner, level)));
-        }
-
-        if(newVal == prev) return;
-
-        for (var action : cfg.valueActions) {
-            if (action.test(newVal, owner)) {
-                action.action().ifPresent(a -> a.run(EntityCtx.of(owner, level)));
+        int[] depth = ACTION_DEPTH.get();
+        if (depth[0] >= MAX_ACTION_DEPTH) {
+            if (FunctionWarnings.first(powerId, "resource_actions")) {
+                dev.overgrown.apoli.Apoli.LOGGER.warn("[Apoli] {} stopped running its min_action, max_action and on_change "
+                    + "after {} changes in a row that each triggered another one. Check for an action that keeps "
+                    + "changing the resource it was triggered by.", powerId, MAX_ACTION_DEPTH);
             }
+            DevMode.reportEvery(owner, "stopped " + powerId, DEV_REPORT_TICKS, powerId + " stopped after " + MAX_ACTION_DEPTH
+                + " chained changes: an action keeps changing the resource that triggered it");
+            return;
+        }
+        StringBuilder fired = DevMode.any() ? new StringBuilder() : null;
+        depth[0]++;
+        try {
+            if (newVal == min && prev != min && cfg.minAction.isPresent()) {
+                cfg.minAction.get().run(EntityCtx.of(owner, level));
+                if (fired != null) fired.append("min_action");
+            }
+            if (newVal == max && prev != max && cfg.maxAction.isPresent()) {
+                cfg.maxAction.get().run(EntityCtx.of(owner, level));
+                if (fired != null) fired.append(fired.isEmpty() ? "" : ", ").append("max_action");
+            }
+            List<OnChange> onChange = cfg.onChange;
+            for (int i = 0; i < onChange.size(); i++) {
+                OnChange entry = onChange.get(i);
+                if (!entry.matches(newVal, owner)) continue;
+                entry.entityAction().get().run(EntityCtx.of(owner, level));
+                if (fired != null) fired.append(fired.isEmpty() ? "" : ", ").append("on_change[").append(i).append(']');
+            }
+        } finally {
+            depth[0]--;
+        }
+        if (fired != null && !fired.isEmpty()) {
+            DevMode.reportEvery(owner, powerId, DEV_REPORT_TICKS, powerId + " " + prev + " → " + newVal + " ran " + fired);
         }
     }
 }

@@ -15,6 +15,8 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.OwnableEntity;
+import net.minecraft.world.entity.projectile.Projectile;
 
 import java.util.List;
 import java.util.Optional;
@@ -54,7 +56,11 @@ public final class DamageBiEntityAction implements ActionType<BiEntityCtx, Damag
         Optional<net.minecraft.core.Holder.Reference<DamageType>> holder = ctx.level().registryAccess()
             .registryOrThrow(Registries.DAMAGE_TYPE).getHolder(typeKey);
         if (holder.isEmpty()) return;
-        DamageSource source = new DamageSource(holder.get(), ctx.actor());
+        Entity actor = ctx.actor();
+        Entity owner = ownerOf(actor);
+        DamageSource source = owner != null
+            ? new DamageSource(holder.get(), actor, owner)
+            : new DamageSource(holder.get(), actor);
 
         float base = cfg.amount.isPresent()
             ? (float) cfg.amount.get().eval(ctx.actor())
@@ -62,5 +68,15 @@ public final class DamageBiEntityAction implements ActionType<BiEntityCtx, Damag
         List<AttributeModifier> mods = cfg.allModifiers();
         float finalAmount = mods.isEmpty() ? base : Math.max(0f, AttributeModifierHelper.apply(base, mods, livingTarget));
         if (finalAmount > 0f) target.hurt(source, finalAmount);
+    }
+
+    private static Entity ownerOf(Entity actor) {
+        if (actor instanceof Projectile projectile) {
+            return projectile.getOwner();
+        }
+        if (actor instanceof dev.overgrown.apoli.entity.summon.Temporary && actor instanceof OwnableEntity ownable) {
+            return ownable.getOwner();
+        }
+        return null;
     }
 }

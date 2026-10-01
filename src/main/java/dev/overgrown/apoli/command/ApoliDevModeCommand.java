@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.overgrown.apoli.dev.DevMode;
+import dev.overgrown.apoli.macros.MacroReport;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -33,6 +34,9 @@ public final class ApoliDevModeCommand {
             boolean enabled = DevMode.toggle(player);
             player.sendSystemMessage(Component.literal("Apoli developer mode " + (enabled ? "on" : "off"))
                 .withStyle(enabled ? ChatFormatting.GREEN : ChatFormatting.GRAY));
+            if (enabled) {
+                for (Component line : MacroReport.latest().lines()) player.sendSystemMessage(line);
+            }
             changed++;
         }
         int total = changed;

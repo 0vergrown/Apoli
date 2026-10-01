@@ -33,13 +33,15 @@ public class MinionCustomModelLayer extends RenderLayer<MinionEntity, MinionMode
         MinionModel rest = this.restPose();
         for (int i = 0; i < geometry.size(); i++) {
             GeometryRender render = geometry.get(i);
-            CustomModel custom = CustomModelManager.get(render.model());
+            CustomModel custom = CustomModelManager.get(render.model(), false);
             if (custom == null) {
                 continue;
             }
             GeometryRenderer.resetAll(custom);
-            for (String name : MinionModel.BONES) {
-                GeometryRenderer.syncBone(custom, name, model.bone(name), rest.bone(name));
+            if (render.bindBodyParts()) {
+                for (String name : MinionModel.BONES) {
+                    GeometryRenderer.syncBone(custom, name, model.bone(name), rest.bone(name));
+                }
             }
             AnimationPlayer.apply(minion, render, custom, partialTick);
             GeometryRenderer.applyVisibility(custom, render.bodyParts());

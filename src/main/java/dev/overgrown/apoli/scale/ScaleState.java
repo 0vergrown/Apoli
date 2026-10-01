@@ -34,6 +34,7 @@ public final class ScaleState {
 
     private float appliedWidth = Float.NaN;
     private float appliedHeight = Float.NaN;
+    private float appliedEye = Float.NaN;
     private float[] pushed;
 
     public ScaleState(Entity owner) {
@@ -195,10 +196,11 @@ public final class ScaleState {
         cacheVolatile = perTick;
     }
 
-    public boolean dimensionsChanged(float width, float height) {
-        if (appliedWidth == width && appliedHeight == height) return false;
+    public boolean dimensionsChanged(float width, float height, float eye) {
+        if (appliedWidth == width && appliedHeight == height && appliedEye == eye) return false;
         appliedWidth = width;
         appliedHeight = height;
+        appliedEye = eye;
         return true;
     }
 
@@ -222,6 +224,7 @@ public final class ScaleState {
     public void forgetDimensions() {
         appliedWidth = Float.NaN;
         appliedHeight = Float.NaN;
+        appliedEye = Float.NaN;
         pushed = null;
     }
 

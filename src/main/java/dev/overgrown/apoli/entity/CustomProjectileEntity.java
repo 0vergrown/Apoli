@@ -16,6 +16,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +30,13 @@ public class CustomProjectileEntity extends ThrowableProjectile {
         SynchedEntityData.defineId(CustomProjectileEntity.class, EntityDataSerializers.ITEM_STACK);
     private static final EntityDataAccessor<Float> RETURN_PULL =
         SynchedEntityData.defineId(CustomProjectileEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Integer> HOMING_TARGET =
+        SynchedEntityData.defineId(CustomProjectileEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Float> HOMING_TURN =
+        SynchedEntityData.defineId(CustomProjectileEntity.class, EntityDataSerializers.FLOAT);
+
+    @Nullable
+    private ProjectileHoming homing;
 
     public CustomProjectileEntity(EntityType<? extends CustomProjectileEntity> type, Level level) {
         super(type, level);
@@ -46,6 +54,8 @@ public class CustomProjectileEntity extends ThrowableProjectile {
         builder.define(MODEL_POWER, "");
         builder.define(ITEM, net.minecraft.world.item.ItemStack.EMPTY);
         builder.define(RETURN_PULL, 0.0F);
+        builder.define(HOMING_TARGET, ProjectileHoming.NONE);
+        builder.define(HOMING_TURN, 0.0F);
     }
 
     public void setTexture(ResourceLocation texture) {
@@ -81,13 +91,49 @@ public class CustomProjectileEntity extends ThrowableProjectile {
     public void startReturning(float pull) {
         this.entityData.set(RETURN_PULL, pull);
         this.setNoGravity(true);
+        this.homing = null;
+        this.entityData.set(HOMING_TARGET, ProjectileHoming.NONE);
+    }
+
+    public void startHoming(dev.overgrown.apoli.power.builtin.FireProjectilePower.Homing config, Entity shooter) {
+        this.homing = new ProjectileHoming(config, shooter);
+        this.entityData.set(HOMING_TURN, this.homing.turnRate());
+    }
+
+    public boolean canTarget(Entity entity) {
+        return this.canHitEntity(entity);
     }
 
     @Override
     public void tick() {
         float pull = this.entityData.get(RETURN_PULL);
-        if (pull > 0.0F && !this.steerHome(pull)) return;
+        if (pull > 0.0F) {
+            if (!this.steerHome(pull)) return;
+        } else {
+            this.seek();
+        }
         super.tick();
+    }
+
+    private void seek() {
+        int targetId = this.entityData.get(HOMING_TARGET);
+        if (this.homing != null && !this.level().isClientSide) {
+            int next = this.homing.update(this, targetId);
+            if (next == ProjectileHoming.FINISHED) {
+                this.homing = null;
+                next = ProjectileHoming.NONE;
+            }
+            if (next != targetId) {
+                this.entityData.set(HOMING_TARGET, next);
+                this.hasImpulse = true;
+                targetId = next;
+            }
+        }
+        if (targetId < 0) return;
+        Entity target = this.level().getEntity(targetId);
+        if (target != null) {
+            ProjectileHoming.steer(this, target, this.entityData.get(HOMING_TURN));
+        }
     }
 
     private boolean steerHome(float pull) {

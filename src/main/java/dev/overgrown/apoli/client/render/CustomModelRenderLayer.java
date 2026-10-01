@@ -40,11 +40,15 @@ public class CustomModelRenderLayer extends RenderLayer<AbstractClientPlayer, Pl
         }
         PlayerModel<AbstractClientPlayer> rest = PlayerRestPose.get();
         for (GeometryRender render : geometry) {
-            CustomModel custom = CustomModelManager.get(render.model());
+            CustomModel custom = CustomModelManager.get(render.model(), render.bindBodyParts());
             if (custom == null) {
                 continue;
             }
-            GeometryRenderer.syncPlayer(custom, model, rest);
+            if (render.bindBodyParts()) {
+                GeometryRenderer.syncPlayer(custom, model, rest);
+            } else {
+                GeometryRenderer.resetAll(custom);
+            }
             AnimationPlayer.apply(player, render, custom, partialTick);
             GeometryRenderer.applyVisibility(custom, render.bodyParts());
             GeometryRenderer.draw(render, custom, pose, buffers, light, player);

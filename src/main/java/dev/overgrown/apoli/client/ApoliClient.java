@@ -37,6 +37,10 @@ public final class ApoliClient implements ClientModInitializer {
         net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
             dev.overgrown.apoli.entity.ApoliEntities.CUSTOM_PROJECTILE,
             dev.overgrown.apoli.client.CustomProjectileRenderer::new);
+        if (dev.overgrown.apoli.compat.ModCompat.FLYWHEEL) {
+            dev.overgrown.apoli.compat.flywheel.CustomProjectileVisualizer.register(
+                dev.overgrown.apoli.entity.ApoliEntities.CUSTOM_PROJECTILE);
+        }
 
         net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry.getInstance().register(
             dev.overgrown.apoli.particle.ApoliParticles.CUSTOM,
@@ -275,6 +279,9 @@ public final class ApoliClient implements ClientModInitializer {
             RopeClientManager.tick();
             TextOverlayRenderer.tick();
             dev.overgrown.apoli.client.disguise.ClientDisguiseManager.tick(mc);
+            if (dev.overgrown.apoli.compat.ModCompat.FLYWHEEL) {
+                dev.overgrown.apoli.compat.flywheel.FlywheelBridge.clientTick(mc);
+            }
             dev.overgrown.apoli.client.speech.SpeechClient.clientTick(mc);
             if (dev.overgrown.apoli.compat.ModCompat.FIGURA) {
                 dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.tick(mc);

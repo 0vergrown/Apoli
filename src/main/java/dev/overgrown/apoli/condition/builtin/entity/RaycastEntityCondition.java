@@ -13,7 +13,9 @@ import dev.overgrown.apoli.data.FluidHandling;
 import dev.overgrown.apoli.data.ShapeType;
 import dev.overgrown.apoli.data.Space;
 import dev.overgrown.apoli.data.Vector;
+import dev.overgrown.apoli.dev.DevParticles;
 import dev.overgrown.apoli.util.InteractionRange;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ClipContext;
@@ -22,6 +24,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
@@ -74,22 +77,24 @@ public final class RaycastEntityCondition implements ConditionType<EntityCtx, Ra
         float entityDist = InteractionRange.entity(source, cfg.entityDistance, cfg.distance);
 
         BlockHitResult blockHit = null;
+        double nearestSq = Double.POSITIVE_INFINITY;
         if (cfg.block) {
             Vec3 to = origin.add(dir.scale(blockDist));
-            blockHit = level.clip(new ClipContext(origin, to, cfg.shapeType.vanilla(), cfg.fluidHandling.vanilla(), source));
-            if (blockHit.getType() == HitResult.Type.MISS) blockHit = null;
-            if (blockHit != null && cfg.blockCondition.isPresent()) {
-                if (!cfg.blockCondition.get().test(new BlockCtx(blockHit.getBlockPos(),
-                    level.getBlockState(blockHit.getBlockPos()), level))) blockHit = null;
+            BlockHitResult hit = level.clip(new ClipContext(origin, to, cfg.shapeType.vanilla(), cfg.fluidHandling.vanilla(), source));
+            if (hit.getType() != HitResult.Type.MISS) {
+                blockHit = hit;
+                nearestSq = origin.distanceToSqr(hit.getLocation());
             }
         }
 
+        Entity entityHit = null;
         if (cfg.entity) {
             Vec3 endE = origin.add(dir.scale(entityDist));
             AABB box = new AABB(origin, endE).inflate(1.0);
             List<Entity> cands = level.getEntities(source, box, e ->
                 e != source && e.isPickable());
-            for (Entity cand : cands) {
+            for (int i = 0; i < cands.size(); i++) {
+                Entity cand = cands.get(i);
                 AABB targetBox = cand.getBoundingBox();
                 Vec3 hitPos;
                 if (targetBox.contains(origin)) {
@@ -99,13 +104,45 @@ public final class RaycastEntityCondition implements ConditionType<EntityCtx, Ra
                     if (inter.isEmpty()) continue;
                     hitPos = inter.get();
                 }
-                if (blockHit != null && origin.distanceToSqr(hitPos) > origin.distanceToSqr(blockHit.getLocation())) continue;
-                BiEntityCtx bctx = new BiEntityCtx(source, cand, level);
-                if (cfg.matchBientityCondition.isPresent() && !cfg.matchBientityCondition.get().test(bctx)) continue;
-                if (cfg.hitBientityCondition.isPresent() && !cfg.hitBientityCondition.get().test(bctx)) continue;
-                return true;
+                double distSq = origin.distanceToSqr(hitPos);
+                if (distSq > nearestSq) continue;
+                if (cfg.matchBientityCondition.isPresent()
+                    && !cfg.matchBientityCondition.get().test(new BiEntityCtx(source, cand, level))) continue;
+                entityHit = cand;
+                nearestSq = distSq;
             }
         }
-        return blockHit != null;
+
+        boolean passed;
+        if (entityHit != null) {
+            passed = cfg.hitBientityCondition.isEmpty()
+                || cfg.hitBientityCondition.get().test(new BiEntityCtx(source, entityHit, level));
+        } else if (blockHit != null) {
+            passed = cfg.blockCondition.isEmpty() || cfg.blockCondition.get().test(new BlockCtx(blockHit.getBlockPos(),
+                level.getBlockState(blockHit.getBlockPos()), level));
+        } else {
+            passed = false;
+        }
+        if (DevParticles.due(level, source, cfg)) {
+            outline((ServerLevel) level, cfg, origin, dir, blockDist, entityDist, blockHit, entityHit, nearestSq, passed);
+        }
+        return passed;
+    }
+
+    private static void outline(ServerLevel level, Cfg cfg, Vec3 origin, Vec3 dir, float blockDist, float entityDist,
+                                @Nullable BlockHitResult blockHit, @Nullable Entity entityHit, double stopSq,
+                                boolean passed) {
+        DevParticles.Ray kind = DevParticles.Ray.CONDITION;
+        double reach = Math.max(cfg.block ? blockDist : 0.0, cfg.entity ? entityDist : 0.0);
+        DevParticles.ray(level, kind, origin, dir, Double.isInfinite(stopSq) ? reach : Math.sqrt(stopSq), reach);
+        if (cfg.entity) {
+            double length = blockHit == null ? entityDist : Math.min(entityDist, origin.distanceTo(blockHit.getLocation()));
+            DevParticles.detection(level, kind, origin, dir, length, 0.0, 0.0, 0.0, -1.0);
+        }
+        if (entityHit != null) {
+            DevParticles.mark(level, kind, entityHit, passed);
+        } else if (blockHit != null) {
+            DevParticles.mark(level, kind, blockHit.getBlockPos(), passed);
+        }
     }
 }

@@ -90,6 +90,10 @@ public final class ClientPowerState {
         ENTITY_POWERS.put(payload.entityId(), Map.copyOf(payload.powersBySource()));
         ENTITY_AUX.put(payload.entityId(), Map.copyOf(payload.auxInt()));
         ENTITY_SUPPRESSED.put(payload.entityId(), Set.copyOf(payload.suppressed()));
+        net.minecraft.client.multiplayer.ClientLevel level = Minecraft.getInstance().level;
+        if (level == null) return;
+        net.minecraft.world.entity.Entity entity = level.getEntity(payload.entityId());
+        if (entity != null) dev.overgrown.apoli.scale.Scales.invalidate(entity);
     }
 
     public static void applyAuxInts(dev.overgrown.apoli.network.payload.SyncAuxIntsS2C payload) {

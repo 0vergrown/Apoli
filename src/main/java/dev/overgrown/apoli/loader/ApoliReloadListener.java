@@ -12,8 +12,9 @@ import dev.overgrown.apoli.ApoliNetwork;
 import dev.overgrown.apoli.alias.AliasDefault;
 import dev.overgrown.apoli.alias.NamespaceAlias;
 import dev.overgrown.apoli.condition.StaticCondition;
-import dev.overgrown.apoli.macros.MacroLoader;
-import dev.overgrown.apoli.macros.MacroRegistry;
+import dev.overgrown.apoli.dev.DevMode;
+import dev.overgrown.apoli.macros.MacroExpander;
+import dev.overgrown.apoli.macros.MacroReport;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.LegacyPowerShapes;
@@ -50,26 +51,19 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
 
     @Override
     protected void apply(Map<ResourceLocation, JsonElement> data, ResourceManager rm, ProfilerFiller profiler) {
-        Map<ResourceLocation, Dynamic<JsonElement>> dynamicMap = new HashMap<>();
-
-        for (var entry : data.entrySet()) {
-            dynamicMap.put(entry.getKey(), new Dynamic<>(JsonOps.INSTANCE, entry.getValue()));
-        }
-
-        dynamicMap = MacroLoader.load(dynamicMap);
-        data = MacroRegistry.applyAll(dynamicMap);
-
-        Map<ResourceLocation, Dynamic<JsonElement>> expanded = new LinkedHashMap<>(dynamicMap.size());
+        MacroExpander<JsonElement> macros = MacroExpander.collect(JsonOps.INSTANCE, data);
+        Map<ResourceLocation, Dynamic<JsonElement>> expanded = new LinkedHashMap<>(data.size());
         for (Map.Entry<ResourceLocation, JsonElement> e : data.entrySet()) {
             ResourceLocation id = e.getKey();
             try {
-                Dynamic<JsonElement> power = new Dynamic<>(JsonOps.INSTANCE, e.getValue());
-                if (!loadConditionPasses(power, id)) continue;
+                Dynamic<JsonElement> power = macros.expand(id, new Dynamic<>(JsonOps.INSTANCE, e.getValue()));
+                if (power == null || !loadConditionPasses(power, id)) continue;
                 expandMultiples(id, power, expanded);
             } catch (Exception ex) {
                 LOG.error("[Apoli] Failed to expand power {}: {}", id, ex.getMessage());
             }
         }
+        MacroReport macroReport = macros.finish();
 
         Map<ResourceLocation, Power> loaded = new HashMap<>(expanded.size());
         for (Map.Entry<ResourceLocation, Dynamic<JsonElement>> e : expanded.entrySet()) {
@@ -96,6 +90,7 @@ public final class ApoliReloadListener extends SimpleJsonResourceReloadListener 
 
         if (server != null) {
             ApoliNetwork.broadcastPowers(server);
+            DevMode.announce(server, macroReport.lines());
         }
     }
 
