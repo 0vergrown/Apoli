@@ -1,5 +1,7 @@
 package dev.overgrown.apoli.mixin.tick;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import dev.overgrown.apoli.tick.TickRates;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -17,6 +19,16 @@ public abstract class ServerLevelTickRateMixin {
     private void apoli$gateEntityTick(Entity entity, CallbackInfo ci) {
         if (TickRates.idle()) return;
         if (!TickRates.shouldTickEntity(entity)) ci.cancel();
+    }
+
+    @WrapOperation(method = "tickPassenger(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/entity/Entity;)V",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;rideTick()V"))
+    private void apoli$gatePassengerTick(Entity passenger, Operation<Void> original, Entity vehicle, Entity rider) {
+        if (TickRates.idle() || TickRates.shouldTickEntity(passenger)) {
+            original.call(passenger);
+            return;
+        }
+        vehicle.positionRider(passenger);
     }
 
     @Inject(method = "tickChunk(Lnet/minecraft/world/level/chunk/LevelChunk;I)V", at = @At("HEAD"), cancellable = true)

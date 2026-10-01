@@ -36,7 +36,7 @@ public final class EntityInRadiusCondition implements ConditionType<EntityCtx, E
         Entity self = ctx.entity();
 
         double r = cfg.radius;
-        if (dev.overgrown.apoli.dev.DevParticles.due(ctx.level())
+        if (dev.overgrown.apoli.dev.DevParticles.due(ctx.level(), self, cfg)
             && ctx.level() instanceof net.minecraft.server.level.ServerLevel devLevel) {
             dev.overgrown.apoli.dev.DevParticles.outlineCondition(devLevel, self.position(), cfg.shape, r, r, r);
         }

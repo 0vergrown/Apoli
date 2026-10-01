@@ -79,13 +79,13 @@ public abstract class PlayerRendererCustomModelMixin extends LivingEntityRendere
     @Inject(method = "renderRightHand", at = @At("TAIL"))
     private void apoli$rightArmOverlay(PoseStack pose, MultiBufferSource buffers, int light, AbstractClientPlayer player, CallbackInfo ci) {
         apoli$renderArmOverlay(pose, buffers, light, player, this.getModel().rightArm, this.getModel().rightSleeve);
-        apoli$renderArmGeometry(pose, buffers, light, player, ModelParts.RIGHT_ARM);
+        apoli$renderArmGeometry(pose, buffers, light, player, ModelParts.RIGHT_ARM, this.getModel().rightArm);
     }
 
     @Inject(method = "renderLeftHand", at = @At("TAIL"))
     private void apoli$leftArmOverlay(PoseStack pose, MultiBufferSource buffers, int light, AbstractClientPlayer player, CallbackInfo ci) {
         apoli$renderArmOverlay(pose, buffers, light, player, this.getModel().leftArm, this.getModel().leftSleeve);
-        apoli$renderArmGeometry(pose, buffers, light, player, ModelParts.LEFT_ARM);
+        apoli$renderArmGeometry(pose, buffers, light, player, ModelParts.LEFT_ARM, this.getModel().leftArm);
     }
 
     @Unique
@@ -110,7 +110,7 @@ public abstract class PlayerRendererCustomModelMixin extends LivingEntityRendere
 
     @Unique
     private void apoli$renderArmGeometry(PoseStack pose, MultiBufferSource buffers, int light,
-                                         AbstractClientPlayer player, String slot) {
+                                         AbstractClientPlayer player, String slot, ModelPart arm) {
         List<GeometryRender> geometry = CustomModelRenderPower.collectGeometry(player);
         if (geometry.isEmpty()) {
             return;
@@ -123,14 +123,19 @@ public abstract class PlayerRendererCustomModelMixin extends LivingEntityRendere
             if (!render.showFirstPerson()) {
                 continue;
             }
-            CustomModel custom = CustomModelManager.get(render.model());
+            CustomModel custom = CustomModelManager.get(render.model(), render.bindBodyParts());
             if (custom == null) {
                 continue;
             }
-            GeometryRenderer.syncPlayer(custom, model, rest);
+            if (render.bindBodyParts()) {
+                GeometryRenderer.syncPlayer(custom, model, rest);
+            } else {
+                GeometryRenderer.resetAll(custom);
+            }
             AnimationPlayer.apply(player, render, custom, Minecraft.getInstance().getFrameTime());
             GeometryRenderer.applyVisibility(custom, render.bodyParts());
-            GeometryRenderer.drawSlot(render, custom, slot, alphaScale, pose, buffers, light, player);
+            GeometryRenderer.drawSlot(render, custom, slot, alphaScale, pose, buffers, light, player,
+                render.bindBodyParts() ? null : arm);
         }
     }
 

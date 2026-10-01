@@ -1,10 +1,14 @@
 package dev.overgrown.apoli.mixin.scale;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import dev.overgrown.apoli.scale.ScaleTypes;
 import dev.overgrown.apoli.scale.Scales;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -13,6 +17,22 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(LivingEntity.class)
 public abstract class LivingEntityScaleMixin {
+
+    @WrapMethod(method = "getEyeHeight(Lnet/minecraft/world/entity/Pose;Lnet/minecraft/world/entity/EntityDimensions;)F")
+    private float apoli$scaleEyeHeight(Pose pose, EntityDimensions dimensions, Operation<Float> original) {
+        LivingEntity self = (LivingEntity) (Object) this;
+        if (Scales.untouched(self)) return original.call(pose, dimensions);
+        float width = Scales.applied(self, ScaleTypes.HITBOX_WIDTH);
+        float height = Scales.applied(self, ScaleTypes.HITBOX_HEIGHT);
+        float eye = Scales.applied(self, ScaleTypes.EYE_HEIGHT);
+        if (width == 1.0F && height == 1.0F && eye == 1.0F) return original.call(pose, dimensions);
+        if (dimensions.fixed) {
+            float raw = original.call(pose, dimensions);
+            return eye == height ? raw : raw * eye;
+        }
+        EntityDimensions unscaled = width > 0.0F && height > 0.0F ? dimensions.scale(1.0F / width, 1.0F / height) : dimensions;
+        return original.call(pose, unscaled) * eye;
+    }
 
     @Inject(method = "getSpeed()F", at = @At("RETURN"), cancellable = true)
     private void apoli$scaleSpeed(CallbackInfoReturnable<Float> cir) {

@@ -1,0 +1,14 @@
+{
+  "required": false,
+  "package": "dev.overgrown.apoli.compat.flywheel.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "plugin": "dev.overgrown.apoli.compat.flywheel.mixin.FlywheelCompatMixinPlugin",
+  "mixins": [],
+  "client": [
+    "EntityVanillaRenderClaimMixin",
+    "ModelPartAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

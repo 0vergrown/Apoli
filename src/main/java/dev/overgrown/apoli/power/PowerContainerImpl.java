@@ -156,7 +156,7 @@ public final class PowerContainerImpl implements PowerContainer {
         Set<ResourceLocation> sources = bySources.computeIfAbsent(power, k -> new HashSet<>());
         boolean first = sources.isEmpty();
         boolean added = sources.add(source);
-        if (added) this.effectiveSuppressed = null;
+        if (added) markStructureDirty();
         if (added && first && owner != null && owner.level() instanceof ServerLevel) {
             Power loaded = ApoliPowers.get(power);
             if (loaded != null) {
@@ -165,7 +165,6 @@ public final class PowerContainerImpl implements PowerContainer {
             }
         }
         if (added) {
-            markStructureDirty();
             refreshSuppression();
             dev.overgrown.apoli.advancement.ApoliCriteria.powerGranted(owner, power, source);
         }
@@ -182,6 +181,7 @@ public final class PowerContainerImpl implements PowerContainer {
             bySources.remove(power);
             suppressedBySources.remove(power);
             releaseSuppressionSource(power);
+            if (removed) markStructureDirty();
             if (removed && owner != null && owner.level() instanceof ServerLevel) {
                 Power loaded = ApoliPowers.get(power);
                 if (loaded != null) {

@@ -43,6 +43,10 @@ public final class ApoliClient implements ClientModInitializer {
         net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
             dev.overgrown.apoli.entity.ApoliEntities.CUSTOM_PROJECTILE,
             dev.overgrown.apoli.client.CustomProjectileRenderer::new);
+        if (dev.overgrown.apoli.compat.ModCompat.FLYWHEEL) {
+            dev.overgrown.apoli.compat.flywheel.CustomProjectileVisualizer.register(
+                dev.overgrown.apoli.entity.ApoliEntities.CUSTOM_PROJECTILE);
+        }
 
         net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry.getInstance().register(
             dev.overgrown.apoli.particle.ApoliParticles.CUSTOM,
@@ -341,6 +345,9 @@ public final class ApoliClient implements ClientModInitializer {
             dev.overgrown.apoli.client.MouseMovementWatcher.clientTick(mc);
             dev.overgrown.apoli.client.render.ClientRenderFlags.clientTick(mc);
             dev.overgrown.apoli.client.render.BlockRenderRules.clientTick(mc);
+            if (dev.overgrown.apoli.compat.ModCompat.FLYWHEEL) {
+                dev.overgrown.apoli.compat.flywheel.FlywheelBridge.clientTick(mc);
+            }
             if (mc.player != null && !mc.isPaused()) {
                 while (SKILL_TREE_KEY.consumeClick()) {
                     if (mc.screen == null && dev.overgrown.apoli.client.skill.ClientSkillState.hasAnyTree()) {

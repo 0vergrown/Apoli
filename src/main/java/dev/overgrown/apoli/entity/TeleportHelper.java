@@ -46,10 +46,12 @@ public final class TeleportHelper {
         if (entity.level() != level) return true;
         Vec3 origin = entity.position();
         entity.setPos(x, y, z);
+        Entity previous = StagedLanding.begin(entity);
         boolean allowed;
         try {
             allowed = entityCondition.get().test(new EntityCtx(entity, level));
         } finally {
+            StagedLanding.end(previous);
             entity.setPos(origin.x, origin.y, origin.z);
         }
         return allowed;

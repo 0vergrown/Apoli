@@ -17,6 +17,8 @@ import dev.overgrown.apoli.data.ParticleEffect;
 import dev.overgrown.apoli.data.ShapeType;
 import dev.overgrown.apoli.data.Space;
 import dev.overgrown.apoli.data.Vector;
+import dev.overgrown.apoli.dev.DevMode;
+import dev.overgrown.apoli.dev.DevParticles;
 import dev.overgrown.apoli.util.InteractionRange;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
@@ -146,6 +148,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
 
     private static final int MAX_CHAIN_DEPTH = 32;
     private static final int MAX_PIERCED_BLOCKS = 128;
+    private static final int MAX_MARKED_BLOCKS = 16;
 
     private static final MapCodec<Params> PARAMS = RecordCodecBuilder.mapCodec(i -> i.group(
         Codec.FLOAT.optionalFieldOf("distance").forGetter(Params::distance),
@@ -259,6 +262,9 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         float entityDist = clampToTarget ? (float) gap : baseEntityDist;
         boolean pierceBlocks = cfg.aim.piercesBlocks();
         boolean pierceEntities = cfg.aim.piercesEntities();
+        boolean drawing = DevMode.any() && level instanceof ServerLevel;
+        List<BlockPos> piercedBlocks = drawing && pierceBlocks ? new ArrayList<>(4) : null;
+        List<Entity> hitEntities = drawing ? new ArrayList<>(4) : null;
 
         BlockHitResult blockHit = null;
         if (cfg.params.block) {
@@ -280,6 +286,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
                                 cfg.hooks.blockAction.get().run(blockCtx);
                             }
                         }
+                        if (piercedBlocks != null && piercedBlocks.size() < MAX_MARKED_BLOCKS) piercedBlocks.add(pos);
                     }
 
                     double exitT = cellExitT(origin, dir, pos, blockDist);
@@ -324,6 +331,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
             for (EntityHit hit : hits) {
                 if (cfg.hooks.bientityCondition.isPresent()
                     && !cfg.hooks.bientityCondition.get().test(new BiEntityCtx(source, hit.target(), level))) continue;
+                if (hitEntities != null) hitEntities.add(hit.target());
                 if (cfg.hooks.bientityAction.isPresent()) {
                     try (Scope scope = new Scope(origin, hit.pos(), hits.size(), hitIndex)) {
                         cfg.hooks.bientityAction.get().run(new BiEntityCtx(source, hit.target(), level));
@@ -349,10 +357,9 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
             rayEnd = origin.add(dir.scale(blockDist));
         }
 
-        if (dev.overgrown.apoli.dev.DevMode.any() && level instanceof ServerLevel devLevel) {
-            dev.overgrown.apoli.dev.DevParticles.outlineRay(devLevel, origin, rayEnd,
-                cfg.params.radius.map(r -> Math.max(r.x(), Math.max(r.y(), r.z()))).orElse(0f),
-                cfg.params.coneAngle.orElse(0f));
+        if (drawing) {
+            outline((ServerLevel) level, cfg, origin, dir, rayEnd, blockDist, entityDist, blockHit, blockHitDistSq,
+                piercedBlocks, hitEntities);
         }
 
         boolean anyHit = anyEntityHit || blockHit != null;
@@ -422,6 +429,26 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
             Vec3 chainOrigin = hitNormal != null ? rayEnd.add(hitNormal.scale(0.01)) : rayEnd;
             cast(cfg.chain.get(), ctx, null, chainOrigin, dir, hitNormal, depth + 1);
         }
+    }
+
+    private static void outline(ServerLevel level, Cfg cfg, Vec3 origin, Vec3 dir, Vec3 rayEnd, float blockDist,
+                                float entityDist, @Nullable BlockHitResult blockHit, double blockHitDistSq,
+                                @Nullable List<BlockPos> piercedBlocks, List<Entity> hitEntities) {
+        DevParticles.Ray kind = DevParticles.Ray.ACTION;
+        double reach = Math.max(cfg.params.block ? blockDist : 0.0, cfg.params.entity ? entityDist : 0.0);
+        DevParticles.ray(level, kind, origin, dir, origin.distanceTo(rayEnd), reach);
+        if (cfg.params.entity) {
+            double length = cfg.aim.piercesBlocks() ? entityDist : Math.min(entityDist, Math.sqrt(blockHitDistSq));
+            Vector radius = cfg.params.radius.orElse(Vector.ZERO);
+            DevParticles.detection(level, kind, origin, dir, length, radius.x(), radius.y(), radius.z(),
+                cfg.params.coneAngle.isPresent() ? cfg.params.coneAngle.get() : -1.0);
+        }
+        if (piercedBlocks != null) {
+            for (int i = 0; i < piercedBlocks.size(); i++) DevParticles.mark(level, kind, piercedBlocks.get(i), true);
+        } else if (blockHit != null) {
+            DevParticles.mark(level, kind, blockHit.getBlockPos(), true);
+        }
+        for (int i = 0; i < hitEntities.size(); i++) DevParticles.mark(level, kind, hitEntities.get(i), true);
     }
 
     private static double cellExitT(Vec3 origin, Vec3 dir, BlockPos pos, double maxT) {

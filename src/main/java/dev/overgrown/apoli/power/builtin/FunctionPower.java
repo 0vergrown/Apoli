@@ -1,6 +1,5 @@
 package dev.overgrown.apoli.power.builtin;
 
-import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -10,34 +9,23 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.EntityAction;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.Placeholders;
 import dev.overgrown.apoli.power.PowerType;
-import net.minecraft.Util;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Stream;
 
 public final class FunctionPower extends PowerType<FunctionPower.Cfg> {
 
     private static final Logger LOG = LogUtils.getLogger();
     private static final int MAX_CACHE_ENTRIES = 8;
     private static final int MAX_DEPTH = 16;
-
-    private static final DecimalFormat NUMBER_FORMAT = Util.make(new DecimalFormat("#"), format -> {
-        format.setMaximumFractionDigits(15);
-        format.setDecimalFormatSymbols(DecimalFormatSymbols.getInstance(Locale.US));
-    });
 
     private static final ThreadLocal<int[]> DEPTH = ThreadLocal.withInitial(() -> new int[1]);
 
@@ -81,64 +69,17 @@ public final class FunctionPower extends PowerType<FunctionPower.Cfg> {
     }
 
     private static DataResult<Cfg> build(Raw raw) {
-        Set<String> found = new LinkedHashSet<>();
-        collectPlaceholders(raw.entityAction(), found);
-        List<String> parameters = raw.parameters().orElseGet(() -> List.copyOf(found));
-
-        for (String declared : parameters) {
-            if (!found.contains(declared)) {
-                return DataResult.error(() -> "apoli:function declares parameter [" + declared
-                    + "] but never uses it");
+        return Placeholders.parameters("apoli:function", raw.entityAction(), raw.parameters()).flatMap(parameters -> {
+            if (!parameters.isEmpty()) {
+                return DataResult.success(new Cfg(raw.entityAction(), parameters, null));
             }
-        }
-        for (String used : found) {
-            if (!parameters.contains(used)) {
-                return DataResult.error(() -> "apoli:function uses [" + used
-                    + "] but does not declare it in \"parameters\"");
-            }
-        }
-
-        if (!parameters.isEmpty()) {
-            return DataResult.success(new Cfg(raw.entityAction(), parameters, null));
-        }
-        return parseAction(raw.entityAction())
-            .map(action -> new Cfg(raw.entityAction(), List.of(), action));
+            return parseAction(raw.entityAction())
+                .map(action -> new Cfg(raw.entityAction(), List.of(), action));
+        });
     }
 
     private static <T> DataResult<EntityAction> parseAction(Dynamic<T> source) {
         return EntityAction.CODEC.parse(source.getOps(), source.getValue());
-    }
-
-    private static <T> void collectPlaceholders(Dynamic<T> source, Set<String> out) {
-        collectPlaceholders(source.getOps(), source.getValue(), out);
-    }
-
-    private static <T> void collectPlaceholders(DynamicOps<T> ops, T input, Set<String> out) {
-        Optional<String> text = ops.getStringValue(input).result();
-        if (text.isPresent()) {
-            collectNames(text.get(), out);
-            return;
-        }
-        Optional<Stream<Pair<T, T>>> entries = ops.getMapValues(input).result();
-        if (entries.isPresent()) {
-            entries.get().forEach(entry -> collectPlaceholders(ops, entry.getSecond(), out));
-            return;
-        }
-        ops.getStream(input).result()
-            .ifPresent(values -> values.forEach(value -> collectPlaceholders(ops, value, out)));
-    }
-
-    private static void collectNames(String text, Set<String> out) {
-        int from = 0;
-        while (true) {
-            int open = text.indexOf('[', from);
-            if (open < 0) return;
-            int close = text.indexOf(']', open + 1);
-            if (close < 0) return;
-            String name = text.substring(open + 1, close);
-            if (!name.isEmpty() && name.indexOf('[') < 0) out.add(name);
-            from = close + 1;
-        }
     }
 
     public static void run(ResourceLocation powerId, Cfg cfg, Map<String, Dynamic<?>> arguments, EntityCtx ctx) {
@@ -201,55 +142,6 @@ public final class FunctionPower extends PowerType<FunctionPower.Cfg> {
     private static <T> DataResult<EntityAction> instantiate(Dynamic<T> source, List<String> parameters,
                                                             Map<String, Dynamic<?>> arguments) {
         DynamicOps<T> ops = source.getOps();
-        return EntityAction.CODEC.parse(ops, substitute(ops, source.getValue(), parameters, arguments));
-    }
-
-    private static <T> T substitute(DynamicOps<T> ops, T input, List<String> parameters,
-                                    Map<String, Dynamic<?>> arguments) {
-        Optional<String> text = ops.getStringValue(input).result();
-        if (text.isPresent()) {
-            return substituteString(ops, input, text.get(), parameters, arguments);
-        }
-        Optional<Stream<Pair<T, T>>> entries = ops.getMapValues(input).result();
-        if (entries.isPresent()) {
-            return ops.createMap(entries.get().map(entry -> Pair.of(entry.getFirst(),
-                substitute(ops, entry.getSecond(), parameters, arguments))));
-        }
-        Optional<Stream<T>> values = ops.getStream(input).result();
-        if (values.isPresent()) {
-            return ops.createList(values.get().map(value -> substitute(ops, value, parameters, arguments)));
-        }
-        return input;
-    }
-
-    private static <T> T substituteString(DynamicOps<T> ops, T input, String text, List<String> parameters,
-                                          Map<String, Dynamic<?>> arguments) {
-        for (int i = 0; i < parameters.size(); i++) {
-            String parameter = parameters.get(i);
-            if (text.equals("[" + parameter + "]")) {
-                return arguments.get(parameter).convert(ops).getValue();
-            }
-        }
-        String replaced = text;
-        for (int i = 0; i < parameters.size(); i++) {
-            String parameter = parameters.get(i);
-            String placeholder = "[" + parameter + "]";
-            if (replaced.contains(placeholder)) {
-                replaced = replaced.replace(placeholder, stringify(arguments.get(parameter)));
-            }
-        }
-        return replaced.equals(text) ? input : ops.createString(replaced);
-    }
-
-    private static <T> String stringify(Dynamic<T> value) {
-        DynamicOps<T> ops = value.getOps();
-        T raw = value.getValue();
-        Optional<String> text = ops.getStringValue(raw).result();
-        if (text.isPresent()) return text.get();
-        Optional<Number> number = ops.getNumberValue(raw).result();
-        if (number.isPresent()) return NUMBER_FORMAT.format(number.get());
-        Optional<Boolean> flag = ops.getBooleanValue(raw).result();
-        if (flag.isPresent()) return flag.get().toString();
-        return String.valueOf(raw);
+        return EntityAction.CODEC.parse(ops, Placeholders.substitute(ops, source.getValue(), parameters, arguments));
     }
 }

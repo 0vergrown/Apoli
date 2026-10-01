@@ -20,6 +20,14 @@ loom {
 
 repositories {
 	mavenCentral()
+	maven {
+		name = "CreateMod"
+		url = "https://maven.createmod.net"
+		content {
+			includeGroup "dev.engine-room.flywheel"
+			includeGroup "dev.engine-room.vanillin"
+		}
+	}
 	// Icarus (optional compile-time dependency for the apoli:wings compat power type).
 	maven {
 		name = "Modrinth"
@@ -131,6 +139,8 @@ dependencies {
 	// instead of vanilla RenderChunkRegion, so apoli:modify_block_render needs a second hook there.
 	// Gated by SodiumCompatMixinPlugin, so Apoli runs fine without it.
 	modCompileOnly "maven.modrinth:sodium:${project.sodium_version}"
+	modCompileOnly "dev.engine-room.flywheel:flywheel-fabric-1.20.1:${project.flywheel_version}"
+	modCompileOnly "dev.engine-room.vanillin:vanillin-fabric-1.20.1:${project.vanillin_version}"
 
 	// You're in Grave Danger and Gravestones (compile-only, optional at runtime) — power inventories and
 	// keep_inventory go through their grave APIs, and the grave shows the GraveInscriptions lines. YIGD's own

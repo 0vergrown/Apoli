@@ -25,6 +25,10 @@ public final class ModCompat {
 
     public static final boolean FIGURA = FabricLoader.getInstance().isModLoaded("figura");
 
+    public static final boolean FLYWHEEL = FabricLoader.getInstance().isModLoaded("flywheel");
+
+    public static final boolean VANILLIN = FabricLoader.getInstance().isModLoaded("vanillin");
+
     public static final boolean TRINKETS = FabricLoader.getInstance().isModLoaded("trinkets");
 
     public static final boolean ACCESSORIES = FabricLoader.getInstance().isModLoaded("accessories");

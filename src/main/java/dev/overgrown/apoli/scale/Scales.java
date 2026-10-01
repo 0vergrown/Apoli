@@ -139,7 +139,10 @@ public final class Scales {
 
     public static void invalidate(Entity entity) {
         ScaleState state = stateOf(entity);
-        if (state == null) return;
+        if (state == null) {
+            if (!anyPowerLoaded() || !ScalePower.hasAny(entity)) return;
+            state = stateOrCreate(entity);
+        }
         state.invalidate();
         state.forgetDimensions();
         refreshDimensions(entity, state);
@@ -179,7 +182,8 @@ public final class Scales {
         }
         float width = value(entity, ScaleTypes.HITBOX_WIDTH);
         float height = value(entity, ScaleTypes.HITBOX_HEIGHT);
-        if (!state.dimensionsChanged(width, height)) return;
+        float eye = value(entity, ScaleTypes.EYE_HEIGHT);
+        if (!state.dimensionsChanged(width, height, eye)) return;
         entity.refreshDimensions();
     }
 

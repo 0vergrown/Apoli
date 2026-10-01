@@ -66,18 +66,21 @@ public class CustomProjectileRenderer extends EntityRenderer<CustomProjectileEnt
         poseStack.pushPose();
         poseStack.mulPose(this.entityRenderDispatcher.cameraOrientation());
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
-        PoseStack.Pose pose = poseStack.last();
+        VertexConsumer consumer = buffers.getBuffer(RenderType.entityCutoutNoCull(getTextureLocation(entity)));
+        billboardQuad(consumer, poseStack.last(), light);
+        poseStack.popPose();
+    }
+
+    public static void billboardQuad(VertexConsumer consumer, PoseStack.Pose pose, int light) {
         Matrix4f matrix = pose.pose();
         Matrix3f normal = pose.normal();
-        VertexConsumer consumer = buffers.getBuffer(RenderType.entityCutoutNoCull(getTextureLocation(entity)));
         vertex(consumer, matrix, normal, light, 0.0F, 0, 0, 1);
         vertex(consumer, matrix, normal, light, 1.0F, 0, 1, 1);
         vertex(consumer, matrix, normal, light, 1.0F, 1, 1, 0);
         vertex(consumer, matrix, normal, light, 0.0F, 1, 0, 0);
-        poseStack.popPose();
     }
 
-    private static List<GeometryRender> resolveGeometry(CustomProjectileEntity entity) {
+    public static List<GeometryRender> resolveGeometry(CustomProjectileEntity entity) {
         GeometryRender synced = CustomModelRenderPower.geometryOf(entity.getModelPower());
         if (synced != null) return List.of(synced);
         return CustomModelRenderPower.collectGeometry(entity);
@@ -97,7 +100,7 @@ public class CustomProjectileRenderer extends EntityRenderer<CustomProjectileEnt
         boolean drew = false;
         for (int i = 0; i < geometry.size(); i++) {
             GeometryRender render = geometry.get(i);
-            CustomModel custom = CustomModelManager.get(render.model());
+            CustomModel custom = CustomModelManager.get(render.model(), false);
             if (custom == null) continue;
             GeometryRenderer.resetAll(custom);
             AnimationPlayer.apply(entity, render, custom, partialTick);
@@ -111,6 +114,10 @@ public class CustomProjectileRenderer extends EntityRenderer<CustomProjectileEnt
 
     @Override
     public ResourceLocation getTextureLocation(CustomProjectileEntity entity) {
+        return textureOf(entity);
+    }
+
+    public static ResourceLocation textureOf(CustomProjectileEntity entity) {
         ResourceLocation texture = entity.getTexture();
         return texture != null ? texture : MISSING;
     }

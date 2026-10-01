@@ -46,9 +46,13 @@ public class DisguiseCustomModelLayer<T extends LivingEntity, M extends EntityMo
         List<GeometryRender> geometry = CustomModelRenderPower.collectGeometry(player);
         for (int i = 0; i < geometry.size(); i++) {
             GeometryRender render = geometry.get(i);
-            CustomModel custom = CustomModelManager.get(render.model());
+            CustomModel custom = CustomModelManager.get(render.model(), render.bindBodyParts());
             if (custom == null) continue;
-            GeometryRenderer.syncHumanoid(custom, humanoid);
+            if (render.bindBodyParts()) {
+                GeometryRenderer.syncHumanoid(custom, humanoid);
+            } else {
+                GeometryRenderer.resetAll(custom);
+            }
             AnimationPlayer.apply(player, render, custom, partialTick);
             GeometryRenderer.applyVisibility(custom, render.bodyParts());
             GeometryRenderer.draw(render, custom, pose, buffers, light, player);

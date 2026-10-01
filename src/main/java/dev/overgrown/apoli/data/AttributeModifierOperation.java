@@ -36,6 +36,9 @@ public enum AttributeModifierOperation {
         "addition", ADD_BASE_EARLY,
         "multiply_base", MULTIPLY_BASE_ADDITIVE,
         "multiply_total", MULTIPLY_TOTAL_MULTIPLICATIVE,
+        "add_value", ADD_BASE_EARLY,
+        "add_multiplied_base", MULTIPLY_BASE_ADDITIVE,
+        "add_multiplied_total", MULTIPLY_TOTAL_MULTIPLICATIVE,
         "ADD_VALUE", ADD_BASE_EARLY,
         "ADD_MULTIPLIED_BASE", MULTIPLY_BASE_ADDITIVE,
         "ADD_MULTIPLIED_TOTAL", MULTIPLY_TOTAL_MULTIPLICATIVE

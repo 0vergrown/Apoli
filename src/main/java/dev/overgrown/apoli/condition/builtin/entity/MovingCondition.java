@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
 public final class MovingCondition implements ConditionType<EntityCtx, MovingCondition.Cfg> {
@@ -20,9 +21,22 @@ public final class MovingCondition implements ConditionType<EntityCtx, MovingCon
 
     @Override
     public boolean test(Cfg cfg, EntityCtx ctx) {
-        Vec3 v = ctx.raw().getDeltaMovement();
-        boolean h = v.x * v.x + v.z * v.z > 1.0e-6;
-        boolean ve = Math.abs(v.y) > 1.0e-3;
+        Entity entity = ctx.raw();
+        double dx;
+        double dy;
+        double dz;
+        if (entity.level().isClientSide() && !entity.isControlledByLocalInstance()) {
+            dx = entity.getX() - entity.xo;
+            dy = entity.getY() - entity.yo;
+            dz = entity.getZ() - entity.zo;
+        } else {
+            Vec3 v = entity.getDeltaMovement();
+            dx = v.x;
+            dy = v.y;
+            dz = v.z;
+        }
+        boolean h = dx * dx + dz * dz > 1.0e-6;
+        boolean ve = Math.abs(dy) > 1.0e-3;
         return (cfg.horizontally && h) || (cfg.vertically && ve);
     }
 }

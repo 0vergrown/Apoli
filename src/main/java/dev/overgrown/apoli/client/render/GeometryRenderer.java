@@ -114,6 +114,31 @@ public final class GeometryRenderer {
         ModelParts.HEAD, ModelParts.BODY, ModelParts.RIGHT_ARM, ModelParts.LEFT_ARM, ModelParts.RIGHT_LEG, ModelParts.LEFT_LEG
     };
 
+    private static boolean nestedInAnother(CustomModel.Bone[] bound, int index, ModelPart[] ancestors) {
+        if (ancestors.length == 0) {
+            return false;
+        }
+        for (int j = 0; j < bound.length; j++) {
+            if (j == index) continue;
+            ModelPart other = bound[j].part;
+            for (int k = 0; k < ancestors.length; k++) {
+                if (ancestors[k] == other) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean visible(ModelPart[] parts) {
+        for (int i = 0; i < parts.length; i++) {
+            if (!parts[i].visible) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private static void show(CustomModel model, String key) {
         CustomModel.Bone[] bound = model.bones(key);
         for (int j = 0; j < bound.length; j++) {
@@ -129,14 +154,21 @@ public final class GeometryRenderer {
                             int light, @Nullable Entity subject) {
         VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forGeometry(render.mode(),
             DynamicTextures.resolve(render.texture(), subject), ModelPartAnimator.ageInTicks(subject), render.scrollSpeed()));
+        dev.overgrown.apoli.data.Vector offset = render.offset();
+        boolean shifted = offset.x() != 0.0F || offset.y() != 0.0F || offset.z() != 0.0F;
         boolean scaled = render.scale() != 1.0F;
-        if (scaled) {
+        if (shifted || scaled) {
             pose.pushPose();
-            pose.scale(render.scale(), render.scale(), render.scale());
+            if (shifted) {
+                pose.translate(offset.x(), -offset.y(), -offset.z());
+            }
+            if (scaled) {
+                pose.scale(render.scale(), render.scale(), render.scale());
+            }
         }
         model.root().render(pose, consumer, light, OverlayTexture.NO_OVERLAY,
             render.red(), render.green(), render.blue(), render.alpha());
-        if (scaled) {
+        if (shifted || scaled) {
             pose.popPose();
         }
     }
@@ -148,6 +180,12 @@ public final class GeometryRenderer {
 
     public static void drawSlot(GeometryRender render, CustomModel model, String normalizedName, float alphaScale,
                                 PoseStack pose, MultiBufferSource buffers, int light, @Nullable Entity subject) {
+        drawSlot(render, model, normalizedName, alphaScale, pose, buffers, light, subject, null);
+    }
+
+    public static void drawSlot(GeometryRender render, CustomModel model, String normalizedName, float alphaScale,
+                                PoseStack pose, MultiBufferSource buffers, int light, @Nullable Entity subject,
+                                @Nullable ModelPart anchor) {
         CustomModel.Bone[] bound = model.bones(normalizedName);
         if (bound.length == 0) {
             return;
@@ -160,8 +198,38 @@ public final class GeometryRenderer {
             pose.scale(render.scale(), render.scale(), render.scale());
         }
         for (int i = 0; i < bound.length; i++) {
-            bound[i].part.render(pose, consumer, light, OverlayTexture.NO_OVERLAY,
+            CustomModel.Bone bone = bound[i];
+            ModelPart[] ancestors = bone.ancestors();
+            if (!visible(ancestors) || nestedInAnother(bound, i, ancestors)) continue;
+            ModelPart part = bone.part;
+            if (anchor == null) {
+                part.render(pose, consumer, light, OverlayTexture.NO_OVERLAY,
                 render.red(), render.green(), render.blue(), render.alpha() * alphaScale);
+                continue;
+            }
+            float x = part.x;
+            float y = part.y;
+            float z = part.z;
+            float xRot = part.xRot;
+            float yRot = part.yRot;
+            float zRot = part.zRot;
+            part.x = 0.0F;
+            part.y = 0.0F;
+            part.z = 0.0F;
+            part.xRot = xRot - bone.restXRot();
+            part.yRot = yRot - bone.restYRot();
+            part.zRot = zRot - bone.restZRot();
+            pose.pushPose();
+            anchor.translateAndRotate(pose);
+            part.render(pose, consumer, light, OverlayTexture.NO_OVERLAY,
+                render.red(), render.green(), render.blue(), render.alpha() * alphaScale);
+            pose.popPose();
+            part.x = x;
+            part.y = y;
+            part.z = z;
+            part.xRot = xRot;
+            part.yRot = yRot;
+            part.zRot = zRot;
         }
         if (scaled) {
             pose.popPose();

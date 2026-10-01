@@ -11,11 +11,17 @@ import dev.overgrown.apoli.data.FluidHandling;
 import dev.overgrown.apoli.data.ShapeType;
 import dev.overgrown.apoli.data.Space;
 import dev.overgrown.apoli.data.Vector;
+import dev.overgrown.apoli.dev.DevMode;
+import dev.overgrown.apoli.dev.DevParticles;
 import dev.overgrown.apoli.util.InteractionRange;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 import java.util.Optional;
@@ -76,9 +82,31 @@ public final class RaycastBiEntityCondition implements ConditionType<BiEntityCtx
         double coneCos = cone ? Math.cos(Math.toRadians(cfg.coneAngle.get())) : -1.0;
         Vec3 hit = RaycastAction.entityHit(target, origin, dir, origin.add(dir.scale(range)), range,
             rx, ry, rz, cone, coneCos);
-        if (hit == null) return false;
-        if (!cfg.block || origin.distanceToSqr(hit) < 1.0e-8) return true;
-        return actor.level().clip(new ClipContext(origin, hit, cfg.shapeType.vanilla(),
-            cfg.fluidHandling.vanilla(), actor)).getType() == HitResult.Type.MISS;
+        BlockHitResult blocker = null;
+        if (hit != null && cfg.block && origin.distanceToSqr(hit) >= 1.0e-8) {
+            BlockHitResult clip = actor.level().clip(new ClipContext(origin, hit, cfg.shapeType.vanilla(),
+                cfg.fluidHandling.vanilla(), actor));
+            if (clip.getType() != HitResult.Type.MISS) blocker = clip;
+        }
+        boolean passed = hit != null && blocker == null;
+        if (DevMode.any()) outline(actor.level(), cfg, actor, target, origin, dir, range, rx, ry, rz, hit, blocker, passed);
+        return passed;
+    }
+
+    private static void outline(Level world, Cfg cfg, Entity actor, Entity target, Vec3 origin, Vec3 dir,
+                                double range, double rx, double ry, double rz, @Nullable Vec3 hit,
+                                @Nullable BlockHitResult blocker, boolean passed) {
+        if (!(world instanceof ServerLevel level)) return;
+        DevParticles.Ray kind = DevParticles.Ray.CONDITION;
+        if (DevParticles.due(level, actor, cfg)) {
+            DevParticles.ray(level, kind, origin, dir, 0.0, range);
+            DevParticles.detection(level, kind, origin, dir, range, rx, ry, rz,
+                cfg.coneAngle.isPresent() ? cfg.coneAngle.get() : -1.0);
+        }
+        if (hit == null || !DevParticles.due(level, actor, target, cfg)) return;
+        DevParticles.segment(level, kind, origin, hit,
+            blocker == null ? Double.POSITIVE_INFINITY : origin.distanceTo(blocker.getLocation()));
+        if (blocker != null) DevParticles.mark(level, kind, blocker.getBlockPos(), true);
+        DevParticles.mark(level, kind, target, passed);
     }
 }

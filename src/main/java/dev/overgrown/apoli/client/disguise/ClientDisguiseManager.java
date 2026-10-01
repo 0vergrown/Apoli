@@ -82,6 +82,10 @@ public final class ClientDisguiseManager {
         renderActor = null;
     }
 
+    public static boolean hasAny() {
+        return !DISGUISES.isEmpty();
+    }
+
     @Nullable
     public static DisguiseData get(int netId) {
         return DISGUISES.get(netId);

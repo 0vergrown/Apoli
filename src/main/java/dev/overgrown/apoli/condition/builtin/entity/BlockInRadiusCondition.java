@@ -34,7 +34,7 @@ public final class BlockInRadiusCondition implements ConditionType<EntityCtx, Bl
         int ry = (int) Math.ceil(cfg.radius.y());
         int rz = (int) Math.ceil(cfg.radius.z());
 
-        if (dev.overgrown.apoli.dev.DevParticles.due(ctx.level())
+        if (dev.overgrown.apoli.dev.DevParticles.due(ctx.level(), ctx.entity(), cfg)
             && ctx.level() instanceof net.minecraft.server.level.ServerLevel devLevel) {
             dev.overgrown.apoli.dev.DevParticles.outlineCondition(devLevel,
                 net.minecraft.world.phys.Vec3.atCenterOf(center), cfg.shape,

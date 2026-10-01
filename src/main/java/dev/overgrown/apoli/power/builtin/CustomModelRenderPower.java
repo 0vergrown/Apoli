@@ -8,6 +8,7 @@ import dev.overgrown.apoli.data.EquipmentSlot;
 import dev.overgrown.apoli.data.ModelAnimation;
 import dev.overgrown.apoli.data.BodyPart;
 import dev.overgrown.apoli.data.RenderMode;
+import dev.overgrown.apoli.data.Vector;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
@@ -62,7 +63,9 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         boolean showFirstPerson,
         float scale,
         Optional<ModelAnimation> animations,
-        float scrollSpeed
+        float scrollSpeed,
+        boolean bindBodyParts,
+        Vector offset
     ) {
         @Nullable
         public ResourceLocation wide() {
@@ -110,7 +113,9 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         float scale,
         boolean renderAsOverlay,
         Optional<ModelAnimation> animations,
-        float scrollSpeed
+        float scrollSpeed,
+        boolean bindBodyParts,
+        Vector offset
     ) {}
 
     private record Base(
@@ -132,7 +137,7 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         float scale
     ) {}
 
-    private record Extras(Optional<ModelAnimation> animations, float scrollSpeed) {}
+    private record Extras(Optional<ModelAnimation> animations, float scrollSpeed, boolean bindBodyParts, Vector offset) {}
 
     private static final MapCodec<Base> BASE_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
         Mode.CODEC.optionalFieldOf("mode", Mode.TEXTURE).forGetter(Base::mode),
@@ -155,7 +160,9 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
 
     private static final MapCodec<Extras> EXTRAS_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
         LoggedOptionalField.of("animations", ModelAnimation.CODEC).forGetter(Extras::animations),
-        LoggedOptionalField.of("scroll_speed", Codec.FLOAT, 0.0F).forGetter(Extras::scrollSpeed)
+        LoggedOptionalField.of("scroll_speed", Codec.FLOAT, 0.0F).forGetter(Extras::scrollSpeed),
+        LoggedOptionalField.of("bind_body_parts", Codec.BOOL, true).forGetter(Extras::bindBodyParts),
+        LoggedOptionalField.of("offset", Vector.CODEC, Vector.ZERO).forGetter(Extras::offset)
     ).apply(instance, Extras::new));
 
     private static final MapCodec<Config> CONFIG_CODEC =
@@ -163,14 +170,14 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
             .xmap(
                 pair -> merge(pair.getFirst(), pair.getSecond()),
                 config -> com.mojang.datafixers.util.Pair.of(split(config),
-                    new Extras(config.animations(), config.scrollSpeed()))
+                    new Extras(config.animations(), config.scrollSpeed(), config.bindBodyParts(), config.offset()))
             );
 
     private static Config merge(Base base, Extras extras) {
         return new Config(base.mode(), base.wideTexture(), base.slimTexture(), base.model(), base.texture(),
             base.renderAsOverlay(), base.hideCape(), base.hiddenSlots(), base.renderType(), base.bodyParts(),
             base.red(), base.green(), base.blue(), base.alpha(), base.showFirstPerson(), base.scale(),
-            extras.animations(), extras.scrollSpeed());
+            extras.animations(), extras.scrollSpeed(), extras.bindBodyParts(), extras.offset());
     }
 
     private static Base split(Config config) {
@@ -267,7 +274,7 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
     private static GeometryRender toRender(Config cfg) {
         return new GeometryRender(cfg.model().get(), cfg.texture().get(), cfg.renderType(), cfg.bodyParts(),
             cfg.red(), cfg.green(), cfg.blue(), cfg.alpha(), cfg.showFirstPerson(), cfg.scale(), cfg.renderAsOverlay(),
-            cfg.animations(), cfg.scrollSpeed());
+            cfg.animations(), cfg.scrollSpeed(), cfg.bindBodyParts(), cfg.offset());
     }
 
     @Nullable

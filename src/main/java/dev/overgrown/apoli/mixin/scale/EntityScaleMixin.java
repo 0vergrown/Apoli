@@ -7,6 +7,7 @@ import dev.overgrown.apoli.scale.Scales;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -53,7 +54,7 @@ public abstract class EntityScaleMixin implements ScaleHolder {
     private void apoli$scaleEyeHeight(Pose pose, EntityDimensions dimensions,
                                       CallbackInfoReturnable<Float> cir) {
         Entity self = (Entity) (Object) this;
-        if (Scales.untouched(self)) return;
+        if (self instanceof LivingEntity || Scales.untouched(self)) return;
         float height = Scales.applied(self, ScaleTypes.HITBOX_HEIGHT);
         float eye = Scales.applied(self, ScaleTypes.EYE_HEIGHT);
         if (eye == height || height <= 0.0F) return;

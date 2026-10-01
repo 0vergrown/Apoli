@@ -110,6 +110,7 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
         }
         if (self.distanceToSqr(this.apoli$originX, this.apoli$originY, this.apoli$originZ) > this.apoli$maxRangeSq
             && (ret == null || !apoli$startReturn(self, custom, ret, null))) {
+            apoli$runOwnerAction(self, config.hooks().bientityActionOnExpire());
             self.discard();
         }
     }
@@ -232,10 +233,11 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
     @Unique
     private boolean apoli$tryBounce(Projectile self, Level level, FireProjectilePower.Config config,
                                     HitResult result) {
-        FireProjectilePower.Params params = config.params();
-        if (!params.reflective()) return false;
+        FireProjectilePower.Reflect reflect = config.reflective().orElse(null);
+        if (reflect == null) return false;
         if (!(result instanceof BlockHitResult blockHit)) return false;
-        int limit = params.maxBounces();
+        Entity owner = self.getOwner();
+        int limit = reflect.maxBounces().evalInt(owner);
         if (limit >= 0 && this.apoli$bounces >= limit) return false;
 
         FireProjectilePower.Hooks hooks = config.hooks();
@@ -254,7 +256,7 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
         Vec3 reflected = new Vec3(
             velocity.x - 2.0 * dot * face.getStepX(),
             velocity.y - 2.0 * dot * face.getStepY(),
-            velocity.z - 2.0 * dot * face.getStepZ()).scale(params.bounceSpeed());
+            velocity.z - 2.0 * dot * face.getStepZ()).scale(reflect.speed().eval(owner));
         if (reflected.lengthSqr() < 1.0E-6) return false;
 
         this.apoli$bounces++;

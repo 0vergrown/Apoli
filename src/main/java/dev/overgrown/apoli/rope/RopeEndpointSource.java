@@ -5,6 +5,10 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.compat.sable.SableSubLevels;
 import dev.overgrown.apoli.data.Vector;
+import dev.overgrown.apoli.dev.DevMode;
+import dev.overgrown.apoli.dev.DevParticles;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -72,6 +76,7 @@ public record RopeEndpointSource(Type type, float distance, boolean entities, bo
 
         Vec3 blockHitPos = null;
         UUID blockHitSubLevel = null;
+        BlockPos worldBlock = null;
         double blockDistSq = Double.POSITIVE_INFINITY;
         double maxDistSq = (distance + 2.0) * (distance + 2.0);
         if (blocks) {
@@ -84,29 +89,41 @@ public record RopeEndpointSource(Type type, float distance, boolean entities, bo
                     ? blockHitPos
                     : SableSubLevels.toWorld(level, blockHitSubLevel, blockHitPos);
                 blockDistSq = worldPos == null ? Double.POSITIVE_INFINITY : origin.distanceToSqr(worldPos);
+                if (blockHitSubLevel == null) worldBlock = blockHit.getBlockPos();
                 if (blockDistSq > maxDistSq) {
                     blockHitPos = null;
                     blockHitSubLevel = null;
+                    worldBlock = null;
                     blockDistSq = Double.POSITIVE_INFINITY;
                 }
             }
         }
 
+        Entity best = null;
+        double bestSq = blockDistSq;
         if (entities) {
             AABB box = new AABB(origin, end).inflate(1.0);
             List<Entity> candidates = level.getEntities(actor, box,
                 e -> e != actor && e instanceof LivingEntity && e.isPickable());
-            Entity best = null;
-            double bestSq = blockDistSq;
             for (Entity cand : candidates) {
                 Optional<Vec3> inter = cand.getBoundingBox().clip(origin, end);
                 if (inter.isEmpty()) continue;
                 double dSq = origin.distanceToSqr(inter.get());
                 if (dSq < bestSq) { bestSq = dSq; best = cand; }
             }
-            if (best != null) return new RopeAnchor.OfEntity(best.getId(), Vec3.ZERO);
         }
 
+        if (DevMode.any() && level instanceof ServerLevel devLevel) {
+            DevParticles.Ray kind = DevParticles.Ray.ACTION;
+            DevParticles.ray(devLevel, kind, origin, dir, Double.isInfinite(bestSq) ? distance : Math.sqrt(bestSq), distance);
+            if (best != null) {
+                DevParticles.mark(devLevel, kind, best, true);
+            } else if (worldBlock != null) {
+                DevParticles.mark(devLevel, kind, worldBlock, true);
+            }
+        }
+
+        if (best != null) return new RopeAnchor.OfEntity(best.getId(), Vec3.ZERO);
         if (blockHitPos == null) return null;
         return blockHitSubLevel == null
             ? new RopeAnchor.Position(blockHitPos)

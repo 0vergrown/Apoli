@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.power.builtin;
 
+import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -42,7 +43,59 @@ import java.util.OptionalInt;
 import java.util.UUID;
 
 public final class FireProjectilePower extends PowerType<FireProjectilePower.Config> {
-    public record Config(Params params, Hooks hooks, Optional<Return> returning) {}
+    public record Config(Params params, Hooks hooks, Optional<Return> returning, Optional<Homing> homing,
+                         Optional<Reflect> reflective) {}
+
+    public record Homing(
+        Expression delay,
+        Expression duration,
+        Expression range,
+        Expression angle,
+        Expression turnRate,
+        Optional<BiEntityCondition> bientityCondition
+    ) {
+        public static final Codec<Homing> CODEC = RecordCodecBuilder.create(i -> i.group(
+            Expression.INT_OR_EXPR.optionalFieldOf("delay", Expression.constant(0)).forGetter(Homing::delay),
+            Expression.INT_OR_EXPR.optionalFieldOf("duration", Expression.constant(0)).forGetter(Homing::duration),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("range", Expression.constant(8.0)).forGetter(Homing::range),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("angle", Expression.constant(60.0)).forGetter(Homing::angle),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("turn_rate", Expression.constant(8.0)).forGetter(Homing::turnRate),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Homing::bientityCondition)
+        ).apply(i, Homing::new));
+    }
+
+    public record Reflect(Expression maxBounces, Expression speed) {
+        private static final Expression DEFAULT_MAX_BOUNCES = Expression.constant(4);
+        private static final Expression DEFAULT_SPEED = Expression.constant(1.0);
+
+        public static final Codec<Reflect> CODEC = dev.overgrown.apoli.alias.AliasingMapCodec.wrap(
+            RecordCodecBuilder.<Reflect>mapCodec(i -> i.group(
+                Expression.INT_OR_EXPR.optionalFieldOf("max_bounces", DEFAULT_MAX_BOUNCES).forGetter(Reflect::maxBounces),
+                Expression.FLOAT_OR_EXPR.optionalFieldOf("speed", DEFAULT_SPEED).forGetter(Reflect::speed)
+            ).apply(i, Reflect::new)),
+            java.util.Map.of("bounce_speed", "speed")).codec();
+    }
+
+    private record ReflectFields(Optional<Either<Boolean, Reflect>> reflective, Optional<Expression> maxBounces,
+                                 Optional<Expression> bounceSpeed) {}
+
+    private static final MapCodec<Optional<Reflect>> REFLECTIVE = RecordCodecBuilder.<ReflectFields>mapCodec(i -> i.group(
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("reflective", Codec.either(Codec.BOOL, Reflect.CODEC)).forGetter(ReflectFields::reflective),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("max_bounces", Expression.INT_OR_EXPR).forGetter(ReflectFields::maxBounces),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("bounce_speed", Expression.FLOAT_OR_EXPR).forGetter(ReflectFields::bounceSpeed)
+    ).apply(i, ReflectFields::new)).xmap(
+        FireProjectilePower::reflectFrom,
+        reflect -> new ReflectFields(reflect.map(r -> Either.<Boolean, Reflect>right(r)), Optional.empty(), Optional.empty()));
+
+    private static Optional<Reflect> reflectFrom(ReflectFields fields) {
+        if (fields.reflective().isEmpty()) return Optional.empty();
+        return fields.reflective().get().map(
+            enabled -> enabled
+                ? Optional.of(new Reflect(fields.maxBounces().orElse(Reflect.DEFAULT_MAX_BOUNCES),
+                    fields.bounceSpeed().orElse(Reflect.DEFAULT_SPEED)))
+                : Optional.empty(),
+            Optional::of);
+    }
 
     public record Return(
         boolean onHitEntity,
@@ -80,25 +133,19 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         boolean allowConditionalCancelling,
         boolean blockActionCancelsMissAction,
         Optional<Key> key,
-        float offsetX,
-        float offsetY,
-        float offsetZ,
-        Space space,
-        boolean reflective,
-        int maxBounces,
-        float bounceSpeed
+        Expression offsetX,
+        Expression offsetY,
+        Expression offsetZ,
+        Space space
     ) {
-        Params withExtras(Spawn spawn, Bounce bounce) {
+        Params withSpawn(Spawn spawn) {
             return new Params(entityType, textureLocation, cooldown, hudRender, count, interval, startDelay,
                 speed, divergence, maxDistance, sound, tag, allowConditionalCancelling,
-                blockActionCancelsMissAction, key, spawn.offsetX(), spawn.offsetY(), spawn.offsetZ(), spawn.space(),
-                bounce.reflective(), bounce.maxBounces(), bounce.bounceSpeed());
+                blockActionCancelsMissAction, key, spawn.offsetX(), spawn.offsetY(), spawn.offsetZ(), spawn.space());
         }
     }
 
-    private record Spawn(float offsetX, float offsetY, float offsetZ, Space space) {}
-
-    private record Bounce(boolean reflective, int maxBounces, float bounceSpeed) {}
+    private record Spawn(Expression offsetX, Expression offsetY, Expression offsetZ, Space space) {}
 
     public record Hooks(
         Optional<EntityAction> entityActionBeforeFiring,
@@ -113,8 +160,11 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         Optional<BiEntityCondition> ownerBientityCondition,
         Optional<EntityAction> projectileAction,
         Optional<EntityAction> shooterAction,
-        Optional<BiEntityAction> bientityActionOnBounce
+        Optional<BiEntityAction> bientityActionOnBounce,
+        Optional<BiEntityAction> bientityActionOnExpire
     ) {}
+
+    private static final Expression NO_OFFSET = Expression.constant(0);
 
     private static final MapCodec<Params> PARAMS_BODY = RecordCodecBuilder.mapCodec(i -> i.group(
         IdCodecs.ID.optionalFieldOf("entity_type").forGetter(Params::entityType),
@@ -136,27 +186,19 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
                 maxDistance, sound, tag, allowConditionalCancelling, blockActionCancelsMissAction, key) ->
         new Params(entityType, textureLocation, cooldown, hudRender, count, interval, startDelay, speed, divergence,
             maxDistance, sound, tag, allowConditionalCancelling, blockActionCancelsMissAction, key,
-            0f, 0f, 0f, Space.WORLD, false, 0, 1.0f)));
+            NO_OFFSET, NO_OFFSET, NO_OFFSET, Space.WORLD)));
 
     private static final MapCodec<Spawn> PARAMS_SPAWN = RecordCodecBuilder.mapCodec(i -> i.group(
-        Codec.FLOAT.optionalFieldOf("offset_x", 0f).forGetter(Spawn::offsetX),
-        Codec.FLOAT.optionalFieldOf("offset_y", 0f).forGetter(Spawn::offsetY),
-        Codec.FLOAT.optionalFieldOf("offset_z", 0f).forGetter(Spawn::offsetZ),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("offset_x", NO_OFFSET).forGetter(Spawn::offsetX),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("offset_y", NO_OFFSET).forGetter(Spawn::offsetY),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("offset_z", NO_OFFSET).forGetter(Spawn::offsetZ),
         Space.CODEC.optionalFieldOf("space", Space.WORLD).forGetter(Spawn::space)
     ).apply(i, Spawn::new));
 
-    private static final MapCodec<Bounce> PARAMS_BOUNCE = RecordCodecBuilder.mapCodec(i -> i.group(
-        Codec.BOOL.optionalFieldOf("reflective", false).forGetter(Bounce::reflective),
-        Codec.INT.optionalFieldOf("max_bounces", 4).forGetter(Bounce::maxBounces),
-        Codec.FLOAT.optionalFieldOf("bounce_speed", 1.0f).forGetter(Bounce::bounceSpeed)
-    ).apply(i, Bounce::new));
-
     private static final MapCodec<Params> PARAMS =
-        Codec.mapPair(Codec.mapPair(PARAMS_BODY, PARAMS_SPAWN), PARAMS_BOUNCE).xmap(
-            pair -> pair.getFirst().getFirst().withExtras(pair.getFirst().getSecond(), pair.getSecond()),
-            params -> Pair.of(
-                Pair.of(params, new Spawn(params.offsetX(), params.offsetY(), params.offsetZ(), params.space())),
-                new Bounce(params.reflective(), params.maxBounces(), params.bounceSpeed())));
+        Codec.mapPair(PARAMS_BODY, PARAMS_SPAWN).xmap(
+            pair -> pair.getFirst().withSpawn(pair.getSecond()),
+            params -> Pair.of(params, new Spawn(params.offsetX(), params.offsetY(), params.offsetZ(), params.space())));
 
     private static final MapCodec<Hooks> HOOKS = RecordCodecBuilder.mapCodec(i -> i.group(
         dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action_before_firing", EntityAction.CODEC).forGetter(Hooks::entityActionBeforeFiring),
@@ -171,13 +213,16 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         dev.overgrown.apoli.codec.LoggedOptionalField.strict("owner_bientity_condition", BiEntityCondition.CODEC).forGetter(Hooks::ownerBientityCondition),
         dev.overgrown.apoli.codec.LoggedOptionalField.of("projectile_action", EntityAction.CODEC).forGetter(Hooks::projectileAction),
         dev.overgrown.apoli.codec.LoggedOptionalField.of("shooter_action", EntityAction.CODEC).forGetter(Hooks::shooterAction),
-        dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action_on_bounce", BiEntityAction.CODEC).forGetter(Hooks::bientityActionOnBounce)
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action_on_bounce", BiEntityAction.CODEC).forGetter(Hooks::bientityActionOnBounce),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action_on_expire", BiEntityAction.CODEC).forGetter(Hooks::bientityActionOnExpire)
     ).apply(i, Hooks::new));
 
     public static final MapCodec<Config> CONFIG_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
         PARAMS.forGetter(Config::params),
         HOOKS.forGetter(Config::hooks),
-        dev.overgrown.apoli.codec.LoggedOptionalField.of("return", Return.CODEC).forGetter(Config::returning)
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("return", Return.CODEC).forGetter(Config::returning),
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("homing", Homing.CODEC).forGetter(Config::homing),
+        REFLECTIVE.forGetter(Config::reflective)
     ).apply(i, Config::new));
 
     @Override
@@ -374,6 +419,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
             } else {
                 custom.setTexture(declared);
             }
+            cfg.homing().ifPresent(homing -> custom.startHoming(homing, owner));
             projectile = custom;
         } else if (p.entityType().isPresent()) {
             EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.getOptional(p.entityType().get()).orElse(null);
@@ -394,7 +440,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         float yaw = owner.getYRot();
         float pitch = owner.getXRot();
         Vec3 spawn = new Vec3(owner.getX(), owner.getEyeY(), owner.getZ())
-            .add(p.space().toGlobal(owner, new Vec3(p.offsetX(), p.offsetY(), p.offsetZ())));
+            .add(p.space().toGlobal(owner, new Vec3(p.offsetX().eval(owner), p.offsetY().eval(owner), p.offsetZ().eval(owner))));
         projectile.moveTo(spawn.x, spawn.y, spawn.z, yaw, pitch);
 
         float speed = (float) p.speed().eval(owner);
