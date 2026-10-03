@@ -182,6 +182,7 @@
     "pose.LivingEntityRendererPoseMixin",
     "pose.PlayerRendererPoseMixin",
     "power.FogRendererModifyFogMixin",
+    "power.LevelRendererSkyMixin",
     "power.PreventEntitySelectionMixin",
     "scale.CameraScaleMixin",
     "scale.EntityRenderDispatcherScaleMixin",
