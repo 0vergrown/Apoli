@@ -129,7 +129,7 @@ public final class ApoliClient implements ClientModInitializer {
 
         ClientPlayNetworking.registerGlobalReceiver(
             dev.overgrown.apoli.network.payload.MountOffsetS2C.TYPE, (payload, context) ->
-                context.client().execute(() -> dev.overgrown.apoli.mount.MountOffsets.put(
+                context.client().execute(() -> dev.overgrown.apoli.mount.MountOffsets.putClient(
                     payload.passengerId(),
                     new dev.overgrown.apoli.mount.MountOffsets.Offset(
                         payload.x(), payload.y(), payload.z(), payload.space(), payload.rotation()))));
@@ -172,6 +172,11 @@ public final class ApoliClient implements ClientModInitializer {
             context.client().execute(() -> ForcedKeys.force(payload.key(), payload.duration(), payload.release())));
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SyncShaderS2C.TYPE, (payload, context) ->
             context.client().execute(() -> ShaderPowerState.accept(payload.shader(), payload.toggleable())));
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SyncResolvedPowersS2C.TYPE, (payload, context) ->
+            context.client().execute(() -> ClientResolvedPowers.apply(payload)));
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SetPerspectiveS2C.TYPE, (payload, context) ->
+            context.client().execute(() -> dev.overgrown.apoli.client.camera.CameraController.setPerspective(
+                context.client(), payload.perspective())));
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             ClientPlayNetworking.send(new dev.overgrown.apoli.network.payload.ProtocolVersionPayload(
@@ -209,8 +214,11 @@ public final class ApoliClient implements ClientModInitializer {
                 ClientPowerState.clear();
                 dev.overgrown.apoli.client.ClientEntitySets.clear();
                 ClientDevMode.clear();
-                dev.overgrown.apoli.mount.MountOffsets.clearAll();
+                dev.overgrown.apoli.mount.MountOffsets.clearClient();
                 ShaderPowerState.clear();
+                ClientResolvedPowers.clear();
+                dev.overgrown.apoli.client.camera.CameraController.reset();
+                CameraPerspectiveReporter.reset();
                 dev.overgrown.apoli.client.render.BlockRenderRules.clear();
                 dev.overgrown.apoli.client.render.ClientRenderFlags.clear();
                 TextOverlayRenderer.clear();
@@ -296,6 +304,8 @@ public final class ApoliClient implements ClientModInitializer {
             }
             PlayerModelTypeReporter.tick(mc);
             CameraPerspectiveReporter.tick(mc);
+            ClientResolvedPowers.tick(mc);
+            dev.overgrown.apoli.client.camera.CameraController.clientTick(mc);
             ForcedKeys.tick();
             dev.overgrown.apoli.power.builtin.ModifyFogInterpolator.tick(mc.player);
         });

@@ -40,7 +40,6 @@ public final class ClientEntitySets {
 
     private static final Set<ResourceLocation> WARNED = new HashSet<>();
 
-    /** One line in the log when an overlay names a `set` that is not an apoli:entity_set the client knows about. */
     public static synchronized void warnIfUnknown(ResourceLocation setId) {
         if (!WARNED.add(setId)) return;
         Power power = ApoliPowers.get(setId);

@@ -36,6 +36,8 @@ public final class TextureOverlays {
             pose.scale(layer.scale(), layer.scale(), layer.scale());
         }
         List<ModelPart> parts = layer.wholeModel() ? null : partsOf(model, layer.bodyParts(), subject);
+        ModelPartNames.Named named = parts != null && !(model instanceof HumanoidModel<?>) && !(model instanceof ExtraModelParts)
+            ? ModelPartNames.named(model) : null;
         EntityModelFeaturesCompat.holdPose();
         try {
             if (parts == null) {
@@ -44,7 +46,15 @@ public final class TextureOverlays {
                 for (int i = 0; i < parts.size(); i++) {
                     ModelPart part = parts.get(i);
                     if (parts.indexOf(part) != i) continue;
+                    ModelPart[] chain = named == null ? null : named.chain(part);
+                    if (chain == null || chain.length == 0) {
+                        part.render(pose, consumer, light, OverlayTexture.NO_OVERLAY, color);
+                        continue;
+                    }
+                    pose.pushPose();
+                    for (int c = 0; c < chain.length; c++) chain[c].translateAndRotate(pose);
                     part.render(pose, consumer, light, OverlayTexture.NO_OVERLAY, color);
+                    pose.popPose();
                 }
                 parts.clear();
             }
@@ -72,7 +82,15 @@ public final class TextureOverlays {
             }
             return parts;
         }
-        return null;
+        java.util.Map<String, ModelPart> named = ModelPartNames.of(model);
+        if (named.isEmpty()) return null;
+        for (int i = 0; i < bodyParts.size(); i++) {
+            BodyPart part = bodyParts.get(i);
+            if (part.isEverything()) return null;
+            ModelPart found = named.get(part.key());
+            if (found != null) parts.add(found);
+        }
+        return parts;
     }
 
     public static void renderArm(ResolvedLayer layer, ResourceLocation texture, float alphaScale, float ageInTicks,

@@ -74,7 +74,7 @@ public final class TransferAction implements ActionType<BiEntityCtx, TransferAct
         if (donor == recipient || donor == null || recipient == null) return;
 
         PowerContainer donorContainer = PowerContainer.of(donor);
-        PowerContainer recipientContainer = PowerContainer.of(recipient);
+        PowerContainer recipientContainer = dev.overgrown.apoli.PowerContainerAttachment.getOrCreate(recipient);
         if (donorContainer == null || recipientContainer == null) return;
 
         Map<ResourceLocation, Set<ResourceLocation>> toTransfer = new LinkedHashMap<>();

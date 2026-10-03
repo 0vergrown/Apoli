@@ -349,6 +349,9 @@ public final class PowerTypes {
         );
         PowerTypeRegistry.registerAliasDefaults(Apoli.id("lava_vision"), AliasDefault.of(
             "fluid", com.mojang.serialization.Codec.STRING, "lava"));
+        PowerTypeRegistry.register(Apoli.id("modify_camera"), new ModifyCameraPower());
+        PowerTypeRegistry.register(Apoli.id("modify_fov"), new ModifyFovPower());
+        PowerTypeRegistry.register(Apoli.id("zoom"), new ZoomPower());
         PowerTypeRegistry.register(Apoli.id("modify_camera_submersion"), new ModifyCameraSubmersionPower(),
             AliasingOptions.builder().addTypeAlias(Apoli.id("modify_camera_submersion_type")).build());
 

@@ -37,6 +37,8 @@ public final class PowerContainerImpl implements PowerContainer {
 
     private @Nullable CompoundTag cachedSaveTag;
     private @Nullable Map<ResourceLocation, List<ResourceLocation>> typeIndex;
+    private long @Nullable [] typeBits;
+    private @Nullable Map<ResourceLocation, List<ResourceLocation>> typeBitsSource;
     private @Nullable List<TickEntry> tickList;
     private @Nullable Set<ResourceLocation> effectiveSuppressed;
     private Set<ResourceLocation> notifiedSuppressed = Set.of();
@@ -157,6 +159,10 @@ public final class PowerContainerImpl implements PowerContainer {
         boolean first = sources.isEmpty();
         boolean added = sources.add(source);
         if (added) markStructureDirty();
+        if (added && first && owner != null && owner.level() instanceof ServerLevel) {
+            Power typed = ApoliPowers.get(power);
+            if (typed != null) PowerTypeUsage.markHeld(PowerTypeRegistry.resolveId(typed.typeId()));
+        }
         if (added && first && owner != null && owner.level() instanceof ServerLevel) {
             Power loaded = ApoliPowers.get(power);
             if (loaded != null) {
@@ -497,6 +503,11 @@ public final class PowerContainerImpl implements PowerContainer {
     @Override
     public List<ResourceLocation> powersOfType(ResourceLocation canonicalTypeId) {
         if (bySources.isEmpty()) return List.of();
+        List<ResourceLocation> list = typeIndex().get(canonicalTypeId);
+        return list == null ? List.of() : list;
+    }
+
+    private Map<ResourceLocation, List<ResourceLocation>> typeIndex() {
         ensureCacheGeneration();
         Map<ResourceLocation, List<ResourceLocation>> index = this.typeIndex;
         if (index == null) {
@@ -509,9 +520,22 @@ public final class PowerContainerImpl implements PowerContainer {
             }
             this.typeIndex = index;
         }
-        List<ResourceLocation> list = index.get(canonicalTypeId);
-        return list == null ? List.of() : list;
+        return index;
     }
+
+    public long[] heldTypeBits() {
+        if (bySources.isEmpty()) return EMPTY_BITS;
+        Map<ResourceLocation, List<ResourceLocation>> index = typeIndex();
+        long[] bits = this.typeBits;
+        if (bits == null || this.typeBitsSource != index) {
+            bits = PowerTypeUsage.bitsOf(index.keySet());
+            this.typeBits = bits;
+            this.typeBitsSource = index;
+        }
+        return bits;
+    }
+
+    private static final long[] EMPTY_BITS = new long[0];
 
     private List<TickEntry> tickEntries() {
         ensureCacheGeneration();

@@ -65,6 +65,12 @@ public final class ApoliNetwork {
             dev.overgrown.apoli.network.payload.ForceKeyS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.SyncShaderS2C.TYPE,
             dev.overgrown.apoli.network.payload.SyncShaderS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.SyncResolvedPowersS2C.TYPE,
+            dev.overgrown.apoli.network.payload.SyncResolvedPowersS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.SetPerspectiveS2C.TYPE,
+            dev.overgrown.apoli.network.payload.SetPerspectiveS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.CameraTypeC2S.TYPE,
+            dev.overgrown.apoli.network.payload.CameraTypeC2S.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SkillDefsSyncS2C.TYPE, SkillDefsSyncS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SkillStateSyncS2C.TYPE, SkillStateSyncS2C.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(BuySkillC2S.TYPE, BuySkillC2S.STREAM_CODEC);
@@ -122,7 +128,6 @@ public final class ApoliNetwork {
         if (!connected(recipient)) return;
         PowerSyncCache.sendTo(recipient);
         dev.overgrown.apoli.power.builtin.InventoryPower.syncAll(recipient);
-        dev.overgrown.apoli.mount.MountOffsets.syncAll(recipient);
     }
 
     public static void sendPowerInventory(ServerPlayer recipient,
@@ -196,6 +201,22 @@ public final class ApoliNetwork {
     public static void sendShader(ServerPlayer recipient, dev.overgrown.apoli.network.payload.SyncShaderS2C payload) {
         if (connected(recipient)
             && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.SyncShaderS2C.TYPE)) {
+            ServerPlayNetworking.send(recipient, payload);
+        }
+    }
+
+    public static void sendResolvedPowers(ServerPlayer recipient,
+                                          dev.overgrown.apoli.network.payload.SyncResolvedPowersS2C payload) {
+        if (connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.SyncResolvedPowersS2C.TYPE)) {
+            ServerPlayNetworking.send(recipient, payload);
+        }
+    }
+
+    public static void sendPerspective(ServerPlayer recipient,
+                                       dev.overgrown.apoli.network.payload.SetPerspectiveS2C payload) {
+        if (connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.SetPerspectiveS2C.TYPE)) {
             ServerPlayNetworking.send(recipient, payload);
         }
     }

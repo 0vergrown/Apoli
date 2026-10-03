@@ -165,11 +165,13 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.codec.ApoliOps.setRegistries(null);
             dev.overgrown.apoli.codec.ApoliOps.setLoadingRegistries(null);
             PoweredEntities.clear();
+            dev.overgrown.apoli.power.PowerTypeUsage.reset();
+            dev.overgrown.apoli.power.ResolvedPowers.clear();
             dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.clearServer();
             dev.overgrown.apoli.block.GhostBlocks.clear();
             DelayedActionQueue.clear();
             dev.overgrown.apoli.rope.RopeManager.clear();
-            dev.overgrown.apoli.mount.MountOffsets.clearAll();
+            dev.overgrown.apoli.mount.MountOffsets.clearServer();
             dev.overgrown.apoli.entity.ProjectileTickManager.clearAll();
             dev.overgrown.apoli.compat.icarus.WingsAccess.clear();
             dev.overgrown.apoli.compat.voicechat.VoiceState.clear();
@@ -267,6 +269,10 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.network.payload.CameraPerspectiveC2S.TYPE, (payload, context) ->
                 context.player().server.execute(() -> dev.overgrown.apoli.entity.CameraPerspectives.set(
                     context.player().getUUID(), payload.firstPerson())));
+        ServerPlayNetworking.registerGlobalReceiver(
+            dev.overgrown.apoli.network.payload.CameraTypeC2S.TYPE, (payload, context) ->
+                context.player().server.execute(() -> dev.overgrown.apoli.entity.CameraPerspectives.setType(
+                    context.player().getUUID(), payload.cameraType())));
         ServerPlayNetworking.registerGlobalReceiver(KeyHeldC2S.TYPE, (payload, context) ->
             context.player().server.execute(() ->
                 HeldKeys.setServerHeld(context.player(), payload.keys())));
@@ -495,7 +501,6 @@ public final class Apoli implements ModInitializer {
                 ApoliNetwork.sendLabel(player, new dev.overgrown.apoli.network.payload.LabelUpdateS2C(
                     trackedEntity.getId(), labels));
             }
-            dev.overgrown.apoli.mount.MountOffsets.syncTo(player, trackedEntity);
         });
         net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             dev.overgrown.apoli.entity.disguise.DisguiseManager.onPlayerLeave(handler.player.getUUID());
@@ -504,6 +509,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.entity.PlayerModelTypes.remove(handler.player.getUUID());
             dev.overgrown.apoli.power.builtin.InventoryPower.onPlayerLeave(handler.player.getUUID());
             dev.overgrown.apoli.compat.voicechat.VoiceHearing.forget(handler.player.getUUID());
+            dev.overgrown.apoli.power.ResolvedPowers.forget(handler.player.getUUID());
             dev.overgrown.apoli.compat.voicechat.VoiceState.forget(handler.player.getUUID());
         });
 
@@ -521,10 +527,12 @@ public final class Apoli implements ModInitializer {
         dev.overgrown.apoli.tick.TickRates.serverTick(server);
         boolean forcedKeys = dev.overgrown.apoli.keybind.HeldKeys.anyForced();
         dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.beginScan();
+        dev.overgrown.apoli.power.PowerTypeUsage.beginSweep();
         PoweredEntities.forEach(entity -> {
             PowerContainer c = PowerContainer.of(entity);
             if (!(c instanceof PowerContainerImpl impl)) return;
             impl.tickActive();
+            dev.overgrown.apoli.power.PowerTypeUsage.accumulate(impl.heldTypeBits());
             dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.scan(entity, impl);
             if (forcedKeys) dev.overgrown.apoli.keybind.KeyDispatch.tickForcedNonPlayer(entity);
             if (impl.isStructureDirty()) {
@@ -542,9 +550,11 @@ public final class Apoli implements ModInitializer {
             }
             if (impl.isEmpty()) PoweredEntities.unregister(entity);
         });
+        dev.overgrown.apoli.power.PowerTypeUsage.endSweep();
         dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.endScan();
         dev.overgrown.apoli.block.GhostBlocks.tick(server);
         dev.overgrown.apoli.power.builtin.ShaderPower.tick(server);
+        dev.overgrown.apoli.power.ResolvedPowers.tick(server);
         dev.overgrown.apoli.power.builtin.EntitySetPower.flushPendingRemovals();
         dev.overgrown.apoli.power.builtin.EntitySetPower.flushSync(server);
         CustomEffectRegistry.tick(server);

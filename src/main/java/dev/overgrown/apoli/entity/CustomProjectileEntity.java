@@ -37,6 +37,8 @@ public class CustomProjectileEntity extends ThrowableProjectile {
 
     @Nullable
     private ProjectileHoming homing;
+    private String modelPowersRaw = "";
+    private List<ResourceLocation> modelPowers = List.of();
 
     public CustomProjectileEntity(EntityType<? extends CustomProjectileEntity> type, Level level) {
         super(type, level);
@@ -75,13 +77,33 @@ public class CustomProjectileEntity extends ThrowableProjectile {
         return this.entityData.get(ITEM);
     }
 
-    public void setModelPower(ResourceLocation powerId) {
-        this.entityData.set(MODEL_POWER, powerId == null ? "" : powerId.toString());
+    public void setModelPowers(List<ResourceLocation> powerIds) {
+        StringBuilder joined = new StringBuilder();
+        for (int i = 0; i < powerIds.size(); i++) {
+            if (i > 0) joined.append(',');
+            joined.append(powerIds.get(i));
+        }
+        this.entityData.set(MODEL_POWER, joined.toString());
     }
 
-    public ResourceLocation getModelPower() {
-        String s = this.entityData.get(MODEL_POWER);
-        return s.isEmpty() ? null : ResourceLocation.tryParse(s);
+    public List<ResourceLocation> getModelPowers() {
+        String raw = this.entityData.get(MODEL_POWER);
+        if (!raw.equals(this.modelPowersRaw)) {
+            this.modelPowersRaw = raw;
+            this.modelPowers = parseModelPowers(raw);
+        }
+        return this.modelPowers;
+    }
+
+    private static List<ResourceLocation> parseModelPowers(String raw) {
+        if (raw.isEmpty()) return List.of();
+        String[] parts = raw.split(",");
+        List<ResourceLocation> ids = new ArrayList<>(parts.length);
+        for (String part : parts) {
+            ResourceLocation id = ResourceLocation.tryParse(part);
+            if (id != null) ids.add(id);
+        }
+        return List.copyOf(ids);
     }
 
     public boolean isReturning() {

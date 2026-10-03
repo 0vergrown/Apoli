@@ -60,6 +60,32 @@ public final class ModifyHearingRangePower extends PowerType<ModifyHearingRangeP
         return cachedInUse;
     }
 
+    @Override
+    public boolean resolvesForClient() {
+        return true;
+    }
+
+    public static double resolvedSoundRange(@Nullable Entity listener, double base,
+                                            java.util.function.Predicate<ResourceLocation> active) {
+        if (listener == null) return base;
+        PowerContainer container = PowerContainer.of(listener);
+        if (container == null || container.isEmpty()) return base;
+        List<ResourceLocation> powers = container.powersOfType(CANONICAL);
+        if (powers.isEmpty()) return base;
+        double range = base;
+        for (int i = 0, n = powers.size(); i < n; i++) {
+            ResourceLocation powerId = powers.get(i);
+            if (!active.test(powerId)) continue;
+            Power power = ApoliPowers.get(powerId);
+            if (power == null || !(power.config() instanceof Config cfg) || !cfg.sounds()) continue;
+            if (cfg.bientityCondition().isPresent()) continue;
+            List<AttributeModifier> mods = cfg.flattened();
+            if (mods.isEmpty()) continue;
+            range = AttributeModifierHelper.apply(range, mods, listener, container);
+        }
+        return range;
+    }
+
     public static double soundRange(@Nullable Entity listener, double base) {
         if (listener == null) return base;
         PowerContainer container = PowerContainer.of(listener);

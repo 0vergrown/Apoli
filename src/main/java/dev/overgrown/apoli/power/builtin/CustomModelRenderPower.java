@@ -202,17 +202,50 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
 
     @Nullable
     public static Config firstReplace(@Nullable LivingEntity entity) {
-        Config[] found = new Config[1];
-        PowerLookup.forEach(entity, CANONICAL, Config.class, cfg -> {
-            if (found[0] != null || cfg.mode() != Mode.TEXTURE || cfg.renderAsOverlay()) {
-                return;
+        if (entity == null) return null;
+        PowerContainer container = PowerContainer.of(entity);
+        if (container == null || container.isEmpty()) return null;
+        List<ResourceLocation> powers = container.powersOfType(CANONICAL);
+        if (powers.isEmpty()) return null;
+        dev.overgrown.apoli.condition.context.EntityCtx ctx = null;
+        for (int i = 0, n = powers.size(); i < n; i++) {
+            ResourceLocation powerId = powers.get(i);
+            if (container.isSuppressed(powerId)) continue;
+            Power power = ApoliPowers.get(powerId);
+            if (power == null || !(power.config() instanceof Config cfg)) continue;
+            if (cfg.mode() != Mode.TEXTURE || cfg.renderAsOverlay() || cfg.wide() == null) continue;
+            if (power.condition().isPresent()) {
+                if (ctx == null) ctx = dev.overgrown.apoli.condition.context.EntityCtx.of(entity, entity.level());
+                if (!power.condition().get().test(ctx)) continue;
             }
-            if (cfg.wide() == null || hiddenByEquipment(entity, cfg.hiddenSlots())) {
-                return;
+            if (hiddenByEquipment(entity, cfg.hiddenSlots())) continue;
+            return cfg;
+        }
+        return null;
+    }
+
+    public static boolean replacesModel(@Nullable LivingEntity entity,
+                                        java.util.function.Predicate<ResourceLocation> loaded) {
+        if (entity == null) return false;
+        PowerContainer container = PowerContainer.of(entity);
+        if (container == null || container.isEmpty()) return false;
+        List<ResourceLocation> powers = container.powersOfType(CANONICAL);
+        if (powers.isEmpty()) return false;
+        dev.overgrown.apoli.condition.context.EntityCtx ctx = null;
+        for (int i = 0, n = powers.size(); i < n; i++) {
+            ResourceLocation powerId = powers.get(i);
+            if (container.isSuppressed(powerId)) continue;
+            Power power = ApoliPowers.get(powerId);
+            if (power == null || !(power.config() instanceof Config cfg)) continue;
+            if (cfg.mode() != Mode.GEOMETRY || cfg.renderAsOverlay() || cfg.model().isEmpty() || cfg.texture().isEmpty()) continue;
+            if (power.condition().isPresent()) {
+                if (ctx == null) ctx = dev.overgrown.apoli.condition.context.EntityCtx.of(entity, entity.level());
+                if (!power.condition().get().test(ctx)) continue;
             }
-            found[0] = cfg;
-        });
-        return found[0];
+            if (hiddenByEquipment(entity, cfg.hiddenSlots())) continue;
+            if (loaded.test(cfg.model().get())) return true;
+        }
+        return false;
     }
 
     public static boolean replacesSkin(@Nullable LivingEntity entity) {
@@ -277,18 +310,20 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
             cfg.animations(), cfg.scrollSpeed(), cfg.bindBodyParts(), cfg.offset());
     }
 
-    @Nullable
-    public static ResourceLocation firstGeometryPowerId(@Nullable net.minecraft.world.entity.Entity entity) {
-        if (entity == null) return null;
+    public static List<ResourceLocation> geometryPowerIds(@Nullable net.minecraft.world.entity.Entity entity) {
+        if (entity == null) return List.of();
         PowerContainer container = PowerContainer.of(entity);
-        if (container == null || container.isEmpty()) return null;
+        if (container == null || container.isEmpty()) return List.of();
         List<ResourceLocation> powers = container.powersOfType(CANONICAL);
+        List<ResourceLocation> found = null;
         for (int i = 0; i < powers.size(); i++) {
             ResourceLocation powerId = powers.get(i);
             if (container.isSuppressed(powerId)) continue;
-            if (geometryOf(powerId) != null) return powerId;
+            if (geometryOf(powerId) == null) continue;
+            if (found == null) found = new java.util.ArrayList<>(2);
+            found.add(powerId);
         }
-        return null;
+        return found == null ? List.of() : found;
     }
 
     @Nullable
