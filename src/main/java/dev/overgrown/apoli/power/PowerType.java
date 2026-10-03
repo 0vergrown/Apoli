@@ -2,7 +2,10 @@ package dev.overgrown.apoli.power;
 
 import com.mojang.serialization.MapCodec;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.HudRender;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.OptionalInt;
 
@@ -31,6 +34,18 @@ public abstract class PowerType<C> {
 
     public boolean isCooldown() {
         return false;
+    }
+
+    public @Nullable HudRender hudRender(C cfg) {
+        return cfg instanceof HudRendered rendered ? rendered.hudRender() : null;
+    }
+
+    public boolean resolvesForClient() {
+        return false;
+    }
+
+    public int clientTarget(ResourceLocation powerId, C cfg, ServerPlayer player, int current) {
+        return -1;
     }
 
     public OptionalInt readResource(ResourceLocation powerId, C cfg, PowerContainer holder) {

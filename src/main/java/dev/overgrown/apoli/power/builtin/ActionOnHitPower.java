@@ -36,7 +36,7 @@ public final class ActionOnHitPower extends PowerType<ActionOnHitPower.Config> {
         Optional<DamageCondition> damageCondition,
         Expression cooldown,
         HudRender hudRender
-    ) {}
+    ) implements dev.overgrown.apoli.power.HudRendered {}
 
     @Override
     public MapCodec<Config> configCodec() {

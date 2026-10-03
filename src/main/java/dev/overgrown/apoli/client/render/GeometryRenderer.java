@@ -50,6 +50,34 @@ public final class GeometryRenderer {
         syncBone(custom, ModelParts.LEFT_LEG, live.leftLeg, rest.leftLeg);
     }
 
+    public static void syncNamed(CustomModel custom, java.util.Map<String, ModelPart> parts) {
+        resetAll(custom);
+        if (parts.isEmpty()) return;
+        for (java.util.Map.Entry<String, ModelPart> entry : parts.entrySet()) {
+            CustomModel.Bone[] bound = custom.bones(entry.getKey());
+            if (bound.length == 0) continue;
+            ModelPart live = entry.getValue();
+            net.minecraft.client.model.geom.PartPose rest = live.getInitialPose();
+            for (int i = 0; i < bound.length; i++) {
+                poseFromInitial(bound[i], live, rest);
+            }
+        }
+    }
+
+    private static void poseFromInitial(CustomModel.Bone bone, ModelPart live, net.minecraft.client.model.geom.PartPose rest) {
+        bone.reset();
+        ModelPart part = bone.part;
+        part.xScale = live.xScale;
+        part.yScale = live.yScale;
+        part.zScale = live.zScale;
+        part.x += live.x - rest.x;
+        part.y += live.y - rest.y;
+        part.z += live.z - rest.z;
+        part.xRot += live.xRot - rest.xRot;
+        part.yRot += live.yRot - rest.yRot;
+        part.zRot += live.zRot - rest.zRot;
+    }
+
     public static void syncBone(CustomModel model, String normalizedName, @Nullable ModelPart live, @Nullable ModelPart rest) {
         if (live == null) {
             return;

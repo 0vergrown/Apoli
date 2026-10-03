@@ -20,7 +20,6 @@ import java.util.List;
 public final class RecipePower extends PowerType<RecipePower.Config> {
     public record Config(Dynamic<?> recipe, @Nullable ResourceLocation recipeId, CompoundTag resultPowers) {
 
-        /** 1.20.1's {@code RecipeManager.fromJson} predates recipe codecs and still demands a Gson tree. */
         public JsonObject recipeAsJson() {
             JsonElement element = recipe.convert(JsonOps.INSTANCE).getValue();
             return element.isJsonObject() ? element.getAsJsonObject() : new JsonObject();
@@ -38,7 +37,6 @@ public final class RecipePower extends PowerType<RecipePower.Config> {
         return new Config(stripPowerFields(recipe), extractId(recipe), extractResultPowers(recipe));
     }
 
-    /** Vanilla's 1.20.1 recipe parser rejects unknown result fields, so drop them once they are read. */
     private static <T> Dynamic<T> stripPowerFields(Dynamic<T> recipe) {
         Dynamic<T> result = recipe.get("result").result().orElse(null);
         if (result == null || result.getMapValues().result().isEmpty()) return recipe;

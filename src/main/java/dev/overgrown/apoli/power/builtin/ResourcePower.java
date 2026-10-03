@@ -49,7 +49,7 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         List<OnChange> onChange,
         boolean persistent,
         int size
-    ) {}
+    ) implements dev.overgrown.apoli.power.HudRendered {}
 
     public record OnChange(
         Optional<Expression> value,
@@ -276,13 +276,17 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         if (!(type instanceof ResourcePower rp)) return;
         if (!(loaded.config() instanceof Cfg cfg)) return;
         if (!(holder instanceof PowerContainerImpl impl)) return;
+        rp.resetOnLoad(powerId, cfg, impl);
+    }
+
+    protected void resetOnLoad(ResourceLocation powerId, Cfg cfg, PowerContainerImpl impl) {
         if (cfg.size > 1) impl.trimAuxInts(powerId, cfg.persistent ? cfg.size : 0);
         boolean present = impl.getAuxInt(powerId).isPresent();
         if (present && cfg.persistent) return;
-        impl.setAuxInt(powerId, rp.clampedStart(cfg, holder, powerId));
+        impl.setAuxInt(powerId, clampedStart(cfg, impl, powerId));
     }
 
-    private int clampedStart(Cfg cfg, PowerContainer holder, ResourceLocation powerId) {
+    protected int clampedStart(Cfg cfg, PowerContainer holder, ResourceLocation powerId) {
         return clamp(evalStartValue(cfg, holder), currentMin(cfg, holder, powerId),
             currentMax(cfg, holder, powerId), cfg);
     }
@@ -313,8 +317,8 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         return OptionalInt.of(target);
     }
 
-    private void fireBoundaryActions(ResourceLocation powerId, Cfg cfg, Entity owner, int prev, int newVal,
-                                     int min, int max) {
+    protected void fireBoundaryActions(ResourceLocation powerId, Cfg cfg, Entity owner, int prev, int newVal,
+                                       int min, int max) {
         if (owner == null || newVal == prev) return;
         if (cfg.minAction.isEmpty() && cfg.maxAction.isEmpty() && cfg.onChange.isEmpty()) return;
         if (!(owner.level() instanceof ServerLevel level)) return;

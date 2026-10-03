@@ -81,6 +81,12 @@ public final class ClientTickRates {
         return RATES.isEmpty() ? -1 : RATES.get(root.getId());
     }
 
+    public static void fadeHurt(Entity entity) {
+        if (entity instanceof net.minecraft.world.entity.LivingEntity living && living.hurtTime > 0 && frozen(entity)) {
+            living.hurtTime--;
+        }
+    }
+
     public static boolean frozen(Entity entity) {
         return rateOf(entity) == 0;
     }

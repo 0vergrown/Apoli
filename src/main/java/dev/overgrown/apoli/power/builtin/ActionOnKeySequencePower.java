@@ -50,7 +50,7 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
         int[] atomHold,
         int[] atomGap,
         int[] prefixFunction
-    ) {}
+    ) implements dev.overgrown.apoli.power.HudRendered {}
 
     private static final class SeqState {
         int progress;

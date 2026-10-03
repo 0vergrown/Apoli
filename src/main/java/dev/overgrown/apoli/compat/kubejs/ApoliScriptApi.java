@@ -14,7 +14,7 @@ public final class ApoliScriptApi {
     }
 
     public boolean grantPower(@Nullable Entity entity, String power, String source) {
-        PowerContainer container = entity == null ? null : PowerContainer.of(entity);
+        PowerContainer container = entity == null ? null : dev.overgrown.apoli.PowerContainerAttachment.getOrCreate(entity);
         ResourceLocation id = ResourceLocation.tryParse(power);
         ResourceLocation src = ResourceLocation.tryParse(source);
         return container != null && id != null && src != null && container.addPower(id, src);

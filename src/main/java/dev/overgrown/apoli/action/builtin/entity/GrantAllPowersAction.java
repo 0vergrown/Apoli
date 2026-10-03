@@ -36,7 +36,7 @@ public final class GrantAllPowersAction implements ActionType<EntityCtx, GrantAl
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        PowerContainer holder = PowerContainer.of(ctx.entity());
+        PowerContainer holder = dev.overgrown.apoli.PowerContainerAttachment.getOrCreate(ctx.entity());
         if (holder == null) return;
         if (cfg.from.isEmpty()) {
             ResourceLocation source = cfg.source.orElse(DEFAULT_SOURCE);

@@ -37,7 +37,7 @@ public final class ActionOnCollisionPower extends PowerType<ActionOnCollisionPow
         Expression cooldown,
         boolean includeRiding,
         HudRender hudRender
-    ) {}
+    ) implements dev.overgrown.apoli.power.HudRendered {}
 
     @Override
     public MapCodec<Config> configCodec() {

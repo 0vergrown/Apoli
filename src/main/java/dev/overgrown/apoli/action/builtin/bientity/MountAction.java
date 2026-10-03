@@ -3,16 +3,12 @@ package dev.overgrown.apoli.action.builtin.bientity;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import dev.overgrown.apoli.ApoliNetwork;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.data.Space;
 import dev.overgrown.apoli.mount.MountOffsets;
 import dev.overgrown.apoli.mount.MountRotation;
-import dev.overgrown.apoli.network.payload.MountOffsetS2C;
-import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
 public final class MountAction implements ActionType<BiEntityCtx, MountAction.Cfg> {
@@ -40,18 +36,8 @@ public final class MountAction implements ActionType<BiEntityCtx, MountAction.Cf
         if (actor.getVehicle() != target && !actor.startRiding(target, cfg.force)) return;
         if (target.level().isClientSide()) return;
 
-        MountOffsets.Offset offset = new MountOffsets.Offset(
-            cfg.x.eval(actor), cfg.y.eval(actor), cfg.z.eval(actor), cfg.space, cfg.rotation);
-        MountOffsets.put(actor, offset);
-
-        ClientboundSetPassengersPacket packet = new ClientboundSetPassengersPacket(target);
-        if (target instanceof ServerPlayer player) {
-            player.connection.send(packet);
-        }
-        if (actor instanceof ServerPlayer player) {
-            player.connection.send(packet);
-        }
-        ApoliNetwork.broadcastMountOffset(actor, new MountOffsetS2C(
-            actor.getId(), offset.x(), offset.y(), offset.z(), offset.space(), offset.rotation()));
+        MountOffsets.put(actor, new MountOffsets.Offset(
+            cfg.x.eval(actor), cfg.y.eval(actor), cfg.z.eval(actor), cfg.space, cfg.rotation));
+        MountOffsets.broadcast(actor);
     }
 }

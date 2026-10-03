@@ -27,7 +27,7 @@ import java.util.UUID;
 public final class ActionOnKeyPressPower extends PowerType<ActionOnKeyPressPower.Config> {
     private final Map<CooldownKey, Integer> cooldowns = new HashMap<>();
 
-    public record Config(EntityAction entityAction, Expression cooldown, HudRender hudRender, Key key) {}
+    public record Config(EntityAction entityAction, Expression cooldown, HudRender hudRender, Key key) implements dev.overgrown.apoli.power.HudRendered {}
 
     @Override
     public MapCodec<Config> configCodec() {

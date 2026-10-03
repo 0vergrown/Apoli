@@ -36,6 +36,7 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("store_data"), new StoreDataAction());
         ActionTypes.ENTITY.register(Apoli.id("exhaust"), new ExhaustAction());
         ActionTypes.ENTITY.register(Apoli.id("heal"), new HealAction());
+        ActionTypes.ENTITY.register(Apoli.id("set_perspective"), new SetPerspectiveAction());
         ActionTypes.ENTITY.register(Apoli.id("set_on_fire"), new SetOnFireAction());
         ActionTypes.ENTITY.register(Apoli.id("explode"), new ExplodeEntityAction());
         ActionTypes.ENTITY.register(
@@ -147,6 +148,7 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("spawn_entity"), new SpawnEntityAction());
         ActionTypes.ENTITY.register(Apoli.id("spawn_effect_cloud"), new SpawnEffectCloudAction());
         ActionTypes.ENTITY.register(Apoli.id("spawn_particles"), new SpawnParticlesAction());
+        ActionTypes.ENTITY.register(Apoli.id("start_raid"), new StartRaidAction());
         ActionTypes.ENTITY.register(Apoli.id("summon_clone"), new SummonCloneAction());
         ActionTypes.ENTITY.register(Apoli.id("summon_minion"), new SummonMinionAction());
         ActionTypes.ENTITY.register(Apoli.id("set_summon_max_life"), new SetSummonMaxLifeAction(),

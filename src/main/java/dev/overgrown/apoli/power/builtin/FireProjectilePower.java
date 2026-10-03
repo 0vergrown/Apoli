@@ -44,7 +44,7 @@ import java.util.UUID;
 
 public final class FireProjectilePower extends PowerType<FireProjectilePower.Config> {
     public record Config(Params params, Hooks hooks, Optional<Return> returning, Optional<Homing> homing,
-                         Optional<Reflect> reflective) {}
+                         Optional<Reflect> reflective, Expression lifetime) {}
 
     public record Homing(
         Expression delay,
@@ -165,6 +165,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
     ) {}
 
     private static final Expression NO_OFFSET = Expression.constant(0);
+    private static final Expression NO_LIFETIME = Expression.constant(0);
 
     private static final MapCodec<Params> PARAMS_BODY = RecordCodecBuilder.mapCodec(i -> i.group(
         IdCodecs.ID.optionalFieldOf("entity_type").forGetter(Params::entityType),
@@ -222,7 +223,8 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         HOOKS.forGetter(Config::hooks),
         dev.overgrown.apoli.codec.LoggedOptionalField.of("return", Return.CODEC).forGetter(Config::returning),
         dev.overgrown.apoli.codec.LoggedOptionalField.of("homing", Homing.CODEC).forGetter(Config::homing),
-        REFLECTIVE.forGetter(Config::reflective)
+        REFLECTIVE.forGetter(Config::reflective),
+        Expression.INT_OR_EXPR.optionalFieldOf("lifetime", NO_LIFETIME).forGetter(Config::lifetime)
     ).apply(i, Config::new));
 
     @Override
@@ -303,6 +305,11 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
 
         return true;
 
+    }
+
+    @Override
+    public HudRender hudRender(Config cfg) {
+        return cfg.params().hudRender().orElse(null);
     }
 
 
@@ -433,6 +440,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         if (projectile instanceof ProjectileHitActions hooks) {
             hooks.apoli$setFireConfig(cfg);
             hooks.apoli$setMaxRange(p.maxDistance().eval(owner));
+            hooks.apoli$setLifetime(cfg.lifetime().evalInt(owner));
             hooks.apoli$setFireCause(dev.overgrown.apoli.attribution.PowerCause.holder(),
                 dev.overgrown.apoli.attribution.PowerCause.powerId());
         }
@@ -472,8 +480,8 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
 
         cfg.hooks().projectileAction().ifPresent(a -> a.run(new EntityCtx(projectile, level)));
         if (projectile instanceof CustomProjectileEntity custom) {
-            ResourceLocation modelPower = CustomModelRenderPower.firstGeometryPowerId(projectile);
-            if (modelPower != null) custom.setModelPower(modelPower);
+            java.util.List<ResourceLocation> modelPowers = CustomModelRenderPower.geometryPowerIds(projectile);
+            if (!modelPowers.isEmpty()) custom.setModelPowers(modelPowers);
         }
         cfg.hooks().bientityActionAfterFiring().ifPresent(a ->
             a.run(dev.overgrown.apoli.condition.context.BiEntityCtx.of(owner, projectile, level)));

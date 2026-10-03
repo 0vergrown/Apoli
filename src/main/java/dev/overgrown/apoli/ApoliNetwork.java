@@ -33,7 +33,6 @@ public final class ApoliNetwork {
         if (!connected(recipient)) return;
         dev.overgrown.apoli.network.PowerSyncCache.sendTo(recipient);
         dev.overgrown.apoli.power.builtin.InventoryPower.syncAll(recipient);
-        dev.overgrown.apoli.mount.MountOffsets.syncAll(recipient);
     }
 
     public static void sendPowerInventory(ServerPlayer recipient,
@@ -151,6 +150,20 @@ public final class ApoliNetwork {
     public static void sendForceKey(ServerPlayer recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C payload) {
         if (connected(recipient) && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C.CHANNEL)) {
             send(recipient, dev.overgrown.apoli.network.payload.ForceKeyS2C.CHANNEL, payload::write);
+        }
+    }
+
+    public static void sendResolvedPowers(ServerPlayer recipient,
+                                          dev.overgrown.apoli.network.payload.SyncResolvedPowersS2C payload) {
+        if (connected(recipient) && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.SyncResolvedPowersS2C.CHANNEL)) {
+            send(recipient, dev.overgrown.apoli.network.payload.SyncResolvedPowersS2C.CHANNEL, payload::write);
+        }
+    }
+
+    public static void sendPerspective(ServerPlayer recipient,
+                                       dev.overgrown.apoli.network.payload.SetPerspectiveS2C payload) {
+        if (connected(recipient) && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.SetPerspectiveS2C.CHANNEL)) {
+            send(recipient, dev.overgrown.apoli.network.payload.SetPerspectiveS2C.CHANNEL, payload::write);
         }
     }
 

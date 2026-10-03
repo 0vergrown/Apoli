@@ -35,7 +35,7 @@ public final class ApoliMountCommand {
         Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
         int found = 0;
         for (Entity target : targets) {
-            MountOffsets.Offset offset = MountOffsets.get(target.getId());
+            MountOffsets.Offset offset = MountOffsets.get(target);
             if (offset == null) {
                 ctx.getSource().sendSuccess(() -> Component.literal(name(target) + ": no mount offset")
                     .withStyle(ChatFormatting.GRAY), false);
@@ -43,7 +43,7 @@ public final class ApoliMountCommand {
             }
             found++;
             Entity vehicle = target.getVehicle();
-            Vec3 resolved = vehicle == null ? Vec3.ZERO : MountOffsets.resolve(vehicle, target);
+            Vec3 resolved = vehicle == null ? Vec3.ZERO : MountOffsets.resolve(vehicle, offset);
             MutableComponent line = Component.literal(name(target) + ": ").withStyle(ChatFormatting.WHITE)
                 .append(Component.literal(String.format("x=%.2f y=%.2f z=%.2f ", offset.x(), offset.y(), offset.z()))
                     .withStyle(ChatFormatting.GRAY))
@@ -66,8 +66,9 @@ public final class ApoliMountCommand {
     private static int clear(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         int cleared = 0;
         for (Entity target : EntityArgument.getEntities(ctx, "targets")) {
-            if (MountOffsets.get(target.getId()) == null) continue;
-            MountOffsets.clear(target.getId());
+            if (MountOffsets.get(target) == null) continue;
+            MountOffsets.clear(target);
+            MountOffsets.broadcast(target);
             cleared++;
         }
         int total = cleared;

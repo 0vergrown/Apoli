@@ -158,7 +158,7 @@ public final class ApoliClient implements ClientModInitializer {
             dev.overgrown.apoli.network.payload.MountOffsetS2C.CHANNEL, (mc, handler, buf, sender) -> {
                 dev.overgrown.apoli.network.payload.MountOffsetS2C payload =
                     dev.overgrown.apoli.network.payload.MountOffsetS2C.read(buf);
-                mc.execute(() -> dev.overgrown.apoli.mount.MountOffsets.put(payload.passengerId(),
+                mc.execute(() -> dev.overgrown.apoli.mount.MountOffsets.putClient(payload.passengerId(),
                     new dev.overgrown.apoli.mount.MountOffsets.Offset(
                         payload.x(), payload.y(), payload.z(), payload.space(), payload.rotation())));
             });
@@ -228,6 +228,16 @@ public final class ApoliClient implements ClientModInitializer {
             mc.execute(() -> dev.overgrown.apoli.client.ForcedKeys.force(payload.key(), payload.duration(), payload.release()));
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SyncResolvedPowersS2C.CHANNEL, (mc, handler, buf, sender) -> {
+            dev.overgrown.apoli.network.payload.SyncResolvedPowersS2C payload = dev.overgrown.apoli.network.payload.SyncResolvedPowersS2C.read(buf);
+            mc.execute(() -> dev.overgrown.apoli.client.ClientResolvedPowers.apply(payload));
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SetPerspectiveS2C.CHANNEL, (mc, handler, buf, sender) -> {
+            dev.overgrown.apoli.network.payload.SetPerspectiveS2C payload = dev.overgrown.apoli.network.payload.SetPerspectiveS2C.read(buf);
+            mc.execute(() -> dev.overgrown.apoli.client.camera.CameraController.setPerspective(mc, payload.perspective()));
+        });
+
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SyncShaderS2C.CHANNEL, (mc, handler, buf, sender) -> {
             dev.overgrown.apoli.network.payload.SyncShaderS2C payload = dev.overgrown.apoli.network.payload.SyncShaderS2C.read(buf);
             mc.execute(() -> dev.overgrown.apoli.client.ShaderPowerState.accept(payload.shader(), payload.toggleable()));
@@ -284,8 +294,11 @@ public final class ApoliClient implements ClientModInitializer {
                 ClientPowerState.clear();
                 dev.overgrown.apoli.client.ClientEntitySets.clear();
                 dev.overgrown.apoli.client.ClientDevMode.clear();
-                dev.overgrown.apoli.mount.MountOffsets.clearAll();
+                dev.overgrown.apoli.mount.MountOffsets.clearClient();
                 dev.overgrown.apoli.client.ShaderPowerState.clear();
+                dev.overgrown.apoli.client.ClientResolvedPowers.clear();
+                dev.overgrown.apoli.client.camera.CameraController.reset();
+                dev.overgrown.apoli.client.CameraPerspectiveReporter.reset();
                 dev.overgrown.apoli.client.render.BlockRenderRules.clear();
                 dev.overgrown.apoli.client.render.ClientRenderFlags.clear();
                 dev.overgrown.apoli.client.TextOverlayRenderer.clear();
@@ -368,6 +381,8 @@ public final class ApoliClient implements ClientModInitializer {
             }
             dev.overgrown.apoli.client.PlayerModelTypeReporter.tick(mc);
             dev.overgrown.apoli.client.CameraPerspectiveReporter.tick(mc);
+            dev.overgrown.apoli.client.ClientResolvedPowers.tick(mc);
+            dev.overgrown.apoli.client.camera.CameraController.clientTick(mc);
             dev.overgrown.apoli.client.ForcedKeys.tick();
             dev.overgrown.apoli.power.builtin.ModifyFogInterpolator.tick(mc.player);
         });

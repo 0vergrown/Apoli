@@ -21,7 +21,7 @@ public final class GrantPowerAction implements ActionType<EntityCtx, GrantPowerA
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        PowerContainer holder = PowerContainer.of(ctx.entity());
+        PowerContainer holder = dev.overgrown.apoli.PowerContainerAttachment.getOrCreate(ctx.entity());
         if (holder != null) holder.addPower(cfg.power, cfg.source);
     }
 }

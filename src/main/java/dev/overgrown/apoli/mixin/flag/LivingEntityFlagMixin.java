@@ -1,17 +1,12 @@
 package dev.overgrown.apoli.mixin.flag;
 
-import dev.overgrown.apoli.Apoli;
-import dev.overgrown.apoli.condition.context.EntityCtx;
-import dev.overgrown.apoli.power.PowerLookup;
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import dev.overgrown.apoli.power.builtin.ClimbingPower;
-import dev.overgrown.apoli.power.ApoliIds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.Optional;
 
@@ -19,27 +14,22 @@ import java.util.Optional;
 public abstract class LivingEntityFlagMixin {
     @Shadow private Optional<BlockPos> lastClimbablePos;
 
-    @Inject(method = "onClimbable", at = @At("RETURN"), cancellable = true)
-    private void apoli$climbing(CallbackInfoReturnable<Boolean> cir) {
-        if (cir.getReturnValueZ()) return;
+    @ModifyReturnValue(method = "onClimbable", at = @At("RETURN"))
+    private boolean apoli$climbing(boolean original) {
+        if (original) return true;
         LivingEntity self = (LivingEntity) (Object) this;
-        if (self.isSpectator() || !PowerLookup.hasActive(self, ApoliIds.CLIMBING)) return;
+        if (self.isSpectator() || !ClimbingPower.mayHold(self)) return false;
+        if (ClimbingPower.state(self, false) == ClimbingPower.NONE) return false;
         this.lastClimbablePos = Optional.of(self.blockPosition());
-        cir.setReturnValue(true);
+        return true;
     }
 
-    @Inject(method = "isSuppressingSlidingDownLadder", at = @At("RETURN"), cancellable = true)
-    private void apoli$climbingHold(CallbackInfoReturnable<Boolean> cir) {
+    @ModifyReturnValue(method = "isSuppressingSlidingDownLadder", at = @At("RETURN"))
+    private boolean apoli$climbingHold(boolean original) {
         LivingEntity self = (LivingEntity) (Object) this;
-        EntityCtx ctx = new EntityCtx(self, self.level());
-        boolean[] hasPower = {false};
-        boolean[] canHold = {false};
-        PowerLookup.forEach(self, ApoliIds.CLIMBING, ClimbingPower.Config.class, cfg -> {
-            hasPower[0] = true;
-            if (canHold[0] || !cfg.allowHolding()) return;
-            boolean held = cfg.holdCondition().map(c -> c.test(ctx)).orElseGet(self::isShiftKeyDown);
-            if (held) canHold[0] = true;
-        });
-        if (hasPower[0]) cir.setReturnValue(canHold[0]);
+        if (!ClimbingPower.mayHold(self)) return original;
+        int state = ClimbingPower.state(self, true);
+        if (state == ClimbingPower.NONE) return original;
+        return state == ClimbingPower.HOLDS;
     }
 }

@@ -19,7 +19,6 @@ public final class IdWildcards {
         return walk(data, self.getNamespace(), self.getNamespace() + ":" + self.getPath());
     }
 
-    /** Convenience bridge for callers that already hold a Gson tree, such as the Origins loaders. */
     public static JsonElement apply(JsonElement json, ResourceLocation self) {
         return apply(new Dynamic<>(JsonOps.INSTANCE, json), self).getValue();
     }

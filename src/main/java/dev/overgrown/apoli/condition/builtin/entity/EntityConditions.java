@@ -106,6 +106,7 @@ public final class EntityConditions {
         ConditionTypes.ENTITY.register(Apoli.id("dimension"), new DimensionCondition());
         ConditionTypes.ENTITY.register(Apoli.id("entity_group"), new EntityGroupCondition());
         ConditionTypes.ENTITY.register(Apoli.id("gamemode"), new GamemodeCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("perspective"), new PerspectiveCondition());
         ConditionTypes.ENTITY.register(Apoli.id("in_tag"), new InTagCondition());
         ConditionTypes.ENTITY.register(Apoli.id("nbt"), new NbtCondition());
         ConditionTypes.ENTITY.register(Apoli.id("predicate"), new PredicateCondition());
