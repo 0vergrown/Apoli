@@ -16,7 +16,9 @@ public final class PoweredEntities {
     private PoweredEntities() {}
 
     public static void register(Entity entity) {
-        if (entity != null && !entity.level().isClientSide()) POWERED.add(entity);
+        if (entity == null || entity.level().isClientSide()) return;
+        POWERED.add(entity);
+        if (PowerContainer.of(entity) instanceof PowerContainerImpl impl) PowerTypeUsage.open(impl.heldTypeBits());
     }
 
     public static void unregister(Entity entity) {

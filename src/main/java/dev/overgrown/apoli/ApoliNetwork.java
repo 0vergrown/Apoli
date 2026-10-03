@@ -33,7 +33,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public final class ApoliNetwork {
 
-    private static final String PROTOCOL_VERSION = "13";
+    private static final String PROTOCOL_VERSION = "14";
 
     private ApoliNetwork() {}
 
@@ -69,6 +69,12 @@ public final class ApoliNetwork {
             dev.overgrown.apoli.network.payload.ForceKeyS2C.STREAM_CODEC, ApoliNetwork::onForceKey);
         registrar.playToClient(dev.overgrown.apoli.network.payload.SyncShaderS2C.TYPE,
             dev.overgrown.apoli.network.payload.SyncShaderS2C.STREAM_CODEC, ApoliNetwork::onSyncShader);
+        registrar.playToClient(dev.overgrown.apoli.network.payload.SyncResolvedPowersS2C.TYPE,
+            dev.overgrown.apoli.network.payload.SyncResolvedPowersS2C.STREAM_CODEC, ApoliNetwork::onSyncResolvedPowers);
+        registrar.playToClient(dev.overgrown.apoli.network.payload.SetPerspectiveS2C.TYPE,
+            dev.overgrown.apoli.network.payload.SetPerspectiveS2C.STREAM_CODEC, ApoliNetwork::onSetPerspective);
+        registrar.playToServer(dev.overgrown.apoli.network.payload.CameraTypeC2S.TYPE,
+            dev.overgrown.apoli.network.payload.CameraTypeC2S.STREAM_CODEC, ApoliNetwork::onCameraType);
         registrar.playToClient(dev.overgrown.apoli.network.payload.LabelUpdateS2C.TYPE,
             dev.overgrown.apoli.network.payload.LabelUpdateS2C.STREAM_CODEC, ApoliNetwork::onLabelUpdate);
         registrar.playToClient(SkillDefsSyncS2C.TYPE, SkillDefsSyncS2C.STREAM_CODEC, ApoliNetwork::onSkillDefs);
@@ -206,6 +212,33 @@ public final class ApoliNetwork {
             ctx.player().getUUID(), payload.firstPerson()));
     }
 
+    private static void onCameraType(dev.overgrown.apoli.network.payload.CameraTypeC2S payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> dev.overgrown.apoli.entity.CameraPerspectives.setType(
+            ctx.player().getUUID(), payload.cameraType()));
+    }
+
+    private static void onSyncResolvedPowers(dev.overgrown.apoli.network.payload.SyncResolvedPowersS2C payload,
+                                             IPayloadContext ctx) {
+        ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPayloadHandlers.onSyncResolvedPowers(payload));
+    }
+
+    private static void onSetPerspective(dev.overgrown.apoli.network.payload.SetPerspectiveS2C payload,
+                                         IPayloadContext ctx) {
+        ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPayloadHandlers.onSetPerspective(payload));
+    }
+
+    public static void sendResolvedPowers(ServerPlayer recipient,
+                                          dev.overgrown.apoli.network.payload.SyncResolvedPowersS2C payload) {
+        if (!connected(recipient)) return;
+        PacketDistributor.sendToPlayer(recipient, payload);
+    }
+
+    public static void sendPerspective(ServerPlayer recipient,
+                                       dev.overgrown.apoli.network.payload.SetPerspectiveS2C payload) {
+        if (!connected(recipient)) return;
+        PacketDistributor.sendToPlayer(recipient, payload);
+    }
+
     private static void onTickRate(dev.overgrown.apoli.network.payload.TickRateS2C payload, IPayloadContext ctx) {
         ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPayloadHandlers.onTickRate(payload));
     }
@@ -282,7 +315,6 @@ public final class ApoliNetwork {
         if (!connected(recipient)) return;
         dev.overgrown.apoli.network.PowerSyncCache.sendTo(recipient);
         dev.overgrown.apoli.power.builtin.InventoryPower.syncAll(recipient);
-        dev.overgrown.apoli.mount.MountOffsets.syncAll(recipient);
     }
 
     public static void sendPowerInventory(ServerPlayer recipient,

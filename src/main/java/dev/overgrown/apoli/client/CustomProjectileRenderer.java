@@ -77,8 +77,20 @@ public class CustomProjectileRenderer extends EntityRenderer<CustomProjectileEnt
     }
 
     public static List<GeometryRender> resolveGeometry(CustomProjectileEntity entity) {
-        GeometryRender synced = CustomModelRenderPower.geometryOf(entity.getModelPower());
-        if (synced != null) return List.of(synced);
+        List<ResourceLocation> stamped = entity.getModelPowers();
+        if (!stamped.isEmpty()) {
+            if (stamped.size() == 1) {
+                GeometryRender synced = CustomModelRenderPower.geometryOf(stamped.get(0));
+                if (synced != null) return List.of(synced);
+            } else {
+                List<GeometryRender> synced = new java.util.ArrayList<>(stamped.size());
+                for (int i = 0; i < stamped.size(); i++) {
+                    GeometryRender render = CustomModelRenderPower.geometryOf(stamped.get(i));
+                    if (render != null) synced.add(render);
+                }
+                if (!synced.isEmpty()) return synced;
+            }
+        }
         return CustomModelRenderPower.collectGeometry(entity);
     }
 

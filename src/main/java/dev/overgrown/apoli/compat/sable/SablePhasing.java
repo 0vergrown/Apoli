@@ -21,7 +21,7 @@ public final class SablePhasing {
     public static void begin(Entity entity) {
         Scope scope = SCOPE.get();
         scope.push(entity instanceof LivingEntity living
-            && PowerLookup.hasActive(living, ApoliIds.PHASING) ? living : null);
+            && PhasingPower.mayHold(living) && PhasingPower.holdsActive(living) ? living : null);
     }
 
     public static void end() {

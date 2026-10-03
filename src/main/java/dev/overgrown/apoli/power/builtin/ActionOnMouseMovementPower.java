@@ -39,7 +39,7 @@ public final class ActionOnMouseMovementPower extends PowerType<ActionOnMouseMov
         boolean ignoreModifyCursorSpeed,
         Expression cooldown,
         HudRender hudRender
-    ) {
+    ) implements dev.overgrown.apoli.power.HudRendered {
         public boolean anyDirection() {
             return !up && !down && !left && !right;
         }

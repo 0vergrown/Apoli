@@ -1,12 +1,8 @@
 package dev.overgrown.apoli.mixin.flag;
 
-import dev.overgrown.apoli.Apoli;
-import dev.overgrown.apoli.condition.context.EntityCtx;
-import dev.overgrown.apoli.power.PowerLookup;
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import dev.overgrown.apoli.power.builtin.PhasingPower;
-import dev.overgrown.apoli.power.ApoliIds;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -18,44 +14,18 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(BlockBehaviour.BlockStateBase.class)
 public abstract class PhasingMixin {
-    @Inject(method = "getCollisionShape(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;",
-        at = @At("RETURN"), cancellable = true)
-    private void apoli$phaseThrough(BlockGetter getter, BlockPos pos, CollisionContext ctx,
-                                    CallbackInfoReturnable<VoxelShape> cir) {
-        VoxelShape original = cir.getReturnValue();
-        if (original.isEmpty()) return;
-        if (!(ctx instanceof EntityCollisionContext esc)) return;
-        Entity entity = esc.getEntity();
-        if (!(entity instanceof LivingEntity living)) return;
-        if (!PowerLookup.hasActive(living, ApoliIds.PHASING)) return;
 
-        BlockState state = (BlockState) (Object) this;
+    @ModifyReturnValue(method = "getCollisionShape(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;",
+        at = @At("RETURN"))
+    private VoxelShape apoli$phaseThrough(VoxelShape original, BlockGetter getter, BlockPos pos, CollisionContext ctx) {
+        if (original.isEmpty()) return original;
+        if (!(ctx instanceof EntityCollisionContext esc)) return original;
+        if (!(esc.getEntity() instanceof LivingEntity living)) return original;
+        if (!PhasingPower.mayHold(living)) return original;
         Level level = getter instanceof Level fromGetter ? fromGetter : living.level();
-        boolean standingOnTop = isStandingOnTop(living, original, pos);
-        boolean[] allow = new boolean[]{false};
-        PowerLookup.forEach(living, ApoliIds.PHASING, PhasingPower.Config.class, cfg -> {
-            if (allow[0]) return;
-            if (!PhasingPower.allowsPhasing(cfg, level, pos, state)) return;
-            if (standingOnTop && !phaseDownAllowed(cfg, living, level)) return;
-            allow[0] = true;
-        });
-        if (allow[0]) cir.setReturnValue(Shapes.empty());
-    }
-
-    private static boolean isStandingOnTop(LivingEntity entity, VoxelShape shape, BlockPos pos) {
-        double margin = entity.onGround() ? 8.05 / 16.0 : 0.0015;
-        return entity.getY() > pos.getY() + shape.max(net.minecraft.core.Direction.Axis.Y) - margin;
-    }
-
-    private static boolean phaseDownAllowed(PhasingPower.Config cfg, LivingEntity entity, Level level) {
-        if (cfg.phaseDownCondition().isPresent()) {
-            return cfg.phaseDownCondition().get().test(new EntityCtx(entity, level));
-        }
-        return entity.isShiftKeyDown();
+        return PhasingPower.phases(living, level, pos, (BlockState) (Object) this, original) ? Shapes.empty() : original;
     }
 }

@@ -28,6 +28,7 @@ public abstract class ClientLevelTickRateMixin {
         if (ClientTickRates.simulatedOnClient(entity) && ClientTickRates.shouldTick(entity)) return;
         ClientTickRates.keepRenderPose(entity);
         ClientTickRates.advanceLerp(entity);
+        ClientTickRates.fadeHurt(entity);
         ci.cancel();
     }
 

@@ -43,7 +43,7 @@ public final class ClientPayloadHandlers {
     }
 
     public static void onMountOffset(dev.overgrown.apoli.network.payload.MountOffsetS2C msg) {
-        dev.overgrown.apoli.mount.MountOffsets.put(msg.passengerId(),
+        dev.overgrown.apoli.mount.MountOffsets.putClient(msg.passengerId(),
             new dev.overgrown.apoli.mount.MountOffsets.Offset(msg.x(), msg.y(), msg.z(), msg.space(), msg.rotation()));
     }
 
@@ -88,6 +88,15 @@ public final class ClientPayloadHandlers {
 
     public static void onSyncShader(dev.overgrown.apoli.network.payload.SyncShaderS2C msg) {
         ShaderPowerState.accept(msg.shader(), msg.toggleable());
+    }
+
+    public static void onSyncResolvedPowers(dev.overgrown.apoli.network.payload.SyncResolvedPowersS2C msg) {
+        ClientResolvedPowers.apply(msg);
+    }
+
+    public static void onSetPerspective(dev.overgrown.apoli.network.payload.SetPerspectiveS2C msg) {
+        dev.overgrown.apoli.client.camera.CameraController.setPerspective(
+            net.minecraft.client.Minecraft.getInstance(), msg.perspective());
     }
 
     public static void onSkillDefs(dev.overgrown.apoli.network.payload.SkillDefsSyncS2C msg) {

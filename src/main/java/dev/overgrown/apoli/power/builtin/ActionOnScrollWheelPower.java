@@ -41,7 +41,7 @@ public final class ActionOnScrollWheelPower extends PowerType<ActionOnScrollWhee
         boolean preventHotbarChange,
         Expression cooldown,
         HudRender hudRender
-    ) {}
+    ) implements dev.overgrown.apoli.power.HudRendered {}
 
     private static final class Progress {
         int notches;

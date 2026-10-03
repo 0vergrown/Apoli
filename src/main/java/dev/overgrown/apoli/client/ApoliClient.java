@@ -156,6 +156,8 @@ public final class ApoliClient {
             }
             PlayerModelTypeReporter.tick(mc);
             CameraPerspectiveReporter.tick(mc);
+            ClientResolvedPowers.tick(mc);
+            dev.overgrown.apoli.client.camera.CameraController.clientTick(mc);
             if (mc.player == null || mc.isPaused()) {
                 ForcedKeys.tick();
                 return;
@@ -178,8 +180,11 @@ public final class ApoliClient {
             ClientPowerState.clear();
             dev.overgrown.apoli.client.ClientEntitySets.clear();
             dev.overgrown.apoli.client.ClientDevMode.clear();
-            dev.overgrown.apoli.mount.MountOffsets.clearAll();
+            dev.overgrown.apoli.mount.MountOffsets.clearClient();
             ShaderPowerState.clear();
+            ClientResolvedPowers.clear();
+            dev.overgrown.apoli.client.camera.CameraController.reset();
+            CameraPerspectiveReporter.reset();
             dev.overgrown.apoli.client.render.BlockRenderRules.clear();
             dev.overgrown.apoli.client.render.ClientRenderFlags.clear();
             TextOverlayRenderer.clear();

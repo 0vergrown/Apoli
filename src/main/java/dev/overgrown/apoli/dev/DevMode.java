@@ -44,7 +44,6 @@ public final class DevMode {
         return any && entity != null && ENABLED.contains(entity.getUUID());
     }
 
-    /** With dev mode on, show the actor the command exactly as it will run, macros already expanded. */
     public static void echoCommand(@Nullable Entity actor, String command) {
         if (!any || !(actor instanceof ServerPlayer player) || !ENABLED.contains(player.getUUID())) return;
         player.sendSystemMessage(net.minecraft.network.chat.Component

@@ -67,7 +67,7 @@ public final class GameEventListenerPower extends PowerType<GameEventListenerPow
         Optional<ResourceLocation> eventTag,
         boolean showParticle,
         int range
-    ) {}
+    ) implements dev.overgrown.apoli.power.HudRendered {}
 
     @Override
     public MapCodec<Config> configCodec() {

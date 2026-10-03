@@ -41,7 +41,6 @@ public record MacroArguments(Optional<ResourceLocation> storage, String path, Op
         targetResources = Map.copyOf(targetResources);
     }
 
-    /** Either {"key": "ns:power"} or ["ns:power"], where the list form keys each entry by its path. */
     private static final Codec<Map<String, ResourceLocation>> RESOURCE_MAP = Codec.either(
         Codec.unboundedMap(Codec.STRING, IdCodecs.ID),
         IdCodecs.ID.listOf()

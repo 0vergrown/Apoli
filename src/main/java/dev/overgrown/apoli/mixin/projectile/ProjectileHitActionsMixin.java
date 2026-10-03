@@ -36,15 +36,21 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
     @Unique
     private boolean apoli$missFired;
     @Unique
-    private double apoli$maxRangeSq;
+    private double apoli$maxRange;
     @Unique
-    private boolean apoli$originSet;
+    private double apoli$travelled;
     @Unique
-    private double apoli$originX;
+    private int apoli$lifetime;
     @Unique
-    private double apoli$originY;
+    private int apoli$age;
     @Unique
-    private double apoli$originZ;
+    private boolean apoli$lastSet;
+    @Unique
+    private double apoli$lastX;
+    @Unique
+    private double apoli$lastY;
+    @Unique
+    private double apoli$lastZ;
     @Unique
     private @Nullable Entity apoli$causeHolder;
     @Unique
@@ -65,7 +71,12 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
 
     @Override
     public void apoli$setMaxRange(double blocks) {
-        this.apoli$maxRangeSq = blocks > 0.0 ? blocks * blocks : 0.0;
+        this.apoli$maxRange = blocks > 0.0 ? blocks : 0.0;
+    }
+
+    @Override
+    public void apoli$setLifetime(int ticks) {
+        this.apoli$lifetime = Math.max(0, ticks);
     }
 
     @Override
@@ -93,6 +104,11 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
         if (config == null) return;
         Projectile self = (Projectile) (Object) this;
         if (self.level().isClientSide() || self.isRemoved()) return;
+        if (this.apoli$lifetime > 0 && ++this.apoli$age > this.apoli$lifetime) {
+            apoli$runOwnerAction(self, config.hooks().bientityActionOnExpire());
+            self.discard();
+            return;
+        }
         CustomProjectileEntity custom = self instanceof CustomProjectileEntity projectile ? projectile : null;
         if (custom != null && custom.isReturning()) return;
         FireProjectilePower.Return ret = custom == null ? null : config.returning().orElse(null);
@@ -100,15 +116,22 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
             && apoli$startReturn(self, custom, ret, null)) {
             return;
         }
-        if (this.apoli$maxRangeSq <= 0.0) return;
-        if (!this.apoli$originSet) {
-            this.apoli$originSet = true;
-            this.apoli$originX = self.getX();
-            this.apoli$originY = self.getY();
-            this.apoli$originZ = self.getZ();
+        if (this.apoli$maxRange <= 0.0) return;
+        if (!this.apoli$lastSet) {
+            this.apoli$lastSet = true;
+            this.apoli$lastX = self.getX();
+            this.apoli$lastY = self.getY();
+            this.apoli$lastZ = self.getZ();
             return;
         }
-        if (self.distanceToSqr(this.apoli$originX, this.apoli$originY, this.apoli$originZ) > this.apoli$maxRangeSq
+        double dx = self.getX() - this.apoli$lastX;
+        double dy = self.getY() - this.apoli$lastY;
+        double dz = self.getZ() - this.apoli$lastZ;
+        this.apoli$lastX = self.getX();
+        this.apoli$lastY = self.getY();
+        this.apoli$lastZ = self.getZ();
+        this.apoli$travelled += Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (this.apoli$travelled > this.apoli$maxRange
             && (ret == null || !apoli$startReturn(self, custom, ret, null))) {
             apoli$runOwnerAction(self, config.hooks().bientityActionOnExpire());
             self.discard();

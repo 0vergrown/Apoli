@@ -9,16 +9,6 @@ import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.power.PowerTypeRegistry;
-import dev.overgrown.apoli.power.builtin.ActionOnCollisionPower;
-import dev.overgrown.apoli.power.builtin.ActionOnHitPower;
-import dev.overgrown.apoli.power.builtin.ActionOnKeyPressPower;
-import dev.overgrown.apoli.power.builtin.ActionOnKeySequencePower;
-import dev.overgrown.apoli.power.builtin.ActionOnKillPower;
-import dev.overgrown.apoli.power.builtin.ActionWhenHitPower;
-import dev.overgrown.apoli.power.builtin.CooldownPower;
-import dev.overgrown.apoli.power.builtin.FireProjectilePower;
-import dev.overgrown.apoli.power.builtin.GameEventListenerPower;
-import dev.overgrown.apoli.power.builtin.ResourcePower;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
@@ -88,44 +78,36 @@ public final class PowerHudRenderer {
                                 @Nullable PowerContainer container, EntityCtx ctx) {
         if (container == null) return;
         PowerType<?> type = PowerTypeRegistry.get(power.typeId());
-        Object config = power.config();
+        if (type == null) return;
 
-        HudRender hud = hudRenderOf(type, config);
+        HudRender hud = hudRenderOf(type, power.config());
         if (hud == null) return;
+
+        HudRender.Entry entry = hud.selectEntry(ctx);
+        if (entry == null) return;
 
         OptionalInt value = PowerResources.read(container, powerId);
         if (value.isEmpty()) return;
         int current = value.getAsInt();
 
-        HudRender.Entry entry = hud.selectEntry(ctx);
-        if (entry == null) return;
-
         float fill;
-        if (type instanceof ResourcePower && !(type instanceof CooldownPower) && config instanceof ResourcePower.Cfg cfg) {
-            fill = resourceFill(player, container, powerId, cfg, entry);
-            if (fill < 0.0F) return;
-        } else {
+        if (type.isCooldown()) {
             if (current <= 0) return;
             int bound = entry.max().isPresent()
                 ? entry.max().get().evalIntWith(player, container, current)
                 : PowerResources.bound(container, powerId, true).orElse(0);
             fill = cooldownProgress(current, bound);
+        } else {
+            fill = resourceFill(player, container, powerId, current, entry);
+            if (fill < 0.0F) return;
         }
 
         RENDERABLES.add(new Renderable(entry, fill, entry.order().orElse(0)));
     }
 
-    private static @Nullable HudRender hudRenderOf(@Nullable PowerType<?> type, Object config) {
-        if (type instanceof ActionOnKeyPressPower && config instanceof ActionOnKeyPressPower.Config cfg) return cfg.hudRender();
-        if (type instanceof ActionOnKeySequencePower && config instanceof ActionOnKeySequencePower.Config cfg) return cfg.hudRender();
-        if (type instanceof FireProjectilePower && config instanceof FireProjectilePower.Config cfg) return cfg.params().hudRender().orElse(null);
-        if (type instanceof ResourcePower && config instanceof ResourcePower.Cfg cfg) return cfg.hudRender();
-        if (type instanceof ActionOnHitPower && config instanceof ActionOnHitPower.Config cfg) return cfg.hudRender();
-        if (type instanceof ActionWhenHitPower && config instanceof ActionWhenHitPower.Config cfg) return cfg.hudRender();
-        if (type instanceof ActionOnCollisionPower && config instanceof ActionOnCollisionPower.Config cfg) return cfg.hudRender();
-        if (type instanceof ActionOnKillPower && config instanceof ActionOnKillPower.Config cfg) return cfg.hudRender();
-        if (type instanceof GameEventListenerPower && config instanceof GameEventListenerPower.Config cfg) return cfg.hudRender();
-        return null;
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static @Nullable HudRender hudRenderOf(PowerType type, Object config) {
+        return type.hudRender(config);
     }
 
     private static float cooldownProgress(int remaining, int max) {
@@ -135,23 +117,26 @@ public final class PowerHudRenderer {
 
     private static final java.util.Set<ResourceLocation> UNSCALED = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
-    private static float resourceFill(LocalPlayer player, @Nullable PowerContainer container,
-                                      ResourceLocation powerId, ResourcePower.Cfg cfg, HudRender.Entry entry) {
-        OptionalInt cur = ClientPowerState.getAuxInt(powerId);
-        if (cur.isEmpty()) return 0.0F;
-        int value = cur.getAsInt();
-        dev.overgrown.apoli.data.Expression scale = entry.max().or(cfg::max).orElse(null);
-        if (scale == null) {
-            if (UNSCALED.add(powerId)) {
-                dev.overgrown.apoli.Apoli.LOGGER.warn(
-                    "[Apoli] {} asks for a HUD bar but has no 'max', so there is no value that would fill it. "
-                    + "Give the resource a 'max', or give its 'hud_render' one, or set 'should_render' to false.",
-                    powerId);
+    private static float resourceFill(LocalPlayer player, PowerContainer container, ResourceLocation powerId,
+                                      int value, HudRender.Entry entry) {
+        int max;
+        if (entry.max().isPresent()) {
+            max = entry.max().get().evalIntWith(player, container, value);
+        } else {
+            OptionalInt upper = PowerResources.bound(container, powerId, true);
+            if (upper.isEmpty() || upper.getAsInt() == Integer.MAX_VALUE) {
+                if (UNSCALED.add(powerId)) {
+                    dev.overgrown.apoli.Apoli.LOGGER.warn(
+                        "[Apoli] {} asks for a HUD bar but has no 'max', so there is no value that would fill it. "
+                        + "Give the resource a 'max', or give its 'hud_render' one, or set 'should_render' to false.",
+                        powerId);
+                }
+                return -1.0F;
             }
-            return -1.0F;
+            max = upper.getAsInt();
         }
-        int max = scale.evalIntWith(player, container, value);
-        int min = cfg.min().isPresent() ? cfg.min().get().evalIntWith(player, container, value) : 0;
+        OptionalInt lower = PowerResources.bound(container, powerId, false);
+        int min = lower.isPresent() && lower.getAsInt() != Integer.MIN_VALUE ? lower.getAsInt() : 0;
         if (max == min) return value >= max ? 1.0F : 0.0F;
         return Mth.clamp((value - min) / (float) (max - min), 0.0F, 1.0F);
     }
