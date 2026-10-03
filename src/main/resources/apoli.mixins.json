@@ -197,6 +197,7 @@
     "pose.LivingEntityRendererPoseMixin",
     "pose.PlayerRendererPoseMixin",
     "power.FogRendererModifyFogMixin",
+    "power.LevelRendererSkyMixin",
     "power.PreventEntitySelectionMixin",
     "reach.GameRendererReachMixin",
     "reach.MultiPlayerGameModeReachMixin",
