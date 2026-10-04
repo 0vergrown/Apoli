@@ -184,6 +184,7 @@
     "input.EntityTurnCursorSpeedMixin",
     "input.LocalPlayerUseSlowdownMixin",
     "input.MouseHandlerScrollMixin",
+    "item.ItemStackTooltipMixin",
     "keybinding.ClientLanguageKeybindNameMixin",
     "keybinding.KeyMappingCategoryAccessor",
     "keybinding.KeyMappingClickCountAccessor",
