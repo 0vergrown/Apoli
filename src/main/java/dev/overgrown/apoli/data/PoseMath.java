@@ -41,6 +41,48 @@ public final class PoseMath {
         return type != ModelPartTransformation.Type.VISIBLE && type != ModelPartTransformation.Type.HIDDEN;
     }
 
+    public static void reach(float[] pose, int at, float endX, float endY, float endZ,
+                             float targetX, float targetY, float targetZ, float blend) {
+        if (blend <= 0.0F || Math.abs(endY) < MIN_SCALE) return;
+        double dx = targetX - pose[at + X];
+        double dy = targetY - pose[at + Y];
+        double dz = targetZ - pose[at + Z];
+        double sideX = endX * pose[at + X_SCALE];
+        double sideZ = endZ * pose[at + Z_SCALE];
+        double along = Math.sqrt(Math.max(dx * dx + dy * dy + dz * dz - sideX * sideX - sideZ * sideZ, 0.0));
+        double radius = Math.sqrt(along * along + sideZ * sideZ);
+        if (radius < MIN_SCALE) return;
+        if (endY < 0.0F) along = -along;
+        double phase = Math.atan2(sideZ, along);
+        double swing = Math.acos(Math.max(-1.0, Math.min(1.0, dy / radius)));
+        double heading = Math.atan2(dx, dz);
+        double pitch = 0.0;
+        double yaw = 0.0;
+        boolean found = false;
+        for (int candidate = 0; candidate < 2; candidate++) {
+            double tryPitch = candidate == 0 ? swing - phase : -swing - phase;
+            double localZ = along * Math.sin(tryPitch) + sideZ * Math.cos(tryPitch);
+            double tryYaw = wrap(heading - Math.atan2(sideX, localZ));
+            if (!found || Math.abs(tryYaw) < Math.abs(yaw)) {
+                pitch = wrap(tryPitch);
+                yaw = tryYaw;
+                found = true;
+            }
+        }
+        float yScale = (float) Math.max(Math.abs(along) / Math.abs(endY), MIN_SCALE);
+        pose[at + X_ROT] += (float) wrap(pitch - pose[at + X_ROT]) * blend;
+        pose[at + Y_ROT] += (float) wrap(yaw - pose[at + Y_ROT]) * blend;
+        pose[at + Z_ROT] -= pose[at + Z_ROT] * blend;
+        pose[at + Y_SCALE] += (yScale - pose[at + Y_SCALE]) * blend;
+    }
+
+    private static double wrap(double angle) {
+        double wrapped = angle % (Math.PI * 2.0);
+        if (wrapped > Math.PI) wrapped -= Math.PI * 2.0;
+        else if (wrapped < -Math.PI) wrapped += Math.PI * 2.0;
+        return wrapped;
+    }
+
     private static void rotateGroup(float[] pose, int at, int axis, float value, float weight, boolean override,
                                     float pivotX, float pivotY, float pivotZ) {
         if (override) {
@@ -139,6 +181,33 @@ public final class PoseMath {
             r22 = -sin * m02 + cos * m22;
         }
 
+        euler(r00, r01, r10, r11, r20, r21, r22, pose, at);
+    }
+
+    public static void rotation(float xRot, float yRot, float zRot, double[] out, int at) {
+        double ca = Math.cos(xRot);
+        double sa = Math.sin(xRot);
+        double cb = Math.cos(yRot);
+        double sb = Math.sin(yRot);
+        double cg = Math.cos(zRot);
+        double sg = Math.sin(zRot);
+        out[at] = cg * cb;
+        out[at + 1] = cg * sb * sa - sg * ca;
+        out[at + 2] = cg * sb * ca + sg * sa;
+        out[at + 3] = sg * cb;
+        out[at + 4] = sg * sb * sa + cg * ca;
+        out[at + 5] = sg * sb * ca - cg * sa;
+        out[at + 6] = -sb;
+        out[at + 7] = cb * sa;
+        out[at + 8] = cb * ca;
+    }
+
+    public static void euler(double[] m, int from, float[] pose, int at) {
+        euler(m[from], m[from + 1], m[from + 3], m[from + 4], m[from + 6], m[from + 7], m[from + 8], pose, at);
+    }
+
+    private static void euler(double r00, double r01, double r10, double r11, double r20, double r21, double r22,
+                              float[] pose, int at) {
         double sinY = -r20;
         if (sinY >= GIMBAL) {
             pose[at + X_ROT] = (float) Math.atan2(r01, r11);

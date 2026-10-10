@@ -83,6 +83,41 @@ public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
         return rgba == null ? IDENTITY : rgba;
     }
 
+    public static boolean resolve(Entity entity, float[] whole, List<PartColor> parts) {
+        whole[0] = 1f;
+        whole[1] = 1f;
+        whole[2] = 1f;
+        whole[3] = 1f;
+        whole[4] = 0f;
+        List<Config> configs = CONFIGS.get();
+        configs.clear();
+        PowerLookup.collect(entity, CANONICAL, Config.class, configs);
+        if (configs.isEmpty()) return false;
+        EntityCtx ctx = null;
+        for (int i = 0; i < configs.size(); i++) {
+            Config cfg = configs.get(i);
+            if (!cfg.hasParts()) {
+                whole[0] *= cfg.red();
+                whole[1] *= cfg.green();
+                whole[2] *= cfg.blue();
+                whole[3] *= cfg.alpha();
+                if (cfg.whiten()) whole[4] = 1f;
+                continue;
+            }
+            List<PartColor> partList = cfg.parts();
+            for (int p = 0; p < partList.size(); p++) {
+                PartColor pc = partList.get(p);
+                if (pc.condition().isPresent()) {
+                    if (ctx == null) ctx = EntityCtx.of(entity, entity.level());
+                    if (!pc.condition().get().test(ctx)) continue;
+                }
+                parts.add(pc);
+            }
+        }
+        configs.clear();
+        return true;
+    }
+
     public static boolean hasPartColors(@Nullable Entity entity) {
         return PowerLookup.anyActive(entity, CANONICAL, Config.class, Config::hasParts);
     }

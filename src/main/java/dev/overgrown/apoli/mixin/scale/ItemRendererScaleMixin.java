@@ -1,6 +1,8 @@
 package dev.overgrown.apoli.mixin.scale;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.overgrown.apoli.client.render.HeldItemEdits;
+import dev.overgrown.apoli.client.render.ScaleRender;
 import dev.overgrown.apoli.scale.ScaleType;
 import dev.overgrown.apoli.scale.ScaleTypes;
 import dev.overgrown.apoli.scale.Scales;
@@ -26,8 +28,8 @@ import org.jetbrains.annotations.Nullable;
 public abstract class ItemRendererScaleMixin {
 
     @Unique
-    private static boolean apoli$scalable(@Nullable LivingEntity entity, ItemStack stack, ItemDisplayContext context) {
-        if (entity == null || stack.isEmpty()) return false;
+    private static boolean apoli$scalable(LivingEntity entity, ItemStack stack, ItemDisplayContext context) {
+        if (ScaleRender.inDoll()) return false;
         if (context == ItemDisplayContext.HEAD
             && entity.getMainHandItem() != stack && entity.getOffhandItem() != stack) {
             return false;
@@ -45,22 +47,33 @@ public abstract class ItemRendererScaleMixin {
     }
 
     @Inject(method = "renderStatic(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;ZLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/world/level/Level;III)V",
-            at = @At("HEAD"))
-    private void apoli$scaleHeldItemPush(@Nullable LivingEntity entity, ItemStack stack, ItemDisplayContext context,
-                                         boolean leftHand, PoseStack poseStack, MultiBufferSource buffer,
-                                         @Nullable Level level, int light, int overlay, int seed, CallbackInfo ci) {
-        if (!apoli$scalable(entity, stack, context)) return;
+            at = @At("HEAD"), cancellable = true)
+    private void apoli$heldItemPush(@Nullable LivingEntity entity, ItemStack stack, ItemDisplayContext context,
+                                    boolean leftHand, PoseStack poseStack, MultiBufferSource buffer,
+                                    @Nullable Level level, int light, int overlay, int seed, CallbackInfo ci) {
+        if (entity == null || stack.isEmpty()) return;
+        int edits = HeldItemEdits.resolve(entity, context, leftHand);
+        if (edits == HeldItemEdits.HIDDEN) {
+            ci.cancel();
+            return;
+        }
+        boolean scaled = apoli$scalable(entity, stack, context);
+        if (!scaled && edits == HeldItemEdits.NONE) return;
         poseStack.pushPose();
+        if (edits == HeldItemEdits.EDITED) HeldItemEdits.apply(poseStack);
+        if (!scaled) return;
         float scale = Scales.applied(entity, apoli$handScale(entity, stack, leftHand), Minecraft.getInstance().getFrameTime());
         if (scale != 1.0F) poseStack.scale(scale, scale, scale);
     }
 
     @Inject(method = "renderStatic(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;ZLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/world/level/Level;III)V",
             at = @At("RETURN"))
-    private void apoli$scaleHeldItemPop(@Nullable LivingEntity entity, ItemStack stack, ItemDisplayContext context,
-                                        boolean leftHand, PoseStack poseStack, MultiBufferSource buffer,
-                                        @Nullable Level level, int light, int overlay, int seed, CallbackInfo ci) {
-        if (!apoli$scalable(entity, stack, context)) return;
+    private void apoli$heldItemPop(@Nullable LivingEntity entity, ItemStack stack, ItemDisplayContext context,
+                                   boolean leftHand, PoseStack poseStack, MultiBufferSource buffer,
+                                   @Nullable Level level, int light, int overlay, int seed, CallbackInfo ci) {
+        if (entity == null || stack.isEmpty()) return;
+        if (!apoli$scalable(entity, stack, context)
+            && HeldItemEdits.resolve(entity, context, leftHand) == HeldItemEdits.NONE) return;
         poseStack.popPose();
     }
 }

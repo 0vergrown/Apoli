@@ -8,6 +8,7 @@ import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.BiEntityCondition;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.AnchoredParticleEmission;
 import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.data.ExprVector;
 import dev.overgrown.apoli.data.BodyPart;
@@ -74,6 +75,23 @@ public final class SpawnParticlesAction implements ActionType<EntityCtx, SpawnPa
         if (e == null) return;
         ParticleOptions opts = cfg.particle.resolve(level, e);
         if (opts == null) return;
+
+        if (cfg.modelPart.isPresent()) {
+            AnchoredParticleEmission emission = new AnchoredParticleEmission(e, cfg.modelPart.get(), cfg.space, opts,
+                cfg.force, (float) cfg.offsetX.eval(e), (float) cfg.offsetY.eval(e), (float) cfg.offsetZ.eval(e),
+                ParticlePlacement.localVelocity((float) cfg.velocityX.eval(e), (float) cfg.velocityY.eval(e),
+                    (float) cfg.velocityZ.eval(e), ParticlePlacement.speedVector(e, cfg.speed)),
+                Math.max(0, cfg.count.evalInt(e)), cfg.spread.resolve(e), ParticlePlacement.scalarSpeed(e, cfg.speed));
+            List<ServerPlayer> viewers = level.players();
+            for (int i = 0; i < viewers.size(); i++) {
+                ServerPlayer player = viewers.get(i);
+                if (!emission.inRange(player)) continue;
+                if (cfg.bientityCondition.isPresent()
+                    && !cfg.bientityCondition.get().test(BiEntityCtx.of(e, player, level))) continue;
+                emission.sendTo(level, player);
+            }
+            return;
+        }
 
         dev.overgrown.apoli.data.ModelPartAnchor.Frame frame = ParticlePlacement.frame(e, cfg.modelPart);
         Vec3 origin = ParticlePlacement.origin(e, frame, cfg.space,

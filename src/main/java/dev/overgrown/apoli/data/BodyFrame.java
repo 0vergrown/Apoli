@@ -44,18 +44,29 @@ public final class BodyFrame {
     }
 
     public static BodyFrame of(Entity entity) {
-        float bodyYaw = entity instanceof LivingEntity living ? living.yBodyRot : entity.getYRot();
+        return of(entity, 1.0F, 0.0F);
+    }
+
+    public static BodyFrame of(Entity entity, float partialTick) {
+        return of(entity, partialTick, partialTick);
+    }
+
+    private static BodyFrame of(Entity entity, float partialTick, float tickOffset) {
+        float bodyYaw = entity instanceof LivingEntity living
+            ? Mth.rotLerp(partialTick, living.yBodyRotO, living.yBodyRot)
+            : Mth.rotLerp(partialTick, entity.yRotO, entity.getYRot());
         float bodyPitch = 0.0F;
         float bodyRoll = 0.0F;
         boolean crawling = false;
         if (entity instanceof Player player) {
-            float swimAmount = player.getSwimAmount(1.0F);
+            float swimAmount = player.getSwimAmount(partialTick);
+            float xRot = player.getViewXRot(partialTick);
             if (player.isFallFlying()) {
-                float ticks = player.getFallFlyingTicks();
-                bodyPitch = Mth.clamp(ticks * ticks / 100.0F, 0.0F, 1.0F) * (-90.0F - player.getXRot()) * (float) DEG_TO_RAD;
-                bodyRoll = glideRoll(player);
+                float ticks = player.getFallFlyingTicks() + tickOffset;
+                bodyPitch = Mth.clamp(ticks * ticks / 100.0F, 0.0F, 1.0F) * (-90.0F - xRot) * (float) DEG_TO_RAD;
+                bodyRoll = glideRoll(player, partialTick);
             } else if (swimAmount > 0.0F) {
-                float target = player.isInWater() ? -90.0F - player.getXRot() : -90.0F;
+                float target = player.isInWater() ? -90.0F - xRot : -90.0F;
                 bodyPitch = Mth.lerp(swimAmount, 0.0F, target) * (float) DEG_TO_RAD;
                 crawling = player.isVisuallySwimming();
             }
@@ -153,8 +164,8 @@ public final class BodyFrame {
         out[2] = z;
     }
 
-    private static float glideRoll(Player player) {
-        Vec3 view = player.getViewVector(1.0F);
+    private static float glideRoll(Player player, float partialTick) {
+        Vec3 view = player.getViewVector(partialTick);
         Vec3 motion = player.getDeltaMovement();
         double motionSqr = motion.horizontalDistanceSqr();
         double viewSqr = view.horizontalDistanceSqr();

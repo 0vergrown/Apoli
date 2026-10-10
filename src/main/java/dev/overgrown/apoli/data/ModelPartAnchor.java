@@ -2,6 +2,9 @@ package dev.overgrown.apoli.data;
 
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix3f;
+import org.joml.Vector3f;
 
 public final class ModelPartAnchor {
 
@@ -12,14 +15,27 @@ public final class ModelPartAnchor {
         private final float partXRot;
         private final float partYRot;
         private final float partZRot;
+        @Nullable
         private final BodyFrame body;
+        @Nullable
+        private final Matrix3f basis;
 
         Frame(Vec3 pivot, float partXRot, float partYRot, float partZRot, BodyFrame body) {
+            this(pivot, partXRot, partYRot, partZRot, body, null);
+        }
+
+        private Frame(Vec3 pivot, float partXRot, float partYRot, float partZRot, @Nullable BodyFrame body,
+                      @Nullable Matrix3f basis) {
             this.pivot = pivot;
             this.partXRot = partXRot;
             this.partYRot = partYRot;
             this.partZRot = partZRot;
             this.body = body;
+            this.basis = basis;
+        }
+
+        public static Frame world(Vec3 pivot, float partXRot, float partYRot, float partZRot, Matrix3f basis) {
+            return new Frame(pivot, partXRot, partYRot, partZRot, null, basis);
         }
 
         public Vec3 pivot() {
@@ -29,18 +45,34 @@ public final class ModelPartAnchor {
         public Vec3 direction(Vec3 local) {
             if (local.lengthSqr() < 1.0e-12) return Vec3.ZERO;
             Vec3 model = rotate(new Vec3(local.x, -local.y, -local.z), partXRot, partYRot, partZRot);
+            if (basis != null) {
+                Vector3f world = basis.transform((float) model.x, (float) model.y, (float) model.z, new Vector3f());
+                return new Vec3(world.x, world.y, world.z);
+            }
             return body.localDirectionToWorld(-model.x, -model.y, model.z);
         }
     }
 
     public static Frame frameOf(Entity entity, BodyPart part) {
-        BodyFrame body = BodyFrame.of(entity);
         BodyPart sided = part.sided(entity);
-        if (!sided.hasPoint()) {
-            return new Frame(new Vec3(0.0, entity.getBbHeight() * 0.5, 0.0), 0.0F, 0.0F, 0.0F, body);
-        }
+        BodyFrame body = BodyFrame.of(entity);
+        if (!sided.hasPoint()) return centre(entity, body);
+        return frameOf(sided, HumanoidPose.of(entity), body);
+    }
 
-        HumanoidPose pose = HumanoidPose.of(entity);
+    public static Frame frameOf(Entity entity, BodyPart part, ModelPartTimeline timeline, double now,
+                                float partialTick) {
+        BodyPart sided = part.sided(entity);
+        BodyFrame body = BodyFrame.of(entity, partialTick);
+        if (!sided.hasPoint()) return centre(entity, body);
+        return frameOf(sided, HumanoidPose.of(entity, timeline, now, partialTick), body);
+    }
+
+    private static Frame centre(Entity entity, BodyFrame body) {
+        return new Frame(new Vec3(0.0, entity.getBbHeight() * 0.5, 0.0), 0.0F, 0.0F, 0.0F, body);
+    }
+
+    private static Frame frameOf(BodyPart sided, HumanoidPose pose, BodyFrame body) {
         float[] point = new float[3];
         double[] scratch = new double[3];
         sided.pointInto(pose.poses(), scratch, point);

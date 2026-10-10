@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.client.radial;
 
+import dev.overgrown.apoli.client.ScreenCloseKeys;
 import dev.overgrown.apoli.network.payload.RadialMenuOpenS2C;
 import dev.overgrown.apoli.network.payload.RadialMenuSelectC2S;
 import io.netty.buffer.Unpooled;
@@ -184,6 +185,7 @@ public class RadialMenu {
     }
 
     private void select(int index) {
+        ScreenCloseKeys.carryOver();
         FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
         new RadialMenuSelectC2S(nonce, index).write(buf);
         ClientPlayNetworking.send(RadialMenuSelectC2S.CHANNEL, buf);

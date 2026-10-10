@@ -57,6 +57,16 @@ public final class ApoliNetwork {
         if (passenger instanceof ServerPlayer self) sendMountOffset(self, payload);
     }
 
+    public static boolean canSendAnchoredParticles(ServerPlayer recipient) {
+        return connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.AnchoredParticlesS2C.CHANNEL);
+    }
+
+    public static void sendAnchoredParticles(ServerPlayer recipient,
+                                             dev.overgrown.apoli.network.payload.AnchoredParticlesS2C payload) {
+        send(recipient, dev.overgrown.apoli.network.payload.AnchoredParticlesS2C.CHANNEL, payload::write);
+    }
+
     public static void sendResourceTables(ServerPlayer recipient,
                                           dev.overgrown.apoli.network.payload.SyncResourceTablesS2C payload) {
         if (connected(recipient)

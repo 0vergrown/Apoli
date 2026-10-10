@@ -163,6 +163,13 @@ public final class ApoliClient implements ClientModInitializer {
                         payload.x(), payload.y(), payload.z(), payload.space(), payload.rotation())));
             });
 
+        ClientPlayNetworking.registerGlobalReceiver(
+            dev.overgrown.apoli.network.payload.AnchoredParticlesS2C.CHANNEL, (mc, handler, buf, sender) -> {
+                dev.overgrown.apoli.network.payload.AnchoredParticlesS2C payload =
+                    dev.overgrown.apoli.network.payload.AnchoredParticlesS2C.read(buf);
+                mc.execute(() -> dev.overgrown.apoli.client.particle.AnchoredParticleClient.enqueue(payload));
+            });
+
         dev.overgrown.apoli.power.builtin.InventoryPower.setClientLookup((holder, powerId) ->
             holder == net.minecraft.client.Minecraft.getInstance().player
                 ? dev.overgrown.apoli.client.ClientPowerState.powerInventory(powerId)
@@ -296,6 +303,7 @@ public final class ApoliClient implements ClientModInitializer {
                 dev.overgrown.apoli.client.ClientDevMode.clear();
                 dev.overgrown.apoli.mount.MountOffsets.clearClient();
                 dev.overgrown.apoli.client.ShaderPowerState.clear();
+                dev.overgrown.apoli.client.ScreenCloseKeys.clear();
                 dev.overgrown.apoli.client.ClientResolvedPowers.clear();
                 dev.overgrown.apoli.client.camera.CameraController.reset();
                 dev.overgrown.apoli.client.CameraPerspectiveReporter.reset();

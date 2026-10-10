@@ -48,7 +48,11 @@ public final class ModelPartTimeline {
                 continue;
             }
             slot.weight = weight;
-            slot.value = slot.transformation.sample((float) (now - slot.startedAt), entity);
+            float elapsed = (float) (now - slot.startedAt);
+            slot.value = slot.transformation.sample(elapsed, entity);
+            if (slot.transformation.type() == ModelPartTransformation.Type.REACH) {
+                slot.hasTarget = slot.transformation.sampleTarget(elapsed, slot.target);
+            }
         }
         if (slots.isEmpty() && state.poseMask == 0 && !ModifyModelPartsPower.has(entity)) this.states.remove(entity);
         return slots;
@@ -86,6 +90,8 @@ public final class ModelPartTimeline {
         private float weightAtEdge;
         private float weight;
         private float value;
+        private final float[] target = new float[3];
+        private boolean hasTarget;
 
         private Slot(ModelPartTransformation transformation) {
             this.transformation = transformation;
@@ -101,6 +107,22 @@ public final class ModelPartTimeline {
 
         public float value() {
             return value;
+        }
+
+        public boolean hasTarget() {
+            return hasTarget;
+        }
+
+        public float targetX() {
+            return target[0];
+        }
+
+        public float targetY() {
+            return target[1];
+        }
+
+        public float targetZ() {
+            return target[2];
         }
 
         public boolean rendersIn(boolean firstPerson) {

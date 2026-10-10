@@ -21,12 +21,15 @@ public final class BodyAttachments {
     public static final int RIGHT_DIGITIGRADE_LEG = 1 << 15;
     public static final int LEFT_DIGITIGRADE_LEG = 1 << 16;
     public static final int HALO = 1 << 17;
-    public static final int COUNT = 18;
+    public static final int RIGHT_ITEM = 1 << 18;
+    public static final int LEFT_ITEM = 1 << 19;
+    public static final int COUNT = 20;
 
     public static final int WINGS = RIGHT_WING | LEFT_WING | WING_PAIR;
     public static final int EARS = RIGHT_EAR | LEFT_EAR | EAR_PAIR;
     public static final int CLAWS = RIGHT_ARM_CLAW | LEFT_ARM_CLAW | RIGHT_LEG_CLAW | LEFT_LEG_CLAW;
     public static final int DIGITIGRADE_LEGS = RIGHT_DIGITIGRADE_LEG | LEFT_DIGITIGRADE_LEG;
+    public static final int ITEMS = RIGHT_ITEM | LEFT_ITEM;
 
     public static int index(int bit) {
         return Integer.numberOfTrailingZeros(bit);

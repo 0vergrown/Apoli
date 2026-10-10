@@ -14,6 +14,7 @@ import dev.overgrown.apoli.power.builtin.TogglePower;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 
@@ -36,6 +37,7 @@ public final class ApoliKeyHandler {
                 FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
                 new PowerActivationC2S(powerId).write(buf);
                 ClientPlayNetworking.send(PowerActivationC2S.CHANNEL, buf);
+                ScreenCloseKeys.expect(km);
             } else if (type instanceof FireProjectilePower) {
                 if (!(power.config() instanceof FireProjectilePower.Config cfg)) continue;
                 Key fpKey = cfg.params().key().orElse(Key.DEFAULT_PRIMARY);
@@ -52,6 +54,7 @@ public final class ApoliKeyHandler {
                 FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
                 new PowerActivationC2S(powerId).write(buf);
                 ClientPlayNetworking.send(PowerActivationC2S.CHANNEL, buf);
+                ScreenCloseKeys.expect(km);
             } else if (type instanceof TogglePower) {
                 if (!(power.config() instanceof TogglePower.Config cfg)) continue;
                 KeyMapping km = ApoliKeyMappings.resolve(cfg.key().key());
@@ -62,5 +65,6 @@ public final class ApoliKeyHandler {
             }
         }
         KeyPressWatcher.tick();
+        ScreenCloseKeys.tick(Minecraft.getInstance());
     }
 }

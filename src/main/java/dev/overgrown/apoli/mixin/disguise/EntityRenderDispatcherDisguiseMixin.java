@@ -1,10 +1,12 @@
 package dev.overgrown.apoli.mixin.disguise;
 
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.overgrown.apoli.client.disguise.ClientDisguiseManager;
 import dev.overgrown.apoli.entity.disguise.DisguiseData;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.world.entity.Entity;
@@ -29,7 +31,6 @@ public abstract class EntityRenderDispatcherDisguiseMixin {
         if (dummy == null) return;
 
         ClientDisguiseManager.ensureCustomModelLayer((EntityRenderDispatcher) (Object) this, dummy);
-        ClientDisguiseManager.ensureCustomModelLayer((EntityRenderDispatcher) (Object) this, dummy);
         Entity previous = ClientDisguiseManager.beginDisguiseRender(entity);
         try {
             ((EntityRenderDispatcher) (Object) this).render(dummy, x, y, z, yaw, partialTick, pose, buffers, light);
@@ -37,5 +38,12 @@ public abstract class EntityRenderDispatcherDisguiseMixin {
             ClientDisguiseManager.endDisguiseRender(previous);
         }
         ci.cancel();
+    }
+
+    @ModifyExpressionValue(method = "getRenderer",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/AbstractClientPlayer;getModelName()Ljava/lang/String;"))
+    private String apoli$disguiseModel(String original, Entity entity) {
+        PlayerInfo info = ClientDisguiseManager.playerInfo(entity.getId());
+        return info == null ? original : info.getModelName();
     }
 }

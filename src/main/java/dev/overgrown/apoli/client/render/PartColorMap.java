@@ -13,65 +13,25 @@ import java.util.Map;
 
 public final class PartColorMap {
 
-    private static final ThreadLocal<PartColorMap> SCRATCH = ThreadLocal.withInitial(PartColorMap::new);
-
     private final Map<ModelPart, float[]> colors = new IdentityHashMap<>();
     private final List<float[]> pool = new ArrayList<>();
-    private final List<ModelColorPower.PartColor> partColors = new ArrayList<>(4);
     private final List<ModelPart> parts = new ArrayList<>(8);
     private int used;
 
-    private PartColorMap() {}
+    PartColorMap() {}
 
     @Nullable
-    public static Map<ModelPart, float[]> build(Entity entity, HumanoidModel<?> model) {
-        return SCRATCH.get().fill(entity, model, null, null);
+    Map<ModelPart, float[]> map() {
+        return colors.isEmpty() ? null : colors;
     }
 
-    @Nullable
-    public static Map<ModelPart, float[]> buildHand(Entity entity, HumanoidModel<?> model, ModelPart arm,
-                                                    ModelPart sleeve, float[] whole) {
-        PartColorMap map = SCRATCH.get();
-        boolean tinted = whole != ModelColorPower.IDENTITY;
-        if (!tinted && !ModelColorPower.hasPartColors(entity)) return null;
-        map.fill(entity, model, arm, sleeve);
-        if (!tinted) return map.colors.isEmpty() ? null : map.colors;
-        map.multiply(arm, whole);
-        map.multiply(sleeve, whole);
-        return map.colors;
-    }
-
-    public static void attach(ModelPart part, float[] colours, int at) {
-        PartColorMap map = SCRATCH.get();
-        float[] color = map.colors.get(part);
-        if (color == null) {
-            color = map.next();
-            map.colors.put(part, color);
-        }
-        System.arraycopy(colours, at, color, 0, 5);
-        ModelColorState.set(map.colors);
-    }
-
-    private void multiply(ModelPart part, float[] whole) {
-        float[] color = colors.get(part);
-        if (color == null) {
-            color = next();
-            colors.put(part, color);
-        }
-        color[0] *= whole[0];
-        color[1] *= whole[1];
-        color[2] *= whole[2];
-        color[3] *= whole[3];
-        color[4] = Math.max(color[4], whole[4]);
-    }
-
-    @Nullable
-    private Map<ModelPart, float[]> fill(Entity entity, HumanoidModel<?> model, @Nullable ModelPart onlyA,
-                                         @Nullable ModelPart onlyB) {
-        colors.clear();
+    void reset() {
+        if (!colors.isEmpty()) colors.clear();
         used = 0;
-        partColors.clear();
-        ModelColorPower.collectPartColors(entity, partColors);
+    }
+
+    void fill(Entity entity, HumanoidModel<?> model, List<ModelColorPower.PartColor> partColors,
+              @Nullable ModelPart onlyA, @Nullable ModelPart onlyB) {
         for (int i = 0; i < partColors.size(); i++) {
             ModelColorPower.PartColor partColor = partColors.get(i);
             parts.clear();
@@ -79,11 +39,7 @@ public final class PartColorMap {
             for (int p = 0; p < parts.size(); p++) {
                 ModelPart part = parts.get(p);
                 if (onlyA != null && part != onlyA && part != onlyB) continue;
-                float[] color = colors.get(part);
-                if (color == null) {
-                    color = next();
-                    colors.put(part, color);
-                }
+                float[] color = entry(part);
                 color[0] *= partColor.red();
                 color[1] *= partColor.green();
                 color[2] *= partColor.blue();
@@ -92,8 +48,28 @@ public final class PartColorMap {
             }
         }
         parts.clear();
-        partColors.clear();
-        return colors.isEmpty() ? null : colors;
+    }
+
+    void multiply(ModelPart part, float[] whole) {
+        float[] color = entry(part);
+        color[0] *= whole[0];
+        color[1] *= whole[1];
+        color[2] *= whole[2];
+        color[3] *= whole[3];
+        color[4] = Math.max(color[4], whole[4]);
+    }
+
+    void attach(ModelPart part, float[] colours, int at) {
+        System.arraycopy(colours, at, entry(part), 0, 5);
+    }
+
+    private float[] entry(ModelPart part) {
+        float[] color = colors.get(part);
+        if (color == null) {
+            color = next();
+            colors.put(part, color);
+        }
+        return color;
     }
 
     private float[] next() {
