@@ -2,9 +2,11 @@ package dev.overgrown.apoli.mixin.firstperson;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.overgrown.apoli.client.render.GhostArmState;
+import dev.overgrown.apoli.client.render.ModelColorState;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.model.geom.ModelPart;
@@ -21,8 +23,11 @@ public abstract class PlayerRendererGhostArmMixin {
 
     @WrapOperation(method = "renderHand",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/RenderType;entitySolid(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/client/renderer/RenderType;"))
-    private RenderType apoli$ghostArmType(ResourceLocation texture, Operation<RenderType> original) {
-        return GhostArmState.isActive() ? RenderType.entityTranslucent(texture) : original.call(texture);
+    private RenderType apoli$translucentArmType(ResourceLocation texture, Operation<RenderType> original,
+                                                @Local(argsOnly = true, ordinal = 0) ModelPart arm) {
+        if (GhostArmState.isActive()) return RenderType.entityTranslucent(texture);
+        if (ModelColorState.alphaFor(arm) < 0.999F) return RenderType.entityTranslucentCull(texture);
+        return original.call(texture);
     }
 
     @WrapOperation(method = "renderHand",

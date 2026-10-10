@@ -8,6 +8,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.BiEntityCondition;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.AnchoredParticleEmission;
 import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.data.ExprVector;
 import dev.overgrown.apoli.data.BodyPart;
@@ -122,6 +123,28 @@ public final class ParticlePower extends PowerType<ParticlePower.Config> {
 
         ParticleOptions opts = cfg.particle().resolve(level, owner);
         if (opts == null) return;
+
+        if (cfg.modelPart().isPresent()) {
+            AnchoredParticleEmission emission = new AnchoredParticleEmission(owner, cfg.modelPart().get(),
+                cfg.space(), opts, cfg.force(), (float) cfg.offsetX().eval(owner), (float) cfg.offsetY().eval(owner),
+                (float) cfg.offsetZ().eval(owner),
+                ParticlePlacement.localVelocity((float) cfg.velocityX().eval(owner), (float) cfg.velocityY().eval(owner),
+                    (float) cfg.velocityZ().eval(owner), ParticlePlacement.speedVector(owner, cfg.speed())),
+                Math.max(0, cfg.count().evalInt(owner)), cfg.spread().resolve(owner),
+                ParticlePlacement.scalarSpeed(owner, cfg.speed()));
+            List<ServerPlayer> viewers = level.players();
+            for (int i = 0; i < viewers.size(); i++) {
+                ServerPlayer player = viewers.get(i);
+                if (!emission.inRange(player)) continue;
+                if (player == owner && !cfg.visibleInFirstPerson()
+                    && dev.overgrown.apoli.entity.CameraPerspectives.isFirstPerson(player)) continue;
+                if (!cfg.visibleWhileInvisible() && owner.isInvisibleTo(player)) continue;
+                if (cfg.bientityCondition().isPresent() && owner instanceof LivingEntity le
+                    && !cfg.bientityCondition().get().test(new BiEntityCtx(le, player, level))) continue;
+                emission.sendTo(level, player);
+            }
+            return;
+        }
 
         dev.overgrown.apoli.data.ModelPartAnchor.Frame frame = ParticlePlacement.frame(owner, cfg.modelPart());
         Vec3 origin = ParticlePlacement.origin(owner, frame, cfg.space(),

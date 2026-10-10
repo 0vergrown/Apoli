@@ -182,6 +182,7 @@ public final class ApoliClient {
             dev.overgrown.apoli.client.ClientDevMode.clear();
             dev.overgrown.apoli.mount.MountOffsets.clearClient();
             ShaderPowerState.clear();
+            ScreenCloseKeys.clear();
             ClientResolvedPowers.clear();
             dev.overgrown.apoli.client.camera.CameraController.reset();
             CameraPerspectiveReporter.reset();

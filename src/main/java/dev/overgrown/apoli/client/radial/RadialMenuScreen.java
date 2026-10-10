@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.client.radial;
 
+import dev.overgrown.apoli.client.ScreenCloseKeys;
 import dev.overgrown.apoli.network.payload.RadialMenuOpenS2C;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -46,6 +47,16 @@ public class RadialMenuScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (this.minecraft != null && (ScreenCloseKeys.closes(this, keyCode, scanCode)
+            || this.minecraft.options.keyInventory.matches(keyCode, scanCode))) {
+            this.onClose();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override

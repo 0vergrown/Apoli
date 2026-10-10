@@ -38,6 +38,7 @@ public final class ApoliIds {
     public static final ResourceLocation MODIFY_DAMAGE = Apoli.id("modify_damage");
     public static final ResourceLocation ACTION_ON_HIT = Apoli.id("action_on_hit");
     public static final ResourceLocation ACTION_WHEN_HIT = Apoli.id("action_when_hit");
+    public static final ResourceLocation ACTION_ON_KILL = Apoli.id("action_on_kill");
     public static final ResourceLocation ACTION_ON_COLLISION = Apoli.id("action_on_collision");
     public static final ResourceLocation REPLACE_SOUND_EMISSION = Apoli.id("replace_sound_emission");
     public static final ResourceLocation REPLACE_SOUND_RECEPTION = Apoli.id("replace_sound_reception");

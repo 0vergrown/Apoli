@@ -136,6 +136,16 @@ public final class BodyParts {
         BodyAttachments.LEFT_DIGITIGRADE_LEG, "digitigrade_left_leg");
     public static final BodyPart DIGITIGRADE_LEGS = attachment("digitigrade_legs", BodyAttachments.DIGITIGRADE_LEGS);
 
+    public static final BodyPart RIGHT_ITEM = attachment("right_item", BodyAttachments.RIGHT_ITEM, "item_right",
+        "right_hand_item", "right_held_item");
+    public static final BodyPart LEFT_ITEM = attachment("left_item", BodyAttachments.LEFT_ITEM, "item_left",
+        "left_hand_item", "left_held_item");
+    public static final BodyPart MAIN_HAND_ITEM = handedAttachment("main_hand_item", RIGHT_ITEM, LEFT_ITEM,
+        "main_item", "item_main", "mainhand_item");
+    public static final BodyPart OFF_HAND_ITEM = handedAttachment("off_hand_item", LEFT_ITEM, RIGHT_ITEM,
+        "off_item", "item_off", "offhand_item");
+    public static final BodyPart ITEMS = attachment("items", BodyAttachments.ITEMS, "held_items", "held_item");
+
     private static BodyPart limb(String name, int models, int limb, String bindKey, String... aliases) {
         return register(new BodyPart(name, ModelParts.normalize(name), models, 1 << limb, false, false, false,
             new BodyPart.Region[]{BodyPart.Region.whole(1 << limb)},
@@ -163,6 +173,15 @@ public final class BodyParts {
         BodyPart part = new BodyPart(name, ModelParts.normalize(name), 0, rightHanded.limbs() | leftHanded.limbs(),
             false, false, false, new BodyPart.Region[0], BodyPart.POINT_NONE, -1, 0, 0, 0, -1, 0, 0, 0, null);
         part.handed(rightHanded, leftHanded);
+        return register(part, aliases);
+    }
+
+    private static BodyPart handedAttachment(String name, BodyPart rightHanded, BodyPart leftHanded,
+                                             String... aliases) {
+        BodyPart part = new BodyPart(name, ModelParts.normalize(name), 0, 0, false, false, true,
+            new BodyPart.Region[0], BodyPart.POINT_NONE, -1, 0, 0, 0, -1, 0, 0, 0, null);
+        part.handed(rightHanded, leftHanded);
+        part.attach(rightHanded.attachments() | leftHanded.attachments());
         return register(part, aliases);
     }
 

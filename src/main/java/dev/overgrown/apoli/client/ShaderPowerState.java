@@ -49,19 +49,30 @@ public final class ShaderPowerState {
         renderer.apoli$loadEffect(want);
         PostChain loaded = renderer.apoli$postEffect();
         if (loaded == null) {
-            if (BROKEN.add(want)) {
-                dev.overgrown.apoli.Apoli.LOGGER.warn(
-                    "[Apoli] apoli:shader asked for '{}' but the game loaded no post effect for it. "
-                    + "Either assets/{}/shaders/post/{}.json is missing or broken, or another mod is "
-                    + "blocking post-processing shaders (Sodium Extra's \"Prevent Shaders\" does exactly that).",
-                    want, want.getNamespace(), want.getPath());
-            }
+            if (BROKEN.add(want)) warnBroken(want);
             applied = null;
             lastSeen = null;
             return;
         }
         applied = want;
         lastSeen = loaded;
+    }
+
+    private static void warnBroken(ResourceLocation shader) {
+        String path = shader.getPath();
+        if (path.startsWith("shaders/post/") && path.endsWith(".json")) {
+            dev.overgrown.apoli.Apoli.LOGGER.warn(
+                "[Apoli] apoli:shader asked for '{}' but the game loaded no post effect for it. "
+                + "Either assets/{}/{} is missing or broken, or another mod is "
+                + "blocking post-processing shaders (Sodium Extra's \"Prevent Shaders\" does exactly that).",
+                shader, shader.getNamespace(), path);
+        } else {
+            dev.overgrown.apoli.Apoli.LOGGER.warn(
+                "[Apoli] apoli:shader asked for '{}' but the game loaded no post effect for it. "
+                + "The shader field is the full path of a post chain file, like "
+                + "minecraft:shaders/post/creeper.json, so the game looked for assets/{}/{}.",
+                shader, shader.getNamespace(), path);
+        }
     }
 
     public static boolean locksToggle() {

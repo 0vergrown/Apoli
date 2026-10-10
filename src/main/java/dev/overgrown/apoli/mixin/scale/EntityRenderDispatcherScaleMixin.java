@@ -1,12 +1,16 @@
 package dev.overgrown.apoli.mixin.scale;
 
+import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.overgrown.apoli.client.render.ScaleRender;
 import dev.overgrown.apoli.scale.ScaleTypes;
 import dev.overgrown.apoli.scale.Scales;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.LevelReader;
 import org.spongepowered.asm.mixin.Mixin;
@@ -23,11 +27,12 @@ public abstract class EntityRenderDispatcherScaleMixin {
             at = @At(value = "INVOKE", shift = At.Shift.BEFORE,
                      target = "Lnet/minecraft/client/renderer/entity/EntityRenderer;render(Lnet/minecraft/world/entity/Entity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"))
     private void apoli$scaleModelPush(Entity entity, double x, double y, double z, float yaw, float partialTick,
-                                      PoseStack poseStack, MultiBufferSource buffer, int light, CallbackInfo ci) {
+                                      PoseStack poseStack, MultiBufferSource buffer, int light, CallbackInfo ci,
+                                      @Local EntityRenderer<?> renderer) {
         poseStack.pushPose();
-        if (Scales.untouched(entity)) return;
-        float width = Scales.applied(entity, ScaleTypes.MODEL_WIDTH, partialTick);
-        float height = Scales.applied(entity, ScaleTypes.MODEL_HEIGHT, partialTick);
+        if (renderer instanceof LivingEntityRenderer) return;
+        float width = ScaleRender.modelWidth(entity, partialTick);
+        float height = ScaleRender.modelHeight(entity, partialTick);
         if (width != 1.0F || height != 1.0F) poseStack.scale(width, height, width);
     }
 

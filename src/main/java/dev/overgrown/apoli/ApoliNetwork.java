@@ -33,7 +33,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public final class ApoliNetwork {
 
-    private static final String PROTOCOL_VERSION = "14";
+    private static final String PROTOCOL_VERSION = "15";
 
     private ApoliNetwork() {}
 
@@ -60,6 +60,8 @@ public final class ApoliNetwork {
             dev.overgrown.apoli.network.payload.PowerInventoryS2C.STREAM_CODEC, ApoliNetwork::onPowerInventory);
         registrar.playToClient(dev.overgrown.apoli.network.payload.MountOffsetS2C.TYPE,
             dev.overgrown.apoli.network.payload.MountOffsetS2C.STREAM_CODEC, ApoliNetwork::onMountOffset);
+        registrar.playToClient(dev.overgrown.apoli.network.payload.AnchoredParticlesS2C.TYPE,
+            dev.overgrown.apoli.network.payload.AnchoredParticlesS2C.STREAM_CODEC, ApoliNetwork::onAnchoredParticles);
         registrar.playToClient(DisguiseUpdateS2C.TYPE, DisguiseUpdateS2C.STREAM_CODEC, ApoliNetwork::onDisguiseUpdate);
         registrar.playToClient(dev.overgrown.apoli.network.payload.ScaleSyncS2C.TYPE,
             dev.overgrown.apoli.network.payload.ScaleSyncS2C.STREAM_CODEC, ApoliNetwork::onScaleSync);
@@ -178,6 +180,11 @@ public final class ApoliNetwork {
     private static void onMountOffset(dev.overgrown.apoli.network.payload.MountOffsetS2C payload,
                                       IPayloadContext ctx) {
         ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPayloadHandlers.onMountOffset(payload));
+    }
+
+    private static void onAnchoredParticles(dev.overgrown.apoli.network.payload.AnchoredParticlesS2C payload,
+                                            IPayloadContext ctx) {
+        ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPayloadHandlers.onAnchoredParticles(payload));
     }
 
     private static void onApplyVelocity(ApplyVelocityS2C payload, IPayloadContext ctx) {
@@ -332,6 +339,15 @@ public final class ApoliNetwork {
     public static void broadcastMountOffset(Entity passenger,
                                             dev.overgrown.apoli.network.payload.MountOffsetS2C payload) {
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(passenger, payload);
+    }
+
+    public static boolean canSendAnchoredParticles(ServerPlayer recipient) {
+        return connected(recipient);
+    }
+
+    public static void sendAnchoredParticles(ServerPlayer recipient,
+                                             dev.overgrown.apoli.network.payload.AnchoredParticlesS2C payload) {
+        PacketDistributor.sendToPlayer(recipient, payload);
     }
 
     public static void broadcastRopeCreate(net.minecraft.server.level.ServerLevel level, RopeCreateS2C payload) {

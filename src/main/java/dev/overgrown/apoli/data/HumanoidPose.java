@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.data;
 
+import dev.overgrown.apoli.access.DualSwingHolder;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
@@ -60,6 +61,8 @@ public final class HumanoidPose {
     private final float[] parts = new float[PART_COUNT * STRIDE];
     private float[] pivot;
     private double[] scratch;
+    private float[] body;
+    private double[] matrix;
 
     private HumanoidPose() {
         rest();
@@ -68,9 +71,26 @@ public final class HumanoidPose {
     public static HumanoidPose of(Entity entity) {
         HumanoidPose pose = new HumanoidPose();
         if (entity instanceof LivingEntity living) {
-            pose.animate(living);
-            pose.applyPowers(living);
+            pose.animate(living, TIMELINE, living.tickCount, 1.0F, living.tickCount);
+            pose.applyPowers(living, TIMELINE, living.tickCount, false);
         }
+        return pose;
+    }
+
+    public static HumanoidPose of(Entity entity, ModelPartTimeline timeline, double now, float partialTick) {
+        HumanoidPose pose = new HumanoidPose();
+        if (entity instanceof LivingEntity living) {
+            pose.animate(living, timeline, now, partialTick, living.tickCount + partialTick);
+            pose.applyPowers(living, timeline, now, false);
+        }
+        return pose;
+    }
+
+    public static HumanoidPose firstPersonArms(LivingEntity entity, ModelPartTimeline timeline, double now) {
+        HumanoidPose pose = new HumanoidPose();
+        pose.bob(RIGHT_ARM, 0.0F, 1.0F);
+        pose.bob(LEFT_ARM, 0.0F, -1.0F);
+        pose.applyPowers(entity, timeline, now, true);
         return pose;
     }
 
@@ -150,24 +170,25 @@ public final class HumanoidPose {
         parts[part * STRIDE + field] += value;
     }
 
-    private void animate(LivingEntity entity) {
-        boolean overridden = overridesPose(entity);
+    private void animate(LivingEntity entity, ModelPartTimeline timeline, double now, float partialTick,
+                         float ageInTicks) {
+        boolean overridden = timeline.overridesPose(entity, now);
         boolean fallFlying = !overridden && entity.getFallFlyingTicks() > 4;
         boolean riding = !overridden && entity.isPassenger();
         boolean crouching = !overridden && entity.isCrouching();
-        float swimAmount = overridden ? 0.0F : entity.getSwimAmount(1.0F);
+        float swimAmount = overridden ? 0.0F : entity.getSwimAmount(partialTick);
         boolean visuallySwimming = entity.isVisuallySwimming();
 
-        float netHeadYaw = Mth.wrapDegrees(entity.getYHeadRot() - entity.yBodyRot);
-        float headPitch = entity.getXRot();
-        float ageInTicks = entity.tickCount;
-        float attackTime = entity.getAttackAnim(1.0F);
+        float netHeadYaw = Mth.wrapDegrees(Mth.rotLerp(partialTick, entity.yHeadRotO, entity.yHeadRot)
+            - Mth.rotLerp(partialTick, entity.yBodyRotO, entity.yBodyRot));
+        float headPitch = Mth.lerp(partialTick, entity.xRotO, entity.getXRot());
+        float attackTime = entity.getAttackAnim(partialTick);
 
         float limbSwing = 0.0F;
         float limbSwingAmount = 0.0F;
         if (!entity.isPassenger() && entity.isAlive()) {
-            limbSwingAmount = Math.min(1.0F, walkSpeed(entity));
-            limbSwing = walkPosition(entity);
+            limbSwingAmount = Math.min(1.0F, entity.walkAnimation.speed(partialTick));
+            limbSwing = entity.walkAnimation.position(partialTick);
             if (entity.isBaby()) limbSwing *= 3.0F;
         }
 
@@ -322,6 +343,11 @@ public final class HumanoidPose {
         add(arm, X_ROT, -(swing * 1.2F + lean));
         add(arm, Y_ROT, bodyYRot * 2.0F);
         add(arm, Z_ROT, Mth.sin(attackTime * (float) Math.PI) * -0.4F);
+        if (!DualSwingHolder.of(entity)) return;
+        int other = arm == RIGHT_ARM ? LEFT_ARM : RIGHT_ARM;
+        add(other, X_ROT, -(swing * 1.2F + lean));
+        add(other, Y_ROT, bodyYRot * 2.0F);
+        add(other, Z_ROT, Mth.sin(attackTime * (float) Math.PI) * -0.4F);
     }
 
     private void swim(LivingEntity entity, float limbSwing, float swimAmount, float attackTime, HumanoidArm mainArm) {
@@ -367,15 +393,19 @@ public final class HumanoidPose {
         add(arm, X_ROT, sign * Mth.sin(ageInTicks * 0.067F) * 0.05F);
     }
 
-    private void applyPowers(LivingEntity entity) {
-        List<ModelPartTimeline.Slot> slots = TIMELINE.update(entity, entity.tickCount);
+    private void applyPowers(LivingEntity entity, ModelPartTimeline timeline, double now, boolean firstPerson) {
+        List<ModelPartTimeline.Slot> slots = timeline.update(entity, now);
         for (int i = 0; i < slots.size(); i++) {
             ModelPartTimeline.Slot slot = slots.get(i);
             float weight = slot.weight();
             if (weight <= 0.0F) continue;
-            if (!slot.rendersIn(false)) continue;
+            if (!slot.rendersIn(firstPerson)) continue;
             ModelPartTransformation transformation = slot.transformation();
             BodyPart bodyPart = transformation.bodyPart();
+            if (transformation.type() == ModelPartTransformation.Type.REACH) {
+                reachLimbs(bodyPart.sided(entity), slot, weight, firstPerson);
+                continue;
+            }
             if (bodyPart.isGroup()) {
                 if (PoseMath.isSpatial(transformation.type())) {
                     applyGroup(bodyPart, transformation, slot.value(), weight);
@@ -400,6 +430,30 @@ public final class HumanoidPose {
             if ((limbs & (1 << limb)) == 0) continue;
             PoseMath.applyGroup(transformation.type(), parts, limb * STRIDE, value, weight, override,
                 pivot[0], pivot[1], pivot[2]);
+        }
+    }
+
+    private void reachLimbs(BodyPart bodyPart, ModelPartTimeline.Slot slot, float weight, boolean firstPerson) {
+        if (!slot.hasTarget() || bodyPart.models() == 0) return;
+        float blend = Mth.clamp(slot.value(), 0.0F, 1.0F) * weight;
+        int limbs = bodyPart.limbs();
+        for (int limb = 0; limb < PART_COUNT; limb++) {
+            if ((limbs & (1 << limb)) == 0) continue;
+            int box = limb * 6;
+            float endX = (BOXES[box] + BOXES[box + 3]) * 0.5F;
+            float endY = BOXES[box + 4];
+            float endZ = (BOXES[box + 2] + BOXES[box + 5]) * 0.5F;
+            if (firstPerson && (limb == RIGHT_ARM || limb == LEFT_ARM)) {
+                if (body == null) {
+                    body = new float[STRIDE];
+                    matrix = new double[FirstPersonFrame.MATRIX_SIZE];
+                }
+                FirstPersonFrame.reach(limb == RIGHT_ARM, parts, limb * STRIDE, endX, endY, endZ,
+                    slot.targetX(), slot.targetY(), slot.targetZ(), blend, body, matrix);
+                continue;
+            }
+            PoseMath.reach(parts, limb * STRIDE, endX, endY, endZ,
+                slot.targetX(), slot.targetY(), slot.targetZ(), blend);
         }
     }
 
@@ -441,10 +495,6 @@ public final class HumanoidPose {
         }
     }
 
-    public static boolean overridesPose(LivingEntity entity) {
-        return TIMELINE.overridesPose(entity, entity.tickCount);
-    }
-
     public static int indexOf(BodyPart part) {
         if (part.isGroup() || part.models() == 0) return -1;
         return singleLimb(part);
@@ -465,14 +515,6 @@ public final class HumanoidPose {
             if (anim == UseAnim.SPEAR) return POSE_SPEAR;
         }
         return POSE_ITEM;
-    }
-
-    private static float walkSpeed(LivingEntity entity) {
-        return entity.walkAnimation.speed(1.0F);
-    }
-
-    private static float walkPosition(LivingEntity entity) {
-        return entity.walkAnimation.position(1.0F);
     }
 
     private static float rotlerpRad(float delta, float from, float to) {

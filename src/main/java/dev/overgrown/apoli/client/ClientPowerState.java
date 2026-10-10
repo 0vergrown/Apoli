@@ -9,6 +9,8 @@ import dev.overgrown.apoli.network.payload.SyncPowersChunkS2C;
 import dev.overgrown.apoli.network.payload.SyncPowersS2C;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
+import dev.overgrown.apoli.power.PowerTypeRegistry;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
@@ -88,6 +90,7 @@ public final class ClientPowerState {
 
     public static void applyEntityPowersSync(SyncEntityPowersS2C payload) {
         ENTITY_POWERS.put(payload.entityId(), Map.copyOf(payload.powersBySource()));
+        holdersDirty = true;
         ENTITY_AUX.put(payload.entityId(), Map.copyOf(payload.auxInt()));
         ENTITY_SUPPRESSED.put(payload.entityId(), Set.copyOf(payload.suppressed()));
         net.minecraft.client.multiplayer.ClientLevel level = Minecraft.getInstance().level;
@@ -101,7 +104,46 @@ public final class ClientPowerState {
         ENTITY_AUX.put(payload.entityId(), Map.copyOf(payload.auxInt()));
     }
 
+    private static final Map<ResourceLocation, TypeHolders> HOLDERS = new ConcurrentHashMap<>();
+    private static volatile boolean holdersDirty = true;
+    private static int holdersGeneration = -1;
+
+    public static TypeHolders holders(ResourceLocation canonicalType) {
+        TypeHolders holders = HOLDERS.computeIfAbsent(canonicalType, type -> new TypeHolders());
+        holdersDirty = true;
+        return holders;
+    }
+
+    public static final class TypeHolders {
+        private final IntOpenHashSet ids = new IntOpenHashSet();
+
+        private TypeHolders() {}
+
+        public boolean contains(int entityId) {
+            if (holdersDirty || holdersGeneration != ApoliPowers.generation()) rebuildHolders();
+            return this.ids.contains(entityId);
+        }
+    }
+
+    private static synchronized void rebuildHolders() {
+        int generation = ApoliPowers.generation();
+        if (!holdersDirty && holdersGeneration == generation) return;
+        holdersDirty = false;
+        for (TypeHolders holders : HOLDERS.values()) holders.ids.clear();
+        for (Map.Entry<Integer, Map<ResourceLocation, Set<ResourceLocation>>> entry : ENTITY_POWERS.entrySet()) {
+            int entityId = entry.getKey();
+            for (ResourceLocation powerId : entry.getValue().keySet()) {
+                Power power = ApoliPowers.get(powerId);
+                if (power == null) continue;
+                TypeHolders holders = HOLDERS.get(PowerTypeRegistry.resolveId(power.typeId()));
+                if (holders != null) holders.ids.add(entityId);
+            }
+        }
+        holdersGeneration = generation;
+    }
+
     public static void removeEntity(int entityId) {
+        holdersDirty = true;
         ENTITY_POWERS.remove(entityId);
         ENTITY_AUX.remove(entityId);
         ENTITY_SUPPRESSED.remove(entityId);
@@ -146,6 +188,7 @@ public final class ClientPowerState {
     }
 
     public static void clear() {
+        holdersDirty = true;
         LOCAL_POWER_INVENTORIES.clear();
         ENTITY_POWERS.clear();
         ENTITY_AUX.clear();

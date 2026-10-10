@@ -89,12 +89,12 @@ public final class ClientDisguiseManager {
 
     @Nullable
     public static DisguiseData get(int netId) {
-        return DISGUISES.get(netId);
+        return DISGUISES.isEmpty() ? null : DISGUISES.get(netId);
     }
 
     @Nullable
     public static PlayerSkin playerSkin(int netId) {
-        DisguiseData data = DISGUISES.get(netId);
+        DisguiseData data = get(netId);
         if (data == null || !data.isPlayerDisguise() || data.playerUuid().isEmpty()) return null;
         ClientPacketListener connection = Minecraft.getInstance().getConnection();
         if (connection == null) return null;

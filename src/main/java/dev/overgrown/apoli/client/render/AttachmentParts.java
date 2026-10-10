@@ -10,7 +10,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @OnlyIn(Dist.CLIENT)
@@ -19,9 +18,6 @@ public final class AttachmentParts {
 
     private static final int PAIRED_EARS = BodyAttachments.RIGHT_EAR | BodyAttachments.LEFT_EAR;
     private static final int PAIRED_WINGS = BodyAttachments.RIGHT_WING | BodyAttachments.LEFT_WING;
-
-    private static final ThreadLocal<List<ModelColorPower.PartColor>> SCRATCH =
-        ThreadLocal.withInitial(() -> new ArrayList<>(4));
 
     private AttachmentParts() {}
 
@@ -57,10 +53,7 @@ public final class AttachmentParts {
     }
 
     public static boolean colours(@Nullable Entity source, float[] out) {
-        if (!ModelColorPower.hasPartColors(source)) return false;
-        List<ModelColorPower.PartColor> parts = SCRATCH.get();
-        parts.clear();
-        ModelColorPower.collectPartColors(source, parts);
+        List<ModelColorPower.PartColor> parts = ModelColorState.partColors(source);
         boolean tinted = false;
         for (int i = 0; i < parts.size(); i++) {
             ModelColorPower.PartColor colour = parts.get(i);
@@ -80,7 +73,6 @@ public final class AttachmentParts {
                 if (colour.whiten()) out[at + 4] = 1.0F;
             }
         }
-        parts.clear();
         return tinted;
     }
 

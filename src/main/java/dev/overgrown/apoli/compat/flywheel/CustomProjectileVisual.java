@@ -87,7 +87,7 @@ public final class CustomProjectileVisual extends AbstractEntityVisual<CustomPro
             instance.setChanged();
             return;
         }
-        float yaw = (180.0F - Mth.lerp(partialTick, this.entity.yRotO, this.entity.getYRot())) * DEG_TO_RAD;
+        float yaw = (Mth.lerp(partialTick, this.entity.yRotO, this.entity.getYRot()) + 180.0F) * DEG_TO_RAD;
         float pitch = Mth.lerp(partialTick, this.entity.xRotO, this.entity.getXRot()) * DEG_TO_RAD;
         for (LayerInstances layer : this.layers) {
             this.matrix.translation(x, y, z).rotateY(yaw).rotateX(pitch).scale(-1.0F, -1.0F, 1.0F).translate(0.0F, -1.5F, 0.0F);

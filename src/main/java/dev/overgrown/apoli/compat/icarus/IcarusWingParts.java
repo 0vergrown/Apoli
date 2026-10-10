@@ -3,9 +3,9 @@ package dev.overgrown.apoli.compat.icarus;
 import dev.overgrown.apoli.client.disguise.ClientDisguiseManager;
 import dev.overgrown.apoli.client.render.AttachmentParts;
 import dev.overgrown.apoli.client.render.HandRenderPass;
+import dev.overgrown.apoli.client.render.ModelColorState;
 import dev.overgrown.apoli.client.render.ModelPartAnimator;
 import dev.overgrown.apoli.client.render.ModelPartEdits;
-import dev.overgrown.apoli.client.render.PartColorMap;
 import dev.overgrown.apoli.data.BodyAttachments;
 import dev.overgrown.apoli.data.ModelPartTimeline;
 import net.neoforged.api.distmarker.Dist;
@@ -63,8 +63,8 @@ public final class IcarusWingParts {
             }
         }
         if (AttachmentParts.colours(ClientDisguiseManager.powerSource(entity), COLOURS)) {
-            if (AttachmentParts.tinted(COLOURS, RIGHT)) PartColorMap.attach(rightWing, COLOURS, RIGHT);
-            if (AttachmentParts.tinted(COLOURS, LEFT)) PartColorMap.attach(leftWing, COLOURS, LEFT);
+            if (AttachmentParts.tinted(COLOURS, RIGHT)) ModelColorState.attach(rightWing, COLOURS, RIGHT);
+            if (AttachmentParts.tinted(COLOURS, LEFT)) ModelColorState.attach(leftWing, COLOURS, LEFT);
         }
         return edited;
     }

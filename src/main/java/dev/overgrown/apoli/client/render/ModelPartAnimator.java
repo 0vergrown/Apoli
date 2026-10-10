@@ -27,7 +27,15 @@ public final class ModelPartAnimator {
         return entity == null ? 0.0F : (float) now(entity);
     }
 
-    private static double now(Entity entity) {
-        return entity.tickCount + (double) Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(true);
+    public static ModelPartTimeline timeline() {
+        return TIMELINE;
+    }
+
+    public static float partialTick() {
+        return Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(true);
+    }
+
+    public static double now(Entity entity) {
+        return entity.tickCount + (double) partialTick();
     }
 }

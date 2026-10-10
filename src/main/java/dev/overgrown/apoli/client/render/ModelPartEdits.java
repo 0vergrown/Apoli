@@ -2,10 +2,13 @@ package dev.overgrown.apoli.client.render;
 
 import dev.overgrown.apoli.data.ModelPartTimeline;
 import dev.overgrown.apoli.data.ModelPartTransformation;
+import dev.overgrown.apoli.mixin.modelparts.ModelPartCubesAccessor;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.model.geom.ModelPart;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 @OnlyIn(Dist.CLIENT)
 public final class ModelPartEdits {
@@ -21,11 +24,42 @@ public final class ModelPartEdits {
     }
 
     public static void restore(ModelPart part, float[] o) {
+        restorePose(part, o);
+        part.visible = o[9] != 0f;
+        part.skipDraw = o[10] != 0f;
+    }
+
+    public static void restorePose(ModelPart part, float[] o) {
         part.x = o[0]; part.y = o[1]; part.z = o[2];
         part.xRot = o[3]; part.yRot = o[4]; part.zRot = o[5];
         part.xScale = o[6]; part.yScale = o[7]; part.zScale = o[8];
-        part.visible = o[9] != 0f;
-        part.skipDraw = o[10] != 0f;
+    }
+
+    public static boolean endPoint(ModelPart part, float[] out) {
+        List<ModelPart.Cube> cubes = ((ModelPartCubesAccessor) (Object) part).apoli$modelCubes();
+        int n = cubes.size();
+        if (n == 0) return false;
+        float minX = Float.POSITIVE_INFINITY;
+        float minZ = Float.POSITIVE_INFINITY;
+        float maxX = Float.NEGATIVE_INFINITY;
+        float maxY = Float.NEGATIVE_INFINITY;
+        float maxZ = Float.NEGATIVE_INFINITY;
+        for (int i = 0; i < n; i++) {
+            ModelPart.Cube cube = cubes.get(i);
+            minX = Math.min(minX, cube.minX);
+            minZ = Math.min(minZ, cube.minZ);
+            maxX = Math.max(maxX, cube.maxX);
+            maxY = Math.max(maxY, cube.maxY);
+            maxZ = Math.max(maxZ, cube.maxZ);
+        }
+        out[0] = (minX + maxX) * 0.5F;
+        out[1] = maxY;
+        out[2] = (minZ + maxZ) * 0.5F;
+        return true;
+    }
+
+    public static boolean changesVisibility(ModelPartTransformation.Type type) {
+        return type == ModelPartTransformation.Type.VISIBLE || type == ModelPartTransformation.Type.HIDDEN;
     }
 
     public static void apply(ModelPart part, ModelPartTimeline.Slot slot, @Nullable float[] o) {

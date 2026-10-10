@@ -47,6 +47,10 @@ public final class ClientPayloadHandlers {
             new dev.overgrown.apoli.mount.MountOffsets.Offset(msg.x(), msg.y(), msg.z(), msg.space(), msg.rotation()));
     }
 
+    public static void onAnchoredParticles(dev.overgrown.apoli.network.payload.AnchoredParticlesS2C msg) {
+        dev.overgrown.apoli.client.particle.AnchoredParticleClient.enqueue(msg);
+    }
+
     public static void onScaleSync(dev.overgrown.apoli.network.payload.ScaleSyncS2C payload) {
         net.minecraft.client.multiplayer.ClientLevel level = Minecraft.getInstance().level;
         if (level == null) return;

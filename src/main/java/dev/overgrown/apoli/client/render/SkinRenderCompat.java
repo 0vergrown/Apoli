@@ -35,7 +35,7 @@ public final class SkinRenderCompat {
         if (entity == null) return color;
         if (part != null && part.skipDraw) return color & 0x00FFFFFF;
 
-        float[] whole = ModelColorPower.colorFor(ClientDisguiseManager.powerSource(entity));
+        float[] whole = ModelColorState.whole(ClientDisguiseManager.powerSource(entity));
         float[] partColor = part == null || !ModelColorState.isActive() ? null : ModelColorState.colorFor(part);
         if (whole == ModelColorPower.IDENTITY && partColor == null) return color;
 
@@ -55,7 +55,7 @@ public final class SkinRenderCompat {
 
     public static int overlay(int overlay, @Nullable LivingEntity entity, @Nullable ModelPart part) {
         if (entity == null) return overlay;
-        if (ModelColorPower.colorFor(ClientDisguiseManager.powerSource(entity))[4] < 1.0F) {
+        if (ModelColorState.whole(ClientDisguiseManager.powerSource(entity))[4] < 1.0F) {
             float[] partColor = part == null || !ModelColorState.isActive() ? null : ModelColorState.colorFor(part);
             if (partColor == null || partColor[4] < 1.0F) return overlay;
         }
@@ -64,7 +64,7 @@ public final class SkinRenderCompat {
 
     public static float[] rgba(@Nullable LivingEntity entity) {
         if (entity == null) return ModelColorPower.IDENTITY;
-        return ModelColorPower.colorFor(ClientDisguiseManager.powerSource(entity));
+        return ModelColorState.whole(ClientDisguiseManager.powerSource(entity));
     }
 
     private static int scale(int channel, float factor) {
