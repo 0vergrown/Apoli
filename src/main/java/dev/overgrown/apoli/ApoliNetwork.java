@@ -102,6 +102,9 @@ public final class ApoliNetwork {
         PayloadTypeRegistry.playS2C().register(
             dev.overgrown.apoli.network.payload.MountOffsetS2C.TYPE,
             dev.overgrown.apoli.network.payload.MountOffsetS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(
+            dev.overgrown.apoli.network.payload.AnchoredParticlesS2C.TYPE,
+            dev.overgrown.apoli.network.payload.AnchoredParticlesS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(RopeCreateS2C.TYPE, RopeCreateS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(RopeDeleteS2C.TYPE, RopeDeleteS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(RopeVerletLengthS2C.TYPE, RopeVerletLengthS2C.STREAM_CODEC);
@@ -150,6 +153,16 @@ public final class ApoliNetwork {
                                             dev.overgrown.apoli.network.payload.MountOffsetS2C payload) {
         for (ServerPlayer viewer : PlayerLookup.tracking(passenger)) sendMountOffset(viewer, payload);
         if (passenger instanceof ServerPlayer self) sendMountOffset(self, payload);
+    }
+
+    public static boolean canSendAnchoredParticles(ServerPlayer recipient) {
+        return connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.AnchoredParticlesS2C.TYPE);
+    }
+
+    public static void sendAnchoredParticles(ServerPlayer recipient,
+                                             dev.overgrown.apoli.network.payload.AnchoredParticlesS2C payload) {
+        ServerPlayNetworking.send(recipient, payload);
     }
 
     public static boolean connected(ServerPlayer recipient) {

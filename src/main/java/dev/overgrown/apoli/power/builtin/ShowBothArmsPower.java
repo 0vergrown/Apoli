@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.Perspective;
 import dev.overgrown.apoli.power.ApoliIds;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
@@ -22,19 +23,26 @@ public final class ShowBothArmsPower extends PowerType<ShowBothArmsPower.Config>
 
     public static final int MAX_GHOST_ARMS = 16;
 
-    public record Config(boolean mainHand, boolean offHand, int ghostArms, float ghostSpacing, float ghostAlpha) {}
+    public record Config(boolean mainHand, boolean offHand, int ghostArms, float ghostSpacing, float ghostAlpha,
+                         List<Perspective> ghostPerspectives, int ghostPerspectiveMask) {}
 
     public static final class Arms {
         public int mask;
         public int ghosts;
         public float spacing = 0.12F;
         public float alpha = 0.35F;
+        public int perspectives = Perspective.MASK_BOTH;
+
+        public boolean ghostsIn(boolean firstPerson) {
+            return ghosts > 0 && Perspective.masked(perspectives, firstPerson);
+        }
 
         private void clear() {
             this.mask = 0;
             this.ghosts = 0;
             this.spacing = 0.12F;
             this.alpha = 0.35F;
+            this.perspectives = Perspective.MASK_BOTH;
         }
     }
 
@@ -45,8 +53,11 @@ public final class ShowBothArmsPower extends PowerType<ShowBothArmsPower.Config>
             Codec.BOOL.optionalFieldOf("off_hand", true).forGetter(Config::offHand),
             Codec.intRange(0, MAX_GHOST_ARMS).optionalFieldOf("ghost_arms", 0).forGetter(Config::ghostArms),
             Codec.FLOAT.optionalFieldOf("ghost_spacing", 0.12F).forGetter(Config::ghostSpacing),
-            Codec.FLOAT.optionalFieldOf("ghost_alpha", 0.35F).forGetter(Config::ghostAlpha)
-        ).apply(i, Config::new));
+            Codec.FLOAT.optionalFieldOf("ghost_alpha", 0.35F).forGetter(Config::ghostAlpha),
+            Perspective.LIST_CODEC.optionalFieldOf("ghost_perspectives", Perspective.BOTH).forGetter(Config::ghostPerspectives)
+        ).apply(i, (mainHand, offHand, ghostArms, ghostSpacing, ghostAlpha, ghostPerspectives) ->
+            new Config(mainHand, offHand, ghostArms, ghostSpacing, ghostAlpha, ghostPerspectives,
+                Perspective.maskOf(ghostPerspectives))));
     }
 
     public static boolean resolve(@Nullable Entity entity, Arms out) {
@@ -73,6 +84,7 @@ public final class ShowBothArmsPower extends PowerType<ShowBothArmsPower.Config>
                 out.ghosts = cfg.ghostArms;
                 out.spacing = cfg.ghostSpacing;
                 out.alpha = cfg.ghostAlpha;
+                out.perspectives = cfg.ghostPerspectiveMask;
             }
         }
         return out.mask != 0 || out.ghosts > 0;

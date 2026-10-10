@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.power.builtin;
 
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.power.ApoliIds;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
@@ -13,20 +14,24 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
+
 public final class DeathHandler {
     private DeathHandler() {}
 
     public static void onDeath(LivingEntity dead, DamageSource source) {
         if (!(dead.level() instanceof ServerLevel level)) return;
-        PowerContainer container = PowerContainer.of(dead);
-        if (!(container instanceof PowerContainerImpl impl)) return;
-
         @Nullable LivingEntity killer = source.getEntity() instanceof LivingEntity living ? living : null;
+        if (PowerContainer.of(dead) instanceof PowerContainerImpl impl) fireDeathPowers(dead, killer, source, level, impl);
+        if (killer != null) fireActionOnKill(killer, dead, source, level);
+    }
 
-        for (ResourceLocation powerId : container.allPowers()) {
+    private static void fireDeathPowers(LivingEntity dead, @Nullable LivingEntity killer, DamageSource source,
+                                        ServerLevel level, PowerContainerImpl impl) {
+        for (ResourceLocation powerId : impl.allPowers()) {
             Power loaded = ApoliPowers.get(powerId);
             if (loaded == null) continue;
-            if (container.isSuppressed(powerId)) continue;
+            if (impl.isSuppressed(powerId)) continue;
             PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
 
             if (type instanceof ActionOnDeathPower aod
@@ -44,21 +49,23 @@ public final class DeathHandler {
                 PowerStoragePower.clear(impl, powerId);
             }
         }
-
-        if (killer != null) fireActionOnKill(killer, dead, source, level);
     }
 
     private static void fireActionOnKill(LivingEntity killer, LivingEntity victim, DamageSource source, ServerLevel level) {
-        PowerContainer container = PowerContainer.of(killer);
-        if (!(container instanceof PowerContainerImpl impl)) return;
-        for (ResourceLocation powerId : container.allPowers()) {
+        if (!(PowerContainer.of(killer) instanceof PowerContainerImpl impl)) return;
+        List<ResourceLocation> powers = impl.powersOfType(ApoliIds.ACTION_ON_KILL);
+        if (powers.isEmpty()) return;
+        EntityCtx killerCtx = null;
+        for (int i = 0; i < powers.size(); i++) {
+            ResourceLocation powerId = powers.get(i);
+            if (impl.isSuppressed(powerId)) continue;
             Power loaded = ApoliPowers.get(powerId);
-            if (loaded == null) continue;
-            if (container.isSuppressed(powerId)) continue;
+            if (loaded == null || !(loaded.config() instanceof ActionOnKillPower.Config cfg)) continue;
             if (!(PowerTypeRegistry.get(loaded.typeId()) instanceof ActionOnKillPower aok)) continue;
-            if (!(loaded.config() instanceof ActionOnKillPower.Config cfg)) continue;
-            if (loaded.condition().isPresent()
-                && !loaded.condition().get().test(new EntityCtx(killer, level))) continue;
+            if (loaded.condition().isPresent()) {
+                if (killerCtx == null) killerCtx = new EntityCtx(killer, level);
+                if (!loaded.condition().get().test(killerCtx)) continue;
+            }
             aok.onKill(powerId, cfg, killer, victim, source, level, impl);
         }
     }

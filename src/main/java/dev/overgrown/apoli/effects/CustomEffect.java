@@ -23,7 +23,7 @@ public record CustomEffect(
         Optional<String> name
     ) {
 
-    private static final Codec<MobEffectCategory> CATEGORY_CODEC = Codec.STRING.comapFlatMap(
+    public static final Codec<MobEffectCategory> CATEGORY_CODEC = Codec.STRING.comapFlatMap(
             name -> switch (name) {
                 case "beneficial", "BENEFICIAL" -> DataResult.success(MobEffectCategory.BENEFICIAL);
                 case "harmful", "HARMFUL" -> DataResult.success(MobEffectCategory.HARMFUL);

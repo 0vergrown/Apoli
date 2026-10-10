@@ -1,29 +1,23 @@
 package dev.overgrown.apoli.mixin.flag;
 
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.mojang.blaze3d.vertex.PoseStack;
-import dev.overgrown.apoli.client.disguise.ClientDisguiseManager;
+import dev.overgrown.apoli.client.render.LevelRenderPass;
 import dev.overgrown.apoli.client.render.ModelColorState;
-import dev.overgrown.apoli.client.render.PartColorMap;
-import dev.overgrown.apoli.power.builtin.ModelColorPower;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.model.EntityModel;
-import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FastColor;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArgs;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
 
 @Mixin(LivingEntityRenderer.class)
@@ -31,54 +25,43 @@ import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 public abstract class LivingEntityRendererModelColorMixin {
 
     private static final String RENDER = "render(Lnet/minecraft/world/entity/LivingEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V";
+    private static final String RENDER_TO_BUFFER = "Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V";
 
     @Inject(method = RENDER, at = @At("HEAD"))
-    private void apoli$setupPartColors(LivingEntity entity, float entityYaw, float partialTick,
+    private void apoli$beginModelColor(LivingEntity entity, float entityYaw, float partialTick,
                                        PoseStack pose, MultiBufferSource buffer, int packedLight, CallbackInfo ci) {
-        ModelColorState.clear();
-        Entity source = ClientDisguiseManager.powerSource(entity);
-        if (!ModelColorPower.hasPartColors(source)) return;
-        EntityModel<?> model = ((LivingEntityRenderer<?, ?>) (Object) this).getModel();
-        if (!(model instanceof HumanoidModel<?> humanoid)) return;
-        ModelColorState.set(PartColorMap.build(source, humanoid));
+        ModelColorState.begin(entity, ((LivingEntityRenderer<?, ?>) (Object) this).getModel());
     }
 
     @Inject(method = RENDER, at = @At("RETURN"))
-    private void apoli$clearPartColors(LivingEntity entity, float entityYaw, float partialTick,
-                                       PoseStack pose, MultiBufferSource buffer, int packedLight, CallbackInfo ci) {
-        ModelColorState.clear();
+    private void apoli$endModelColor(LivingEntity entity, float entityYaw, float partialTick,
+                                     PoseStack pose, MultiBufferSource buffer, int packedLight, CallbackInfo ci) {
+        ModelColorState.end();
     }
 
-    @ModifyArgs(
-        method = RENDER,
-        at = @At(value = "INVOKE",
-                 target = "Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V"))
-    private void apoli$applyModelColor(Args args,
-                                       LivingEntity entity, float entityYaw, float partialTick,
-                                       PoseStack pose, MultiBufferSource buffer, int packedLight) {
-        float[] color = ModelColorPower.colorFor(ClientDisguiseManager.powerSource(entity));
-        if (color == ModelColorPower.IDENTITY) return;
-        if (color[4] >= 1f) {
-            int overlay = args.<Integer>get(3);
-            args.set(3, OverlayTexture.pack(15, overlay >> 16 & 0xFFFF));
-        }
-        int packedColor = args.<Integer>get(4);
-        int a = Math.min(255, Math.round(FastColor.ARGB32.alpha(packedColor) * color[3]));
-        int r = Math.min(255, Math.round(FastColor.ARGB32.red(packedColor) * color[0]));
-        int g = Math.min(255, Math.round(FastColor.ARGB32.green(packedColor) * color[1]));
-        int b = Math.min(255, Math.round(FastColor.ARGB32.blue(packedColor) * color[2]));
-        args.set(4, FastColor.ARGB32.color(a, r, g, b));
+    @ModifyArg(method = RENDER, at = @At(value = "INVOKE", target = RENDER_TO_BUFFER), index = 3)
+    private int apoli$whitenModel(int overlay) {
+        return ModelColorState.whitens() ? OverlayTexture.pack(15, overlay >> 16 & 0xFFFF) : overlay;
     }
 
-    @Inject(method = "getRenderType", at = @At("HEAD"), cancellable = true)
-    private void apoli$forceTranslucent(LivingEntity entity, boolean isVisible, boolean isInvisibleToPlayer,
-                                        boolean useTranslucent, CallbackInfoReturnable<RenderType> cir) {
-        if (!isVisible) return;
-        if (isInvisibleToPlayer) return;
-        if (ModelColorPower.minAlpha(ClientDisguiseManager.powerSource(entity)) >= 0.999f) return;
+    @ModifyArg(method = RENDER, at = @At(value = "INVOKE", target = RENDER_TO_BUFFER), index = 4)
+    private int apoli$tintModel(int color) {
+        float[] tint = ModelColorState.tint();
+        if (tint == null) return color;
+        return FastColor.ARGB32.color(
+            Math.min(255, Math.round(FastColor.ARGB32.alpha(color) * tint[3])),
+            Math.min(255, Math.round(FastColor.ARGB32.red(color) * tint[0])),
+            Math.min(255, Math.round(FastColor.ARGB32.green(color) * tint[1])),
+            Math.min(255, Math.round(FastColor.ARGB32.blue(color) * tint[2])));
+    }
+
+    @ModifyReturnValue(method = "getRenderType", at = @At("RETURN"))
+    private RenderType apoli$translucentModel(RenderType original, LivingEntity entity, boolean isVisible,
+                                              boolean isInvisibleToPlayer, boolean glowing) {
+        if (!isVisible || isInvisibleToPlayer || ModelColorState.minAlpha(entity) >= 0.999f) return original;
         @SuppressWarnings("unchecked")
         LivingEntityRenderer<LivingEntity, ?> self = (LivingEntityRenderer<LivingEntity, ?>) (Object) this;
-        ResourceLocation tex = self.getTextureLocation(entity);
-        cir.setReturnValue(RenderType.itemEntityTranslucentCull(tex));
+        ResourceLocation texture = self.getTextureLocation(entity);
+        return LevelRenderPass.active() ? RenderType.itemEntityTranslucentCull(texture) : RenderType.entityTranslucentCull(texture);
     }
 }

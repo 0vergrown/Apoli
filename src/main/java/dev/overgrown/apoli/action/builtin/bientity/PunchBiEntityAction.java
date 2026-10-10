@@ -25,6 +25,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
@@ -77,7 +78,7 @@ public final class PunchBiEntityAction implements ActionType<BiEntityCtx, PunchB
                 typed(cfg.damageType.get(), actor, target, level);
             } else if (actor instanceof Player player) {
                 player.attack(target);
-            } else if (actor instanceof Mob mob) {
+            } else if (actor instanceof Mob mob && mob.getAttribute(Attributes.ATTACK_DAMAGE) != null) {
                 mob.doHurtTarget(target);
             } else {
                 hurt(actor, target, level, actor.damageSources().mobAttack(actor));
@@ -108,11 +109,21 @@ public final class PunchBiEntityAction implements ActionType<BiEntityCtx, PunchB
     }
 
     private static void hurt(LivingEntity actor, Entity target, ServerLevel level, DamageSource source) {
-        float base = (float) actor.getAttributeValue(Attributes.ATTACK_DAMAGE);
+        float base = (float) attackDamage(actor);
         float charge = actor instanceof Player player ? player.getAttackStrengthScale(0.5F) : 1.0F;
         float enchanted = EnchantmentHelper.modifyDamage(level, actor.getWeaponItem(), target, source, base) - base;
         float amount = base * (0.2F + charge * charge * 0.8F) + enchanted * charge;
         if (actor instanceof Player player) player.resetAttackStrengthTicker();
         if (amount > 0.0F) target.hurt(source, amount);
+    }
+
+    private static double attackDamage(LivingEntity actor) {
+        AttributeInstance own = actor.getAttribute(Attributes.ATTACK_DAMAGE);
+        if (own != null) return own.getValue();
+        AttributeInstance detached = new AttributeInstance(Attributes.ATTACK_DAMAGE, instance -> {});
+        actor.getWeaponItem().forEachModifier(EquipmentSlot.MAINHAND, (attribute, modifier) -> {
+            if (attribute.value() == Attributes.ATTACK_DAMAGE.value()) detached.addOrUpdateTransientModifier(modifier);
+        });
+        return detached.getValue();
     }
 }

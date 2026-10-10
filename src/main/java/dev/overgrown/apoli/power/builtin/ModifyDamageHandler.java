@@ -6,6 +6,7 @@ import dev.overgrown.apoli.condition.context.DamageCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.AttributeModifier;
 import dev.overgrown.apoli.data.AttributeModifierHelper;
+import dev.overgrown.apoli.dev.DevMode;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
@@ -16,10 +17,15 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public final class ModifyDamageHandler {
+    private static final int DEV_REPORT_TICKS = 10;
+
     private ModifyDamageHandler() {}
 
     public static float modifyAmount(@Nullable LivingEntity attacker, LivingEntity target,
@@ -33,6 +39,7 @@ public final class ModifyDamageHandler {
         if (matches.isEmpty()) return dev.overgrown.apoli.scale.ScaleEffects.damage(attacker, target, amount);
 
         float modified = dev.overgrown.apoli.scale.ScaleEffects.damage(attacker, target, applyModifiers(amount, matches));
+        if (DevMode.any()) reportToDevMode(attacker, target, source, amount, modified, matches);
         for (Match m : matches) runActions(m, attacker, target, level);
         return modified;
     }
@@ -103,7 +110,7 @@ public final class ModifyDamageHandler {
             if (cfg.damageCondition().isPresent()
                 && !cfg.damageCondition().get().test(damageCtx)) continue;
 
-            out.add(new Match(cfg, holder, container, bientityActor, bientityTarget, targetUsedSide));
+            out.add(new Match(powerId, cfg, holder, container, bientityActor, bientityTarget, targetUsedSide));
         }
     }
 
@@ -139,7 +146,35 @@ public final class ModifyDamageHandler {
         }
     }
 
-    private record Match(ModifyDamagePower.Config cfg, LivingEntity holder, PowerContainer container,
-                         @Nullable LivingEntity bientityActor,
+    private static void reportToDevMode(@Nullable LivingEntity attacker, LivingEntity target, DamageSource source,
+                                        float before, float after, List<Match> matches) {
+        StringBuilder line = new StringBuilder("damage ").append(number(before)).append(" → ").append(number(after));
+        source.typeHolder().unwrapKey().ifPresent(type -> line.append(" (").append(type.location()).append(')'));
+        appendSide(line, " · dealt: ", matches, false);
+        appendSide(line, " · taken: ", matches, true);
+        DevMode.reportEvery(target, new DevTopic(attacker == null ? null : attacker.getUUID()), DEV_REPORT_TICKS, line.toString());
+    }
+
+    private static void appendSide(StringBuilder line, String label, List<Match> matches, boolean takenSide) {
+        boolean first = true;
+        for (int i = 0, n = matches.size(); i < n; i++) {
+            Match m = matches.get(i);
+            if (m.targetUsedSide != takenSide) continue;
+            line.append(first ? label : ", ").append(m.powerId);
+            if (!takenSide) line.append(" (").append(m.holder.getName().getString()).append(')');
+            first = false;
+        }
+    }
+
+    private static String number(float value) {
+        if (!Float.isFinite(value)) return Float.toString(value);
+        if (value == Math.rint(value) && Math.abs(value) < 1.0E15F) return Long.toString((long) value);
+        return BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString();
+    }
+
+    private record DevTopic(@Nullable UUID attacker) {}
+
+    private record Match(ResourceLocation powerId, ModifyDamagePower.Config cfg, LivingEntity holder,
+                         PowerContainer container, @Nullable LivingEntity bientityActor,
                          LivingEntity bientityTarget, boolean targetUsedSide) {}
 }

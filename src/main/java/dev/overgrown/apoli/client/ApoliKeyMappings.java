@@ -55,6 +55,10 @@ public final class ApoliKeyMappings {
         return !screenOpen() && !BlockedKeys.blocks(km) && st.down();
     }
 
+    public static boolean isHeld(KeyMapping km) {
+        return probe(km) == Probe.DOWN;
+    }
+
     private static KeyState state(KeyMapping km) {
         KeyState st = TICK_CACHE.get(km);
         if (st == null) {

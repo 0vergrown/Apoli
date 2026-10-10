@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.mixin.disguise;
 
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.overgrown.apoli.client.disguise.ClientDisguiseManager;
 import dev.overgrown.apoli.entity.disguise.DisguiseData;
@@ -7,6 +8,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.resources.PlayerSkin;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
@@ -36,5 +38,12 @@ public abstract class EntityRenderDispatcherDisguiseMixin {
             ClientDisguiseManager.endDisguiseRender(previous);
         }
         ci.cancel();
+    }
+
+    @ModifyExpressionValue(method = "getRenderer",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/resources/PlayerSkin;model()Lnet/minecraft/client/resources/PlayerSkin$Model;"))
+    private PlayerSkin.Model apoli$disguiseModel(PlayerSkin.Model original, Entity entity) {
+        PlayerSkin skin = ClientDisguiseManager.playerSkin(entity.getId());
+        return skin == null ? original : skin.model();
     }
 }

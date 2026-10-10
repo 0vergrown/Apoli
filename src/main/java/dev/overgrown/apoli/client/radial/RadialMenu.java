@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.client.radial;
 
+import dev.overgrown.apoli.client.ScreenCloseKeys;
 import dev.overgrown.apoli.network.payload.RadialMenuOpenS2C;
 import dev.overgrown.apoli.network.payload.RadialMenuSelectC2S;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -182,6 +183,7 @@ public class RadialMenu {
     }
 
     private void select(int index) {
+        ScreenCloseKeys.carryOver();
         ClientPlayNetworking.send(new RadialMenuSelectC2S(nonce, index));
         Minecraft.getInstance().setScreen(null);
     }
