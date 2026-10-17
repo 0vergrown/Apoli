@@ -16,7 +16,7 @@ public final class PoweredEntities {
     private PoweredEntities() {}
 
     public static void register(Entity entity) {
-        if (entity == null || entity.level().isClientSide()) return;
+        if (entity == null || entity.level().isClientSide() || dev.overgrown.apoli.entity.OfflinePlayers.isSnapshot(entity)) return;
         POWERED.add(entity);
         if (PowerContainer.of(entity) instanceof PowerContainerImpl impl) PowerTypeUsage.open(impl.heldTypeBits());
     }

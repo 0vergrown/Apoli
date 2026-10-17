@@ -10,6 +10,8 @@ import dev.overgrown.apoli.network.payload.SyncPowersS2C;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerTypeRegistry;
+import dev.overgrown.apoli.util.CopyOnWriteIntMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -27,9 +29,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Environment(EnvType.CLIENT)
 public final class ClientPowerState {
     private static final Map<ResourceLocation, Integer> COOLDOWNS = new ConcurrentHashMap<>();
-    private static final Map<Integer, Map<ResourceLocation, Set<ResourceLocation>>> ENTITY_POWERS = new ConcurrentHashMap<>();
-    private static final Map<Integer, Map<ResourceLocation, Integer>> ENTITY_AUX = new ConcurrentHashMap<>();
-    private static final Map<Integer, Set<ResourceLocation>> ENTITY_SUPPRESSED = new ConcurrentHashMap<>();
+    private static final CopyOnWriteIntMap<Map<ResourceLocation, Set<ResourceLocation>>> ENTITY_POWERS = new CopyOnWriteIntMap<>();
+    private static final CopyOnWriteIntMap<Map<ResourceLocation, Integer>> ENTITY_AUX = new CopyOnWriteIntMap<>();
+    private static final CopyOnWriteIntMap<Set<ResourceLocation>> ENTITY_SUPPRESSED = new CopyOnWriteIntMap<>();
 
     private ClientPowerState() {}
 
@@ -126,8 +128,8 @@ public final class ClientPowerState {
         if (!holdersDirty && holdersGeneration == generation) return;
         holdersDirty = false;
         for (TypeHolders holders : HOLDERS.values()) holders.ids.clear();
-        for (Map.Entry<Integer, Map<ResourceLocation, Set<ResourceLocation>>> entry : ENTITY_POWERS.entrySet()) {
-            int entityId = entry.getKey();
+        for (Int2ObjectMap.Entry<Map<ResourceLocation, Set<ResourceLocation>>> entry : ENTITY_POWERS.snapshot().int2ObjectEntrySet()) {
+            int entityId = entry.getIntKey();
             for (ResourceLocation powerId : entry.getValue().keySet()) {
                 Power power = ApoliPowers.get(powerId);
                 if (power == null) continue;
@@ -147,7 +149,7 @@ public final class ClientPowerState {
         CONTAINERS.remove(entityId);
     }
 
-    private static final Map<Integer, ClientPowerContainer> CONTAINERS = new ConcurrentHashMap<>();
+    private static final CopyOnWriteIntMap<ClientPowerContainer> CONTAINERS = new CopyOnWriteIntMap<>();
 
     public static @org.jetbrains.annotations.Nullable ClientPowerContainer containerFor(
             net.minecraft.world.entity.Entity entity) {
@@ -160,7 +162,7 @@ public final class ClientPowerState {
         return created;
     }
 
-    private static final Map<Integer, Map<ResourceLocation, int[]>> ENTITY_TABLES = new ConcurrentHashMap<>();
+    private static final CopyOnWriteIntMap<Map<ResourceLocation, int[]>> ENTITY_TABLES = new CopyOnWriteIntMap<>();
 
     public static void applyResourceTables(dev.overgrown.apoli.network.payload.SyncResourceTablesS2C payload) {
         if (payload.tables().isEmpty()) ENTITY_TABLES.remove(payload.entityId());

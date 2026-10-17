@@ -325,11 +325,21 @@ public class SkillTreeScreen extends Screen {
             if (!e.powers().isEmpty()) {
                 parts.add(Component.translatable("screen.apoli.skill_tree.purchased").withStyle(ChatFormatting.GREEN));
                 if (ClientSkillState.canRefund(e.id())) {
-                    parts.add(Component.translatable("screen.apoli.skill_tree.refund", e.cost()).withStyle(ChatFormatting.YELLOW));
+                    String refundKey = e.costItems().isEmpty() ? "screen.apoli.skill_tree.refund" : "screen.apoli.skill_tree.refund_items";
+                    parts.add(Component.translatable(refundKey, e.cost()).withStyle(ChatFormatting.YELLOW));
                 }
             }
         } else {
-            parts.add(Component.translatable("screen.apoli.skill_tree.cost", e.cost()).withStyle(ChatFormatting.GOLD));
+            if (e.cost() > 0 || e.costItems().isEmpty()) {
+                parts.add(Component.translatable("screen.apoli.skill_tree.cost", e.cost()).withStyle(ChatFormatting.GOLD));
+            } else {
+                parts.add(Component.translatable("screen.apoli.skill_tree.cost_items").withStyle(ChatFormatting.GOLD));
+            }
+            for (SkillDefsSyncS2C.CostItem item : e.costItems()) {
+                boolean enough = ClientSkillState.heldCount(item) >= item.count();
+                parts.add(Component.translatable("screen.apoli.skill_tree.cost_item", item.count(), item.display().getHoverName())
+                    .withStyle(enough ? ChatFormatting.GOLD : ChatFormatting.RED));
+            }
             ResourceLocation blocker = ClientSkillState.excludedBy(e.id());
             if (blocker != null) {
                 SkillDefsSyncS2C.Entry blockerDef = ClientSkillState.def(blocker);
@@ -342,6 +352,8 @@ public class SkillTreeScreen extends Screen {
                 parts.add(Component.translatable("screen.apoli.skill_tree.unavailable").withStyle(ChatFormatting.RED));
             } else if (ClientSkillState.points(ClientSkillState.rootOf(e.id())) < e.cost()) {
                 parts.add(Component.translatable("screen.apoli.skill_tree.not_enough").withStyle(ChatFormatting.RED));
+            } else if (!ClientSkillState.hasCostItems(e)) {
+                parts.add(Component.translatable("screen.apoli.skill_tree.missing_items").withStyle(ChatFormatting.RED));
             } else {
                 parts.add(Component.translatable("screen.apoli.skill_tree.click_buy").withStyle(ChatFormatting.YELLOW));
             }

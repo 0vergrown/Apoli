@@ -1,5 +1,7 @@
 package dev.overgrown.apoli.mixin.scale;
 
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.overgrown.apoli.client.render.HeldItemEdits;
 import dev.overgrown.apoli.client.render.ScaleRender;
@@ -47,16 +49,13 @@ public abstract class ItemRendererScaleMixin {
     }
 
     @Inject(method = "renderStatic(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;ZLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/world/level/Level;III)V",
-            at = @At("HEAD"), cancellable = true)
+            at = @At("HEAD"))
     private void apoli$heldItemPush(@Nullable LivingEntity entity, ItemStack stack, ItemDisplayContext context,
                                     boolean leftHand, PoseStack poseStack, MultiBufferSource buffer,
                                     @Nullable Level level, int light, int overlay, int seed, CallbackInfo ci) {
         if (entity == null || stack.isEmpty()) return;
         int edits = HeldItemEdits.resolve(entity, context, leftHand);
-        if (edits == HeldItemEdits.HIDDEN) {
-            ci.cancel();
-            return;
-        }
+        if (edits == HeldItemEdits.HIDDEN) return;
         boolean scaled = apoli$scalable(entity, stack, context);
         if (!scaled && edits == HeldItemEdits.NONE) return;
         poseStack.pushPose();
@@ -66,14 +65,23 @@ public abstract class ItemRendererScaleMixin {
         if (scale != 1.0F) poseStack.scale(scale, scale, scale);
     }
 
+    @ModifyExpressionValue(method = "renderStatic(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;ZLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/world/level/Level;III)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;isEmpty()Z"))
+    private boolean apoli$hideHeldItem(boolean empty, @Local(argsOnly = true) @Nullable LivingEntity entity,
+                                       @Local(argsOnly = true) ItemDisplayContext context,
+                                       @Local(argsOnly = true) boolean leftHand) {
+        return empty || entity != null && HeldItemEdits.resolve(entity, context, leftHand) == HeldItemEdits.HIDDEN;
+    }
+
     @Inject(method = "renderStatic(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;ZLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/world/level/Level;III)V",
             at = @At("RETURN"))
     private void apoli$heldItemPop(@Nullable LivingEntity entity, ItemStack stack, ItemDisplayContext context,
                                    boolean leftHand, PoseStack poseStack, MultiBufferSource buffer,
                                    @Nullable Level level, int light, int overlay, int seed, CallbackInfo ci) {
         if (entity == null || stack.isEmpty()) return;
-        if (!apoli$scalable(entity, stack, context)
-            && HeldItemEdits.resolve(entity, context, leftHand) == HeldItemEdits.NONE) return;
+        int edits = HeldItemEdits.resolve(entity, context, leftHand);
+        if (edits == HeldItemEdits.HIDDEN) return;
+        if (!apoli$scalable(entity, stack, context) && edits == HeldItemEdits.NONE) return;
         poseStack.popPose();
     }
 }

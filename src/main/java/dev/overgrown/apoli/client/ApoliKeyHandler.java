@@ -37,6 +37,7 @@ public final class ApoliKeyHandler {
                 FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
                 new PowerActivationC2S(powerId).write(buf);
                 ClientPlayNetworking.send(PowerActivationC2S.CHANNEL, buf);
+                if (cfg.releases()) KeyReleases.pressed(powerId, km);
                 ScreenCloseKeys.expect(km);
             } else if (type instanceof FireProjectilePower) {
                 if (!(power.config() instanceof FireProjectilePower.Config cfg)) continue;
@@ -64,6 +65,7 @@ public final class ApoliKeyHandler {
                 ClientPlayNetworking.send(PowerToggleC2S.CHANNEL, buf);
             }
         }
+        KeyReleases.tick();
         KeyPressWatcher.tick();
         ScreenCloseKeys.tick(Minecraft.getInstance());
     }

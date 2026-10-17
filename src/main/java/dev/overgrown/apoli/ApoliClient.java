@@ -71,6 +71,7 @@ public final class ApoliClient implements ClientModInitializer {
             dev.overgrown.apoli.client.summon.CloneRenderer::new);
 
         PowerContainerAttachment.setClientLookup(dev.overgrown.apoli.client.ClientPowerState::containerFor);
+        dev.overgrown.apoli.power.builtin.EntitySetPower.setClientView(dev.overgrown.apoli.client.ClientEntitySets.VIEW);
 
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents.ENTITY_UNLOAD.register((entity, level) -> {
             dev.overgrown.apoli.client.ClientPowerState.removeEntity(entity.getId());
@@ -88,6 +89,12 @@ public final class ApoliClient implements ClientModInitializer {
             FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
             new KeyHeldC2S(keys).write(buf);
             ClientPlayNetworking.send(KeyHeldC2S.CHANNEL, buf);
+        });
+        KeyReleases.setSender(power -> {
+            if (!ClientPlayNetworking.canSend(dev.overgrown.apoli.network.payload.PowerReleaseC2S.CHANNEL)) return;
+            FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+            new dev.overgrown.apoli.network.payload.PowerReleaseC2S(power).write(buf);
+            ClientPlayNetworking.send(dev.overgrown.apoli.network.payload.PowerReleaseC2S.CHANNEL, buf);
         });
 
         ClientPlayNetworking.registerGlobalReceiver(CustomEffectNetworking.SyncCustomEffectsPacket.CHANNEL, (mc, listener, byteBuf, sender) -> SyncCustomEffectRegistry.sync(mc, byteBuf, sender));
@@ -128,6 +135,14 @@ public final class ApoliClient implements ClientModInitializer {
                 dev.overgrown.apoli.network.payload.SyncEntitySetsS2C sets =
                     dev.overgrown.apoli.network.payload.SyncEntitySetsS2C.read(buf);
                 mc.execute(() -> dev.overgrown.apoli.client.ClientEntitySets.apply(sets.powerId(), sets.members()));
+            });
+
+        ClientPlayNetworking.registerGlobalReceiver(
+            dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C.CHANNEL, (mc, handler, buf, sender) -> {
+                dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C sets =
+                    dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C.read(buf);
+                mc.execute(() -> dev.overgrown.apoli.client.ClientEntitySets.applyTracked(
+                    sets.owner(), sets.powerId(), sets.members()));
             });
 
         ClientPlayNetworking.registerGlobalReceiver(
@@ -299,6 +314,8 @@ public final class ApoliClient implements ClientModInitializer {
             mc.execute(() -> {
                 DynamicKeyMappingManager.unregisterAll();
                 ClientPowerState.clear();
+                KeyReleases.clear();
+                StatusBarTextures.clear();
                 dev.overgrown.apoli.client.ClientEntitySets.clear();
                 dev.overgrown.apoli.client.ClientDevMode.clear();
                 dev.overgrown.apoli.mount.MountOffsets.clearClient();

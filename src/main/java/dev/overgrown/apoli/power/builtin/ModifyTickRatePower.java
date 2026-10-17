@@ -61,6 +61,7 @@ public final class ModifyTickRatePower extends PowerType<ModifyTickRatePower.Con
         boolean frozen,
         Vector radius,
         Shape shape,
+        Expression hollowThickness,
         Optional<BiEntityCondition> bientityCondition,
         Optional<Boolean> includeSelf,
         boolean affectChunks,
@@ -75,6 +76,7 @@ public final class ModifyTickRatePower extends PowerType<ModifyTickRatePower.Con
             Codec.BOOL.optionalFieldOf("frozen", false).forGetter(Config::frozen),
             Vector.SCALAR_OR_VECTOR.optionalFieldOf("radius", Vector.uniform(16.0f)).forGetter(Config::radius),
             Shape.CODEC.optionalFieldOf("shape", Shape.CUBE).forGetter(Config::shape),
+            Shape.HOLLOW_THICKNESS.forGetter(Config::hollowThickness),
             LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition),
             Codec.BOOL.optionalFieldOf("include_self").forGetter(Config::includeSelf),
             Codec.BOOL.optionalFieldOf("affect_chunks", false).forGetter(Config::affectChunks),
@@ -144,11 +146,12 @@ public final class ModifyTickRatePower extends PowerType<ModifyTickRatePower.Con
             dev.overgrown.apoli.dev.DevParticles.outlineShape(level, origin, cfg.shape,
                 cfg.radius.x(), cfg.radius.y(), cfg.radius.z());
         }
+        double thickness = cfg.shape.thickness(cfg.hollowThickness, owner);
         List<Entity> nearby = level.getEntities((Entity) null, box, target -> {
             if (target == owner) return cfg.includeSelf.orElse(false);
             BlockPos tp = target.blockPosition();
             return cfg.shape.contains(tp.getX() - center.getX(), tp.getY() - center.getY(),
-                tp.getZ() - center.getZ(), rx, ry, rz);
+                tp.getZ() - center.getZ(), rx, ry, rz, thickness);
         });
         boolean filtered = cfg.bientityCondition.isPresent();
         for (int i = 0; i < nearby.size(); i++) {

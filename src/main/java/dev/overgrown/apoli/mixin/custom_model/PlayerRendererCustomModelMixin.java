@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.mixin.custom_model;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.overgrown.apoli.client.model.CustomModel;
@@ -33,7 +34,6 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.List;
 
@@ -54,14 +54,13 @@ public abstract class PlayerRendererCustomModelMixin extends LivingEntityRendere
         this.addLayer(new CustomModelRenderLayer(this, slim));
     }
 
-    @Inject(method = "getTextureLocation", at = @At("HEAD"), cancellable = true)
-    private void apoli$replaceSkin(AbstractClientPlayer player, CallbackInfoReturnable<ResourceLocation> cir) {
+    @ModifyReturnValue(method = "getTextureLocation(Lnet/minecraft/client/player/AbstractClientPlayer;)Lnet/minecraft/resources/ResourceLocation;", at = @At("RETURN"))
+    private ResourceLocation apoli$replaceSkin(ResourceLocation original, AbstractClientPlayer player) {
         CustomModelRenderPower.Config cfg = CustomModelRenderPower.firstReplace(player);
         if (cfg == null) {
-            return;
+            return original;
         }
-        cir.setReturnValue(dev.overgrown.apoli.client.render.DynamicTextures.resolve(
-            apoli$slim ? cfg.slim() : cfg.wide(), player));
+        return dev.overgrown.apoli.client.render.DynamicTextures.resolve(apoli$slim ? cfg.slim() : cfg.wide(), player);
     }
 
     @ModifyExpressionValue(method = "renderHand",

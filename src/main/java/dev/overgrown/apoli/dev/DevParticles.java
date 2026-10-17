@@ -101,11 +101,12 @@ public final class DevParticles {
                                   double rx, double ry, double rz, DustParticleOptions color) {
         Emitter out = emitter(level, color, MAX_POINTS);
         if (out == null) return;
-        switch (shape) {
+        switch (shape.solid()) {
             case CUBE -> box(out, origin, rx, ry, rz, SHAPE_DENSITY);
             case SPHERE -> ellipsoid(out, origin, rx, ry, rz);
             case STAR -> star(out, origin, rx, ry, rz);
             case CONE -> cone(out, origin, rx, ry, rz);
+            default -> { }
         }
     }
 

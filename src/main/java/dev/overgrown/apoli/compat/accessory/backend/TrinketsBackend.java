@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.compat.accessory.backend;
 
+import dev.emi.trinkets.TrinketPlayerScreenHandler;
 import dev.emi.trinkets.api.SlotReference;
 import dev.emi.trinkets.api.TrinketComponent;
 import dev.emi.trinkets.api.TrinketInventory;
@@ -10,6 +11,7 @@ import dev.overgrown.apoli.compat.accessory.AccessorySlot;
 import dev.overgrown.apoli.compat.accessory.AccessorySlotRef;
 import com.google.common.collect.Multimap;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -72,11 +74,19 @@ public final class TrinketsBackend implements AccessoryProvider {
     @Override
     public void applySlotModifiers(LivingEntity entity, Multimap<String, AttributeModifier> modifiers) {
         TrinketsApi.getTrinketComponent(entity).ifPresent(component -> component.addTemporaryModifiers(modifiers));
+        refreshSlots(entity);
     }
 
     @Override
     public void removeSlotModifiers(LivingEntity entity, Multimap<String, AttributeModifier> modifiers) {
         TrinketsApi.getTrinketComponent(entity).ifPresent(component -> component.removeModifiers(modifiers));
+        refreshSlots(entity);
+    }
+
+    private static void refreshSlots(LivingEntity entity) {
+        if (entity instanceof Player player && player.inventoryMenu instanceof TrinketPlayerScreenHandler handler) {
+            handler.trinkets$updateTrinketSlots(false);
+        }
     }
 
     public static AccessorySlotRef slotRef(SlotReference reference) {

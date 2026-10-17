@@ -1,8 +1,7 @@
 package dev.overgrown.apoli.mixin.pose;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.sugar.Local;
 import dev.overgrown.apoli.access.ModifiedPoseHolder;
 import dev.overgrown.apoli.client.ArmPoseReferenceClient;
@@ -18,8 +17,6 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Pose;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(PlayerRenderer.class)
 @Environment(EnvType.CLIENT)
@@ -28,15 +25,12 @@ public abstract class PlayerRendererPoseMixin {
     private static final String SETUP_ROTATIONS = "setupRotations(Lnet/minecraft/client/player/AbstractClientPlayer;Lcom/mojang/blaze3d/vertex/PoseStack;FFF)V";
     private static final String RENDER_OFFSET = "getRenderOffset(Lnet/minecraft/client/player/AbstractClientPlayer;F)Lnet/minecraft/world/phys/Vec3;";
 
-    @Inject(method = "getArmPose", at = @At("RETURN"), cancellable = true)
-    private static void apoli$overrideArmPose(AbstractClientPlayer player, InteractionHand hand,
-                                              CallbackInfoReturnable<HumanoidModel.ArmPose> cir) {
-        if (player instanceof ModifiedPoseHolder holder) {
-            ArmPoseReference ref = holder.apoli$getModifiedArmPose(hand);
-            if (ref != null) {
-                cir.setReturnValue(ArmPoseReferenceClient.toVanilla(ref));
-            }
-        }
+    @ModifyReturnValue(method = "getArmPose", at = @At("RETURN"))
+    private static HumanoidModel.ArmPose apoli$overrideArmPose(HumanoidModel.ArmPose original, AbstractClientPlayer player,
+                                                               InteractionHand hand) {
+        if (!(player instanceof ModifiedPoseHolder holder)) return original;
+        ArmPoseReference ref = holder.apoli$getModifiedArmPose(hand);
+        return ref != null ? ArmPoseReferenceClient.toVanilla(ref) : original;
     }
 
     @ModifyExpressionValue(method = SETUP_ROTATIONS, at = @At(value = "INVOKE",
@@ -52,16 +46,15 @@ public abstract class PlayerRendererPoseMixin {
         return original || PosePower.hasEntityPose(player, Pose.SPIN_ATTACK);
     }
 
-    @WrapOperation(method = SETUP_ROTATIONS, at = @At(value = "INVOKE",
+    @ModifyExpressionValue(method = SETUP_ROTATIONS, at = @At(value = "INVOKE",
         target = "Lnet/minecraft/client/player/AbstractClientPlayer;getSwimAmount(F)F"))
-    private float apoli$neutralizeSwimRotation(AbstractClientPlayer player, float partialTick,
-                                               Operation<Float> original) {
-        return ModelPartAnimator.overridesPose(player) ? 0.0F : original.call(player, partialTick);
+    private float apoli$neutralizeSwimRotation(float original, @Local(argsOnly = true) AbstractClientPlayer player) {
+        return ModelPartAnimator.overridesPose(player) ? 0.0F : original;
     }
 
-    @WrapOperation(method = RENDER_OFFSET, at = @At(value = "INVOKE",
+    @ModifyExpressionValue(method = RENDER_OFFSET, at = @At(value = "INVOKE",
         target = "Lnet/minecraft/client/player/AbstractClientPlayer;isCrouching()Z"))
-    private boolean apoli$neutralizeCrouchOffset(AbstractClientPlayer player, Operation<Boolean> original) {
-        return !ModelPartAnimator.overridesPose(player) && original.call(player);
+    private boolean apoli$neutralizeCrouchOffset(boolean original, @Local(argsOnly = true) AbstractClientPlayer player) {
+        return original && !ModelPartAnimator.overridesPose(player);
     }
 }

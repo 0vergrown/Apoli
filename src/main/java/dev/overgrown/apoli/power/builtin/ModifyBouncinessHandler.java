@@ -6,6 +6,7 @@ import dev.overgrown.apoli.data.AttributeModifierHelper;
 import dev.overgrown.apoli.power.ApoliIds;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerLookup;
+import dev.overgrown.apoli.power.PowerTypeGate;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.ArrayList;
@@ -13,6 +14,7 @@ import java.util.List;
 
 public final class ModifyBouncinessHandler {
 
+    private static final PowerTypeGate IN_USE = new PowerTypeGate(ApoliIds.MODIFY_BOUNCINESS);
     private static final int MATCHED = 1;
     private static final int DAMAGE = 2;
     private static final int PREVENTABLE = 4;
@@ -20,6 +22,7 @@ public final class ModifyBouncinessHandler {
     private ModifyBouncinessHandler() {}
 
     public static boolean has(LivingEntity entity) {
+        if (!IN_USE.inUse()) return false;
         PowerContainer container = PowerContainer.of(entity);
         if (container == null || container.isEmpty()) return false;
         return !container.powersOfType(ApoliIds.MODIFY_BOUNCINESS).isEmpty();

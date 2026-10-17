@@ -33,6 +33,14 @@ public record ItemStackData(ItemStack stack) {
 
     public static final Codec<ItemStackData> CODEC = MAP_CODEC.codec();
 
+    public static boolean hasData(ItemStack template) {
+        return template.hasTag();
+    }
+
+    public static boolean sameData(ItemStack a, ItemStack b) {
+        return ItemStack.isSameItemSameTags(a, b);
+    }
+
     private static ItemStackData build(Item item, Integer amount, Optional<Nbt> tag,
                                        Optional<Component> name, Boolean unbreakable) {
         ItemStack stack = new ItemStack(item, amount);

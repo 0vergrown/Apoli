@@ -25,7 +25,7 @@ public record Skill(
     Optional<EntityCondition> condition,
     Optional<EntityCondition> visibilityCondition,
     List<ResourceLocation> excludes,
-    int cost,
+    SkillCost cost,
     int order
 ) {
     public ResourceLocation rootId() {
@@ -47,7 +47,7 @@ public record Skill(
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("condition", EntityCondition.CODEC).forGetter(Skill::condition),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("visibility_condition", EntityCondition.CODEC).forGetter(Skill::visibilityCondition),
             IdCodecs.ID.listOf().optionalFieldOf("excludes", List.of()).forGetter(Skill::excludes),
-            Codec.INT.optionalFieldOf("cost", 0).forGetter(Skill::cost),
+            SkillCost.CODEC.optionalFieldOf("cost", SkillCost.FREE).forGetter(Skill::cost),
             Codec.INT.optionalFieldOf("order", 0).forGetter(Skill::order)
         ).apply(i, (parent, name, description, icon, frame, powers, condition, visibilityCondition, excludes, cost, order) ->
             new Skill(id, parent, name, description, icon, frame, List.copyOf(powers), condition,

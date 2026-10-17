@@ -34,13 +34,21 @@ public final class BlockRenderRules {
     }
 
     public static BlockState replace(Level level, BlockPos pos, BlockState original) {
+        return replace(level, pos, 0, 0, 0, original);
+    }
+
+    public static BlockState replace(Level level, int x, int y, int z, BlockState original) {
+        return replace(level, null, x, y, z, original);
+    }
+
+    private static BlockState replace(Level level, @Nullable BlockPos pos, int x, int y, int z, BlockState original) {
         Rule[] snapshot = rules;
         if (snapshot.length == 0) return original;
         BlockCtx ctx = null;
         for (int i = 0; i < snapshot.length; i++) {
             Rule rule = snapshot[i];
             if (rule.condition() != null) {
-                if (ctx == null) ctx = new BlockCtx(pos, original, level);
+                if (ctx == null) ctx = new BlockCtx(pos != null ? pos : new BlockPos(x, y, z), original, level);
                 if (!rule.condition().test(ctx)) continue;
             }
             return rule.replacement();

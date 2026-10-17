@@ -11,6 +11,7 @@ import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.power.PowerTypeGate;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
@@ -19,6 +20,8 @@ import java.util.List;
 import java.util.Optional;
 
 public final class SolidHitboxPower extends PowerType<SolidHitboxPower.Config> {
+    private static final PowerTypeGate IN_USE = new PowerTypeGate(ApoliIds.SOLID_HITBOX);
+
     public record Config(boolean pushable, Optional<BiEntityCondition> bientityCondition) {}
 
     @Override
@@ -43,6 +46,7 @@ public final class SolidHitboxPower extends PowerType<SolidHitboxPower.Config> {
     }
 
     private static @Nullable Config matching(Entity holder, @Nullable Entity other) {
+        if (!IN_USE.inUse()) return null;
         PowerContainer container = PowerContainer.of(holder);
         if (container == null || container.isEmpty()) return null;
         List<ResourceLocation> powers = container.powersOfType(ApoliIds.SOLID_HITBOX);

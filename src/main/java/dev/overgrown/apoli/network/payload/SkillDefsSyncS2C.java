@@ -17,7 +17,13 @@ import java.util.Optional;
 public record SkillDefsSyncS2C(List<Entry> entries, boolean legacyFormat) {
     public record Entry(ResourceLocation id, Optional<ResourceLocation> parent, Component name, Component description,
                         IconData icon, List<ResourceLocation> powers, int cost, Optional<ResourceLocation> background,
-                        int order, SkillFrame frame, List<ResourceLocation> excludes) {}
+                        int order, SkillFrame frame, List<ResourceLocation> excludes, List<CostItem> costItems) {}
+
+    public record CostItem(ItemStack display, int count, boolean conditional) {
+        static CostItem of(dev.overgrown.apoli.skill.SkillCost.ItemCost cost) {
+            return new CostItem(cost.stack().copyWithCount(1), cost.count(), cost.condition().isPresent());
+        }
+    }
 
     public static final ResourceLocation CHANNEL = Apoli.id("skill_defs_sync");
 
@@ -33,12 +39,14 @@ public record SkillDefsSyncS2C(List<Entry> entries, boolean legacyFormat) {
         List<Entry> entries = new ArrayList<>();
         for (dev.overgrown.apoli.skill.SkillTree tree : SkillRegistry.trees()) {
             entries.add(new Entry(tree.id(), Optional.empty(), tree.name(), tree.description(),
-                tree.icon(), List.of(), 0, tree.background(), tree.order(), tree.frame(), List.of()));
+                tree.icon(), List.of(), 0, tree.background(), tree.order(), tree.frame(), List.of(), List.of()));
         }
         for (Skill skill : SkillRegistry.all()) {
+            List<CostItem> costItems = new ArrayList<>(skill.cost().items().size());
+            for (dev.overgrown.apoli.skill.SkillCost.ItemCost item : skill.cost().items()) costItems.add(CostItem.of(item));
             entries.add(new Entry(skill.id(), Optional.of(skill.parent()), skill.name(), skill.description(),
-                skill.icon(), skill.powers(), skill.cost(), Optional.empty(), skill.order(),
-                skill.frame(), skill.excludes()));
+                skill.icon(), skill.powers(), skill.cost().points(), Optional.empty(), skill.order(),
+                skill.frame(), skill.excludes(), costItems));
         }
         return new SkillDefsSyncS2C(entries, legacyFormat);
     }
@@ -62,6 +70,12 @@ public record SkillDefsSyncS2C(List<Entry> entries, boolean legacyFormat) {
                 buf.writeVarInt(e.order());
                 buf.writeEnum(e.frame());
                 buf.writeCollection(e.excludes(), (b, x) -> b.writeResourceLocation(x));
+                buf.writeVarInt(e.costItems().size());
+                for (CostItem item : e.costItems()) {
+                    buf.writeItem(item.display());
+                    buf.writeVarInt(item.count());
+                    buf.writeBoolean(item.conditional());
+                }
             }
         }
     }
@@ -95,8 +109,19 @@ public record SkillDefsSyncS2C(List<Entry> entries, boolean legacyFormat) {
             int order = modern ? buf.readVarInt() : 0;
             SkillFrame frame = modern ? buf.readEnum(SkillFrame.class) : SkillFrame.TASK;
             List<ResourceLocation> excludes = modern ? buf.readList(b -> b.readResourceLocation()) : List.of();
-            entries.add(new Entry(id, parent, name, description, icon, powers, cost, background, order, frame, excludes));
+            List<CostItem> costItems = modern ? readCostItems(buf) : List.of();
+            entries.add(new Entry(id, parent, name, description, icon, powers, cost, background, order, frame, excludes, costItems));
         }
         return new SkillDefsSyncS2C(entries);
+    }
+
+    private static List<CostItem> readCostItems(FriendlyByteBuf buf) {
+        int n = buf.readVarInt();
+        List<CostItem> items = new ArrayList<>(Math.min(n, 64));
+        for (int i = 0; i < n; i++) {
+            ItemStack display = buf.readItem();
+            items.add(new CostItem(display, buf.readVarInt(), buf.readBoolean()));
+        }
+        return items;
     }
 }

@@ -1,8 +1,6 @@
 package dev.overgrown.apoli.mixin.pose;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import dev.overgrown.apoli.client.render.ModelPartAnimator;
 import dev.overgrown.apoli.power.builtin.PosePower;
@@ -27,9 +25,9 @@ public abstract class LivingEntityRendererPoseMixin {
         return original || PosePower.hasEntityPose(entity, Pose.SPIN_ATTACK);
     }
 
-    @WrapOperation(method = SETUP_ROTATIONS, at = @At(value = "INVOKE",
+    @ModifyExpressionValue(method = SETUP_ROTATIONS, at = @At(value = "INVOKE",
         target = "Lnet/minecraft/world/entity/LivingEntity;hasPose(Lnet/minecraft/world/entity/Pose;)Z"))
-    private boolean apoli$neutralizeSleepRotation(LivingEntity entity, Pose pose, Operation<Boolean> original) {
-        return !ModelPartAnimator.overridesPose(entity) && original.call(entity, pose);
+    private boolean apoli$neutralizeSleepRotation(boolean original, @Local(argsOnly = true) LivingEntity entity) {
+        return original && !ModelPartAnimator.overridesPose(entity);
     }
 }

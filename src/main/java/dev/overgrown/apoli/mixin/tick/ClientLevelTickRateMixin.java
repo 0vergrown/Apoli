@@ -1,7 +1,6 @@
 package dev.overgrown.apoli.mixin.tick;
 
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.injector.WrapWithCondition;
 import dev.overgrown.apoli.client.ClientTickRates;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -32,14 +31,12 @@ public abstract class ClientLevelTickRateMixin {
         ci.cancel();
     }
 
-    @WrapOperation(method = "tickPassenger(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/entity/Entity;)V",
+    @WrapWithCondition(method = "tickPassenger(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/entity/Entity;)V",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;rideTick()V"))
-    private void apoli$gatePassengerTick(Entity passenger, Operation<Void> original, Entity vehicle, Entity rider) {
-        if (!ClientTickRates.holdsPassenger(passenger)) {
-            original.call(passenger);
-            return;
-        }
+    private boolean apoli$gatePassengerTick(Entity passenger, Entity vehicle, Entity rider) {
+        if (!ClientTickRates.holdsPassenger(passenger)) return true;
         vehicle.positionRider(passenger);
+        return false;
     }
 
     @Inject(

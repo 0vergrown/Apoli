@@ -29,6 +29,12 @@
     ]
   },
   "custom": {
+    "badoptimizations:cache_hooks": {
+      "lightmap": "dev.overgrown.apoli.compat.badoptimizations.BadOptimizationsLightmapHook"
+    },
+    "badoptimizations:incompatibilities": [
+      "enable_remove_redundant_fov_calculations"
+    ],
     "catalogue": {
       "configFactory": "dev.overgrown.apoli.compat.catalogue.CatalogueConfigFactory",
       "icon": {

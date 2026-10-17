@@ -42,15 +42,19 @@ public final class SoundReplacer {
     }
 
     public static void emit(@Nullable Entity source, SoundEvent sound, float volume, float pitch, Emitter emitter) {
-        apply(ApoliIds.REPLACE_SOUND_EMISSION, source, sound, volume, pitch, emitter);
+        apply(ApoliIds.REPLACE_SOUND_EMISSION, source, sound, volume, pitch, true, emitter);
+    }
+
+    public static void emitLocally(@Nullable Entity source, SoundEvent sound, float volume, float pitch, Emitter emitter) {
+        apply(ApoliIds.REPLACE_SOUND_EMISSION, source, sound, volume, pitch, false, emitter);
     }
 
     public static void receive(@Nullable Entity listener, SoundEvent sound, float volume, float pitch, Emitter emitter) {
-        apply(ApoliIds.REPLACE_SOUND_RECEPTION, listener, sound, volume, pitch, emitter);
+        apply(ApoliIds.REPLACE_SOUND_RECEPTION, listener, sound, volume, pitch, true, emitter);
     }
 
     private static void apply(ResourceLocation typeId, @Nullable Entity holder, SoundEvent sound,
-                              float volume, float pitch, Emitter emitter) {
+                              float volume, float pitch, boolean runActions, Emitter emitter) {
         List<Entry> entries = collect(typeId, holder);
         if (entries.isEmpty()) {
             emitter.play(sound, volume, pitch);
@@ -66,7 +70,7 @@ public final class SoundReplacer {
             WeightedSound replacement = cfg.sounds().find(sound.getLocation(), random);
             if (replacement == null) continue;
 
-            if (cfg.entityAction().isPresent()) {
+            if (runActions && cfg.entityAction().isPresent()) {
                 if (ctx == null) ctx = new EntityCtx(holder, holder.level());
                 cfg.entityAction().get().run(ctx);
             }

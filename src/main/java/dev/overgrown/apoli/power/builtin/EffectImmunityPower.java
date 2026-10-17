@@ -10,6 +10,7 @@ import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.power.PowerTypeGate;
 import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -24,6 +25,7 @@ import java.util.Optional;
 
 public final class EffectImmunityPower extends PowerType<EffectImmunityPower.Config> {
     public static final ResourceLocation CANONICAL = Apoli.id("effect_immunity");
+    private static final PowerTypeGate IN_USE = new PowerTypeGate(CANONICAL);
 
     public record Config(
         Optional<ResourceLocation> effect,
@@ -50,13 +52,7 @@ public final class EffectImmunityPower extends PowerType<EffectImmunityPower.Con
     }
 
     public static boolean isImmuneTo(LivingEntity entity, MobEffectInstance effect) {
-        MobEffect target = effect.getEffect();
-        boolean[] blocked = new boolean[]{false};
-        PowerLookup.forEach(entity, CANONICAL, Config.class, cfg -> {
-            if (blocked[0]) return;
-            if (cfg.blocks(target)) blocked[0] = true;
-        });
-        return blocked[0];
+        return IN_USE.inUse() && PowerLookup.anyActive(entity, CANONICAL, Config.class, Config::blocks, effect.getEffect());
     }
 
     @Override

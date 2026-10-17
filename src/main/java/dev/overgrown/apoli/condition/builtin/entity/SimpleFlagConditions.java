@@ -45,7 +45,7 @@ public final class SimpleFlagConditions {
     }
 
     public static ConditionType<EntityCtx, EmptyCfg> exists() {
-        return new FlagCondition(e -> e != null && !e.isRemoved());
+        return new FlagCondition(e -> e != null && !e.isRemoved() && !dev.overgrown.apoli.entity.OfflinePlayers.isSnapshot(e));
     }
 
     public static ConditionType<EntityCtx, EmptyCfg> exposedToSky() {

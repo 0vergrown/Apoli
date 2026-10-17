@@ -6,6 +6,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.power.ApoliIds;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.power.PowerTypeGate;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.material.FogType;
@@ -14,6 +15,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Optional;
 
 public final class FluidVisionPower extends PowerType<FluidVisionPower.Config> {
+    private static final PowerTypeGate IN_USE = new PowerTypeGate(ApoliIds.FLUID_VISION);
+
 
     public enum Submersion implements StringRepresentable {
         NONE("none", FogType.NONE),
@@ -64,7 +67,9 @@ public final class FluidVisionPower extends PowerType<FluidVisionPower.Config> {
 
     @Nullable
     public static Config activeFor(@Nullable Entity entity, FogType fog) {
-        if (entity == null || fog == null) return null;
+        if (entity == null || fog == null || !IN_USE.inUse() || !PowerLookup.holdsType(entity, ApoliIds.FLUID_VISION)) {
+            return null;
+        }
         Config[] best = {null};
         PowerLookup.forEach(entity, ApoliIds.FLUID_VISION, Config.class, cfg -> {
             if (cfg.fluid.fog() != fog) return;

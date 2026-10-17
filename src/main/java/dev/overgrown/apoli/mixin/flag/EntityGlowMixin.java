@@ -1,12 +1,8 @@
 package dev.overgrown.apoli.mixin.flag;
 
-import dev.overgrown.apoli.Apoli;
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import dev.overgrown.apoli.client.render.ClientRenderFlags;
-import dev.overgrown.apoli.condition.context.BiEntityCtx;
-import dev.overgrown.apoli.condition.context.EntityCtx;
-import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.builtin.EntityGlowPower;
-import dev.overgrown.apoli.power.ApoliIds;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
@@ -16,31 +12,29 @@ import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Environment(EnvType.CLIENT)
 @Mixin(Entity.class)
 public abstract class EntityGlowMixin {
 
-    @Inject(method = "isCurrentlyGlowing", at = @At("HEAD"), cancellable = true)
-    private void apoli$entityGlow(CallbackInfoReturnable<Boolean> cir) {
-        if (apoli$matchingGlow() != null) cir.setReturnValue(true);
+    @ModifyReturnValue(method = "isCurrentlyGlowing", at = @At("RETURN"))
+    private boolean apoli$entityGlow(boolean original) {
+        return original || apoli$matchingGlow() != null;
     }
 
-    @Inject(method = "getTeamColor", at = @At("HEAD"), cancellable = true)
-    private void apoli$glowColor(CallbackInfoReturnable<Integer> cir) {
+    @ModifyReturnValue(method = "getTeamColor", at = @At("RETURN"))
+    private int apoli$glowColor(int original) {
         EntityGlowPower.Config cfg = apoli$matchingGlow();
-        if (cfg != null && !cfg.useTeams()) {
-            int r = Mth.clamp((int) (cfg.red() * 255f), 0, 255);
-            int g = Mth.clamp((int) (cfg.green() * 255f), 0, 255);
-            int b = Mth.clamp((int) (cfg.blue() * 255f), 0, 255);
-            cir.setReturnValue((r << 16) | (g << 8) | b);
-        }
+        if (cfg == null || cfg.useTeams()) return original;
+        int r = Mth.clamp((int) (cfg.red() * 255f), 0, 255);
+        int g = Mth.clamp((int) (cfg.green() * 255f), 0, 255);
+        int b = Mth.clamp((int) (cfg.blue() * 255f), 0, 255);
+        return (r << 16) | (g << 8) | b;
     }
 
     @Unique
     private EntityGlowPower.Config apoli$matchingGlow() {
+        if (!EntityGlowPower.inUse()) return null;
         Entity self = (Entity) (Object) this;
         if (!self.level().isClientSide()) return null;
         LocalPlayer viewer = Minecraft.getInstance().player;
@@ -53,17 +47,8 @@ public abstract class EntityGlowMixin {
 
     @Unique
     private static EntityGlowPower.Config apoli$find(Entity glowing, LocalPlayer viewer, boolean selfGlow) {
-        Entity holder = selfGlow ? glowing : viewer;
-        Entity subject = selfGlow ? viewer : glowing;
-        EntityGlowPower.Config[] match = {null};
-        PowerLookup.forEach(holder, ApoliIds.ENTITY_GLOW, EntityGlowPower.Config.class, cfg -> {
-            if (match[0] != null || cfg.selfGlowTarget() != selfGlow) return;
-            if (cfg.entityCondition().isPresent()
-                && !cfg.entityCondition().get().test(new EntityCtx(subject, subject.level()))) return;
-            if (cfg.bientityCondition().isPresent()
-                && !cfg.bientityCondition().get().test(new BiEntityCtx(holder, subject, glowing.level()))) return;
-            match[0] = cfg;
-        });
-        return match[0];
+        return selfGlow
+            ? EntityGlowPower.match(glowing, viewer, glowing, true)
+            : EntityGlowPower.match(viewer, glowing, glowing, false);
     }
 }

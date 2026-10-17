@@ -44,10 +44,19 @@ public final class BlockInteractionHelper {
             heldItemAction.get().run(new ItemCtx(used, player.level(), player));
         }
         if (resultStack.isEmpty()) return;
-        ItemStack result = resultStack.get().stack().copy();
+        ItemStack[] result = {resultStack.get().stack().copy()};
         if (resultItemAction.isPresent()) {
-            resultItemAction.get().run(new ItemCtx(result, player.level(), player));
+            resultItemAction.get().run(new ItemCtx(result[0], player.level(), player, replaced -> result[0] = replaced));
         }
-        player.setItemInHand(hand, result);
+        giveResult(player, hand, result[0]);
+    }
+
+    public static void giveResult(Player player, InteractionHand hand, ItemStack result) {
+        if (result.isEmpty()) return;
+        if (player.getItemInHand(hand).isEmpty()) {
+            player.setItemInHand(hand, result);
+        } else if (!player.getInventory().add(result)) {
+            player.drop(result, false);
+        }
     }
 }

@@ -84,6 +84,13 @@ public enum AttributeModifierOperation {
         return phase == Phase.BASE ? r.base() : r.total();
     }
 
+    public boolean bounds() {
+        return switch (this) {
+            case MIN_BASE, MAX_BASE, SET_BASE, MIN_TOTAL, MAX_TOTAL, SET_TOTAL -> true;
+            default -> false;
+        };
+    }
+
     public net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation vanillaOperation() {
         return switch (this) {
             case ADD_BASE_EARLY, ADD_BASE_LATE, SET_BASE, ADD_TOTAL_EARLY, ADD_TOTAL_LATE ->

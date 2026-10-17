@@ -416,6 +416,7 @@ public final class ExprVars {
         registerContext("index");
         registerContext("mouse_x");
         registerContext("mouse_y");
+        registerContext("held_ticks");
 
         register("health", (e, c, l, v) -> e instanceof LivingEntity le ? le.getHealth() : 0);
         register("max_health", (e, c, l, v) -> e instanceof LivingEntity le ? le.getMaxHealth() : 0);

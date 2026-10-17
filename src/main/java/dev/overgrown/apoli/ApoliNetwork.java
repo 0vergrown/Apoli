@@ -95,6 +95,21 @@ public final class ApoliNetwork {
         send(recipient, dev.overgrown.apoli.network.payload.SyncEntitySetsS2C.CHANNEL, payload::write);
     }
 
+    public static void sendTrackedEntitySet(ServerPlayer recipient,
+                                            dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C payload) {
+        if (connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C.CHANNEL)) {
+            send(recipient, dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C.CHANNEL, payload::write);
+        }
+    }
+
+    public static void sendEntitySetToTrackers(Entity owner,
+                                               dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C payload) {
+        for (ServerPlayer viewer : PlayerLookup.tracking(owner)) {
+            if (viewer != owner) sendTrackedEntitySet(viewer, payload);
+        }
+    }
+
     public static void sendEntityPowers(ServerPlayer recipient, SyncEntityPowersS2C payload) {
         send(recipient, SyncEntityPowersS2C.CHANNEL, payload::write);
     }
