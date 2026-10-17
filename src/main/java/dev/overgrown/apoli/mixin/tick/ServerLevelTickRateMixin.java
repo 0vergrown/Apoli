@@ -1,7 +1,7 @@
 package dev.overgrown.apoli.mixin.tick;
 
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
+import com.llamalad7.mixinextras.injector.WrapWithCondition;
 import dev.overgrown.apoli.tick.TickRates;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -10,7 +10,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ServerLevel.class)
 public abstract class ServerLevelTickRateMixin {
@@ -21,14 +20,12 @@ public abstract class ServerLevelTickRateMixin {
         if (!TickRates.shouldTickEntity(entity)) ci.cancel();
     }
 
-    @WrapOperation(method = "tickPassenger(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/entity/Entity;)V",
+    @WrapWithCondition(method = "tickPassenger(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/entity/Entity;)V",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;rideTick()V"))
-    private void apoli$gatePassengerTick(Entity passenger, Operation<Void> original, Entity vehicle, Entity rider) {
-        if (TickRates.idle() || TickRates.shouldTickEntity(passenger)) {
-            original.call(passenger);
-            return;
-        }
+    private boolean apoli$gatePassengerTick(Entity passenger, Entity vehicle, Entity rider) {
+        if (TickRates.idle() || TickRates.shouldTickEntity(passenger)) return true;
         vehicle.positionRider(passenger);
+        return false;
     }
 
     @Inject(method = "tickChunk(Lnet/minecraft/world/level/chunk/LevelChunk;I)V", at = @At("HEAD"), cancellable = true)
@@ -37,9 +34,8 @@ public abstract class ServerLevelTickRateMixin {
         if (!TickRates.shouldTickChunk((ServerLevel) (Object) this, chunk.getPos().toLong())) ci.cancel();
     }
 
-    @Inject(method = "shouldTickBlocksAt(J)Z", at = @At("HEAD"), cancellable = true)
-    private void apoli$gateBlockTicks(long chunkPos, CallbackInfoReturnable<Boolean> cir) {
-        if (TickRates.idle()) return;
-        if (!TickRates.shouldTickChunk((ServerLevel) (Object) this, chunkPos)) cir.setReturnValue(false);
+    @ModifyReturnValue(method = "shouldTickBlocksAt(J)Z", at = @At("RETURN"))
+    private boolean apoli$gateBlockTicks(boolean original, long chunkPos) {
+        return original && (TickRates.idle() || TickRates.shouldTickChunk((ServerLevel) (Object) this, chunkPos));
     }
 }

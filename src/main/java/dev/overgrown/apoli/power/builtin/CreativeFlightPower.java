@@ -45,6 +45,12 @@ public final class CreativeFlightPower extends PowerType<CreativeFlightPower.Con
         sync(holder.owner());
     }
 
+    public static boolean providesFlight(Player player) {
+        Abilities abilities = player.getAbilities();
+        if (abilities.instabuild || player.isSpectator()) return false;
+        return PowerLookup.hasActive(player, ApoliIds.CREATIVE_FLIGHT);
+    }
+
     private static void sync(LivingEntity owner) {
         if (!(owner instanceof Player player)) return;
         Abilities abilities = player.getAbilities();

@@ -7,9 +7,13 @@ import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.access.ModifiedPoseHolder;
 import dev.overgrown.apoli.data.ArmPoseReference;
 import dev.overgrown.apoli.data.EntityPoses;
+import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Hand;
-import dev.overgrown.apoli.power.PowerLookup;
+import dev.overgrown.apoli.power.ApoliPowers;
+import dev.overgrown.apoli.power.Power;
+import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.power.PowerTypeGate;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Pose;
@@ -20,6 +24,7 @@ import java.util.Optional;
 
 public final class PosePower extends PowerType<PosePower.Config> {
     public static final ResourceLocation CANONICAL = Apoli.id("pose");
+    private static final PowerTypeGate IN_USE = new PowerTypeGate(CANONICAL);
 
     public record Config(Optional<Pose> entityPose, Optional<ArmPoseReference> armPose, List<Hand> hands, int priority) {
         public boolean hasPose() {
@@ -39,14 +44,25 @@ public final class PosePower extends PowerType<PosePower.Config> {
 
     @Nullable
     public static Config chooseBest(Entity entity) {
-        Config[] best = new Config[1];
-        PowerLookup.forEach(entity, CANONICAL, Config.class, cfg -> {
-            if (!cfg.hasPose()) return;
-            if (best[0] == null || cfg.priority() > best[0].priority()) {
-                best[0] = cfg;
+        if (!IN_USE.inUse()) return null;
+        PowerContainer container = PowerContainer.of(entity);
+        if (container == null || container.isEmpty()) return null;
+        List<ResourceLocation> powers = container.powersOfType(CANONICAL);
+        Config best = null;
+        EntityCtx ctx = null;
+        for (int i = 0, n = powers.size(); i < n; i++) {
+            ResourceLocation powerId = powers.get(i);
+            if (container.isSuppressed(powerId)) continue;
+            Power power = ApoliPowers.get(powerId);
+            if (power == null || !(power.config() instanceof Config cfg) || !cfg.hasPose()) continue;
+            if (best != null && cfg.priority() <= best.priority()) continue;
+            if (power.condition().isPresent()) {
+                if (ctx == null) ctx = EntityCtx.of(entity, entity.level());
+                if (!power.condition().get().test(ctx)) continue;
             }
-        });
-        return best[0];
+            best = cfg;
+        }
+        return best;
     }
 
     public static boolean hasEntityPose(Entity entity, Pose pose) {

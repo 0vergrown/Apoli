@@ -9,10 +9,17 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 
 public final class PowerLookup {
     private PowerLookup() {}
+
+    public static boolean holdsType(@Nullable Entity entity, ResourceLocation canonicalId) {
+        if (entity == null) return false;
+        PowerContainer container = PowerContainer.of(entity);
+        return container != null && !container.isEmpty() && !container.powersOfType(canonicalId).isEmpty();
+    }
 
     public static boolean hasActive(@Nullable Entity entity, ResourceLocation canonicalId) {
         if (entity == null) return false;
@@ -118,9 +125,18 @@ public final class PowerLookup {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public static <C> boolean anyActive(@Nullable Entity entity, ResourceLocation canonicalId, Class<C> configClass,
                                         java.util.function.Predicate<C> test) {
+        return anyActive(entity, canonicalId, configClass, PowerLookup::testConfig, test);
+    }
+
+    private static <C> boolean testConfig(C config, java.util.function.Predicate<C> test) {
+        return test.test(config);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <C, A> boolean anyActive(@Nullable Entity entity, ResourceLocation canonicalId, Class<C> configClass,
+                                           BiPredicate<C, A> test, A argument) {
         if (entity == null) return false;
         PowerContainer container = PowerContainer.of(entity);
         if (container == null || container.isEmpty()) return false;
@@ -133,7 +149,7 @@ public final class PowerLookup {
             Power power = ApoliPowers.get(powerId);
             if (power == null) continue;
             Object cfg = power.config();
-            if (!configClass.isInstance(cfg) || !test.test((C) cfg)) continue;
+            if (!configClass.isInstance(cfg) || !test.test((C) cfg, argument)) continue;
             if (power.condition().isPresent()) {
                 if (ctx == null) ctx = EntityCtx.of(entity, entity.level());
                 if (!power.condition().get().test(ctx)) continue;

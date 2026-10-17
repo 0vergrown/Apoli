@@ -6,7 +6,6 @@ import net.caffeinemc.mods.sodium.client.world.LevelSlice;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
@@ -22,6 +21,6 @@ public abstract class LevelSliceBlockRenderMixin {
         if (!BlockRenderRules.active()) return original;
         Level level = Minecraft.getInstance().level;
         if (level == null) return original;
-        return BlockRenderRules.replace(level, new BlockPos(x, y, z), original);
+        return BlockRenderRules.replace(level, x, y, z, original);
     }
 }

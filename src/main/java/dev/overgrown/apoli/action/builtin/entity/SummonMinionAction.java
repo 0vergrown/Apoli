@@ -76,5 +76,6 @@ public final class SummonMinionAction implements ActionType<EntityCtx, SummonMin
         level.addFreshEntity(minion);
         Summons.grantPowers(minion, cfg.powers);
         cfg.bientityAction.ifPresent(action -> action.run(new BiEntityCtx(owner, minion, level)));
+        Summons.resendIfMoved(minion, pos);
     }
 }

@@ -1,19 +1,17 @@
 package dev.overgrown.apoli.mixin.scale;
 
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import dev.overgrown.apoli.scale.ScaleHolder;
 import dev.overgrown.apoli.scale.ScaleState;
-import dev.overgrown.apoli.scale.ScaleTypes;
 import dev.overgrown.apoli.scale.Scales;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.Pose;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.jetbrains.annotations.Nullable;
 
 @Mixin(Entity.class)
@@ -37,18 +35,9 @@ public abstract class EntityScaleMixin implements ScaleHolder {
         return state;
     }
 
-    @Inject(method = "getDimensions", at = @At("RETURN"), cancellable = true)
-    private void apoli$scaleDimensions(Pose pose, CallbackInfoReturnable<EntityDimensions> cir) {
-        Entity self = (Entity) (Object) this;
-        if (Scales.untouched(self)) return;
-        float width = Scales.applied(self, ScaleTypes.HITBOX_WIDTH);
-        float height = Scales.applied(self, ScaleTypes.HITBOX_HEIGHT);
-        float eye = Scales.applied(self, ScaleTypes.EYE_HEIGHT);
-        if (width == 1.0F && height == 1.0F && eye == 1.0F) return;
-        EntityDimensions base = cir.getReturnValue();
-        EntityDimensions scaled = base.scale(width, height);
-        if (eye != height) scaled = scaled.withEyeHeight(base.eyeHeight() * eye);
-        cir.setReturnValue(scaled);
+    @ModifyReturnValue(method = "getDimensions", at = @At("RETURN"))
+    private EntityDimensions apoli$scaleDimensions(EntityDimensions original) {
+        return Scales.scaledDimensions((Entity) (Object) this, original);
     }
 
     @Inject(method = "tick", at = @At("HEAD"))
@@ -64,10 +53,11 @@ public abstract class EntityScaleMixin implements ScaleHolder {
         Scales.refreshDimensions(self, apoli$scalesOrCreate());
     }
 
-    @Inject(method = "saveWithoutId", at = @At("RETURN"))
-    private void apoli$saveScales(CompoundTag tag, CallbackInfoReturnable<CompoundTag> cir) {
+    @ModifyReturnValue(method = "saveWithoutId", at = @At("RETURN"))
+    private CompoundTag apoli$saveScales(CompoundTag saved) {
         ScaleState state = this.apoli$scaleState;
-        if (state != null && !state.isDefault()) state.save(cir.getReturnValue());
+        if (state != null && !state.isDefault()) state.save(saved);
+        return saved;
     }
 
     @Inject(method = "load", at = @At("RETURN"))

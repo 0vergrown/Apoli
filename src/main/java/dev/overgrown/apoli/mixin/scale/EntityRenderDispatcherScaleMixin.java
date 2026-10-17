@@ -29,18 +29,22 @@ public abstract class EntityRenderDispatcherScaleMixin {
     private void apoli$scaleModelPush(Entity entity, double x, double y, double z, float yaw, float partialTick,
                                       PoseStack poseStack, MultiBufferSource buffer, int light, CallbackInfo ci,
                                       @Local EntityRenderer<?> renderer) {
-        poseStack.pushPose();
         if (renderer instanceof LivingEntityRenderer) return;
         float width = ScaleRender.modelWidth(entity, partialTick);
         float height = ScaleRender.modelHeight(entity, partialTick);
-        if (width != 1.0F || height != 1.0F) poseStack.scale(width, height, width);
+        if (width == 1.0F && height == 1.0F) return;
+        poseStack.pushPose();
+        poseStack.scale(width, height, width);
     }
 
     @Inject(method = "render(Lnet/minecraft/world/entity/Entity;DDDFFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
             at = @At(value = "INVOKE", shift = At.Shift.AFTER,
                      target = "Lnet/minecraft/client/renderer/entity/EntityRenderer;render(Lnet/minecraft/world/entity/Entity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"))
     private void apoli$scaleModelPop(Entity entity, double x, double y, double z, float yaw, float partialTick,
-                                     PoseStack poseStack, MultiBufferSource buffer, int light, CallbackInfo ci) {
+                                     PoseStack poseStack, MultiBufferSource buffer, int light, CallbackInfo ci,
+                                     @Local EntityRenderer<?> renderer) {
+        if (renderer instanceof LivingEntityRenderer) return;
+        if (ScaleRender.modelWidth(entity, partialTick) == 1.0F && ScaleRender.modelHeight(entity, partialTick) == 1.0F) return;
         poseStack.popPose();
     }
 

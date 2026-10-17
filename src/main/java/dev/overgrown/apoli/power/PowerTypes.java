@@ -61,6 +61,7 @@ public final class PowerTypes {
             AliasingOptions.builder().addTypeAlias(Apoli.id("action_on_scroll")).build()
         );
         PowerTypeRegistry.register(Apoli.id("entity_set"), new EntitySetPower());
+        PowerTypeRegistry.register(Apoli.id("status_bar_texture"), new StatusBarTexturePower());
         PowerTypeRegistry.register(Apoli.id("modify_type_tag"), new ModifyTypeTagPower(),
             AliasingOptions.builder().addTypeAlias(Apoli.id("entity_group")).build());
         PowerTypeRegistry.register(Apoli.id("function"), new FunctionPower());

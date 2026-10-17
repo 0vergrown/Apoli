@@ -1,21 +1,19 @@
 package dev.overgrown.apoli.mixin.item;
 
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import dev.overgrown.apoli.item.ConjuredItems;
 import net.minecraft.world.entity.item.ItemEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ItemEntity.class)
 public abstract class ItemEntityConjuredMixin {
 
-    @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
-    private void apoli$discardConjured(CallbackInfo ci) {
+    @ModifyExpressionValue(method = "tick",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;isEmpty()Z", ordinal = 0))
+    private boolean apoli$discardConjured(boolean empty) {
+        if (empty) return true;
         ItemEntity self = (ItemEntity) (Object) this;
-        if (!self.level().isClientSide() && ConjuredItems.isConjured(self.getItem())) {
-            self.discard();
-            ci.cancel();
-        }
+        return !self.level().isClientSide() && ConjuredItems.isConjured(self.getItem());
     }
 }

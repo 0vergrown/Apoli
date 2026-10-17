@@ -83,6 +83,24 @@ public final class AttributeModifierHelper {
         return total;
     }
 
+    public static double applyBounds(double baseValue, List<AttributeModifier> mods,
+                                     @Nullable Entity entity, @Nullable PowerContainer container) {
+        if (mods.isEmpty()) return baseValue;
+        List<AttributeModifier> ordered = ensureSorted(mods);
+        double base = baseValue;
+        double total = baseValue;
+        for (int i = 0, n = ordered.size(); i < n; i++) {
+            AttributeModifier mod = ordered.get(i);
+            if (!mod.operation().bounds()) continue;
+            double modValue = mod.resolveInput(entity, container, baseValue);
+            AttributeModifierOperation.Result r = mod.operation().apply(base, total, modValue);
+            base = r.base();
+            total = r.total();
+            if (mod.operation().phase() == AttributeModifierOperation.Phase.BASE) total = base;
+        }
+        return total;
+    }
+
     public static double apply(double baseValue, List<AttributeModifier> mods, @Nullable Entity entity,
                                @Nullable PowerContainer container,
                                @Nullable Entity actor, @Nullable Entity target) {

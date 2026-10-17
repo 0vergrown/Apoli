@@ -25,7 +25,9 @@ public final class SimpleFlagConditions {
     public static ConditionType<EntityCtx, EmptyCfg> collidedHoriz(){ return new FlagCondition(e -> e.horizontalCollision); }
     public static ConditionType<EntityCtx, EmptyCfg> creativeFly()  { return new FlagCondition(e -> e instanceof Player p && p.getAbilities().flying); }
     public static ConditionType<EntityCtx, EmptyCfg> daytime()      { return new FlagCondition(e -> syncedSky(e.level()).isDay()); }
-    public static ConditionType<EntityCtx, EmptyCfg> exists()       { return new FlagCondition(e -> e != null && !e.isRemoved()); }
+    public static ConditionType<EntityCtx, EmptyCfg> exists()       {
+        return new FlagCondition(e -> e != null && !e.isRemoved() && !dev.overgrown.apoli.entity.OfflinePlayers.isSnapshot(e));
+    }
     public static ConditionType<EntityCtx, EmptyCfg> exposedToSky() { return new FlagCondition(e -> e.level().canSeeSky(e.blockPosition())); }
     public static ConditionType<EntityCtx, EmptyCfg> exposedToSun() {
         return new FlagCondition(e -> {

@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.builtin.bientity.RelativeRotationCondition;
 import dev.overgrown.apoli.data.AttributeModifier;
+import dev.overgrown.apoli.data.AttributeModifierHelper;
 import dev.overgrown.apoli.power.PowerType;
 
 import java.util.List;
@@ -13,8 +14,19 @@ public final class ModifyVelocityPower extends PowerType<ModifyVelocityPower.Con
     public record Config(
         List<RelativeRotationCondition.Axis> axes,
         Optional<AttributeModifier> modifier,
-        Optional<List<AttributeModifier>> modifiers
-    ) {}
+        Optional<List<AttributeModifier>> modifiers,
+        List<AttributeModifier> combined
+    ) {
+        public Config(List<RelativeRotationCondition.Axis> axes,
+                      Optional<AttributeModifier> modifier,
+                      Optional<List<AttributeModifier>> modifiers) {
+            this(axes, modifier, modifiers, AttributeModifierHelper.flatten(modifier, modifiers));
+        }
+
+        public boolean affects(RelativeRotationCondition.Axis axis) {
+            return axes.contains(axis);
+        }
+    }
 
     private static final List<RelativeRotationCondition.Axis> ALL_AXES = List.of(
         RelativeRotationCondition.Axis.X,
@@ -28,6 +40,6 @@ public final class ModifyVelocityPower extends PowerType<ModifyVelocityPower.Con
             RelativeRotationCondition.Axis.LIST_CODEC.optionalFieldOf("axes", ALL_AXES).forGetter(Config::axes),
             AttributeModifier.CODEC.optionalFieldOf("modifier").forGetter(Config::modifier),
             AttributeModifier.LIST_OR_SINGLE.optionalFieldOf("modifiers").forGetter(Config::modifiers)
-        ).apply(i, Config::new));
+        ).apply(i, (axes, modifier, modifiers) -> new Config(axes, modifier, modifiers)));
     }
 }

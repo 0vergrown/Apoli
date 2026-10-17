@@ -1,12 +1,13 @@
 package dev.overgrown.apoli.mixin.flag;
 
-import dev.overgrown.apoli.power.ApoliIds;
-import dev.overgrown.apoli.power.PowerLookup;
+import com.llamalad7.mixinextras.injector.WrapWithCondition;
+import dev.overgrown.apoli.power.builtin.SwimmingPower;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -16,11 +17,14 @@ public abstract class SwimmingMixin {
 
     @Shadow protected boolean wasTouchingWater;
 
-    @Inject(method = "updateSwimming", at = @At("HEAD"), cancellable = true)
+    @Unique
+    private boolean apoli$powerSwimming;
+
+    @Inject(method = "updateSwimming", at = @At("HEAD"))
     private void apoli$swimming(CallbackInfo ci) {
         Entity self = (Entity) (Object) this;
-        if (!(self instanceof LivingEntity living)) return;
-        if (!PowerLookup.hasActive(living, ApoliIds.SWIMMING)) return;
+        this.apoli$powerSwimming = self instanceof LivingEntity living && SwimmingPower.holds(living);
+        if (!this.apoli$powerSwimming) return;
         boolean swimming = self.isSprinting() && !self.isPassenger();
         boolean submerged = self.isInWater();
         self.setSwimming(swimming);
@@ -29,6 +33,11 @@ public abstract class SwimmingMixin {
             self.fallDistance = 0.0F;
             self.move(MoverType.SELF, self.getLookAngle().scale(0.25));
         }
-        ci.cancel();
+    }
+
+    @WrapWithCondition(method = "updateSwimming",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;setSwimming(Z)V"))
+    private boolean apoli$keepPowerSwimming(Entity self, boolean swimming) {
+        return !this.apoli$powerSwimming;
     }
 }

@@ -10,6 +10,7 @@ import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.power.PowerTypeGate;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 
@@ -17,6 +18,8 @@ import java.util.List;
 import java.util.Optional;
 
 public final class PreventEntityCollisionPower extends PowerType<PreventEntityCollisionPower.Config> {
+    private static final PowerTypeGate IN_USE = new PowerTypeGate(ApoliIds.PREVENT_ENTITY_COLLISION);
+
     public record Config(Optional<BiEntityCondition> bientityCondition) {}
 
     @Override
@@ -27,7 +30,7 @@ public final class PreventEntityCollisionPower extends PowerType<PreventEntityCo
     }
 
     public static boolean prevents(Entity a, Entity b) {
-        if (a == null || b == null || a == b) return false;
+        if (a == null || b == null || a == b || !IN_USE.inUse()) return false;
         return holderPrevents(a, b) || holderPrevents(b, a);
     }
 

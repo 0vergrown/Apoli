@@ -28,7 +28,8 @@ public final class ActionOnEntitySetAction implements ActionType<EntityCtx, Acti
         Optional<BiEntityCondition> biEntityCondition,
         int limit,
         boolean reverse,
-        SetIteration iterate
+        SetIteration iterate,
+        boolean includeOffline
     ) {}
 
     @Override
@@ -39,7 +40,8 @@ public final class ActionOnEntitySetAction implements ActionType<EntityCtx, Acti
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Cfg::biEntityCondition),
             Codec.INT.optionalFieldOf("limit", 0).forGetter(Cfg::limit),
             Codec.BOOL.optionalFieldOf("reverse", false).forGetter(Cfg::reverse),
-            SetIteration.CODEC.optionalFieldOf("iterate", SetIteration.MEMBERS).forGetter(Cfg::iterate)
+            SetIteration.CODEC.optionalFieldOf("iterate", SetIteration.MEMBERS).forGetter(Cfg::iterate),
+            Codec.BOOL.optionalFieldOf("include_offline", false).forGetter(Cfg::includeOffline)
         ).apply(i, Cfg::new));
     }
 
@@ -61,7 +63,7 @@ public final class ActionOnEntitySetAction implements ActionType<EntityCtx, Acti
         List<UUID> order = EntitySetPower.iterationOrder(holder, cfg.set, cfg.reverse);
         int processed = 0;
         for (int i = 0; i < order.size(); i++) {
-            Entity target = EntitySetPower.resolveEntity(server, order.get(i));
+            Entity target = EntitySetPower.resolveEntity(server, order.get(i), cfg.includeOffline);
             if (target == null) continue;
             BiEntityCtx biCtx = new BiEntityCtx(holder, target, serverLevel);
             if (cfg.biEntityCondition.isPresent() && !cfg.biEntityCondition.get().test(biCtx)) continue;
@@ -74,7 +76,7 @@ public final class ActionOnEntitySetAction implements ActionType<EntityCtx, Acti
         List<UUID> owners = EntitySetPower.ownersContaining(holder, cfg.set, cfg.reverse);
         int processed = 0;
         for (int i = 0; i < owners.size(); i++) {
-            Entity owner = EntitySetPower.resolveEntity(server, owners.get(i));
+            Entity owner = EntitySetPower.resolveEntity(server, owners.get(i), cfg.includeOffline);
             if (owner == null) continue;
             BiEntityCtx biCtx = new BiEntityCtx(owner, holder, level);
             if (cfg.biEntityCondition.isPresent() && !cfg.biEntityCondition.get().test(biCtx)) continue;

@@ -49,6 +49,8 @@ public final class ApoliNetwork {
             dev.overgrown.apoli.network.payload.DevModeS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.SyncEntitySetsS2C.TYPE,
             dev.overgrown.apoli.network.payload.SyncEntitySetsS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C.TYPE,
+            dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(PowerActivatedS2C.TYPE, PowerActivatedS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SyncKeybindsS2C.TYPE, SyncKeybindsS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(ApplyVelocityS2C.TYPE, ApplyVelocityS2C.STREAM_CODEC);
@@ -76,6 +78,7 @@ public final class ApoliNetwork {
         PayloadTypeRegistry.playC2S().register(BuySkillC2S.TYPE, BuySkillC2S.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(PowerActivationC2S.TYPE, PowerActivationC2S.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(PowerToggleC2S.TYPE, PowerToggleC2S.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.PowerReleaseC2S.TYPE, dev.overgrown.apoli.network.payload.PowerReleaseC2S.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.RequestSkillStateC2S.TYPE, dev.overgrown.apoli.network.payload.RequestSkillStateC2S.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.RefundSkillC2S.TYPE, dev.overgrown.apoli.network.payload.RefundSkillC2S.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(KeyHeldC2S.TYPE, KeyHeldC2S.STREAM_CODEC);
@@ -204,6 +207,21 @@ public final class ApoliNetwork {
         if (connected(recipient)
             && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.SyncEntitySetsS2C.TYPE)) {
             ServerPlayNetworking.send(recipient, payload);
+        }
+    }
+
+    public static void sendTrackedEntitySet(ServerPlayer recipient,
+                                            dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C payload) {
+        if (connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C.TYPE)) {
+            ServerPlayNetworking.send(recipient, payload);
+        }
+    }
+
+    public static void sendEntitySetToTrackers(Entity owner,
+                                               dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C payload) {
+        for (ServerPlayer viewer : PlayerLookup.tracking(owner)) {
+            if (viewer != owner) sendTrackedEntitySet(viewer, payload);
         }
     }
 

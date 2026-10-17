@@ -9,6 +9,7 @@ import dev.overgrown.apoli.power.ApoliIds;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
+import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
@@ -29,6 +30,10 @@ public final class InvisibilityPower extends PowerType<InvisibilityPower.Config>
     private static final Predicate<Config> ARMOR = Config::renderArmor;
     private static final Predicate<Config> OUTLINE = Config::renderOutline;
     private static final Predicate<Config> HELD_ITEMS = Config::renderHeldItems;
+    private static final Predicate<Config> UNCONDITIONAL = cfg -> cfg.bientityCondition().isEmpty();
+
+    private static volatile int cachedGeneration = -1;
+    private static volatile boolean cachedInUse;
 
     @Override
     public MapCodec<Config> configCodec() {
@@ -50,6 +55,19 @@ public final class InvisibilityPower extends PowerType<InvisibilityPower.Config>
 
     public static boolean hidesHeldItems(@Nullable Entity entity) {
         return suppresses(entity, HELD_ITEMS);
+    }
+
+    public static boolean inUse() {
+        int generation = ApoliPowers.generation();
+        if (generation != cachedGeneration) {
+            cachedInUse = ApoliPowers.anyOfType(ApoliIds.INVISIBILITY);
+            cachedGeneration = generation;
+        }
+        return cachedInUse;
+    }
+
+    public static boolean hidesUnconditionally(@Nullable Entity entity) {
+        return inUse() && PowerLookup.anyActive(entity, ApoliIds.INVISIBILITY, Config.class, UNCONDITIONAL);
     }
 
     private static boolean suppresses(@Nullable Entity entity, Predicate<Config> renders) {

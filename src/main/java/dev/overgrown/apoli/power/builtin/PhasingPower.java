@@ -75,6 +75,25 @@ public final class PhasingPower extends PowerType<PhasingPower.Config> {
         return living.level().isClientSide() || HELD.isHeld();
     }
 
+    public static boolean allowsAny(LivingEntity living, Level level, BlockPos pos, BlockState state) {
+        PowerContainer container = PowerContainer.of(living);
+        if (container == null || container.isEmpty()) return false;
+        List<ResourceLocation> powers = container.powersOfType(ApoliIds.PHASING);
+        EntityCtx ctx = null;
+        for (int i = 0, n = powers.size(); i < n; i++) {
+            ResourceLocation powerId = powers.get(i);
+            if (container.isSuppressed(powerId)) continue;
+            Power power = ApoliPowers.get(powerId);
+            if (power == null || !(power.config() instanceof Config cfg)) continue;
+            if (power.condition().isPresent()) {
+                if (ctx == null) ctx = EntityCtx.of(living, level);
+                if (!power.condition().get().test(ctx)) continue;
+            }
+            if (allowsPhasing(cfg, level, pos, state)) return true;
+        }
+        return false;
+    }
+
     public static boolean phases(LivingEntity living, Level level, BlockPos pos, BlockState state, VoxelShape shape) {
         PowerContainer container = PowerContainer.of(living);
         if (container == null || container.isEmpty()) return false;

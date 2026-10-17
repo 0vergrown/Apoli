@@ -1,7 +1,5 @@
 package dev.overgrown.apoli.compat.sable;
 
-import dev.overgrown.apoli.power.ApoliIds;
-import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.builtin.PhasingPower;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
@@ -33,13 +31,7 @@ public final class SablePhasing {
         LivingEntity living = SCOPE.get().current();
         if (living == null) return shape;
         Level level = getter instanceof Level fromGetter ? fromGetter : living.level();
-        BlockPos immutable = pos.immutable();
-        boolean[] allow = new boolean[]{false};
-        PowerLookup.forEach(living, ApoliIds.PHASING, PhasingPower.Config.class, cfg -> {
-            if (allow[0]) return;
-            if (PhasingPower.allowsPhasing(cfg, level, immutable, state)) allow[0] = true;
-        });
-        return allow[0] ? Shapes.empty() : shape;
+        return PhasingPower.allowsAny(living, level, pos, state) ? Shapes.empty() : shape;
     }
 
     private static final class Scope {

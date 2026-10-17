@@ -22,8 +22,14 @@ public abstract class EntityTypeTagMixin {
     @ModifyReturnValue(method = "is(Lnet/minecraft/core/HolderSet;)Z", at = @At("RETURN"))
     private boolean apoli$modifyTypeTagSet(boolean original, HolderSet<EntityType<?>> holders) {
         if (!ModifyTypeTagPower.active()) return original;
-        Optional<TagKey<EntityType<?>>> tag = holders.unwrapKey();
-        if (tag.isEmpty()) return original;
-        return ModifyTypeTagPower.resolve(original, (EntityType<?>) (Object) this, tag.get());
+        TagKey<EntityType<?>> tag;
+        if (holders instanceof HolderSet.Named<EntityType<?>> named) {
+            tag = named.key();
+        } else {
+            Optional<TagKey<EntityType<?>>> key = holders.unwrapKey();
+            if (key.isEmpty()) return original;
+            tag = key.get();
+        }
+        return ModifyTypeTagPower.resolve(original, (EntityType<?>) (Object) this, tag);
     }
 }

@@ -4,6 +4,7 @@ import dev.overgrown.apoli.ApoliNetwork;
 import dev.overgrown.apoli.data.Space;
 import dev.overgrown.apoli.network.payload.MountOffsetS2C;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -87,6 +88,16 @@ public final class MountOffsets {
             return Space.rotateByYaw(local, MountRotation.BODY.yawOf(vehicle, partialTick));
         }
         return offset.space().toGlobal(vehicle, local);
+    }
+
+    public static Vec3 riderRenderPosition(Entity rider, Entity vehicle, float partialTick) {
+        Vec3 attach = vehicle.getPassengerRidingPosition(rider).subtract(vehicle.position());
+        Vec3 riderVehicle = rider.getVehicleAttachmentPoint(vehicle);
+        Vec3 offset = resolve(vehicle, rider, partialTick);
+        return new Vec3(
+            Mth.lerp(partialTick, vehicle.xOld, vehicle.getX()) + attach.x - riderVehicle.x + offset.x,
+            Mth.lerp(partialTick, vehicle.yOld, vehicle.getY()) + attach.y - riderVehicle.y + offset.y,
+            Mth.lerp(partialTick, vehicle.zOld, vehicle.getZ()) + attach.z - riderVehicle.z + offset.z);
     }
 
     public static void broadcast(Entity passenger) {

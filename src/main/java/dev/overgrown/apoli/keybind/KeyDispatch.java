@@ -20,6 +20,7 @@ import dev.overgrown.apoli.power.builtin.TogglePower;
 import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.network.payload.ForceKeyS2C;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -27,6 +28,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 public final class KeyDispatch {
     private KeyDispatch() {}
@@ -42,11 +44,52 @@ public final class KeyDispatch {
 
         if (release) {
             HeldKeys.release(entity.getUUID(), key);
+            if (!(entity instanceof ServerPlayer)) releaseKey(entity, key);
             return;
         }
 
         HeldKeys.force(entity.getUUID(), key, Math.max(1, duration));
         if (!(entity instanceof ServerPlayer)) press(entity, key);
+    }
+
+    public static void releaseExpired(MinecraftServer server, UUID entityId, String key) {
+        ActionOnKeyPressPower active = keyPressType();
+        if (active == null || active.pressedPowers(entityId).isEmpty()) return;
+        Entity entity = dev.overgrown.apoli.power.builtin.EntitySetPower.resolveEntity(server, entityId);
+        if (entity == null) {
+            active.forget(entityId);
+            return;
+        }
+        if (entity instanceof ServerPlayer) return;
+        releaseKey(entity, key);
+    }
+
+    public static void releaseKey(Entity entity, String key) {
+        ActionOnKeyPressPower active = keyPressType();
+        if (active == null) return;
+        List<ResourceLocation> pressed = active.pressedPowers(entity.getUUID());
+        for (int i = 0; i < pressed.size(); i++) {
+            Power loaded = ApoliPowers.get(pressed.get(i));
+            if (loaded == null || !(loaded.config() instanceof ActionOnKeyPressPower.Config cfg)) continue;
+            if (cfg.key().key().equals(key)) releasePower(entity, pressed.get(i));
+        }
+    }
+
+    public static boolean releasePower(Entity entity, ResourceLocation powerId) {
+        if (entity == null || !(entity.level() instanceof ServerLevel)) return false;
+        ActionOnKeyPressPower active = keyPressType();
+        if (active == null) return false;
+        Power loaded = ApoliPowers.get(powerId);
+        if (loaded == null || !(loaded.config() instanceof ActionOnKeyPressPower.Config cfg)) return false;
+        PowerContainer container = PowerContainer.of(entity);
+        if (container == null) return false;
+        boolean usable = container.hasPower(powerId) && !container.isSuppressed(powerId);
+        return active.release(powerId, cfg, container, usable);
+    }
+
+    private static @Nullable ActionOnKeyPressPower keyPressType() {
+        return PowerTypeRegistry.get(dev.overgrown.apoli.power.ApoliIds.ACTION_ON_KEY_PRESS) instanceof ActionOnKeyPressPower active
+            ? active : null;
     }
 
     public static void tickForcedNonPlayer(Entity entity) {
@@ -79,7 +122,13 @@ public final class KeyDispatch {
         EntityCtx ctx = new EntityCtx(entity, level);
         if (loaded.condition().isPresent() && !loaded.condition().get().test(ctx)) return false;
         ServerPlayer player = entity instanceof ServerPlayer sp ? sp : null;
-        return activate(container, player, powerId, loaded, null, false);
+        if (!activate(container, player, powerId, loaded, null, false)) return false;
+        releasePower(entity, powerId);
+        if (loaded.config() instanceof MultiplePower.Cfg multiple) {
+            List<ResourceLocation> subs = multiple.subPowerIds();
+            for (int i = 0; i < subs.size(); i++) releasePower(entity, subs.get(i));
+        }
+        return true;
     }
 
     private static int dispatch(Entity entity, String key, boolean continuousOnly) {

@@ -21,6 +21,7 @@ public final class ApoliKeyMappings {
 
     private static final class Sample {
         boolean down;
+        boolean screen;
         int clicks = -1;
     }
 
@@ -85,7 +86,10 @@ public final class ApoliKeyMappings {
         boolean clicked = sample.clicks >= 0 && clicks > sample.clicks;
         sample.clicks = clicks;
         while (ForcedKeys.consumeLocalForcedClick(km)) clicked = true;
-        boolean tap = !wasDown && (down || clicked);
+        boolean screen = screenOpen();
+        boolean pressedInScreen = sample.screen && !screen && !clicked;
+        sample.screen = screen;
+        boolean tap = !wasDown && !pressedInScreen && (down || clicked);
         return new KeyState(down, tap);
     }
 

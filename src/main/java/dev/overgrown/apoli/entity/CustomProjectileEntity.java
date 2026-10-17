@@ -188,7 +188,7 @@ public class CustomProjectileEntity extends ThrowableProjectile {
         if (this.isReturning() && result.getType() == HitResult.Type.BLOCK) return;
         super.onHit(result);
         if (!this.level().isClientSide && !this.isReturning()
-            && !((ProjectileHitActions) this).apoli$bouncedThisHit()) {
+            && !((ProjectileHitActions) this).apoli$keepsFlying()) {
             this.discard();
         }
     }

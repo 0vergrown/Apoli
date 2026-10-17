@@ -1,8 +1,8 @@
 package dev.overgrown.apoli.mixin.block;
 
 
-import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.power.ApoliIds;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.builtin.ModifyBouncinessPower;
 import dev.overgrown.apoli.condition.context.BlockCtx;
@@ -35,7 +35,7 @@ public class BlockBouncinessMixin {
         double delta = ModifyBouncinessHandler.modify(living, oldDelta.y * -1, block);
         if (delta <= 0.125) return;
 
-        PowerLookup.forEach(entity, Apoli.id("modify_bounciness"), ModifyBouncinessPower.Config.class, cfg -> {
+        PowerLookup.forEach(entity, ApoliIds.MODIFY_BOUNCINESS, ModifyBouncinessPower.Config.class, cfg -> {
             if (cfg.blockCondition().isEmpty() || cfg.blockCondition().get().test(block)) {
                 cfg.blockAction().ifPresent(action -> action.run(block));
                 cfg.entityAction().ifPresent(action -> action.run(EntityCtx.of(entity, entity.level())));

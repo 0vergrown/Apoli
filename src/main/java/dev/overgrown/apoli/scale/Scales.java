@@ -3,13 +3,17 @@ package dev.overgrown.apoli.scale;
 import dev.overgrown.apoli.compat.pehkui.PehkuiBridge;
 import dev.overgrown.apoli.power.ApoliIds;
 import dev.overgrown.apoli.power.ApoliPowers;
+import dev.overgrown.apoli.power.PowerTypeGate;
 import dev.overgrown.apoli.power.builtin.ScalePower;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
 
 public final class Scales {
+    private static final PowerTypeGate SCALE_POWERS = new PowerTypeGate(ApoliIds.SCALE);
+
     private Scales() {}
 
     @Nullable
@@ -28,13 +32,23 @@ public final class Scales {
     }
 
     public static boolean anyPowerLoaded() {
-        return ApoliPowers.anyOfType(ApoliIds.SCALE);
+        return SCALE_POWERS.inUse();
     }
 
     public static boolean untouched(Entity entity) {
         if (!anyPowerLoaded()) return stateOf(entity) == null;
         if (stateOf(entity) != null) return false;
         return !ScalePower.hasAny(entity);
+    }
+
+    public static EntityDimensions scaledDimensions(Entity entity, EntityDimensions base) {
+        if (untouched(entity)) return base;
+        float width = applied(entity, ScaleTypes.HITBOX_WIDTH);
+        float height = applied(entity, ScaleTypes.HITBOX_HEIGHT);
+        float eye = applied(entity, ScaleTypes.EYE_HEIGHT);
+        if (width == 1.0F && height == 1.0F && eye == 1.0F) return base;
+        EntityDimensions scaled = base.scale(width, height);
+        return eye != height ? scaled.withEyeHeight(base.eyeHeight() * eye) : scaled;
     }
 
     public static float value(Entity entity, ScaleType type) {

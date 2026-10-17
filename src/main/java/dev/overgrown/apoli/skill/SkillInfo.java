@@ -17,7 +17,7 @@ public record SkillInfo(
     Optional<EntityCondition> condition,
     Optional<EntityCondition> visibilityCondition,
     List<ResourceLocation> excludes,
-    int cost,
+    SkillCost cost,
     int order
 ) {
     public static final Codec<SkillInfo> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -27,7 +27,7 @@ public record SkillInfo(
         dev.overgrown.apoli.codec.LoggedOptionalField.strict("condition", EntityCondition.CODEC).forGetter(SkillInfo::condition),
         dev.overgrown.apoli.codec.LoggedOptionalField.strict("visibility_condition", EntityCondition.CODEC).forGetter(SkillInfo::visibilityCondition),
         IdCodecs.ID.listOf().optionalFieldOf("excludes", List.of()).forGetter(SkillInfo::excludes),
-        Codec.INT.optionalFieldOf("cost", 0).forGetter(SkillInfo::cost),
+        SkillCost.CODEC.optionalFieldOf("cost", SkillCost.FREE).forGetter(SkillInfo::cost),
         Codec.INT.optionalFieldOf("order", 0).forGetter(SkillInfo::order)
     ).apply(i, (icon, frame, parent, condition, visibilityCondition, excludes, cost, order) ->
         new SkillInfo(icon, frame, parent, condition, visibilityCondition, List.copyOf(excludes), cost, order)));
