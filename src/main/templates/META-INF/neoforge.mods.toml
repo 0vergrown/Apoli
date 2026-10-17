@@ -162,3 +162,9 @@ config="${mod_id}-gravestone.mixins.json"
 # stop your mod loading on the server for example.
 #[features.${mod_id}]
 #openGLVersion="[3.2,)"
+
+["badoptimizations:cache_hooks"]
+    lightmap="dev.overgrown.apoli.compat.badoptimizations.BadOptimizationsLightmapHook"
+
+["badoptimizations:incompatibilities"]
+    options=["enable_remove_redundant_fov_calculations"]

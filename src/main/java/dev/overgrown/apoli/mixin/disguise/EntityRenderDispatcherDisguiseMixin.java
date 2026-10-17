@@ -1,24 +1,32 @@
 package dev.overgrown.apoli.mixin.disguise;
 
-import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.overgrown.apoli.client.disguise.ClientDisguiseManager;
 import dev.overgrown.apoli.entity.disguise.DisguiseData;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.resources.PlayerSkin;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.Map;
+
 @Mixin(value = EntityRenderDispatcher.class, priority = 900)
 @OnlyIn(Dist.CLIENT)
 public abstract class EntityRenderDispatcherDisguiseMixin {
+
+    @Shadow
+    private Map<PlayerSkin.Model, EntityRenderer<? extends Player>> playerRenderers;
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private <E extends Entity> void apoli$renderDisguise(E entity, double x, double y, double z, float yaw, float partialTick,
@@ -40,10 +48,12 @@ public abstract class EntityRenderDispatcherDisguiseMixin {
         ci.cancel();
     }
 
-    @ModifyExpressionValue(method = "getRenderer",
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/resources/PlayerSkin;model()Lnet/minecraft/client/resources/PlayerSkin$Model;"))
-    private PlayerSkin.Model apoli$disguiseModel(PlayerSkin.Model original, Entity entity) {
+    @ModifyReturnValue(method = "getRenderer", at = @At("RETURN"))
+    private EntityRenderer<?> apoli$disguiseRenderer(EntityRenderer<?> original, Entity entity) {
+        if (!(entity instanceof AbstractClientPlayer)) return original;
         PlayerSkin skin = ClientDisguiseManager.playerSkin(entity.getId());
-        return skin == null ? original : skin.model();
+        if (skin == null) return original;
+        EntityRenderer<? extends Player> renderer = this.playerRenderers.get(skin.model());
+        return renderer == null ? original : renderer;
     }
 }

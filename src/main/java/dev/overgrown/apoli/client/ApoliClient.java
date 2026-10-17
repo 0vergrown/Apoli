@@ -102,6 +102,7 @@ public final class ApoliClient {
     public static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
             PowerContainerAttachment.setClientLookup(ClientPowerState::containerFor);
+            dev.overgrown.apoli.power.builtin.EntitySetPower.setClientView(dev.overgrown.apoli.client.ClientEntitySets.VIEW);
             dev.overgrown.apoli.power.PowerResources.setClientCooldownLookup((owner, powerId) ->
                 owner == Minecraft.getInstance().player ? ClientPowerState.getCooldown(powerId) : 0);
             dev.overgrown.apoli.power.builtin.InventoryPower.setClientLookup((holder, powerId) ->
@@ -109,6 +110,7 @@ public final class ApoliClient {
             HeldKeys.setClientLookup((entity, key, grace) ->
                 entity == Minecraft.getInstance().player && KeyPressWatcher.isLocalHeld(key, grace));
             KeyPressWatcher.setSender(keys -> PacketDistributor.sendToServer(new KeyHeldC2S(keys)));
+            KeyReleases.setSender(power -> PacketDistributor.sendToServer(new dev.overgrown.apoli.network.payload.PowerReleaseC2S(power)));
             dev.overgrown.apoli.client.disguise.ClientDisguiseManager.install();
             if (dev.overgrown.apoli.compat.ModCompat.LAMBDYNLIGHTS) {
                 dev.overgrown.apoli.compat.lambdynlights.LambDynamicLightsCompat.init();
@@ -178,6 +180,8 @@ public final class ApoliClient {
         public static void onDisconnect(ClientPlayerNetworkEvent.LoggingOut event) {
             DynamicKeyMappingManager.unregisterAll();
             ClientPowerState.clear();
+            KeyReleases.clear();
+            StatusBarTextures.clear();
             dev.overgrown.apoli.client.ClientEntitySets.clear();
             dev.overgrown.apoli.client.ClientDevMode.clear();
             dev.overgrown.apoli.mount.MountOffsets.clearClient();

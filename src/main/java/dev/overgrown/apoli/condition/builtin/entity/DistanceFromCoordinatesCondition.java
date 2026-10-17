@@ -86,10 +86,10 @@ public final class DistanceFromCoordinatesCondition implements ConditionType<Ent
         double dx = cfg.ignoreX ? 0 : e.getX() - refX;
         double dy = cfg.ignoreY ? 0 : e.getY() - refY;
         double dz = cfg.ignoreZ ? 0 : e.getZ() - refZ;
-        double dist = switch (cfg.shape) {
+        double dist = switch (cfg.shape.solid()) {
             case CUBE -> Math.max(Math.abs(dx), Math.max(Math.abs(dy), Math.abs(dz)));
-            case SPHERE, CONE -> Math.sqrt(dx * dx + dy * dy + dz * dz);
             case STAR -> Math.abs(dx) + Math.abs(dy) + Math.abs(dz);
+            default -> Math.sqrt(dx * dx + dy * dy + dz * dz);
         };
         if (cfg.roundToDigit.isPresent()) {
             double scale = Math.pow(10, cfg.roundToDigit.get());

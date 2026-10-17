@@ -36,6 +36,7 @@ public final class ApoliKeyHandler {
                 if (km == null || !ApoliKeyMappings.consumePress(km, cfg.key().continuous())) continue;
                 if (ClientPowerState.getCooldown(powerId) > 0) continue;
                 PacketDistributor.sendToServer(new PowerActivationC2S(powerId));
+                if (cfg.releases()) KeyReleases.pressed(powerId, km);
                 ScreenCloseKeys.expect(km);
             } else if (type instanceof FireProjectilePower) {
                 if (!(power.config() instanceof FireProjectilePower.Config cfg)) continue;
@@ -57,6 +58,7 @@ public final class ApoliKeyHandler {
                 PacketDistributor.sendToServer(new PowerToggleC2S(powerId));
             }
         }
+        KeyReleases.tick();
         KeyPressWatcher.tick();
         ScreenCloseKeys.tick(Minecraft.getInstance());
     }

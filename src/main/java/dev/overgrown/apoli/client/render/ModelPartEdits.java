@@ -62,6 +62,13 @@ public final class ModelPartEdits {
         return type == ModelPartTransformation.Type.VISIBLE || type == ModelPartTransformation.Type.HIDDEN;
     }
 
+    public static boolean hides(ModelPartTimeline.Slot slot) {
+        if (slot.weight() < 0.5f) return false;
+        ModelPartTransformation.Type type = slot.transformation().type();
+        if (type == ModelPartTransformation.Type.VISIBLE) return slot.value() == 0f;
+        return type == ModelPartTransformation.Type.HIDDEN && slot.value() != 0f;
+    }
+
     public static void apply(ModelPart part, ModelPartTimeline.Slot slot, @Nullable float[] o) {
         ModelPartTransformation t = slot.transformation();
         float value = slot.value();

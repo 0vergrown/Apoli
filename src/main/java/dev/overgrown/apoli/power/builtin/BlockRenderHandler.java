@@ -21,11 +21,11 @@ public final class BlockRenderHandler {
 
     public static boolean preventsSelection(@Nullable Player player, Level level, BlockPos pos) {
         if (hasNone(player, ApoliIds.PREVENT_BLOCK_SELECTION)) return false;
-        BlockCtx ctx = new BlockCtx(pos, level.getBlockState(pos), level);
-        boolean[] prevented = {false};
-        PowerLookup.forEach(player, ApoliIds.PREVENT_BLOCK_SELECTION, PreventBlockSelectionPower.Config.class, cfg -> {
-            if (cfg.blockCondition().isEmpty() || cfg.blockCondition().get().test(ctx)) prevented[0] = true;
-        });
-        return prevented[0];
+        return PowerLookup.anyActive(player, ApoliIds.PREVENT_BLOCK_SELECTION, PreventBlockSelectionPower.Config.class,
+            BlockRenderHandler::blocksSelection, new BlockCtx(pos, level.getBlockState(pos), level));
+    }
+
+    private static boolean blocksSelection(PreventBlockSelectionPower.Config config, BlockCtx block) {
+        return config.blockCondition().isEmpty() || config.blockCondition().get().test(block);
     }
 }

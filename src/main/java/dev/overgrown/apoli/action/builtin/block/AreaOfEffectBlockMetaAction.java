@@ -17,6 +17,7 @@ public final class AreaOfEffectBlockMetaAction implements ActionType<BlockCtx, A
     public record Cfg(
         Vector radius,
         Shape shape,
+        dev.overgrown.apoli.data.Expression hollowThickness,
         BlockAction blockAction,
         Optional<BlockCondition> blockCondition
     ) {}
@@ -26,6 +27,7 @@ public final class AreaOfEffectBlockMetaAction implements ActionType<BlockCtx, A
         return RecordCodecBuilder.mapCodec(i -> i.group(
             Vector.SCALAR_OR_VECTOR.optionalFieldOf("radius", Vector.uniform(16.0f)).forGetter(Cfg::radius),
             Shape.CODEC.optionalFieldOf("shape", Shape.CUBE).forGetter(Cfg::shape),
+            Shape.HOLLOW_THICKNESS.forGetter(Cfg::hollowThickness),
             BlockAction.CODEC.fieldOf("block_action").forGetter(Cfg::blockAction),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Cfg::blockCondition)
         ).apply(i, Cfg::new));
@@ -38,8 +40,9 @@ public final class AreaOfEffectBlockMetaAction implements ActionType<BlockCtx, A
                 net.minecraft.world.phys.Vec3.atCenterOf(ctx.pos()), cfg.shape,
                 cfg.radius.x(), cfg.radius.y(), cfg.radius.z());
         }
+        double thickness = cfg.shape.thickness(cfg.hollowThickness, ctx.level());
         for (BlockPos pos : cfg.shape.positions(ctx.pos(),
-                (int) Math.ceil(cfg.radius.x()), (int) Math.ceil(cfg.radius.y()), (int) Math.ceil(cfg.radius.z()))) {
+                (int) Math.ceil(cfg.radius.x()), (int) Math.ceil(cfg.radius.y()), (int) Math.ceil(cfg.radius.z()), thickness)) {
             BlockState state = ctx.level().getBlockState(pos);
             BlockCtx nestedCtx = ctx.at(pos.immutable(), state);
             if (cfg.blockCondition.isPresent() && !cfg.blockCondition.get().test(nestedCtx)) continue;

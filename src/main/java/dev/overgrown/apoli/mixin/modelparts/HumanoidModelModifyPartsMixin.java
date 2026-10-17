@@ -1,8 +1,8 @@
 package dev.overgrown.apoli.mixin.modelparts;
 
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import dev.overgrown.apoli.access.PartVisibilityUndo;
+import dev.overgrown.apoli.compat.entitymodelfeatures.EntityModelFeaturesCompat;
 import dev.overgrown.apoli.client.render.AnimationPlayer;
 import dev.overgrown.apoli.client.render.HandRenderPass;
 import dev.overgrown.apoli.client.render.ModelPartAnimator;
@@ -106,10 +106,10 @@ public abstract class HumanoidModelModifyPartsMixin implements PartVisibilityUnd
         }
     }
 
-    @WrapOperation(method = SETUP_ANIM, at = @At(value = "INVOKE",
+    @ModifyExpressionValue(method = SETUP_ANIM, at = @At(value = "INVOKE",
         target = "Lnet/minecraft/world/entity/LivingEntity;getFallFlyingTicks()I"))
-    private int apoli$neutralizeFallFlying(LivingEntity entity, Operation<Integer> original) {
-        return apoli$poseOverridden ? 0 : original.call(entity);
+    private int apoli$neutralizeFallFlying(int original) {
+        return apoli$poseOverridden ? 0 : original;
     }
 
     @Inject(method = SETUP_ANIM, at = @At("TAIL"))
@@ -142,10 +142,12 @@ public abstract class HumanoidModelModifyPartsMixin implements PartVisibilityUnd
                     continue;
                 }
                 boolean visibility = ModelPartEdits.changesVisibility(transformation.type());
+                boolean hidesCustom = visibility && ModelPartEdits.hides(slot) && EntityModelFeaturesCompat.hasCustomParts();
                 for (int p = 0; p < apoli$scratch.size(); p++) {
                     ModelPart member = apoli$scratch.get(p);
                     if (visibility) apoli$rememberVisibility(member);
                     ModelPartEdits.apply(member, slot, apoli$originals.get(member));
+                    if (hidesCustom) apoli$hideCustomChildren(member);
                 }
             }
             apoli$scratch.clear();
@@ -243,6 +245,15 @@ public abstract class HumanoidModelModifyPartsMixin implements PartVisibilityUnd
         apoli$visibilityParts[apoli$visibilityCount] = part;
         apoli$visibilityStates[apoli$visibilityCount] = (byte) ((part.visible ? 1 : 0) | (part.skipDraw ? 2 : 0));
         apoli$visibilityCount++;
+    }
+
+    @Unique
+    private void apoli$hideCustomChildren(ModelPart part) {
+        ModelPart[] custom = EntityModelFeaturesCompat.customChildren(part);
+        for (int i = 0; i < custom.length; i++) {
+            apoli$rememberVisibility(custom[i]);
+            custom[i].visible = false;
+        }
     }
 
     @Override

@@ -14,7 +14,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
 public final class BlockInRadiusCondition implements ConditionType<EntityCtx, BlockInRadiusCondition.Cfg> {
-    public record Cfg(BlockCondition blockCondition, Vector radius, Shape shape, Comparison comparison, Expression compareTo) {}
+    public record Cfg(BlockCondition blockCondition, Vector radius, Shape shape, Expression hollowThickness,
+                      Comparison comparison, Expression compareTo) {}
 
     @Override
     public MapCodec<Cfg> codec() {
@@ -22,6 +23,7 @@ public final class BlockInRadiusCondition implements ConditionType<EntityCtx, Bl
             BlockCondition.CODEC.fieldOf("block_condition").forGetter(Cfg::blockCondition),
             Vector.SCALAR_OR_VECTOR.fieldOf("radius").forGetter(Cfg::radius),
             Shape.CODEC.optionalFieldOf("shape", Shape.CUBE).forGetter(Cfg::shape),
+            Shape.HOLLOW_THICKNESS.forGetter(Cfg::hollowThickness),
             Comparison.CODEC.optionalFieldOf("comparison", Comparison.GREATER_EQUAL).forGetter(Cfg::comparison),
             Expression.INT_OR_EXPR.optionalFieldOf("compare_to", Expression.constant(1)).forGetter(Cfg::compareTo)
         ).apply(i, Cfg::new));
@@ -45,6 +47,7 @@ public final class BlockInRadiusCondition implements ConditionType<EntityCtx, Bl
         long limit = (long) threshold + 1L;
         Level level = ctx.level();
         Shape shape = cfg.shape;
+        double thickness = shape.thickness(cfg.hollowThickness, ctx.entity());
         BlockCondition condition = cfg.blockCondition;
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
         int baseX = center.getX(), baseY = center.getY(), baseZ = center.getZ();
@@ -53,7 +56,7 @@ public final class BlockInRadiusCondition implements ConditionType<EntityCtx, Bl
         for (int dx = -rx; dx <= rx; dx++) {
             for (int dy = -ry; dy <= ry; dy++) {
                 for (int dz = -rz; dz <= rz; dz++) {
-                    if (!shape.contains(dx, dy, dz, rx, ry, rz)) continue;
+                    if (!shape.contains(dx, dy, dz, rx, ry, rz, thickness)) continue;
                     cursor.set(baseX + dx, baseY + dy, baseZ + dz);
                     if (!condition.test(new BlockCtx(cursor.immutable(), level.getBlockState(cursor), level))) continue;
                     if (++count >= limit) return cfg.comparison.compare(count, threshold);

@@ -5,12 +5,15 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.power.ApoliIds;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.power.PowerTypeGate;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.level.material.FogType;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
 public final class ModifyCameraSubmersionPower extends PowerType<ModifyCameraSubmersionPower.Config> {
+    private static final PowerTypeGate IN_USE = new PowerTypeGate(ApoliIds.MODIFY_CAMERA_SUBMERSION);
+
 
     public enum Submersion implements StringRepresentable {
         NONE("none", FogType.NONE),
@@ -50,7 +53,9 @@ public final class ModifyCameraSubmersionPower extends PowerType<ModifyCameraSub
     }
 
     public static FogType remap(@Nullable Entity entity, FogType original) {
-        if (entity == null) return original;
+        if (entity == null || !IN_USE.inUse() || !PowerLookup.holdsType(entity, ApoliIds.MODIFY_CAMERA_SUBMERSION)) {
+            return original;
+        }
         FogType[] result = {original};
         PowerLookup.forEach(entity, ApoliIds.MODIFY_CAMERA_SUBMERSION, Config.class, cfg -> {
             if (cfg.from.fog() == result[0]) result[0] = cfg.to.fog();

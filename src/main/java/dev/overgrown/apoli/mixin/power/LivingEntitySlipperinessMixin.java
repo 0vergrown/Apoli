@@ -21,10 +21,8 @@ public abstract class LivingEntitySlipperinessMixin extends Entity {
         at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;getFriction(Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/Entity;)F")
     )
     private float apoli$modifySlipperiness(float original) {
-        return ModifySlipperinessHandler.modify(
-            (LivingEntity) (Object) this,
-            this.getBlockPosBelowThatAffectsMyMovement(),
-            original
-        );
+        LivingEntity self = (LivingEntity) (Object) this;
+        if (!ModifySlipperinessHandler.applies(self)) return original;
+        return ModifySlipperinessHandler.modify(self, this.getBlockPosBelowThatAffectsMyMovement(), original);
     }
 }

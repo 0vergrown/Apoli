@@ -82,8 +82,8 @@ public final class DistanceFromCoordinatesBlockCondition
         double dz = cfg.ignoreZ ? 0 : (ctx.pos().getZ() - refZ);
 
         double distance = switch (cfg.shape) {
-            case "star" -> Math.abs(dx) + Math.abs(dy) + Math.abs(dz);
-            case "cube" -> Math.max(Math.abs(dx), Math.max(Math.abs(dy), Math.abs(dz)));
+            case "star", "star_hollow" -> Math.abs(dx) + Math.abs(dy) + Math.abs(dz);
+            case "cube", "cube_hollow" -> Math.max(Math.abs(dx), Math.max(Math.abs(dy), Math.abs(dz)));
             default -> Math.sqrt(dx * dx + dy * dy + dz * dz);
         };
 

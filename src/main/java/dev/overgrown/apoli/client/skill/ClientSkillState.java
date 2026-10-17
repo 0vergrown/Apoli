@@ -2,7 +2,11 @@ package dev.overgrown.apoli.client.skill;
 
 import dev.overgrown.apoli.network.payload.SkillDefsSyncS2C;
 import dev.overgrown.apoli.network.payload.SkillStateSyncS2C;
+import dev.overgrown.apoli.data.ItemStackData;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -158,6 +162,32 @@ public final class ClientSkillState {
             && !isHidden(e.id())
             && !isLocked(e.id())
             && parentSatisfied(e)
-            && points(rootOf(e.id())) >= e.cost();
+            && points(rootOf(e.id())) >= e.cost()
+            && hasCostItems(e);
+    }
+
+    public static boolean hasCostItems(SkillDefsSyncS2C.Entry e) {
+        if (e.costItems().isEmpty()) return true;
+        for (SkillDefsSyncS2C.CostItem item : e.costItems()) {
+            if (heldCount(item) < item.count()) return false;
+        }
+        return true;
+    }
+
+    public static int heldCount(SkillDefsSyncS2C.CostItem item) {
+        Player player = net.minecraft.client.Minecraft.getInstance().player;
+        if (player == null) return 0;
+        Inventory inventory = player.getInventory();
+        int count = 0;
+        for (int slot = 0; slot < inventory.items.size(); slot++) {
+            count += matching(inventory.getItem(slot), item.display());
+        }
+        return count + matching(inventory.offhand.get(0), item.display());
+    }
+
+    private static int matching(ItemStack stack, ItemStack template) {
+        if (stack.isEmpty() || !stack.is(template.getItem())) return 0;
+        if (ItemStackData.hasData(template) && !ItemStackData.sameData(stack, template)) return 0;
+        return stack.getCount();
     }
 }

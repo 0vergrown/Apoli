@@ -25,6 +25,7 @@ public final class AreaOfEffectAction implements ActionType<EntityCtx, AreaOfEff
     public record Cfg(
         Vector radius,
         Shape shape,
+        dev.overgrown.apoli.data.Expression hollowThickness,
         Optional<BiEntityAction> bientityAction,
         Optional<BiEntityCondition> bientityCondition,
         boolean includeActor,
@@ -39,6 +40,7 @@ public final class AreaOfEffectAction implements ActionType<EntityCtx, AreaOfEff
     private static final MapCodec<Cfg> INNER = RecordCodecBuilder.mapCodec(i -> i.group(
         Vector.SCALAR_OR_VECTOR.optionalFieldOf("radius", Vector.uniform(16.0f)).forGetter(Cfg::radius),
         Shape.CODEC.optionalFieldOf("shape", Shape.CUBE).forGetter(Cfg::shape),
+        Shape.HOLLOW_THICKNESS.forGetter(Cfg::hollowThickness),
         dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Cfg::bientityAction),
         dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Cfg::bientityCondition),
         Codec.BOOL.optionalFieldOf("include_actor", false).forGetter(Cfg::includeActor),
@@ -70,13 +72,14 @@ public final class AreaOfEffectAction implements ActionType<EntityCtx, AreaOfEff
             dev.overgrown.apoli.dev.DevParticles.outlineShape(devLevel, origin, cfg.shape,
                 cfg.radius.x(), cfg.radius.y(), cfg.radius.z());
         }
+        boolean constrained = cfg.shape != Shape.CUBE || rx != ry || ry != rz;
+        double thickness = cfg.shape.thickness(cfg.hollowThickness, actor);
         List<Entity> nearby = actor.level().getEntities((Entity) null, box,
             target -> {
                 if (target == actor) return cfg.includeActor;
-                boolean constrained = cfg.shape != Shape.CUBE || rx != ry || ry != rz;
                 if (constrained) {
                     BlockPos tp = target.blockPosition();
-                    if (!cfg.shape.contains(tp.getX() - center.getX(), tp.getY() - center.getY(), tp.getZ() - center.getZ(), rx, ry, rz)) return false;
+                    if (!cfg.shape.contains(tp.getX() - center.getX(), tp.getY() - center.getY(), tp.getZ() - center.getZ(), rx, ry, rz, thickness)) return false;
                 }
                 if (cfg.bientityCondition.isPresent()) {
                     if (!cfg.bientityCondition.get().test(BiEntityCtx.of(actor, target, actor.level()))) return false;

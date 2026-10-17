@@ -70,7 +70,8 @@ public final class EntityConditions {
         ConditionTypes.ENTITY.register(Apoli.id("collided_horizontally"), SimpleFlagConditions.collidedHoriz());
         ConditionTypes.ENTITY.register(Apoli.id("creative_flying"), SimpleFlagConditions.creativeFly());
         ConditionTypes.ENTITY.register(Apoli.id("daytime"), SimpleFlagConditions.daytime());
-        ConditionTypes.ENTITY.register(Apoli.id("exists"), SimpleFlagConditions.exists());
+        ConditionTypes.ENTITY.register(Apoli.id("exists"), SimpleFlagConditions.exists(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("online")).build());
         ConditionTypes.ENTITY.register(Apoli.id("exposed_to_sky"), SimpleFlagConditions.exposedToSky());
         ConditionTypes.ENTITY.register(Apoli.id("exposed_to_sun"), SimpleFlagConditions.exposedToSun());
         ConditionTypes.ENTITY.register(Apoli.id("fall_flying"), SimpleFlagConditions.fallFlying());

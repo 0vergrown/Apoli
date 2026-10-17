@@ -3,9 +3,11 @@ package dev.overgrown.apoli.keybind;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -141,17 +143,33 @@ public final class HeldKeys {
         return keys != null && keys.containsKey(key);
     }
 
-    public static void tickForced() {
+    public static void tickForced(MinecraftServer server) {
         if (FORCED.isEmpty()) return;
+        List<UUID> expiredIds = null;
+        List<String> expiredKeys = null;
         for (Iterator<Map.Entry<UUID, Map<String, Integer>>> outer = FORCED.entrySet().iterator(); outer.hasNext(); ) {
-            Map<String, Integer> keys = outer.next().getValue();
+            Map.Entry<UUID, Map<String, Integer>> owner = outer.next();
+            Map<String, Integer> keys = owner.getValue();
             for (Iterator<Map.Entry<String, Integer>> inner = keys.entrySet().iterator(); inner.hasNext(); ) {
                 Map.Entry<String, Integer> entry = inner.next();
                 int left = entry.getValue() - 1;
-                if (left <= 0) inner.remove();
-                else entry.setValue(left);
+                if (left > 0) {
+                    entry.setValue(left);
+                    continue;
+                }
+                inner.remove();
+                if (expiredIds == null) {
+                    expiredIds = new ArrayList<>(2);
+                    expiredKeys = new ArrayList<>(2);
+                }
+                expiredIds.add(owner.getKey());
+                expiredKeys.add(entry.getKey());
             }
             if (keys.isEmpty()) outer.remove();
+        }
+        if (expiredIds == null) return;
+        for (int i = 0; i < expiredIds.size(); i++) {
+            KeyDispatch.releaseExpired(server, expiredIds.get(i), expiredKeys.get(i));
         }
     }
 

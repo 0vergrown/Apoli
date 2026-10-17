@@ -3,6 +3,7 @@ package dev.overgrown.apoli.skill;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,24 +16,27 @@ public final class SkillData {
     private final Map<ResourceLocation, Integer> points;
     private final Set<ResourceLocation> purchased;
     private final Set<ResourceLocation> grantedTrees;
+    private final Map<ResourceLocation, List<ItemStack>> paidItems;
 
     public SkillData() {
-        this(new HashMap<>(), new HashSet<>(), new HashSet<>());
+        this(new HashMap<>(), new HashSet<>(), new HashSet<>(), new HashMap<>());
     }
 
     private SkillData(Map<ResourceLocation, Integer> points, Set<ResourceLocation> purchased,
-                      Set<ResourceLocation> grantedTrees) {
+                      Set<ResourceLocation> grantedTrees, Map<ResourceLocation, List<ItemStack>> paidItems) {
         this.points = new HashMap<>(points);
         this.purchased = new HashSet<>(purchased);
         this.grantedTrees = new HashSet<>(grantedTrees);
+        this.paidItems = new HashMap<>(paidItems);
     }
 
     public static final Codec<SkillData> CODEC = RecordCodecBuilder.create(i -> i.group(
         Codec.unboundedMap(ResourceLocation.CODEC, Codec.INT).optionalFieldOf("points", Map.of()).forGetter(d -> d.points),
         ResourceLocation.CODEC.listOf().optionalFieldOf("purchased", List.of()).forGetter(d -> new ArrayList<>(d.purchased)),
-        ResourceLocation.CODEC.listOf().optionalFieldOf("granted_trees", List.of()).forGetter(d -> new ArrayList<>(d.grantedTrees))
-    ).apply(i, (points, purchased, grantedTrees) ->
-        new SkillData(points, new HashSet<>(purchased), new HashSet<>(grantedTrees))));
+        ResourceLocation.CODEC.listOf().optionalFieldOf("granted_trees", List.of()).forGetter(d -> new ArrayList<>(d.grantedTrees)),
+        Codec.unboundedMap(ResourceLocation.CODEC, ItemStack.CODEC.listOf()).optionalFieldOf("paid_items", Map.of()).forGetter(d -> d.paidItems)
+    ).apply(i, (points, purchased, grantedTrees, paidItems) ->
+        new SkillData(points, new HashSet<>(purchased), new HashSet<>(grantedTrees), paidItems)));
 
     public int getPoints(ResourceLocation root) {
         return points.getOrDefault(root, 0);
@@ -52,6 +56,18 @@ public final class SkillData {
 
     public void purchase(ResourceLocation skill) {
         purchased.add(skill);
+    }
+
+    public void purchase(ResourceLocation skill, List<ItemStack> paid) {
+        purchased.add(skill);
+        if (paid.isEmpty()) paidItems.remove(skill);
+        else paidItems.put(skill, List.copyOf(paid));
+    }
+
+    public List<ItemStack> unpurchase(ResourceLocation skill) {
+        purchased.remove(skill);
+        List<ItemStack> paid = paidItems.remove(skill);
+        return paid == null ? List.of() : paid;
     }
 
     public boolean hasTree(ResourceLocation tree) {
@@ -85,5 +101,11 @@ public final class SkillData {
         this.purchased.addAll(other.purchased);
         this.grantedTrees.clear();
         this.grantedTrees.addAll(other.grantedTrees);
+        this.paidItems.clear();
+        other.paidItems.forEach((skill, paid) -> {
+            List<ItemStack> copies = new ArrayList<>(paid.size());
+            for (ItemStack stack : paid) copies.add(stack.copy());
+            this.paidItems.put(skill, copies);
+        });
     }
 }

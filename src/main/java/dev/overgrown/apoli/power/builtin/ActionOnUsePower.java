@@ -17,7 +17,7 @@ import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
@@ -51,12 +51,11 @@ public final class ActionOnUsePower extends PowerType<ActionOnUsePower.Config> {
         ).apply(i, Config::new));
     }
 
-    public InteractionResult tryFire(Config cfg, LivingEntity actor, Entity target, InteractionHand hand) {
+    public InteractionResult tryFire(Config cfg, Player actor, Entity target, InteractionHand hand) {
         if (!handAllowed(cfg, hand)) return InteractionResult.PASS;
 
         ItemStack stack = actor.getItemInHand(hand);
-        ItemCtx itemCtx = new ItemCtx(stack, actor.level(), actor);
-        if (cfg.itemCondition.isPresent() && !cfg.itemCondition.get().test(itemCtx)) {
+        if (cfg.itemCondition.isPresent() && !cfg.itemCondition.get().test(new ItemCtx(stack, actor.level(), actor))) {
             return InteractionResult.PASS;
         }
         BiEntityCtx biCtx = new BiEntityCtx(actor, target, actor.level());
@@ -64,13 +63,8 @@ public final class ActionOnUsePower extends PowerType<ActionOnUsePower.Config> {
             return InteractionResult.PASS;
         }
         cfg.bientityAction.ifPresent(a -> a.run(biCtx));
-        cfg.heldItemAction.ifPresent(a -> a.run(itemCtx));
-        if (cfg.resultStack.isPresent()) {
-            giveResultStack(actor, hand, cfg.resultStack.get().stack().copy());
-        }
-        if (cfg.resultItemAction.isPresent() && actor.getItemInHand(hand) != ItemStack.EMPTY) {
-            cfg.resultItemAction.get().run(new ItemCtx(actor.getItemInHand(hand), actor.level(), actor));
-        }
+        BlockInteractionHelper.applyItemResult(actor, hand, actor.getItemInHand(hand),
+            cfg.heldItemAction, cfg.resultStack, cfg.resultItemAction);
         return cfg.actionResult.vanilla();
     }
 
@@ -83,16 +77,5 @@ public final class ActionOnUsePower extends PowerType<ActionOnUsePower.Config> {
         Hand needed = Hand.of(hand);
         for (Hand h : cfg.hands) if (h == needed) return true;
         return false;
-    }
-
-    static void giveResultStack(LivingEntity actor, InteractionHand hand, ItemStack result) {
-        ItemStack held = actor.getItemInHand(hand);
-        if (held.isEmpty()) {
-            actor.setItemInHand(hand, result);
-        } else if (actor instanceof net.minecraft.world.entity.player.Player p) {
-            if (!p.getInventory().add(result)) {
-                p.drop(result, false);
-            }
-        }
     }
 }

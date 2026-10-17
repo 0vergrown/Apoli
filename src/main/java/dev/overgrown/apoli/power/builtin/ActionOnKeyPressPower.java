@@ -19,20 +19,32 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
 
 public final class ActionOnKeyPressPower extends PowerType<ActionOnKeyPressPower.Config> {
-    private final Map<CooldownKey, Integer> cooldowns = new HashMap<>();
+    private static final int SLOT_HELD_TICKS = dev.overgrown.apoli.data.expr.ExprContext.slot("held_ticks");
 
-    public record Config(EntityAction entityAction, Expression cooldown, HudRender hudRender, Key key) implements dev.overgrown.apoli.power.HudRendered {}
+    private final Map<CooldownKey, Integer> cooldowns = new HashMap<>();
+    private final Map<CooldownKey, Long> pressedAt = new HashMap<>();
+
+    public record Config(EntityAction entityAction, Optional<EntityAction> entityActionReleased, Expression cooldown,
+                         HudRender hudRender, Key key) implements dev.overgrown.apoli.power.HudRendered {
+        public boolean releases() {
+            return entityActionReleased.isPresent();
+        }
+    }
 
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
             EntityAction.CODEC.fieldOf("entity_action").forGetter(Config::entityAction),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action_released", EntityAction.CODEC).forGetter(Config::entityActionReleased),
             Expression.INT_OR_EXPR.optionalFieldOf("cooldown", Expression.constant(1)).forGetter(Config::cooldown),
             HudRender.CODEC.optionalFieldOf("hud_render", HudRender.DONT_RENDER).forGetter(Config::hudRender),
             Key.CODEC.optionalFieldOf("key", Key.DEFAULT_PRIMARY).forGetter(Config::key)
@@ -57,7 +69,9 @@ public final class ActionOnKeyPressPower extends PowerType<ActionOnKeyPressPower
     @Override
     public void onRemoved(ResourceLocation powerId, Config cfg, PowerContainer holder, ResourceLocation source) {
         if (!holder.allPowers().contains(powerId)) {
-            cooldowns.remove(new CooldownKey(holder.rawOwner().getUUID(), powerId));
+            CooldownKey key = new CooldownKey(holder.rawOwner().getUUID(), powerId);
+            cooldowns.remove(key);
+            pressedAt.remove(key);
         }
     }
 
@@ -69,7 +83,42 @@ public final class ActionOnKeyPressPower extends PowerType<ActionOnKeyPressPower
         cfg.entityAction.run(new EntityCtx(owner, level));
         int ticks = PowerResources.cooldownTicks(cfg.cooldown, holder);
         if (ticks > 0) cooldowns.put(key, ticks);
+        if (cfg.releases()) pressedAt.putIfAbsent(key, level.getGameTime());
         return true;
+    }
+
+    public boolean release(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean run) {
+        if (pressedAt.isEmpty()) return false;
+        Entity owner = holder.rawOwner();
+        if (!(owner.level() instanceof ServerLevel level)) return false;
+        Long pressed = pressedAt.remove(new CooldownKey(owner.getUUID(), powerId));
+        if (pressed == null || !run || cfg.entityActionReleased.isEmpty()) return false;
+        double previous = dev.overgrown.apoli.data.expr.ExprContext.push(SLOT_HELD_TICKS,
+            Math.max(0L, level.getGameTime() - pressed));
+        boolean attributed = dev.overgrown.apoli.attribution.PowerCause.push(owner, powerId);
+        try {
+            cfg.entityActionReleased.get().run(new EntityCtx(owner, level));
+        } finally {
+            if (attributed) dev.overgrown.apoli.attribution.PowerCause.pop();
+            dev.overgrown.apoli.data.expr.ExprContext.pop(SLOT_HELD_TICKS, previous);
+        }
+        return true;
+    }
+
+    public List<ResourceLocation> pressedPowers(UUID entity) {
+        if (pressedAt.isEmpty()) return List.of();
+        List<ResourceLocation> out = null;
+        for (CooldownKey key : pressedAt.keySet()) {
+            if (!key.entity().equals(entity)) continue;
+            if (out == null) out = new ArrayList<>(2);
+            out.add(key.powerId());
+        }
+        return out == null ? List.of() : out;
+    }
+
+    public void forget(UUID entity) {
+        if (pressedAt.isEmpty()) return;
+        pressedAt.keySet().removeIf(key -> key.entity().equals(entity));
     }
 
     public int getCooldown(LivingEntity owner, ResourceLocation powerId) {

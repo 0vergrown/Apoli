@@ -73,6 +73,7 @@ public final class SummonCloneAction implements ActionType<EntityCtx, SummonClon
         cfg.summonId.ifPresent(clone::setSummonId);
         clone.setCustomName(owner.getName());
         clone.moveTo(owner.getX(), owner.getY(), owner.getZ(), owner.getYHeadRot(), 0);
+        net.minecraft.world.phys.Vec3 spawnedAt = clone.position();
 
         if (cfg.inheritEquipment) {
             for (EquipmentSlot slot : EquipmentSlot.values()) {
@@ -90,5 +91,6 @@ public final class SummonCloneAction implements ActionType<EntityCtx, SummonClon
         clone.updateWeaponGoals();
         Summons.grantPowers(clone, cfg.powers);
         cfg.bientityAction.ifPresent(action -> action.run(new BiEntityCtx(owner, clone, level)));
+        Summons.resendIfMoved(clone, spawnedAt);
     }
 }

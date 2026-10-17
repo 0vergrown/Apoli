@@ -33,7 +33,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public final class ApoliNetwork {
 
-    private static final String PROTOCOL_VERSION = "15";
+    private static final String PROTOCOL_VERSION = "17";
 
     private ApoliNetwork() {}
 
@@ -51,6 +51,8 @@ public final class ApoliNetwork {
             dev.overgrown.apoli.network.payload.DevModeS2C.STREAM_CODEC, ApoliNetwork::onDevMode);
         registrar.playToClient(dev.overgrown.apoli.network.payload.SyncEntitySetsS2C.TYPE,
             dev.overgrown.apoli.network.payload.SyncEntitySetsS2C.STREAM_CODEC, ApoliNetwork::onSyncEntitySets);
+        registrar.playToClient(dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C.TYPE,
+            dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C.STREAM_CODEC, ApoliNetwork::onSyncTrackedEntitySet);
         registrar.playToClient(PowerActivatedS2C.TYPE, PowerActivatedS2C.STREAM_CODEC, ApoliNetwork::onPowerActivated);
         registrar.playToClient(SyncKeybindsS2C.TYPE, SyncKeybindsS2C.STREAM_CODEC, ApoliNetwork::onSyncKeybinds);
         registrar.playToClient(ApplyVelocityS2C.TYPE, ApplyVelocityS2C.STREAM_CODEC, ApoliNetwork::onApplyVelocity);
@@ -88,6 +90,8 @@ public final class ApoliNetwork {
             dev.overgrown.apoli.network.payload.RefundSkillC2S.STREAM_CODEC, ApoliNetwork::onRefundSkill);
         registrar.playToServer(PowerActivationC2S.TYPE, PowerActivationC2S.STREAM_CODEC, ApoliNetwork::onPowerActivation);
         registrar.playToServer(PowerToggleC2S.TYPE, PowerToggleC2S.STREAM_CODEC, ApoliNetwork::onPowerToggle);
+        registrar.playToServer(dev.overgrown.apoli.network.payload.PowerReleaseC2S.TYPE,
+            dev.overgrown.apoli.network.payload.PowerReleaseC2S.STREAM_CODEC, ApoliNetwork::onPowerRelease);
         registrar.playToServer(KeyHeldC2S.TYPE, KeyHeldC2S.STREAM_CODEC, ApoliNetwork::onKeyHeld);
         registrar.playToServer(dev.overgrown.apoli.network.payload.ScrollWheelC2S.TYPE,
             dev.overgrown.apoli.network.payload.ScrollWheelC2S.STREAM_CODEC, ApoliNetwork::onScrollWheel);
@@ -164,6 +168,12 @@ public final class ApoliNetwork {
         ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientEntitySets.apply(payload.powerId(), payload.members()));
     }
 
+    private static void onSyncTrackedEntitySet(dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C payload,
+                                               IPayloadContext ctx) {
+        ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientEntitySets.applyTracked(
+            payload.owner(), payload.powerId(), payload.members()));
+    }
+
     private static void onPowerActivated(PowerActivatedS2C payload, IPayloadContext ctx) {
         ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPayloadHandlers.onPowerActivated(payload));
     }
@@ -195,6 +205,14 @@ public final class ApoliNetwork {
         ctx.enqueueWork(() -> {
             if (ctx.player() instanceof ServerPlayer sp) {
                 Apoli.handleActivation(sp, payload);
+            }
+        });
+    }
+
+    private static void onPowerRelease(dev.overgrown.apoli.network.payload.PowerReleaseC2S payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> {
+            if (ctx.player() instanceof ServerPlayer sp) {
+                dev.overgrown.apoli.keybind.KeyDispatch.releasePower(sp, payload.power());
             }
         });
     }
@@ -406,6 +424,17 @@ public final class ApoliNetwork {
                                       dev.overgrown.apoli.network.payload.SyncEntitySetsS2C payload) {
         if (!connected(recipient)) return;
         PacketDistributor.sendToPlayer(recipient, payload);
+    }
+
+    public static void sendTrackedEntitySet(ServerPlayer recipient,
+                                            dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C payload) {
+        if (!connected(recipient)) return;
+        PacketDistributor.sendToPlayer(recipient, payload);
+    }
+
+    public static void sendEntitySetToTrackers(Entity owner,
+                                               dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C payload) {
+        PacketDistributor.sendToPlayersTrackingEntity(owner, payload);
     }
 
     public static void sendKeybinds(ServerPlayer recipient, SyncKeybindsS2C payload) {

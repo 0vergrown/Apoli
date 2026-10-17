@@ -18,6 +18,7 @@ import java.util.Optional;
 
 public final class EntityInRadiusCondition implements ConditionType<EntityCtx, EntityInRadiusCondition.Cfg> {
     public record Cfg(Optional<BiEntityCondition> bientityCondition, float radius, Shape shape,
+                      dev.overgrown.apoli.data.Expression hollowThickness,
                       Comparison comparison, dev.overgrown.apoli.data.Expression compareTo) {}
 
     @Override
@@ -26,6 +27,7 @@ public final class EntityInRadiusCondition implements ConditionType<EntityCtx, E
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Cfg::bientityCondition),
             Codec.FLOAT.fieldOf("radius").forGetter(Cfg::radius),
             Shape.CODEC.optionalFieldOf("shape", Shape.CUBE).forGetter(Cfg::shape),
+            Shape.HOLLOW_THICKNESS.forGetter(Cfg::hollowThickness),
             Comparison.CODEC.optionalFieldOf("comparison", Comparison.GREATER_EQUAL).forGetter(Cfg::comparison),
             dev.overgrown.apoli.data.Expression.INT_OR_EXPR.optionalFieldOf("compare_to", dev.overgrown.apoli.data.Expression.constant(1)).forGetter(Cfg::compareTo)
         ).apply(i, Cfg::new));
@@ -45,11 +47,12 @@ public final class EntityInRadiusCondition implements ConditionType<EntityCtx, E
         List<Entity> nearby = ctx.level().getEntities(self, box);
         boolean filtered = cfg.bientityCondition.isPresent();
         int threshold = cfg.compareTo.evalInt(self);
+        double thickness = cfg.shape.thickness(cfg.hollowThickness, self);
 
         int count = 0;
         for (Entity candidate : nearby) {
             if (!cfg.shape.contains(candidate.getX() - self.getX(), candidate.getY() - self.getY(),
-                    candidate.getZ() - self.getZ(), r, r, r)) continue;
+                    candidate.getZ() - self.getZ(), r, r, r, thickness)) continue;
             if (filtered) {
                 if (!cfg.bientityCondition.get().test(new BiEntityCtx(self, candidate, ctx.level()))) continue;
             }

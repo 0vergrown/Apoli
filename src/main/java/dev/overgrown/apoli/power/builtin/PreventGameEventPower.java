@@ -6,7 +6,10 @@ import dev.overgrown.apoli.action.EntityAction;
 import dev.overgrown.apoli.codec.IdCodecs;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.IdOrTag;
+import dev.overgrown.apoli.power.ApoliIds;
+import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
+import dev.overgrown.apoli.power.PowerTypeGate;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -18,6 +21,8 @@ import java.util.List;
 import java.util.Optional;
 
 public final class PreventGameEventPower extends PowerType<PreventGameEventPower.Config> {
+    private static final PowerTypeGate IN_USE = new PowerTypeGate(ApoliIds.PREVENT_GAME_EVENT);
+
     public record Config(
         Optional<IdOrTag<GameEvent>> event,
         Optional<List<IdOrTag<GameEvent>>> events,
@@ -48,6 +53,17 @@ public final class PreventGameEventPower extends PowerType<PreventGameEventPower
             if (holder.is(tag)) return true;
         }
         return false;
+    }
+
+    public static boolean prevent(ServerLevel level, net.minecraft.world.entity.Entity source, Holder<GameEvent> event) {
+        if (!IN_USE.inUse()
+            || !PowerLookup.anyActive(source, ApoliIds.PREVENT_GAME_EVENT, Config.class, PreventGameEventPower::matches, event)) {
+            return false;
+        }
+        PowerLookup.forEach(source, ApoliIds.PREVENT_GAME_EVENT, Config.class, cfg -> {
+            if (matches(cfg, event)) executeAction(cfg, level, source);
+        });
+        return true;
     }
 
     public static void executeAction(Config cfg, ServerLevel level, net.minecraft.world.entity.Entity entity) {

@@ -7,10 +7,12 @@ import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.power.PowerContainer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public final class SkillTrees {
@@ -110,12 +112,14 @@ public final class SkillTrees {
         ResourceLocation root = SkillRegistry.rootOf(skillId);
         if (!treeAvailable(player, data, root)) return false;
         if (excluded(data, skillId)) return false;
-        if (data.getPoints(root) < skill.cost()) return false;
+        if (data.getPoints(root) < skill.cost().points()) return false;
         EntityCtx ctx = new EntityCtx(player, player.level());
         if (skill.condition().isPresent() && !skill.condition().get().test(ctx)) return false;
+        List<ItemStack> paid = skill.cost().takeItems(player);
+        if (paid == null) return false;
 
-        data.addPoints(root, -skill.cost());
-        data.purchase(skillId);
+        data.addPoints(root, -skill.cost().points());
+        data.purchase(skillId, paid);
 
         PowerContainer container = PowerContainerAttachment.getOrCreate(player);
         if (container != null) {
@@ -130,8 +134,10 @@ public final class SkillTrees {
             ResourceLocation root = SkillRegistry.rootOf(skillId);
             if (tree != null && !tree.equals(root)) continue;
             Skill skill = SkillRegistry.get(skillId);
-            if (refund && skill != null) data.addPoints(root, skill.cost());
-            data.purchasedView().remove(skillId);
+            List<ItemStack> paid = data.unpurchase(skillId);
+            if (!refund) continue;
+            if (skill != null) data.addPoints(root, skill.cost().points());
+            SkillCost.refund(player, paid);
         }
         PowerContainer container = PowerContainerAttachment.getOrCreate(player);
         if (container != null) container.removeAllFromSource(POWER_SOURCE);
@@ -154,8 +160,9 @@ public final class SkillTrees {
         SkillData data = SkillDataAttachment.get(player);
         if (force ? !data.isPurchased(skillId) : !canRefund(data, skillId)) return false;
         Skill skill = SkillRegistry.get(skillId);
-        data.purchasedView().remove(skillId);
-        if (skill != null) data.addPoints(SkillRegistry.rootOf(skillId), skill.cost());
+        List<ItemStack> paid = data.unpurchase(skillId);
+        if (skill != null) data.addPoints(SkillRegistry.rootOf(skillId), skill.cost().points());
+        SkillCost.refund(player, paid);
         reconcilePowers(player);
         return true;
     }
