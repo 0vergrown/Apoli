@@ -26,6 +26,7 @@ public final class BiEntityActions {
         ActionTypes.BI_ENTITY.register(Apoli.id("grab"), new GrabAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("set_in_love"), new SetInLoveAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("tame"), new TameAction());
+        ActionTypes.BI_ENTITY.register(Apoli.id("breed"), new BreedAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("actor_action"), new ActorAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("target_action"), new TargetAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("both"), new BothAction());

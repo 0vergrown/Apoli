@@ -12,9 +12,11 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -90,7 +92,19 @@ public class SkillTreeScreen extends Screen {
         maxX = maxY = Integer.MIN_VALUE;
         if (currentRoot == null) return;
         gather(currentRoot, treeSkills);
-        placeRow(currentRoot, 0, new float[]{0});
+        Map<ResourceLocation, float[]> grid = new HashMap<>();
+        placeRow(currentRoot, 0, new float[]{0}, grid, null);
+        for (ResourceLocation id : treeSkills) {
+            SkillDefsSyncS2C.Entry e = ClientSkillState.def(id);
+            if (e == null || e.placement().isEmpty()) continue;
+            List<ResourceLocation> branch = new ArrayList<>();
+            float row = placeRow(id, e.placement().get().x(), new float[]{0}, grid, branch);
+            float shift = e.placement().get().y() - row;
+            for (ResourceLocation member : branch) grid.get(member)[1] += shift;
+        }
+        for (Map.Entry<ResourceLocation, float[]> cell : grid.entrySet()) {
+            positions.put(cell.getKey(), new int[]{Mth.floor(cell.getValue()[0] * 28f), Mth.floor(cell.getValue()[1] * 27f)});
+        }
         for (ResourceLocation id : treeSkills) {
             int[] p = positions.get(id);
             if (p == null) continue;
@@ -107,22 +121,34 @@ public class SkillTreeScreen extends Screen {
         for (ResourceLocation child : ClientSkillState.childrenOf(id)) gather(child, out);
     }
 
-    private float placeRow(ResourceLocation id, int depth, float[] leaf) {
-        List<ResourceLocation> children = ClientSkillState.childrenOf(id);
+    private float placeRow(ResourceLocation id, float column, float[] leaf, Map<ResourceLocation, float[]> grid,
+                           @Nullable List<ResourceLocation> branch) {
+        List<ResourceLocation> children = flowChildren(id);
         float row;
         if (children.isEmpty()) {
             row = leaf[0]++;
         } else {
             float first = 0, last = 0;
             for (int k = 0; k < children.size(); k++) {
-                float r = placeRow(children.get(k), depth + 1, leaf);
+                float r = placeRow(children.get(k), column + 1, leaf, grid, branch);
                 if (k == 0) first = r;
                 if (k == children.size() - 1) last = r;
             }
             row = (first + last) / 2f;
         }
-        positions.put(id, new int[]{depth * 28, Mth.floor(row * 27f)});
+        grid.put(id, new float[]{column, row});
+        if (branch != null) branch.add(id);
         return row;
+    }
+
+    private static List<ResourceLocation> flowChildren(ResourceLocation id) {
+        List<ResourceLocation> children = ClientSkillState.childrenOf(id);
+        List<ResourceLocation> flow = new ArrayList<>(children.size());
+        for (ResourceLocation child : children) {
+            SkillDefsSyncS2C.Entry e = ClientSkillState.def(child);
+            if (e == null || e.placement().isEmpty()) flow.add(child);
+        }
+        return flow;
     }
 
     @Override
@@ -179,7 +205,7 @@ public class SkillTreeScreen extends Screen {
     private void drawConnectivity(GuiGraphics g, int ox, int oy, boolean border) {
         for (ResourceLocation id : treeSkills) {
             SkillDefsSyncS2C.Entry e = ClientSkillState.def(id);
-            if (e == null || e.parent().isEmpty()) continue;
+            if (e == null || e.parent().isEmpty() || e.placement().isPresent()) continue;
             int[] parent = positions.get(e.parent().get());
             int[] self = positions.get(id);
             if (parent == null || self == null) continue;
@@ -322,45 +348,162 @@ public class SkillTreeScreen extends Screen {
         List<Component> parts = new ArrayList<>();
         if (!e.description().getString().isEmpty()) parts.add(e.description().copy().withStyle(ChatFormatting.GRAY));
         if (isObtained(e)) {
-            if (!e.powers().isEmpty()) {
+            if (!ClientSkillState.isGate(e)) {
                 parts.add(Component.translatable("screen.apoli.skill_tree.purchased").withStyle(ChatFormatting.GREEN));
                 if (ClientSkillState.canRefund(e.id())) {
-                    String refundKey = e.costItems().isEmpty() ? "screen.apoli.skill_tree.refund" : "screen.apoli.skill_tree.refund_items";
-                    parts.add(Component.translatable(refundKey, e.cost()).withStyle(ChatFormatting.YELLOW));
+                    parts.add(refundLine(e).withStyle(ChatFormatting.YELLOW));
+                } else if (ClientSkillState.refundBlockedByRewards(e.id())) {
+                    parts.add(Component.translatable("screen.apoli.skill_tree.refund_blocked").withStyle(ChatFormatting.RED));
                 }
             }
         } else {
-            if (e.cost() > 0 || e.costItems().isEmpty()) {
-                parts.add(Component.translatable("screen.apoli.skill_tree.cost", e.cost()).withStyle(ChatFormatting.GOLD));
-            } else {
-                parts.add(Component.translatable("screen.apoli.skill_tree.cost_items").withStyle(ChatFormatting.GOLD));
-            }
-            for (SkillDefsSyncS2C.CostItem item : e.costItems()) {
-                boolean enough = ClientSkillState.heldCount(item) >= item.count();
-                parts.add(Component.translatable("screen.apoli.skill_tree.cost_item", item.count(), item.display().getHoverName())
-                    .withStyle(enough ? ChatFormatting.GOLD : ChatFormatting.RED));
-            }
-            ResourceLocation blocker = ClientSkillState.excludedBy(e.id());
-            if (blocker != null) {
-                SkillDefsSyncS2C.Entry blockerDef = ClientSkillState.def(blocker);
-                parts.add(Component.translatable("screen.apoli.skill_tree.excluded",
-                    blockerDef != null ? blockerDef.name() : Component.literal(blocker.toString()))
-                    .withStyle(ChatFormatting.RED));
-            } else if (!ClientSkillState.parentSatisfied(e)) {
-                parts.add(Component.translatable("screen.apoli.skill_tree.locked").withStyle(ChatFormatting.RED));
-            } else if (ClientSkillState.isLocked(e.id())) {
-                parts.add(Component.translatable("screen.apoli.skill_tree.unavailable").withStyle(ChatFormatting.RED));
-            } else if (ClientSkillState.points(ClientSkillState.rootOf(e.id())) < e.cost()) {
-                parts.add(Component.translatable("screen.apoli.skill_tree.not_enough").withStyle(ChatFormatting.RED));
-            } else if (!ClientSkillState.hasCostItems(e)) {
-                parts.add(Component.translatable("screen.apoli.skill_tree.missing_items").withStyle(ChatFormatting.RED));
-            } else {
-                parts.add(Component.translatable("screen.apoli.skill_tree.click_buy").withStyle(ChatFormatting.YELLOW));
-            }
+            addCostLines(parts, e);
+            addRewardLines(parts, e);
+            parts.add(statusLine(e));
         }
         List<FormattedCharSequence> out = new ArrayList<>();
         for (Component c : parts) out.addAll(this.font.split(c, 200));
         return out;
+    }
+
+    private static void addCostLines(List<Component> parts, SkillDefsSyncS2C.Entry e) {
+        if (e.costPoints().isEmpty() && e.costItems().isEmpty()) {
+            parts.add(Component.translatable("screen.apoli.skill_tree.cost", 0).withStyle(ChatFormatting.GOLD));
+            return;
+        }
+        if (e.costHidden()) {
+            parts.add(Component.translatable("screen.apoli.skill_tree.cost_hidden").withStyle(ChatFormatting.GOLD));
+            return;
+        }
+        List<Component> lines = new ArrayList<>();
+        boolean hiddenEntry = false;
+        for (SkillDefsSyncS2C.PointEntry point : e.costPoints()) {
+            if (point.hidden()) {
+                hiddenEntry = true;
+                continue;
+            }
+            lines.add(pointLine(e, point, "screen.apoli.skill_tree.cost_points", "screen.apoli.skill_tree.cost_tree_points")
+                .withStyle(ChatFormatting.GOLD));
+        }
+        for (SkillDefsSyncS2C.CostItem item : e.costItems()) {
+            if (item.hidden()) {
+                hiddenEntry = true;
+                continue;
+            }
+            boolean enough = ClientSkillState.heldCount(item) >= item.count();
+            lines.add(Component.translatable("screen.apoli.skill_tree.cost_item", item.count(), item.display().getHoverName())
+                .withStyle(enough ? ChatFormatting.GOLD : ChatFormatting.RED));
+        }
+        if (lines.isEmpty()) {
+            parts.add(Component.translatable("screen.apoli.skill_tree.cost_hidden").withStyle(ChatFormatting.GOLD));
+            return;
+        }
+        if (!hiddenEntry && e.costItems().isEmpty() && e.costPoints().size() == 1
+            && ClientSkillState.isOwnTree(e, e.costPoints().get(0))) {
+            parts.add(Component.translatable("screen.apoli.skill_tree.cost", e.costPoints().get(0).amount())
+                .withStyle(ChatFormatting.GOLD));
+            return;
+        }
+        parts.add(Component.translatable("screen.apoli.skill_tree.cost_items").withStyle(ChatFormatting.GOLD));
+        parts.addAll(lines);
+        if (hiddenEntry) parts.add(Component.translatable("screen.apoli.skill_tree.hidden_entry").withStyle(ChatFormatting.GOLD));
+    }
+
+    private static void addRewardLines(List<Component> parts, SkillDefsSyncS2C.Entry e) {
+        boolean grantsOtherPowers = false;
+        for (ResourceLocation power : e.powers()) {
+            if (!power.equals(e.id())) {
+                grantsOtherPowers = true;
+                break;
+            }
+        }
+        if (e.rewardHidden()) {
+            if (grantsOtherPowers || !e.rewardPoints().isEmpty() || !e.rewardItems().isEmpty()) {
+                parts.add(Component.translatable("screen.apoli.skill_tree.rewards_hidden").withStyle(ChatFormatting.AQUA));
+            }
+            return;
+        }
+        List<Component> lines = new ArrayList<>();
+        boolean hiddenEntry = false;
+        for (Component power : e.rewardPowers()) {
+            lines.add(Component.translatable("screen.apoli.skill_tree.reward_power", power).withStyle(ChatFormatting.AQUA));
+        }
+        for (SkillDefsSyncS2C.RewardItem item : e.rewardItems()) {
+            if (item.hidden()) {
+                hiddenEntry = true;
+                continue;
+            }
+            lines.add(Component.translatable("screen.apoli.skill_tree.reward_item", item.count(), item.display().getHoverName())
+                .withStyle(ChatFormatting.AQUA));
+        }
+        for (SkillDefsSyncS2C.PointEntry point : e.rewardPoints()) {
+            if (point.hidden()) {
+                hiddenEntry = true;
+                continue;
+            }
+            lines.add(pointLine(e, point, "screen.apoli.skill_tree.reward_points", "screen.apoli.skill_tree.reward_tree_points")
+                .withStyle(ChatFormatting.AQUA));
+        }
+        if (lines.isEmpty()) {
+            if (hiddenEntry) parts.add(Component.translatable("screen.apoli.skill_tree.rewards_hidden").withStyle(ChatFormatting.AQUA));
+            return;
+        }
+        parts.add(Component.translatable("screen.apoli.skill_tree.rewards").withStyle(ChatFormatting.AQUA));
+        parts.addAll(lines);
+        if (hiddenEntry) parts.add(Component.translatable("screen.apoli.skill_tree.hidden_entry").withStyle(ChatFormatting.AQUA));
+    }
+
+    private static MutableComponent pointLine(SkillDefsSyncS2C.Entry e, SkillDefsSyncS2C.PointEntry point,
+                                              String ownKey, String treeKey) {
+        if (ClientSkillState.isOwnTree(e, point)) return Component.translatable(ownKey, point.amount());
+        return Component.translatable(treeKey, point.amount(), ClientSkillState.treeName(point.tree()));
+    }
+
+    private static Component statusLine(SkillDefsSyncS2C.Entry e) {
+        ResourceLocation blocker = ClientSkillState.excludedBy(e.id());
+        if (blocker != null) {
+            SkillDefsSyncS2C.Entry blockerDef = ClientSkillState.def(blocker);
+            return Component.translatable("screen.apoli.skill_tree.excluded",
+                blockerDef != null ? blockerDef.name() : Component.literal(blocker.toString()))
+                .withStyle(ChatFormatting.RED);
+        }
+        if (!ClientSkillState.parentSatisfied(e)) {
+            if (e.placement().isPresent() && e.parent().isPresent()) {
+                SkillDefsSyncS2C.Entry parentDef = ClientSkillState.def(e.parent().get());
+                Component parentName = parentDef != null ? parentDef.name() : Component.literal(e.parent().get().toString());
+                return Component.translatable("screen.apoli.skill_tree.locked_named", parentName).withStyle(ChatFormatting.RED);
+            }
+            return Component.translatable("screen.apoli.skill_tree.locked").withStyle(ChatFormatting.RED);
+        }
+        if (ClientSkillState.isLocked(e.id())) {
+            return Component.translatable("screen.apoli.skill_tree.unavailable").withStyle(ChatFormatting.RED);
+        }
+        if (!ClientSkillState.canAfford(e, true)) {
+            return Component.translatable("screen.apoli.skill_tree.not_enough").withStyle(ChatFormatting.RED);
+        }
+        if (!ClientSkillState.hasCostItems(e, true)) {
+            return Component.translatable("screen.apoli.skill_tree.missing_items").withStyle(ChatFormatting.RED);
+        }
+        if (!ClientSkillState.canAfford(e, false) || !ClientSkillState.hasCostItems(e, false)) {
+            return Component.translatable("screen.apoli.skill_tree.cost_unmet").withStyle(ChatFormatting.RED);
+        }
+        return Component.translatable("screen.apoli.skill_tree.click_buy").withStyle(ChatFormatting.YELLOW);
+    }
+
+    private static MutableComponent refundLine(SkillDefsSyncS2C.Entry e) {
+        if (!e.rewardPoints().isEmpty() || !e.rewardItems().isEmpty()) {
+            return Component.translatable("screen.apoli.skill_tree.refund_rewards");
+        }
+        boolean hiddenItem = false;
+        for (SkillDefsSyncS2C.CostItem item : e.costItems()) hiddenItem |= item.hidden();
+        boolean simplePoints = e.costPoints().isEmpty()
+            || e.costPoints().size() == 1 && !e.costPoints().get(0).hidden() && ClientSkillState.isOwnTree(e, e.costPoints().get(0));
+        if (e.costHidden() || hiddenItem || !simplePoints) {
+            return Component.translatable("screen.apoli.skill_tree.refund_paid");
+        }
+        int points = e.costPoints().isEmpty() ? 0 : e.costPoints().get(0).amount();
+        return Component.translatable(e.costItems().isEmpty()
+            ? "screen.apoli.skill_tree.refund" : "screen.apoli.skill_tree.refund_items", points);
     }
 
     @Override
@@ -450,12 +593,12 @@ public class SkillTreeScreen extends Screen {
         double visW = INSIDE_W / zoom;
         double visH = INSIDE_H / zoom;
         if (maxX - minX > visW) {
-            scrollX = Mth.clamp(scrollX, -(maxX - visW), 0.0);
+            scrollX = Mth.clamp(scrollX, visW - maxX, -minX);
         } else {
             scrollX = visW / 2.0 - (maxX + minX) / 2.0;
         }
         if (maxY - minY > visH) {
-            scrollY = Mth.clamp(scrollY, -(maxY - visH), 0.0);
+            scrollY = Mth.clamp(scrollY, visH - maxY, -minY);
         } else {
             scrollY = visH / 2.0 - (maxY + minY) / 2.0;
         }

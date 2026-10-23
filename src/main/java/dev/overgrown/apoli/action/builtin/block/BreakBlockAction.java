@@ -21,7 +21,8 @@ import net.minecraft.world.level.material.FluidState;
 import java.util.Optional;
 
 public final class BreakBlockAction implements ActionType<BlockCtx, BreakBlockAction.Cfg> {
-    public record Cfg(boolean dropLoot, Optional<ItemStackData> stack, boolean breakParticles, boolean asPlayer) {}
+    public record Cfg(boolean dropLoot, Optional<ItemStackData> stack, boolean breakParticles, boolean asPlayer,
+                      boolean mine) {}
 
     @Override
     public MapCodec<Cfg> codec() {
@@ -29,7 +30,8 @@ public final class BreakBlockAction implements ActionType<BlockCtx, BreakBlockAc
             Codec.BOOL.optionalFieldOf("drop_loot", true).forGetter(Cfg::dropLoot),
             LoggedOptionalField.strict("stack", ItemStackData.CODEC).forGetter(Cfg::stack),
             Codec.BOOL.optionalFieldOf("break_particles", true).forGetter(Cfg::breakParticles),
-            Codec.BOOL.optionalFieldOf("as_player", false).forGetter(Cfg::asPlayer)
+            Codec.BOOL.optionalFieldOf("as_player", false).forGetter(Cfg::asPlayer),
+            Codec.BOOL.optionalFieldOf("mine", false).forGetter(Cfg::mine)
         ).apply(i, Cfg::new));
     }
 
@@ -42,6 +44,10 @@ public final class BreakBlockAction implements ActionType<BlockCtx, BreakBlockAc
         if (state.isAir()) return;
 
         Entity actor = ctx.actor();
+        if (cfg.mine && actor instanceof ServerPlayer miner) {
+            if (level.mayInteract(miner, pos)) miner.gameMode.destroyBlock(pos);
+            return;
+        }
         ServerPlayer breaker = cfg.asPlayer && actor instanceof ServerPlayer player ? player : null;
 
         if (cfg.breakParticles) level.levelEvent(2001, pos, Block.getId(state));

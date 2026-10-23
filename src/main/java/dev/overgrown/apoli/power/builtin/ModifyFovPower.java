@@ -12,6 +12,7 @@ import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -50,7 +51,9 @@ public final class ModifyFovPower extends PowerType<ModifyFovPower.Config> {
         PowerContainer container = PowerContainer.of(holder);
         if (container == null || container.isEmpty()) return value;
         List<ResourceLocation> powers = container.powersOfType(CANONICAL);
-        if (powers.isEmpty()) return value;
+        LivingEntity living = holder instanceof LivingEntity le ? le : null;
+        boolean transferred = living != null && AttributeModifyTransferPower.FOV.appliesTo(container);
+        if (powers.isEmpty() && !transferred) return value;
         double result = value;
         for (int i = 0, n = powers.size(); i < n; i++) {
             ResourceLocation powerId = powers.get(i);
@@ -58,6 +61,10 @@ public final class ModifyFovPower extends PowerType<ModifyFovPower.Config> {
             Power power = ApoliPowers.get(powerId);
             if (power == null || !(power.config() instanceof Config cfg) || cfg.flattened().isEmpty()) continue;
             result = AttributeModifierHelper.apply(result, cfg.flattened(), holder, container);
+        }
+        if (transferred) {
+            List<AttributeModifier> transfers = AttributeModifyTransferPower.FOV.merge(living, container, List.of());
+            if (!transfers.isEmpty()) result = AttributeModifierHelper.apply(result, transfers, holder, container);
         }
         return (float) result;
     }

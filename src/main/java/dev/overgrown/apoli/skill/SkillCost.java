@@ -13,6 +13,7 @@ import dev.overgrown.apoli.codec.SingleOrList;
 import dev.overgrown.apoli.condition.ItemCondition;
 import dev.overgrown.apoli.condition.context.ItemCtx;
 import dev.overgrown.apoli.data.ItemStackData;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -20,26 +21,30 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
-public record SkillCost(int points, List<ItemCost> items) {
-    public static final SkillCost FREE = new SkillCost(0, List.of());
+public record SkillCost(List<SkillPoints> points, List<ItemCost> items, boolean hidden) {
+    public static final SkillCost FREE = new SkillCost(List.of(), List.of(), false);
 
     private static final int OFFHAND_SLOT = 40;
+    private static final String[] BUNDLE_KEYS = {"points", "items", "hidden", "skill_tree"};
 
     public SkillCost {
+        points = List.copyOf(points);
         items = List.copyOf(items);
     }
 
     public static SkillCost ofPoints(int points) {
-        return points == 0 ? FREE : new SkillCost(points, List.of());
+        return points == 0 ? FREE : new SkillCost(List.of(SkillPoints.own(points)), List.of(), false);
     }
 
-    public record ItemCost(ItemStack stack, Optional<ItemCondition> condition) {
+    public record ItemCost(ItemStack stack, Optional<ItemCondition> condition, boolean hidden) {
         public static final Codec<ItemCost> CODEC = RecordCodecBuilder.<ItemCost>mapCodec(i -> i.group(
             ItemStackData.MAP_CODEC.forGetter(cost -> new ItemStackData(cost.stack)),
-            LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(ItemCost::condition)
-        ).apply(i, (data, condition) -> new ItemCost(data.stack(), condition))).codec()
+            LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(ItemCost::condition),
+            Codec.BOOL.optionalFieldOf("hidden", false).forGetter(ItemCost::hidden)
+        ).apply(i, (data, condition, hidden) -> new ItemCost(data.stack(), condition, hidden))).codec()
             .flatXmap(ItemCost::requireCount, DataResult::success);
 
         private static DataResult<ItemCost> requireCount(ItemCost cost) {
@@ -59,14 +64,16 @@ public record SkillCost(int points, List<ItemCost> items) {
     }
 
     private static final MapCodec<SkillCost> OBJECT = RecordCodecBuilder.mapCodec(i -> i.group(
-        Codec.INT.optionalFieldOf("points", 0).forGetter(SkillCost::points),
-        SingleOrList.of(ItemCost.CODEC).optionalFieldOf("items", List.of()).forGetter(SkillCost::items)
+        SkillPoints.LIST_CODEC.optionalFieldOf("points", List.of()).forGetter(SkillCost::points),
+        SingleOrList.of(ItemCost.CODEC).optionalFieldOf("items", List.of()).forGetter(SkillCost::items),
+        Codec.BOOL.optionalFieldOf("hidden", false).forGetter(SkillCost::hidden)
     ).apply(i, SkillCost::new));
 
     private static final Codec<SkillCost> OBJECT_CODEC = new Codec<>() {
         @Override
         public <T> DataResult<Pair<SkillCost, T>> decode(DynamicOps<T> ops, T input) {
-            return OBJECT.codec().decode(ops, inlineItem(new Dynamic<>(ops, input)).getValue());
+            Dynamic<T> reshaped = SkillPoints.liftTree(inlineItem(new Dynamic<>(ops, input)));
+            return OBJECT.codec().decode(ops, reshaped.getValue());
         }
 
         @Override
@@ -77,21 +84,68 @@ public record SkillCost(int points, List<ItemCost> items) {
 
     public static final Codec<SkillCost> CODEC = Codec.either(Codec.INT, OBJECT_CODEC).xmap(
         either -> either.map(SkillCost::ofPoints, cost -> cost),
-        cost -> cost.items.isEmpty() ? Either.left(cost.points) : Either.right(cost));
+        cost -> cost.isPlainPoints() ? Either.left(cost.points.isEmpty() ? 0 : cost.points.get(0).amount()) : Either.right(cost));
 
-    private static <T> Dynamic<T> inlineItem(Dynamic<T> cost) {
-        if (cost.get("item").result().isEmpty() && cost.get("id").result().isEmpty()) return cost;
+    private boolean isPlainPoints() {
+        if (!items.isEmpty() || hidden) return false;
+        if (points.isEmpty()) return true;
+        return points.size() == 1 && points.get(0).tree().isEmpty() && !points.get(0).hidden();
+    }
+
+    static <T> Dynamic<T> inlineItem(Dynamic<T> bundle) {
+        if (bundle.get("item").result().isEmpty() && bundle.get("id").result().isEmpty()) return bundle;
         List<Dynamic<T>> items = new ArrayList<>();
-        Optional<Dynamic<T>> listed = cost.get("items").result();
+        Optional<Dynamic<T>> listed = bundle.get("items").result();
         if (listed.isPresent()) {
             Optional<java.util.stream.Stream<Dynamic<T>>> stream = listed.get().asStreamOpt().result();
             if (stream.isPresent()) stream.get().forEach(items::add);
             else items.add(listed.get());
         }
-        items.add(cost.remove("points").remove("items"));
-        Dynamic<T> reshaped = cost.emptyMap().set("items", cost.createList(items.stream()));
-        Optional<Dynamic<T>> points = cost.get("points").result();
-        return points.isPresent() ? reshaped.set("points", points.get()) : reshaped;
+        Dynamic<T> item = bundle;
+        for (String key : BUNDLE_KEYS) item = item.remove(key);
+        items.add(item);
+        Dynamic<T> reshaped = bundle.emptyMap().set("items", bundle.createList(items.stream()));
+        for (String key : BUNDLE_KEYS) {
+            if (key.equals("items")) continue;
+            Optional<Dynamic<T>> value = bundle.get(key).result();
+            if (value.isPresent()) reshaped = reshaped.set(key, value.get());
+        }
+        return reshaped;
+    }
+
+    public boolean isFree() {
+        return points.isEmpty() && items.isEmpty();
+    }
+
+    public boolean anyHidden() {
+        if (hidden || SkillPoints.anyHidden(points)) return true;
+        for (ItemCost item : items) {
+            if (item.hidden) return true;
+        }
+        return false;
+    }
+
+    public int pointsIn(ResourceLocation tree, ResourceLocation ownTree) {
+        int total = 0;
+        for (SkillPoints entry : points) {
+            if (entry.treeOr(ownTree).equals(tree)) total += entry.amount();
+        }
+        return total;
+    }
+
+    public boolean affordable(SkillData data, ResourceLocation ownTree) {
+        if (points.isEmpty()) return true;
+        for (Map.Entry<ResourceLocation, Integer> entry : SkillPoints.totals(points, ownTree).entrySet()) {
+            if (data.getPoints(entry.getKey()) < entry.getValue()) return false;
+        }
+        return true;
+    }
+
+    public Map<ResourceLocation, Integer> pay(SkillData data, ResourceLocation ownTree) {
+        if (points.isEmpty()) return Map.of();
+        Map<ResourceLocation, Integer> paid = SkillPoints.totals(points, ownTree);
+        for (Map.Entry<ResourceLocation, Integer> entry : paid.entrySet()) data.addPoints(entry.getKey(), -entry.getValue());
+        return paid;
     }
 
     public @Nullable List<ItemStack> takeItems(Player player) {

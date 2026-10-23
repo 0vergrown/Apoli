@@ -69,7 +69,9 @@
     "item.InventoryDisableSlotMixin",
     "item.InventoryDropLockedMixin",
     "item.ItemEntityConjuredMixin",
+    "item.ItemEntityPickupMixin",
     "item.ItemStackItemOnItemMixin",
+    "item.MobPickupMixin",
     "item.PlayerDropConjuredMixin",
     "item.PlayerKeepInventoryMixin",
     "item.ServerPlayerKeepInventoryMixin",
@@ -86,6 +88,7 @@
     "performance.ServerRecipeBookSnapshotMixin",
     "pose.EntityPoseMixin",
     "pose.PlayerUpdatePoseMixin",
+    "power.AttributeInstanceModifierSummaryMixin",
     "power.BlockHarvestToolMixin",
     "power.EntityCollisionMixin",
     "power.EntityModifyVelocityMixin",
@@ -131,7 +134,22 @@
     "tick.ServerPlayerTickRateMixin",
     "typetag.EntityTypeLinkMixin",
     "typetag.EntityTypeTagMixin",
-    "typetag.LivingEntityMobTypeMixin"
+    "typetag.LivingEntityMobTypeMixin",
+    "power.TamableAnimalTameMixin",
+    "power.AbstractHorseTameMixin",
+    "power.AnimalBreedMixin",
+    "power.LivingEntityShareEffectsMixin",
+    "projectile.ProjectileDivergenceMixin",
+    "enchantment.EnchantmentMenuEnchantabilityMixin",
+    "enchantment.EnchantmentHelperEnchantabilityMixin",
+    "power.ExperienceOrbXpGainMixin",
+    "power.AbstractFurnaceBlockEntityXpMixin",
+    "trade.MerchantOfferAccessor",
+    "trade.AbstractVillagerInfiniteTradesMixin",
+    "trade.AbstractVillagerExtraTradesMixin",
+    "power.AnvilMenuRepairMixin",
+    "power.EntitySneakyMixin",
+    "power.ServerLevelLevelEventMixin"
   ],
   "client": [
     "camera.AbstractClientPlayerFovMixin",
@@ -237,7 +255,8 @@
     "tick.GameRendererTickRateMixin",
     "tick.LevelRendererTickRateMixin",
     "tick.LivingEntityTickRateMixin",
-    "tick.LocalPlayerTickRateMixin"
+    "tick.LocalPlayerTickRateMixin",
+    "power.ClientLevelLevelEventMixin"
   ],
   "injectors": {
     "defaultRequire": 1

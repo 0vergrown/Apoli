@@ -15,6 +15,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -91,16 +92,33 @@ public final class CustomEffectRegistry {
 
     public static void install(List<CustomMobEffect> effects) {
         RuntimeMobEffectRegistry registry = (RuntimeMobEffectRegistry) BuiltInRegistries.MOB_EFFECT;
-        registry.apoli$unregisterCustom();
+        Map<ResourceLocation, CustomMobEffect> reusable = new HashMap<>();
+        for (CustomMobEffect effect : effects) {
+            if (BuiltInRegistries.MOB_EFFECT.get(effect.id) instanceof CustomMobEffect existing
+                    && BuiltInRegistries.MOB_EFFECT.getId(existing) >= 0) {
+                reusable.put(effect.id, existing);
+            }
+        }
+        registry.apoli$unregisterCustom(reusable.keySet());
         List<CustomMobEffect> installed = new ArrayList<>(effects.size());
         Set<ResourceLocation> installedIds = new HashSet<>();
         for (CustomMobEffect effect : effects) {
-            if (BuiltInRegistries.MOB_EFFECT.containsKey(effect.id) || !installedIds.add(effect.id)) {
+            if (!installedIds.add(effect.id)) {
+                Apoli.LOGGER.error("[Apoli] Skipped custom effect {}: it is defined more than once.", effect.id);
+                continue;
+            }
+            CustomMobEffect existing = reusable.get(effect.id);
+            if (existing != null) {
+                existing.copyFrom(effect);
+                installed.add(existing);
+                continue;
+            }
+            if (BuiltInRegistries.MOB_EFFECT.containsKey(effect.id)) {
+                installedIds.remove(effect.id);
                 Apoli.LOGGER.error("[Apoli] Skipped custom effect {}: a status effect with that id already exists.", effect.id);
                 continue;
             }
-            registry.apoli$register(effect);
-            installed.add(effect);
+            installed.add(registry.apoli$register(effect));
         }
         active = List.copyOf(installed);
         ids = Set.copyOf(installedIds);
@@ -139,9 +157,9 @@ public final class CustomEffectRegistry {
         Set<ResourceLocation> sources = container.allSources();
         for (int i = 0; i < effects.size(); i++) {
             CustomMobEffect effect = effects.get(i);
-            if (!sources.contains(effect.id)) continue;
+            if (!sources.contains(effect.source) && !sources.contains(effect.id)) continue;
             if (!entity.hasEffect(effect)) {
-                container.removeAllFromSource(effect.id);
+                effect.revokePowers(container);
             }
         }
     }

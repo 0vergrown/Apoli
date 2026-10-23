@@ -13,6 +13,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public final class SkillTrees {
@@ -87,7 +88,7 @@ public final class SkillTrees {
         if (SkillRegistry.tree(parentId) != null) return true;
         if (data.isPurchased(parentId)) return true;
         Skill parent = SkillRegistry.get(parentId);
-        return parent != null && parent.powers().isEmpty();
+        return parent != null && parent.isGate();
     }
 
     public static boolean excluded(SkillData data, ResourceLocation skillId) {
@@ -104,7 +105,7 @@ public final class SkillTrees {
 
     public static boolean tryPurchase(ServerPlayer player, ResourceLocation skillId) {
         Skill skill = SkillRegistry.get(skillId);
-        if (skill == null || skill.powers().isEmpty()) return false;
+        if (skill == null || skill.isGate()) return false;
         SkillData data = SkillDataAttachment.get(player);
         if (data.isPurchased(skillId)) return false;
         if (!parentSatisfied(data, skill)) return false;
@@ -112,14 +113,16 @@ public final class SkillTrees {
         ResourceLocation root = SkillRegistry.rootOf(skillId);
         if (!treeAvailable(player, data, root)) return false;
         if (excluded(data, skillId)) return false;
-        if (data.getPoints(root) < skill.cost().points()) return false;
+        if (!skill.cost().affordable(data, root)) return false;
         EntityCtx ctx = new EntityCtx(player, player.level());
         if (skill.condition().isPresent() && !skill.condition().get().test(ctx)) return false;
-        List<ItemStack> paid = skill.cost().takeItems(player);
-        if (paid == null) return false;
+        List<ItemStack> paidItems = skill.cost().takeItems(player);
+        if (paidItems == null) return false;
 
-        data.addPoints(root, -skill.cost().points());
-        data.purchase(skillId, paid);
+        Map<ResourceLocation, Integer> paidPoints = skill.cost().pay(data, root);
+        Map<ResourceLocation, Integer> rewardPoints = skill.reward().givePoints(data, root);
+        List<ItemStack> rewardItems = skill.reward().giveItems(player);
+        data.purchase(skillId, new SkillData.Receipt(paidPoints, paidItems, rewardPoints, rewardItems));
 
         PowerContainer container = PowerContainerAttachment.getOrCreate(player);
         if (container != null) {
@@ -128,16 +131,30 @@ public final class SkillTrees {
         return true;
     }
 
+    private static void returnPayment(ServerPlayer player, SkillData data, @Nullable Skill skill,
+                                      ResourceLocation root, SkillData.Receipt receipt) {
+        if (receipt.paidPoints() != null) {
+            for (Map.Entry<ResourceLocation, Integer> entry : receipt.paidPoints().entrySet()) {
+                data.addPoints(entry.getKey(), entry.getValue());
+            }
+        } else if (skill != null) {
+            for (Map.Entry<ResourceLocation, Integer> entry : SkillPoints.totals(skill.cost().points(), root).entrySet()) {
+                data.addPoints(entry.getKey(), entry.getValue());
+            }
+        }
+        SkillCost.refund(player, receipt.paidItems());
+    }
+
     public static void resetSkills(ServerPlayer player, @Nullable ResourceLocation tree, boolean refund) {
         SkillData data = SkillDataAttachment.get(player);
         for (ResourceLocation skillId : new ArrayList<>(data.purchasedView())) {
             ResourceLocation root = SkillRegistry.rootOf(skillId);
             if (tree != null && !tree.equals(root)) continue;
             Skill skill = SkillRegistry.get(skillId);
-            List<ItemStack> paid = data.unpurchase(skillId);
+            SkillData.Receipt receipt = data.unpurchase(skillId);
             if (!refund) continue;
-            if (skill != null) data.addPoints(root, skill.cost().points());
-            SkillCost.refund(player, paid);
+            SkillReward.takeBack(player, data, receipt);
+            returnPayment(player, data, skill, root, receipt);
         }
         PowerContainer container = PowerContainerAttachment.getOrCreate(player);
         if (container != null) container.removeAllFromSource(POWER_SOURCE);
@@ -156,23 +173,31 @@ public final class SkillTrees {
         return true;
     }
 
+    public static boolean rewardsReturnable(ServerPlayer player, SkillData data, ResourceLocation skillId) {
+        return SkillReward.canTakeBack(player, data, data.receipt(skillId));
+    }
+
     public static boolean tryRefund(ServerPlayer player, ResourceLocation skillId, boolean force) {
         SkillData data = SkillDataAttachment.get(player);
         if (force ? !data.isPurchased(skillId) : !canRefund(data, skillId)) return false;
+        if (!force && !rewardsReturnable(player, data, skillId)) return false;
         Skill skill = SkillRegistry.get(skillId);
-        List<ItemStack> paid = data.unpurchase(skillId);
-        if (skill != null) data.addPoints(SkillRegistry.rootOf(skillId), skill.cost().points());
-        SkillCost.refund(player, paid);
+        SkillData.Receipt receipt = data.unpurchase(skillId);
+        SkillReward.takeBack(player, data, receipt);
+        returnPayment(player, data, skill, SkillRegistry.rootOf(skillId), receipt);
         reconcilePowers(player);
         return true;
     }
 
     public static boolean forcePurchase(ServerPlayer player, ResourceLocation skillId) {
         Skill skill = SkillRegistry.get(skillId);
-        if (skill == null || skill.powers().isEmpty()) return false;
+        if (skill == null || skill.isGate()) return false;
         SkillData data = SkillDataAttachment.get(player);
         if (data.isPurchased(skillId)) return false;
-        data.purchase(skillId);
+        ResourceLocation root = SkillRegistry.rootOf(skillId);
+        Map<ResourceLocation, Integer> rewardPoints = skill.reward().givePoints(data, root);
+        List<ItemStack> rewardItems = skill.reward().giveItems(player);
+        data.purchase(skillId, SkillData.Receipt.reward(rewardPoints, rewardItems));
         reconcilePowers(player);
         return true;
     }

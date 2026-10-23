@@ -224,18 +224,6 @@ public final class Apoli implements ModInitializer {
                     })));
         });
 
-        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register(
-            (player, level, hand, hitResult) ->
-                dev.overgrown.apoli.power.builtin.BlockUseHandler.handle(player, level, hand, hitResult));
-
-        net.fabricmc.fabric.api.message.v1.ServerMessageEvents.ALLOW_CHAT_MESSAGE.register((message, sender, params) ->
-            dev.overgrown.apoli.compat.voicechat.MessagePowerHandler.handle(
-                sender, sender, message.signedContent(), params));
-
-        net.fabricmc.fabric.api.message.v1.ServerMessageEvents.ALLOW_COMMAND_MESSAGE.register((message, source, params) ->
-            dev.overgrown.apoli.compat.voicechat.MessagePowerHandler.handle(
-                source.getEntity(), source.getPlayer(), message.signedContent(), params));
-
         if (dev.overgrown.apoli.compat.ModCompat.PUFFISH_SKILLS) {
             dev.overgrown.apoli.compat.skills.SkillsCompat.init();
         }

@@ -10,7 +10,6 @@ import dev.overgrown.apoli.dev.DevMode;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
-import dev.overgrown.apoli.power.PowerTypeRegistry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
@@ -36,9 +35,10 @@ public final class ModifyDamageHandler {
         if (attacker != null) {
             collect(matches, attacker, attacker, target, damageCtx, false);
         }
-        if (matches.isEmpty()) return amount;
+        List<AttributeModifierHelper.Owned> transfers = transfers(attacker, target);
+        if (matches.isEmpty() && transfers == null) return amount;
 
-        float modified = applyModifiers(amount, matches);
+        float modified = applyModifiers(amount, matches, transfers);
         if (DevMode.any()) reportToDevMode(attacker, target, source, amount, modified, matches);
         for (Match m : matches) runActions(m, attacker, target, level);
         return modified;
@@ -52,8 +52,9 @@ public final class ModifyDamageHandler {
         if (attacker != null) {
             collect(matches, attacker, attacker, target, damageCtx, false);
         }
-        if (matches.isEmpty()) return amount;
-        return applyModifiers(amount, matches);
+        List<AttributeModifierHelper.Owned> transfers = transfers(attacker, target);
+        if (matches.isEmpty() && transfers == null) return amount;
+        return applyModifiers(amount, matches, transfers);
     }
 
     public static boolean shouldApplyArmor(LivingEntity target, @Nullable LivingEntity attacker,
@@ -85,13 +86,13 @@ public final class ModifyDamageHandler {
     private static void collect(List<Match> out, LivingEntity holder, @Nullable LivingEntity attacker,
                                 LivingEntity target, DamageCtx damageCtx, boolean targetUsedSide) {
         PowerContainer container = PowerContainer.of(holder);
-        if (container == null) return;
-        ResourceLocation canonical = dev.overgrown.apoli.power.ApoliIds.MODIFY_DAMAGE;
-        for (ResourceLocation powerId : container.allPowers()) {
+        if (container == null || container.isEmpty()) return;
+        List<ResourceLocation> powers = container.powersOfType(dev.overgrown.apoli.power.ApoliIds.MODIFY_DAMAGE);
+        for (int i = 0, n = powers.size(); i < n; i++) {
+            ResourceLocation powerId = powers.get(i);
             Power power = ApoliPowers.get(powerId);
             if (power == null) continue;
             if (container.isSuppressed(powerId)) continue;
-            if (!canonical.equals(PowerTypeRegistry.resolveId(power.typeId()))) continue;
             if (!(power.config() instanceof ModifyDamagePower.Config cfg)) continue;
             if (cfg.targetUsed() != targetUsedSide) continue;
 
@@ -114,8 +115,31 @@ public final class ModifyDamageHandler {
         }
     }
 
-    private static float applyModifiers(float amount, List<Match> matches) {
-        List<AttributeModifierHelper.Owned> owned = null;
+    private static @Nullable List<AttributeModifierHelper.Owned> transfers(@Nullable LivingEntity attacker, LivingEntity target) {
+        List<AttributeModifierHelper.Owned> out = addTransfers(null, target, AttributeModifyTransferPower.DAMAGE_TAKEN, attacker, target);
+        if (attacker != null) out = addTransfers(out, attacker, AttributeModifyTransferPower.DAMAGE_DEALT, attacker, target);
+        return out;
+    }
+
+    private static @Nullable List<AttributeModifierHelper.Owned> addTransfers(@Nullable List<AttributeModifierHelper.Owned> out,
+                                                                             LivingEntity holder,
+                                                                             AttributeModifyTransferPower.Target transfer,
+                                                                             @Nullable LivingEntity attacker,
+                                                                             LivingEntity target) {
+        if (!transfer.inUse()) return out;
+        PowerContainer container = PowerContainer.of(holder);
+        if (!transfer.appliesTo(container)) return out;
+        List<AttributeModifier> mods = transfer.merge(holder, container, List.of());
+        for (int i = 0, n = mods.size(); i < n; i++) {
+            if (out == null) out = new ArrayList<>(4);
+            out.add(new AttributeModifierHelper.Owned(mods.get(i), holder, container, attacker, target));
+        }
+        return out;
+    }
+
+    private static float applyModifiers(float amount, List<Match> matches,
+                                        @Nullable List<AttributeModifierHelper.Owned> transfers) {
+        List<AttributeModifierHelper.Owned> owned = transfers;
         for (int i = 0, n = matches.size(); i < n; i++) {
             Match m = matches.get(i);
             List<AttributeModifier> mods = m.cfg.allModifiers();

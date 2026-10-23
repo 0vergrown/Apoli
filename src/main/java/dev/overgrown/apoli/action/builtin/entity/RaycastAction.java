@@ -12,6 +12,8 @@ import dev.overgrown.apoli.condition.BlockCondition;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.BlockCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.Expression;
+import dev.overgrown.apoli.data.ExprVector;
 import dev.overgrown.apoli.data.FluidHandling;
 import dev.overgrown.apoli.data.ParticleEffect;
 import dev.overgrown.apoli.data.ShapeType;
@@ -62,7 +64,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
     }
 
     public record Params(
-        Optional<Float> distance,
+        Optional<Expression> distance,
         boolean block,
         boolean entity,
         ShapeType shapeType,
@@ -70,11 +72,11 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         Space space,
         Optional<Vector> direction,
         Optional<ParticleEffect> particle,
-        float spacing,
-        Optional<Float> entityDistance,
-        Optional<Float> blockDistance,
-        Optional<Vector> radius,
-        Optional<Float> coneAngle,
+        Expression spacing,
+        Optional<Expression> entityDistance,
+        Optional<Expression> blockDistance,
+        Optional<ExprVector> radius,
+        Optional<Expression> coneAngle,
         ChainDirection chainDirection
     ) {}
 
@@ -103,9 +105,9 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         Optional<EntityAction> hitAction,
         Optional<EntityAction> missAction,
         Optional<String> commandAtHit,
-        Optional<Float> commandHitOffset,
+        Optional<Expression> commandHitOffset,
         Optional<String> commandAlongRay,
-        float commandStep,
+        Expression commandStep,
         boolean commandAlongRayOnlyOnHit
     ) {}
 
@@ -151,7 +153,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
     private static final int MAX_MARKED_BLOCKS = 16;
 
     private static final MapCodec<Params> PARAMS = RecordCodecBuilder.mapCodec(i -> i.group(
-        Codec.FLOAT.optionalFieldOf("distance").forGetter(Params::distance),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("distance").forGetter(Params::distance),
         Codec.BOOL.optionalFieldOf("block", true).forGetter(Params::block),
         Codec.BOOL.optionalFieldOf("entity", true).forGetter(Params::entity),
         ShapeType.CODEC.optionalFieldOf("shape_type", ShapeType.VISUAL).forGetter(Params::shapeType),
@@ -159,11 +161,11 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         Space.CODEC.optionalFieldOf("space", Space.WORLD).forGetter(Params::space),
         Vector.CODEC.optionalFieldOf("direction").forGetter(Params::direction),
         ParticleEffect.CODEC.optionalFieldOf("particle").forGetter(Params::particle),
-        Codec.FLOAT.optionalFieldOf("spacing", 0.5f).forGetter(Params::spacing),
-        Codec.FLOAT.optionalFieldOf("entity_distance").forGetter(Params::entityDistance),
-        Codec.FLOAT.optionalFieldOf("block_distance").forGetter(Params::blockDistance),
-        Vector.SCALAR_OR_VECTOR.optionalFieldOf("radius").forGetter(Params::radius),
-        Codec.FLOAT.optionalFieldOf("cone_angle").forGetter(Params::coneAngle),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("spacing", Expression.constant(0.5f)).forGetter(Params::spacing),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("entity_distance").forGetter(Params::entityDistance),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("block_distance").forGetter(Params::blockDistance),
+        ExprVector.SCALAR_OR_VECTOR.optionalFieldOf("radius").forGetter(Params::radius),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("cone_angle").forGetter(Params::coneAngle),
         ChainDirection.CODEC.optionalFieldOf("chain_direction", ChainDirection.FORWARD).forGetter(Params::chainDirection)
     ).apply(i, Params::new));
 
@@ -184,9 +186,9 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         dev.overgrown.apoli.codec.LoggedOptionalField.of("hit_action", EntityAction.CODEC).forGetter(Hooks::hitAction),
         dev.overgrown.apoli.codec.LoggedOptionalField.of("miss_action", EntityAction.CODEC).forGetter(Hooks::missAction),
         Codec.STRING.optionalFieldOf("command_at_hit").forGetter(Hooks::commandAtHit),
-        Codec.FLOAT.optionalFieldOf("command_hit_offset").forGetter(Hooks::commandHitOffset),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("command_hit_offset").forGetter(Hooks::commandHitOffset),
         Codec.STRING.optionalFieldOf("command_along_ray").forGetter(Hooks::commandAlongRay),
-        Codec.FLOAT.optionalFieldOf("command_step", 1.0f).forGetter(Hooks::commandStep),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("command_step", Expression.constant(1.0f)).forGetter(Hooks::commandStep),
         Codec.BOOL.optionalFieldOf("command_along_ray_only_on_hit", false).forGetter(Hooks::commandAlongRayOnlyOnHit)
     ).apply(i, Hooks::new));
 
@@ -239,6 +241,18 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         return targetBox.clip(origin, end).orElse(null);
     }
 
+    private static float blockDistance(Entity source, Params params) {
+        if (params.blockDistance.isPresent()) return (float) params.blockDistance.get().eval(source);
+        if (params.distance.isPresent()) return (float) params.distance.get().eval(source);
+        return (float) InteractionRange.block(source);
+    }
+
+    private static float entityDistance(Entity source, Params params) {
+        if (params.entityDistance.isPresent()) return (float) params.entityDistance.get().eval(source);
+        if (params.distance.isPresent()) return (float) params.distance.get().eval(source);
+        return (float) InteractionRange.entity(source);
+    }
+
     private static void cast(Cfg cfg, EntityCtx ctx, @Nullable Entity aimTarget, Vec3 origin,
                              @Nullable Vec3 incomingDir, @Nullable Vec3 incomingNormal, int depth) {
         if (depth > MAX_CHAIN_DEPTH) return;
@@ -255,8 +269,8 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         double gap = aiming ? dir.length() : 0.0;
         dir = dir.normalize();
 
-        float baseBlockDist = InteractionRange.block(source, cfg.params.blockDistance, cfg.params.distance);
-        float baseEntityDist = InteractionRange.entity(source, cfg.params.entityDistance, cfg.params.distance);
+        float baseBlockDist = blockDistance(source, cfg.params);
+        float baseEntityDist = entityDistance(source, cfg.params);
         boolean clampToTarget = aiming && cfg.aim.stopAtTarget;
         float blockDist = clampToTarget ? (float) gap : baseBlockDist;
         float entityDist = clampToTarget ? (float) gap : baseEntityDist;
@@ -301,16 +315,23 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         }
         double blockHitDistSq = blockHit != null ? origin.distanceToSqr(blockHit.getLocation()) : Double.POSITIVE_INFINITY;
 
-        double rx = cfg.params.radius.map(r -> (double) r.x()).orElse(0.0);
-        double ry = cfg.params.radius.map(r -> (double) r.y()).orElse(0.0);
-        double rz = cfg.params.radius.map(r -> (double) r.z()).orElse(0.0);
+        double rx = 0.0;
+        double ry = 0.0;
+        double rz = 0.0;
+        if (cfg.params.radius.isPresent()) {
+            Vector radius = cfg.params.radius.get().resolve(source);
+            rx = radius.x();
+            ry = radius.y();
+            rz = radius.z();
+        }
         double maxRadius = Math.max(rx, Math.max(ry, rz));
 
         boolean anyEntityHit = false;
         Vec3 nearestEntityHit = null;
         double nearestEntityHitDistSq = Double.POSITIVE_INFINITY;
         boolean coneMode = cfg.params.coneAngle.isPresent();
-        double coneCos = coneMode ? Math.cos(Math.toRadians(cfg.params.coneAngle.get())) : -1.0;
+        double coneAngle = coneMode ? cfg.params.coneAngle.get().eval(source) : -1.0;
+        double coneCos = coneMode ? Math.cos(Math.toRadians(coneAngle)) : -1.0;
         if (cfg.params.entity) {
             Vec3 endE = origin.add(dir.scale(entityDist));
             AABB box = coneMode
@@ -358,8 +379,8 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         }
 
         if (drawing) {
-            outline((ServerLevel) level, cfg, origin, dir, rayEnd, blockDist, entityDist, blockHit, blockHitDistSq,
-                piercedBlocks, hitEntities);
+            outline((ServerLevel) level, cfg, origin, dir, rayEnd, blockDist, entityDist, rx, ry, rz, coneAngle,
+                blockHit, blockHitDistSq, piercedBlocks, hitEntities);
         }
 
         boolean anyHit = anyEntityHit || blockHit != null;
@@ -387,7 +408,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
             ParticleOptions opts = cfg.params.particle.get().resolve(level, ctx.raw());
             if (opts != null) {
                 double total = origin.distanceTo(rayEnd);
-                double step = Math.max(0.1, cfg.params.spacing);
+                double step = Math.max(0.1, cfg.params.spacing.eval(source));
                 for (double t = 0; t < total; t += step) {
                     Vec3 p = origin.add(dir.scale(t));
                     serverLevel.sendParticles(opts, p.x, p.y, p.z, 1, 0, 0, 0, 0);
@@ -401,7 +422,9 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
             if (cfg.hooks.commandAtHit.isPresent() && anyHit) {
                 boolean entityFirst = anyEntityHit && nearestEntityHitDistSq <= blockHitDistSq;
                 Vec3 hitPos = entityFirst || blockHit == null ? nearestEntityHit : blockHit.getLocation();
-                float off = cfg.hooks.commandHitOffset.orElse(0.0f);
+                float off = cfg.hooks.commandHitOffset.isPresent()
+                    ? (float) cfg.hooks.commandHitOffset.get().eval(source)
+                    : 0.0f;
                 if (off != 0) {
                     Vec3 normal = entityFirst || blockHit == null
                         ? dir.scale(-1.0)
@@ -413,7 +436,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
             }
             if (cfg.hooks.commandAlongRay.isPresent() && (!cfg.hooks.commandAlongRayOnlyOnHit || anyHit)) {
                 double total = origin.distanceTo(rayEnd);
-                double step = Math.max(0.1, cfg.hooks.commandStep);
+                double step = Math.max(0.1, cfg.hooks.commandStep.eval(source));
                 for (double t = 0; t < total; t += step) {
                     Vec3 p = origin.add(dir.scale(t));
                     server.getCommands().performPrefixedCommand(cmdSrc.withPosition(p), cfg.hooks.commandAlongRay.get());
@@ -432,16 +455,15 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
     }
 
     private static void outline(ServerLevel level, Cfg cfg, Vec3 origin, Vec3 dir, Vec3 rayEnd, float blockDist,
-                                float entityDist, @Nullable BlockHitResult blockHit, double blockHitDistSq,
+                                float entityDist, double rx, double ry, double rz, double coneAngle,
+                                @Nullable BlockHitResult blockHit, double blockHitDistSq,
                                 @Nullable List<BlockPos> piercedBlocks, List<Entity> hitEntities) {
         DevParticles.Ray kind = DevParticles.Ray.ACTION;
         double reach = Math.max(cfg.params.block ? blockDist : 0.0, cfg.params.entity ? entityDist : 0.0);
         DevParticles.ray(level, kind, origin, dir, origin.distanceTo(rayEnd), reach);
         if (cfg.params.entity) {
             double length = cfg.aim.piercesBlocks() ? entityDist : Math.min(entityDist, Math.sqrt(blockHitDistSq));
-            Vector radius = cfg.params.radius.orElse(Vector.ZERO);
-            DevParticles.detection(level, kind, origin, dir, length, radius.x(), radius.y(), radius.z(),
-                cfg.params.coneAngle.isPresent() ? cfg.params.coneAngle.get() : -1.0);
+            DevParticles.detection(level, kind, origin, dir, length, rx, ry, rz, coneAngle);
         }
         if (piercedBlocks != null) {
             for (int i = 0; i < piercedBlocks.size(); i++) DevParticles.mark(level, kind, piercedBlocks.get(i), true);

@@ -3,6 +3,7 @@ package dev.overgrown.apoli.client.skill;
 import dev.overgrown.apoli.network.payload.SkillDefsSyncS2C;
 import dev.overgrown.apoli.network.payload.SkillStateSyncS2C;
 import dev.overgrown.apoli.data.ItemStackData;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -43,7 +44,8 @@ public final class ClientSkillState {
                 ROOTS.add(e.id());
             }
         }
-        java.util.Comparator<ResourceLocation> byOrder = java.util.Comparator.comparingInt(id -> DEFS.get(id).order());
+        java.util.Comparator<ResourceLocation> byOrder = java.util.Comparator.<ResourceLocation>comparingInt(id -> DEFS.get(id).order())
+            .thenComparing(ResourceLocation::toString);
         for (List<ResourceLocation> siblings : CHILDREN.values()) siblings.sort(byOrder);
         ROOTS.sort(byOrder);
         for (ResourceLocation id : DEFS.keySet()) {
@@ -90,10 +92,28 @@ public final class ClientSkillState {
     }
 
     public static boolean canRefund(ResourceLocation id) {
+        return refundAllowed(id) && rewardsReturnable(id);
+    }
+
+    public static boolean refundBlockedByRewards(ResourceLocation id) {
+        return refundAllowed(id) && !rewardsReturnable(id);
+    }
+
+    private static boolean refundAllowed(ResourceLocation id) {
         if (!isPurchased(id) || isHidden(id)) return false;
         if (NON_REFUNDABLE.contains(rootOf(id))) return false;
         for (ResourceLocation child : childrenOf(id)) {
             if (isPurchased(child)) return false;
+        }
+        return true;
+    }
+
+    private static boolean rewardsReturnable(ResourceLocation id) {
+        SkillDefsSyncS2C.Entry e = DEFS.get(id);
+        if (e == null) return true;
+        if (!enoughPoints(e.rewardPoints(), false)) return false;
+        for (SkillDefsSyncS2C.RewardItem item : e.rewardItems()) {
+            if (heldExactly(item.display()) < item.count()) return false;
         }
         return true;
     }
@@ -134,7 +154,40 @@ public final class ClientSkillState {
     public static boolean isObtained(ResourceLocation id) {
         if (isPurchased(id)) return true;
         SkillDefsSyncS2C.Entry e = DEFS.get(id);
-        return e != null && e.powers().isEmpty();
+        return e != null && isGate(e);
+    }
+
+    public static boolean isGate(SkillDefsSyncS2C.Entry e) {
+        return e.powers().isEmpty() && e.rewardPoints().isEmpty() && e.rewardItems().isEmpty();
+    }
+
+    public static Component treeName(ResourceLocation tree) {
+        ResourceLocation root = rootOf(tree);
+        SkillDefsSyncS2C.Entry def = DEFS.get(root);
+        if (def == null || def.name().getString().isEmpty()) return Component.literal(root.toString());
+        return def.name();
+    }
+
+    public static boolean isOwnTree(SkillDefsSyncS2C.Entry e, SkillDefsSyncS2C.PointEntry point) {
+        return rootOf(point.tree()).equals(rootOf(e.id()));
+    }
+
+    public static boolean canAfford(SkillDefsSyncS2C.Entry e, boolean visibleOnly) {
+        if (visibleOnly && e.costHidden()) return true;
+        return enoughPoints(e.costPoints(), visibleOnly);
+    }
+
+    private static boolean enoughPoints(List<SkillDefsSyncS2C.PointEntry> points, boolean visibleOnly) {
+        if (points.isEmpty()) return true;
+        Map<ResourceLocation, Integer> totals = new HashMap<>();
+        for (SkillDefsSyncS2C.PointEntry point : points) {
+            if (visibleOnly && point.hidden()) continue;
+            totals.merge(rootOf(point.tree()), point.amount(), Integer::sum);
+        }
+        for (Map.Entry<ResourceLocation, Integer> total : totals.entrySet()) {
+            if (points(total.getKey()) < total.getValue()) return false;
+        }
+        return true;
     }
 
     public static boolean parentSatisfied(SkillDefsSyncS2C.Entry e) {
@@ -157,18 +210,19 @@ public final class ClientSkillState {
     }
 
     public static boolean canBuy(SkillDefsSyncS2C.Entry e) {
-        return !e.powers().isEmpty()
+        return !isGate(e)
             && !isPurchased(e.id())
             && !isHidden(e.id())
             && !isLocked(e.id())
             && parentSatisfied(e)
-            && points(rootOf(e.id())) >= e.cost()
-            && hasCostItems(e);
+            && canAfford(e, false)
+            && hasCostItems(e, false);
     }
 
-    public static boolean hasCostItems(SkillDefsSyncS2C.Entry e) {
-        if (e.costItems().isEmpty()) return true;
+    public static boolean hasCostItems(SkillDefsSyncS2C.Entry e, boolean visibleOnly) {
+        if (e.costItems().isEmpty() || visibleOnly && e.costHidden()) return true;
         for (SkillDefsSyncS2C.CostItem item : e.costItems()) {
+            if (visibleOnly && item.hidden()) continue;
             if (heldCount(item) < item.count()) return false;
         }
         return true;
@@ -183,6 +237,19 @@ public final class ClientSkillState {
             count += matching(inventory.getItem(slot), item.display());
         }
         return count + matching(inventory.offhand.get(0), item.display());
+    }
+
+    private static int heldExactly(ItemStack template) {
+        Player player = net.minecraft.client.Minecraft.getInstance().player;
+        if (player == null) return 0;
+        Inventory inventory = player.getInventory();
+        int count = 0;
+        for (int slot = 0; slot < inventory.items.size(); slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            if (ItemStackData.sameData(stack, template)) count += stack.getCount();
+        }
+        ItemStack offhand = inventory.offhand.get(0);
+        return ItemStackData.sameData(offhand, template) ? count + offhand.getCount() : count;
     }
 
     private static int matching(ItemStack stack, ItemStack template) {

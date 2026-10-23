@@ -13,6 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -101,24 +102,45 @@ public final class ModifyFoodHandler {
         return found[0];
     }
 
-    public static @Nullable ItemStack replacement(@Nullable LivingEntity entity, ItemStack stack) {
+    public static @Nullable ItemStack replacement(@Nullable Eaten eaten) {
+        if (eaten == null) return null;
+        ItemStack result = null;
+        List<ModifyFoodPower.Config> configs = eaten.configs();
+        for (int i = 0; i < configs.size(); i++) {
+            if (configs.get(i).replaceStack().isPresent()) result = configs.get(i).replaceStack().get().stack().copy();
+        }
+        return result;
+    }
+
+    public record Eaten(List<ModifyFoodPower.Config> configs, ItemStack stack) {}
+
+    public static @Nullable Eaten beforeEat(LivingEntity entity, ItemStack stack) {
         PowerContainer container = candidates(entity, stack);
         if (container == null) return null;
-        ItemStack[] result = {null};
-        forEachApplicable(entity, stack, container,
-            cfg -> cfg.replaceStack().ifPresent(data -> result[0] = data.stack().copy()));
-        return result[0];
+        List<ModifyFoodPower.Config> configs = new ArrayList<>(2);
+        forEachApplicable(entity, stack, container, cfg -> {
+            if (cfg.itemAction().isPresent() || cfg.entityAction().isPresent() || cfg.replaceStack().isPresent()) {
+                configs.add(cfg);
+            }
+        });
+        return configs.isEmpty() ? null : new Eaten(configs, stack.copyWithCount(1));
     }
 
     public static void afterEat(LivingEntity entity, ItemStack stack) {
+        afterEat(entity, stack, beforeEat(entity, stack));
+    }
+
+    public static void afterEat(LivingEntity entity, ItemStack stack, @Nullable Eaten eaten) {
+        if (eaten == null) return;
         Level level = entity.level();
         if (level.isClientSide()) return;
-        PowerContainer container = candidates(entity, stack);
-        if (container == null) return;
-        forEachApplicable(entity, stack, container, cfg -> {
-            cfg.itemAction().ifPresent(action -> action.run(new ItemCtx(stack, level, entity)));
+        ItemStack eatenStack = stack.isEmpty() ? eaten.stack() : stack;
+        List<ModifyFoodPower.Config> configs = eaten.configs();
+        for (int i = 0; i < configs.size(); i++) {
+            ModifyFoodPower.Config cfg = configs.get(i);
+            cfg.itemAction().ifPresent(action -> action.run(new ItemCtx(eatenStack, level, entity)));
             cfg.entityAction().ifPresent(action -> action.run(EntityCtx.of(entity, level)));
-        });
+        }
     }
 
     private static double apply(Optional<List<AttributeModifier>> modifiers, double value,

@@ -21,10 +21,19 @@ public final class ModifyJumpHandler {
     }
 
     public static float modify(LivingEntity entity, float original) {
-        if (hasNone(entity)) return original;
-        List<AttributeModifier> mods = new ArrayList<>();
-        PowerLookup.forEach(entity, ApoliIds.MODIFY_JUMP, ModifyJumpPower.Config.class, cfg ->
-            mods.addAll(AttributeModifierHelper.flatten(cfg.modifier(), cfg.modifiers())));
+        PowerContainer container = PowerContainer.of(entity);
+        if (container == null || container.isEmpty()) return original;
+        boolean own = !container.powersOfType(ApoliIds.MODIFY_JUMP).isEmpty();
+        boolean transferred = AttributeModifyTransferPower.JUMP.appliesTo(container);
+        if (!own && !transferred) return original;
+        List<AttributeModifier> mods = List.of();
+        if (own) {
+            List<AttributeModifier> collected = new ArrayList<>();
+            PowerLookup.forEach(entity, ApoliIds.MODIFY_JUMP, ModifyJumpPower.Config.class, cfg ->
+                collected.addAll(AttributeModifierHelper.flatten(cfg.modifier(), cfg.modifiers())));
+            mods = collected;
+        }
+        if (transferred) mods = AttributeModifyTransferPower.JUMP.merge(entity, container, mods);
         if (mods.isEmpty()) return original;
         return AttributeModifierHelper.apply(original, AttributeModifierHelper.ensureSorted(mods), entity);
     }

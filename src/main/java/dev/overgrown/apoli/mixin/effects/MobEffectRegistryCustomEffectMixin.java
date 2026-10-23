@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Mixin(MappedRegistry.class)
 public abstract class MobEffectRegistryCustomEffectMixin<T> implements RuntimeMobEffectRegistry {
@@ -72,43 +73,45 @@ public abstract class MobEffectRegistryCustomEffectMixin<T> implements RuntimeMo
     }
 
     @Override
-    public void apoli$unregisterCustom() {
+    public void apoli$unregisterCustom(Set<ResourceLocation> keep) {
         if (!this.key.equals(Registries.MOB_EFFECT)) return;
 
         Iterator<Map.Entry<ResourceKey<T>, Holder.Reference<T>>> keys = this.byKey.entrySet().iterator();
         while (keys.hasNext()) {
             Map.Entry<ResourceKey<T>, Holder.Reference<T>> entry = keys.next();
-            if (!apoli$isCustom(entry.getValue())) continue;
+            if (!apoli$retires(entry.getValue(), keep)) continue;
+            ResourceKey<T> retiredKey = entry.getKey();
+            Holder.Reference<T> retiredReference = entry.getValue();
             keys.remove();
             if (this.apoli$retired == null) this.apoli$retired = new HashMap<>();
-            this.apoli$retired.put(entry.getKey(), entry.getValue());
+            this.apoli$retired.put(retiredKey, retiredReference);
         }
 
         Iterator<Holder.Reference<T>> locations = this.byLocation.values().iterator();
         while (locations.hasNext()) {
-            if (apoli$isCustom(locations.next())) locations.remove();
+            if (apoli$retires(locations.next(), keep)) locations.remove();
         }
 
         Iterator<T> values = this.byValue.keySet().iterator();
         while (values.hasNext()) {
-            if (values.next() instanceof CustomMobEffect) values.remove();
+            if (apoli$retires(values.next(), keep)) values.remove();
         }
 
         Iterator<T> numbered = this.toId.keySet().iterator();
         while (numbered.hasNext()) {
-            if (numbered.next() instanceof CustomMobEffect) numbered.remove();
+            if (apoli$retires(numbered.next(), keep)) numbered.remove();
         }
 
         Iterator<T> lifecycleKeys = this.lifecycles.keySet().iterator();
         while (lifecycleKeys.hasNext()) {
-            if (lifecycleKeys.next() instanceof CustomMobEffect) lifecycleKeys.remove();
+            if (apoli$retires(lifecycleKeys.next(), keep)) lifecycleKeys.remove();
         }
 
         this.holdersInOrder = null;
 
         int first = -1;
         for (int i = 0; i < this.byId.size(); i++) {
-            if (apoli$isCustom(this.byId.get(i))) {
+            if (apoli$retires(this.byId.get(i), keep)) {
                 first = i;
                 break;
             }
@@ -118,7 +121,7 @@ public abstract class MobEffectRegistryCustomEffectMixin<T> implements RuntimeMo
         int write = first;
         for (int read = first; read < this.byId.size(); read++) {
             Holder.Reference<T> reference = this.byId.get(read);
-            if (reference == null || apoli$isCustom(reference)) continue;
+            if (reference == null || apoli$retires(reference, keep)) continue;
             this.byId.set(write, reference);
             this.toId.put(reference.value(), write);
             write++;
@@ -129,25 +132,38 @@ public abstract class MobEffectRegistryCustomEffectMixin<T> implements RuntimeMo
 
     @Override
     @SuppressWarnings("unchecked")
-    public void apoli$register(CustomMobEffect effect) {
-        if (!this.key.equals(Registries.MOB_EFFECT)) return;
+    public CustomMobEffect apoli$register(CustomMobEffect effect) {
+        if (!this.key.equals(Registries.MOB_EFFECT)) return effect;
 
         ResourceKey<T> resourceKey = ResourceKey.create(this.key, effect.id);
+        CustomMobEffect installed = effect;
         if (this.apoli$retired != null) {
             Holder.Reference<T> previous = this.apoli$retired.remove(resourceKey);
-            if (previous != null) this.byKey.put(resourceKey, previous);
+            if (previous != null) {
+                this.byKey.put(resourceKey, previous);
+                if (previous.isBound() && previous.value() instanceof CustomMobEffect earlier) {
+                    earlier.copyFrom(effect);
+                    installed = earlier;
+                }
+            }
         }
 
         this.apoli$allowWrite = true;
         try {
-            Registry.register((Registry<T>) (Object) this, resourceKey, (T) effect);
+            Registry.register((Registry<T>) (Object) this, resourceKey, (T) installed);
         } finally {
             this.apoli$allowWrite = false;
         }
+        return installed;
     }
 
     @Unique
-    private static boolean apoli$isCustom(Holder.Reference<?> reference) {
-        return reference != null && reference.isBound() && reference.value() instanceof CustomMobEffect;
+    private static boolean apoli$retires(Holder.Reference<?> reference, Set<ResourceLocation> keep) {
+        return reference != null && reference.isBound() && apoli$retires(reference.value(), keep);
+    }
+
+    @Unique
+    private static boolean apoli$retires(Object value, Set<ResourceLocation> keep) {
+        return value instanceof CustomMobEffect effect && !keep.contains(effect.id);
     }
 }

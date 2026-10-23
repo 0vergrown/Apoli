@@ -20,7 +20,8 @@ public final class ModifyFallingHandler {
         PowerContainer container = PowerContainer.of(entity);
         if (container == null || container.isEmpty()) return original;
         List<ResourceLocation> powers = container.powersOfType(ApoliIds.MODIFY_FALLING);
-        if (powers.isEmpty()) return original;
+        boolean transferred = AttributeModifyTransferPower.FALLING.appliesTo(container);
+        if (powers.isEmpty() && !transferred) return original;
         if (entity.getDeltaMovement().y > 0.0) return original;
 
         double gravity = original;
@@ -49,8 +50,16 @@ public final class ModifyFallingHandler {
                 mods.addAll(cfg.modifiers().get());
             }
         }
+        if (transferred) {
+            List<AttributeModifier> merged = AttributeModifyTransferPower.FALLING.merge(entity, container,
+                mods == null ? List.of() : mods);
+            if (!merged.isEmpty()) {
+                mods = merged;
+                applied = true;
+            }
+        }
         if (!applied) return original;
-        if (mods != null) gravity = AttributeModifierHelper.apply(gravity, mods, entity, container);
+        if (mods != null && !mods.isEmpty()) gravity = AttributeModifierHelper.apply(gravity, mods, entity, container);
         return gravity;
     }
 

@@ -7,6 +7,8 @@ import dev.overgrown.apoli.action.builtin.entity.RaycastAction;
 import dev.overgrown.apoli.alias.AliasingMapCodec;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
+import dev.overgrown.apoli.data.Expression;
+import dev.overgrown.apoli.data.ExprVector;
 import dev.overgrown.apoli.data.FluidHandling;
 import dev.overgrown.apoli.data.ShapeType;
 import dev.overgrown.apoli.data.Space;
@@ -28,26 +30,26 @@ import java.util.Optional;
 
 public final class RaycastBiEntityCondition implements ConditionType<BiEntityCtx, RaycastBiEntityCondition.Cfg> {
     public record Cfg(
-        Optional<Float> distance,
+        Optional<Expression> distance,
         boolean block,
         ShapeType shapeType,
         FluidHandling fluidHandling,
         Space space,
         Optional<Vector> direction,
-        Optional<Vector> radius,
-        Optional<Float> coneAngle
+        Optional<ExprVector> radius,
+        Optional<Expression> coneAngle
     ) {}
 
     private static final MapCodec<Cfg> CODEC = AliasingMapCodec.wrap(
         RecordCodecBuilder.<Cfg>mapCodec(i -> i.group(
-            Codec.FLOAT.optionalFieldOf("distance").forGetter(Cfg::distance),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("distance").forGetter(Cfg::distance),
             Codec.BOOL.optionalFieldOf("block", true).forGetter(Cfg::block),
             ShapeType.CODEC.optionalFieldOf("shape_type", ShapeType.VISUAL).forGetter(Cfg::shapeType),
             FluidHandling.CODEC.optionalFieldOf("fluid_handling", FluidHandling.ANY).forGetter(Cfg::fluidHandling),
             Space.CODEC.optionalFieldOf("space", Space.WORLD).forGetter(Cfg::space),
             Vector.CODEC.optionalFieldOf("direction").forGetter(Cfg::direction),
-            Vector.SCALAR_OR_VECTOR.optionalFieldOf("radius").forGetter(Cfg::radius),
-            Codec.FLOAT.optionalFieldOf("cone_angle").forGetter(Cfg::coneAngle)
+            ExprVector.SCALAR_OR_VECTOR.optionalFieldOf("radius").forGetter(Cfg::radius),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("cone_angle").forGetter(Cfg::coneAngle)
         ).apply(i, Cfg::new)),
         Map.of("entity_distance", "distance")
     );
@@ -68,18 +70,19 @@ public final class RaycastBiEntityCondition implements ConditionType<BiEntityCtx
             : actor.getViewVector(1f);
         if (dir.lengthSqr() < 1.0e-6) dir = actor.getViewVector(1f);
         dir = dir.normalize();
-        double range = cfg.distance.isPresent() ? cfg.distance.get() : InteractionRange.entity(actor);
+        double range = cfg.distance.isPresent() ? cfg.distance.get().eval(actor) : InteractionRange.entity(actor);
         double rx = 0.0;
         double ry = 0.0;
         double rz = 0.0;
         if (cfg.radius.isPresent()) {
-            Vector radius = cfg.radius.get();
+            Vector radius = cfg.radius.get().resolve(actor);
             rx = radius.x();
             ry = radius.y();
             rz = radius.z();
         }
         boolean cone = cfg.coneAngle.isPresent();
-        double coneCos = cone ? Math.cos(Math.toRadians(cfg.coneAngle.get())) : -1.0;
+        double coneAngle = cone ? cfg.coneAngle.get().eval(actor) : -1.0;
+        double coneCos = cone ? Math.cos(Math.toRadians(coneAngle)) : -1.0;
         Vec3 hit = RaycastAction.entityHit(target, origin, dir, origin.add(dir.scale(range)), range,
             rx, ry, rz, cone, coneCos);
         BlockHitResult blocker = null;
@@ -89,19 +92,19 @@ public final class RaycastBiEntityCondition implements ConditionType<BiEntityCtx
             if (clip.getType() != HitResult.Type.MISS) blocker = clip;
         }
         boolean passed = hit != null && blocker == null;
-        if (DevMode.any()) outline(actor.level(), cfg, actor, target, origin, dir, range, rx, ry, rz, hit, blocker, passed);
+        if (DevMode.any()) outline(actor.level(), cfg, actor, target, origin, dir, range, rx, ry, rz, coneAngle,
+            hit, blocker, passed);
         return passed;
     }
 
     private static void outline(Level world, Cfg cfg, Entity actor, Entity target, Vec3 origin, Vec3 dir,
-                                double range, double rx, double ry, double rz, @Nullable Vec3 hit,
+                                double range, double rx, double ry, double rz, double coneAngle, @Nullable Vec3 hit,
                                 @Nullable BlockHitResult blocker, boolean passed) {
         if (!(world instanceof ServerLevel level)) return;
         DevParticles.Ray kind = DevParticles.Ray.CONDITION;
         if (DevParticles.due(level, actor, cfg)) {
             DevParticles.ray(level, kind, origin, dir, 0.0, range);
-            DevParticles.detection(level, kind, origin, dir, range, rx, ry, rz,
-                cfg.coneAngle.isPresent() ? cfg.coneAngle.get() : -1.0);
+            DevParticles.detection(level, kind, origin, dir, range, rx, ry, rz, coneAngle);
         }
         if (hit == null || !DevParticles.due(level, actor, target, cfg)) return;
         DevParticles.segment(level, kind, origin, hit,

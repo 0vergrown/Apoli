@@ -9,6 +9,7 @@ import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.BlockCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.data.FluidHandling;
 import dev.overgrown.apoli.data.ShapeType;
 import dev.overgrown.apoli.data.Space;
@@ -31,7 +32,7 @@ import java.util.Optional;
 
 public final class RaycastEntityCondition implements ConditionType<EntityCtx, RaycastEntityCondition.Cfg> {
     public record Cfg(
-        Optional<Float> distance,
+        Optional<Expression> distance,
         boolean block,
         boolean entity,
         ShapeType shapeType,
@@ -40,15 +41,15 @@ public final class RaycastEntityCondition implements ConditionType<EntityCtx, Ra
         Optional<Vector> direction,
         Optional<BiEntityCondition> matchBientityCondition,
         Optional<BiEntityCondition> hitBientityCondition,
-        Optional<Float> entityDistance,
+        Optional<Expression> entityDistance,
         Optional<BlockCondition> blockCondition,
-        Optional<Float> blockDistance
+        Optional<Expression> blockDistance
     ) {}
 
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.FLOAT.optionalFieldOf("distance").forGetter(Cfg::distance),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("distance").forGetter(Cfg::distance),
             Codec.BOOL.optionalFieldOf("block", true).forGetter(Cfg::block),
             Codec.BOOL.optionalFieldOf("entity", true).forGetter(Cfg::entity),
             ShapeType.CODEC.optionalFieldOf("shape_type", ShapeType.VISUAL).forGetter(Cfg::shapeType),
@@ -57,10 +58,22 @@ public final class RaycastEntityCondition implements ConditionType<EntityCtx, Ra
             Vector.CODEC.optionalFieldOf("direction").forGetter(Cfg::direction),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("match_bientity_condition", BiEntityCondition.CODEC).forGetter(Cfg::matchBientityCondition),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("hit_bientity_condition", BiEntityCondition.CODEC).forGetter(Cfg::hitBientityCondition),
-            Codec.FLOAT.optionalFieldOf("entity_distance").forGetter(Cfg::entityDistance),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("entity_distance").forGetter(Cfg::entityDistance),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Cfg::blockCondition),
-            Codec.FLOAT.optionalFieldOf("block_distance").forGetter(Cfg::blockDistance)
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("block_distance").forGetter(Cfg::blockDistance)
         ).apply(i, Cfg::new));
+    }
+
+    private static float blockDistance(Entity source, Cfg cfg) {
+        if (cfg.blockDistance.isPresent()) return (float) cfg.blockDistance.get().eval(source);
+        if (cfg.distance.isPresent()) return (float) cfg.distance.get().eval(source);
+        return (float) InteractionRange.block(source);
+    }
+
+    private static float entityDistance(Entity source, Cfg cfg) {
+        if (cfg.entityDistance.isPresent()) return (float) cfg.entityDistance.get().eval(source);
+        if (cfg.distance.isPresent()) return (float) cfg.distance.get().eval(source);
+        return (float) InteractionRange.entity(source);
     }
 
     @Override
@@ -73,8 +86,8 @@ public final class RaycastEntityCondition implements ConditionType<EntityCtx, Ra
             : source.getViewVector(1f);
         if (dir.lengthSqr() < 1.0e-6) dir = source.getViewVector(1f);
         dir = dir.normalize();
-        float blockDist = InteractionRange.block(source, cfg.blockDistance, cfg.distance);
-        float entityDist = InteractionRange.entity(source, cfg.entityDistance, cfg.distance);
+        float blockDist = blockDistance(source, cfg);
+        float entityDist = entityDistance(source, cfg);
 
         BlockHitResult blockHit = null;
         double nearestSq = Double.POSITIVE_INFINITY;

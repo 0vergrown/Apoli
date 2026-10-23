@@ -3,6 +3,8 @@ package dev.overgrown.apoli.mixin.power;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Share;
+import com.llamalad7.mixinextras.sugar.ref.LocalRef;
 import dev.overgrown.apoli.power.builtin.EdibleItemHandler;
 import dev.overgrown.apoli.power.builtin.ModifyFoodHandler;
 import net.minecraft.world.InteractionHand;
@@ -34,17 +36,23 @@ public abstract class LivingEntityEatMixin {
         if (ModifyFoodHandler.preventsEffects(eater, stack)) ci.cancel();
     }
 
+    @Inject(method = "eat", at = @At("HEAD"))
+    private void apoli$beforeEat(Level level, ItemStack stack, CallbackInfoReturnable<ItemStack> cir,
+                                 @Share("apoli$eaten") LocalRef<ModifyFoodHandler.Eaten> eaten) {
+        if (stack.isEdible()) eaten.set(ModifyFoodHandler.beforeEat((LivingEntity) (Object) this, stack));
+    }
+
     @Inject(method = "eat", at = @At("RETURN"))
-    private void apoli$afterEat(Level level, ItemStack stack, CallbackInfoReturnable<ItemStack> cir) {
-        if (!stack.isEdible()) return;
-        ModifyFoodHandler.afterEat((LivingEntity) (Object) this, stack);
+    private void apoli$afterEat(Level level, ItemStack stack, CallbackInfoReturnable<ItemStack> cir,
+                                @Share("apoli$eaten") LocalRef<ModifyFoodHandler.Eaten> eaten) {
+        ModifyFoodHandler.afterEat((LivingEntity) (Object) this, stack, eaten.get());
     }
 
     @ModifyReturnValue(method = "eat", at = @At("RETURN"))
-    private ItemStack apoli$replaceEatenStack(ItemStack result, Level level, ItemStack stack) {
-        if (!stack.isEdible()) return result;
+    private ItemStack apoli$replaceEatenStack(ItemStack result, Level level, ItemStack stack,
+                                              @Share("apoli$eaten") LocalRef<ModifyFoodHandler.Eaten> eaten) {
         LivingEntity self = (LivingEntity) (Object) this;
-        ItemStack replacement = ModifyFoodHandler.replacement(self, stack);
+        ItemStack replacement = ModifyFoodHandler.replacement(eaten.get());
         if (replacement == null || replacement.isEmpty()) return result;
         if (self instanceof Player player && player.getAbilities().instabuild) return result;
         if (result.isEmpty()) return replacement;
