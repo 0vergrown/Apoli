@@ -29,11 +29,18 @@ public final class ModifyAirSpeedPower extends PowerType<ModifyAirSpeedPower.Con
     public static float modify(LivingEntity entity, float original) {
         PowerContainer container = PowerContainer.of(entity);
         if (container == null || container.isEmpty()) return original;
-        if (container.powersOfType(ApoliIds.MODIFY_AIR_SPEED).isEmpty()) return original;
+        boolean own = !container.powersOfType(ApoliIds.MODIFY_AIR_SPEED).isEmpty();
+        boolean transferred = AttributeModifyTransferPower.AIR_SPEED.appliesTo(container);
+        if (!own && !transferred) return original;
 
-        List<AttributeModifier> mods = new ArrayList<>();
-        PowerLookup.forEach(entity, ApoliIds.MODIFY_AIR_SPEED, Config.class, cfg ->
-            mods.addAll(AttributeModifierHelper.flatten(cfg.modifier(), cfg.modifiers())));
+        List<AttributeModifier> mods = List.of();
+        if (own) {
+            List<AttributeModifier> collected = new ArrayList<>();
+            PowerLookup.forEach(entity, ApoliIds.MODIFY_AIR_SPEED, Config.class, cfg ->
+                collected.addAll(AttributeModifierHelper.flatten(cfg.modifier(), cfg.modifiers())));
+            mods = collected;
+        }
+        if (transferred) mods = AttributeModifyTransferPower.AIR_SPEED.merge(entity, container, mods);
         if (mods.isEmpty()) return original;
         return AttributeModifierHelper.apply(original, AttributeModifierHelper.ensureSorted(mods), entity);
     }

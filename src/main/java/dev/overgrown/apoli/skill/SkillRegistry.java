@@ -26,6 +26,7 @@ public final class SkillRegistry {
     private static volatile List<ResourceLocation> roots = List.of();
     private static volatile Map<ResourceLocation, ResourceLocation> rootCache = Map.of();
     private static volatile Map<ResourceLocation, ResourceLocation> orphanedSkills = Map.of();
+    private static volatile Map<ResourceLocation, ResourceLocation> unknownPointTrees = Map.of();
 
     public static void setTrees(Map<ResourceLocation, SkillTree> loaded) {
         trees = Map.copyOf(loaded);
@@ -77,24 +78,45 @@ public final class SkillRegistry {
         for (Skill skill : valid.values()) {
             kids.computeIfAbsent(skill.parent(), k -> new ArrayList<>()).add(skill.id());
         }
-        java.util.Comparator<ResourceLocation> byOrder = java.util.Comparator.comparingInt(id -> valid.get(id).order());
+        java.util.Comparator<ResourceLocation> byOrder = java.util.Comparator.<ResourceLocation>comparingInt(id -> valid.get(id).order())
+            .thenComparing(ResourceLocation::toString);
         for (List<ResourceLocation> siblings : kids.values()) siblings.sort(byOrder);
 
         List<ResourceLocation> rootList = new ArrayList<>(treeMap.keySet());
-        rootList.sort(java.util.Comparator.comparingInt(id -> treeMap.get(id).order()));
+        rootList.sort(java.util.Comparator.<ResourceLocation>comparingInt(id -> treeMap.get(id).order())
+            .thenComparing(ResourceLocation::toString));
+
+        Map<ResourceLocation, ResourceLocation> unknownTrees = new LinkedHashMap<>();
+        for (Skill skill : valid.values()) {
+            checkTrees(skill.id(), skill.cost().points(), treeMap, unknownTrees);
+            checkTrees(skill.id(), skill.reward().points(), treeMap, unknownTrees);
+        }
 
         orphanedSkills = Map.copyOf(orphans);
+        unknownPointTrees = Map.copyOf(unknownTrees);
         byId = Map.copyOf(valid);
         children = Map.copyOf(kids);
         roots = List.copyOf(rootList);
         rootCache = Map.copyOf(rc);
     }
 
+    private static void checkTrees(ResourceLocation skillId, List<SkillPoints> points,
+                                   Map<ResourceLocation, SkillTree> treeMap, Map<ResourceLocation, ResourceLocation> unknown) {
+        for (SkillPoints entry : points) {
+            if (entry.tree().isPresent() && !treeMap.containsKey(entry.tree().get())) {
+                unknown.putIfAbsent(skillId, entry.tree().get());
+            }
+        }
+    }
+
     public static void reportOrphanedSkills() {
         Map<ResourceLocation, ResourceLocation> orphans = orphanedSkills;
-        if (orphans.isEmpty()) return;
         for (Map.Entry<ResourceLocation, ResourceLocation> e : orphans.entrySet()) {
             LOG.warn("[Apoli] Skill {} has no skill tree at the top of its parent chain (parent '{}'); it will not appear anywhere. Point its 'parent' at a skill_trees file id or another skill.",
+                e.getKey(), e.getValue());
+        }
+        for (Map.Entry<ResourceLocation, ResourceLocation> e : unknownPointTrees.entrySet()) {
+            LOG.warn("[Apoli] Skill {} uses points of skill tree '{}' in its cost or reward, but no skill tree with that id is loaded. Check the 'skill_tree' id.",
                 e.getKey(), e.getValue());
         }
     }

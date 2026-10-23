@@ -249,6 +249,16 @@ public final class PowerTypes {
         );
         PowerTypeRegistry.registerAliasDefaults(Apoli.id("self_action_on_kill"), entityActionTarget("self"));
         PowerTypeRegistry.register(Apoli.id("action_on_item_pickup"), new ActionOnItemPickupPower());
+        PowerTypeRegistry.register(Apoli.id("action_on_tame"), new ActionOnTamePower());
+        PowerTypeRegistry.register(Apoli.id("action_on_breed"), new ActionOnBreedPower());
+        PowerTypeRegistry.register(Apoli.id("share_effects"), new ShareEffectsPower());
+        PowerTypeRegistry.register(Apoli.id("modify_projectile_divergence"), new ModifyProjectileDivergencePower());
+        PowerTypeRegistry.register(Apoli.id("modify_enchantability"), new ModifyEnchantabilityPower());
+        PowerTypeRegistry.register(Apoli.id("infinite_trades"), new InfiniteTradesPower());
+        PowerTypeRegistry.register(Apoli.id("extra_trades"), new ExtraTradesPower());
+        PowerTypeRegistry.register(Apoli.id("modify_anvil"), new ModifyAnvilPower());
+        PowerTypeRegistry.register(Apoli.id("sneaky"), new SneakyPower());
+        PowerTypeRegistry.register(Apoli.id("prevent_level_event"), new PreventLevelEventPower());
         PowerTypeRegistry.register(Apoli.id("action_on_item_use"), new ActionOnItemUsePower());
         PowerTypeRegistry.register(Apoli.id("action_on_land"), new ActionOnLandPower());
         PowerTypeRegistry.register(Apoli.id("action_on_collision"), new ActionOnCollisionPower());
@@ -335,6 +345,7 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("receive_condition"), new ReceiveConditionPower(),
             AliasingOptions.builder().addTypeAlias("shappoli:receive_condition").build());
         PowerTypeRegistry.register(Apoli.id("modify_air_speed"), new ModifyAirSpeedPower());
+        PowerTypeRegistry.register(Apoli.id("attribute_modify_transfer"), new AttributeModifyTransferPower());
         PowerTypeRegistry.register(Apoli.id("modify_status_effect_amplifier"), new ModifyStatusEffectPower());
         PowerTypeRegistry.register(Apoli.id("modify_status_effect_duration"), new ModifyStatusEffectPower());
         PowerTypeRegistry.register(Apoli.id("night_vision"), new NightVisionPower(),

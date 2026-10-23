@@ -16,6 +16,7 @@ public final class PartColorMap {
     private final Map<ModelPart, float[]> colors = new IdentityHashMap<>();
     private final List<float[]> pool = new ArrayList<>();
     private final List<ModelPart> parts = new ArrayList<>(8);
+    private final float[] tint = new float[5];
     private int used;
 
     PartColorMap() {}
@@ -36,15 +37,12 @@ public final class PartColorMap {
             ModelColorPower.PartColor partColor = partColors.get(i);
             parts.clear();
             ModelPartLookup.resolveInto(model, partColor.part().sided(entity), parts);
+            if (parts.isEmpty()) continue;
+            partColor.tint().resolve(entity, tint);
             for (int p = 0; p < parts.size(); p++) {
                 ModelPart part = parts.get(p);
                 if (onlyA != null && part != onlyA && part != onlyB) continue;
-                float[] color = entry(part);
-                color[0] *= partColor.red();
-                color[1] *= partColor.green();
-                color[2] *= partColor.blue();
-                color[3] *= partColor.alpha();
-                if (partColor.whiten()) color[4] = 1f;
+                multiply(part, tint);
             }
         }
         parts.clear();

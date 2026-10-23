@@ -42,7 +42,7 @@ public record Power(
         return skill.map(info -> new Skill(
             id, info.parent(), displayName(id), displayDescription(id), info.icon(), info.frame(),
             List.of(id), info.condition(), info.visibilityCondition(),
-            info.excludes(), info.cost(), info.order()));
+            info.excludes(), info.cost(), info.order(), info.reward(), info.placement()));
     }
 
     public PowerType<?> type() {

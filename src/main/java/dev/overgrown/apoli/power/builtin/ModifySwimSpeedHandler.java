@@ -19,11 +19,18 @@ public final class ModifySwimSpeedHandler {
     public static float modifyWaterDrag(LivingEntity entity, float original) {
         PowerContainer container = PowerContainer.of(entity);
         if (container == null || container.isEmpty()) return original;
-        if (container.powersOfType(ApoliIds.MODIFY_SWIM_SPEED).isEmpty()) return original;
+        boolean own = !container.powersOfType(ApoliIds.MODIFY_SWIM_SPEED).isEmpty();
+        boolean transferred = AttributeModifyTransferPower.SWIM_SPEED.appliesTo(container);
+        if (!own && !transferred) return original;
 
-        List<AttributeModifier> mods = new ArrayList<>();
-        PowerLookup.forEach(entity, ApoliIds.MODIFY_SWIM_SPEED, ModifySwimSpeedPower.Config.class, cfg ->
-            mods.addAll(AttributeModifierHelper.flatten(cfg.modifier(), cfg.modifiers())));
+        List<AttributeModifier> mods = List.of();
+        if (own) {
+            List<AttributeModifier> collected = new ArrayList<>();
+            PowerLookup.forEach(entity, ApoliIds.MODIFY_SWIM_SPEED, ModifySwimSpeedPower.Config.class, cfg ->
+                collected.addAll(AttributeModifierHelper.flatten(cfg.modifier(), cfg.modifiers())));
+            mods = collected;
+        }
+        if (transferred) mods = AttributeModifyTransferPower.SWIM_SPEED.merge(entity, container, mods);
         if (mods.isEmpty()) return original;
 
         float modified = AttributeModifierHelper.apply(original, AttributeModifierHelper.ensureSorted(mods), entity);

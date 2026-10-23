@@ -23,6 +23,8 @@ public final class ApoliIds {
     public static final ResourceLocation RESTRICT_ARMOR = Apoli.id("restrict_armor");
     public static final ResourceLocation PREVENT_GAME_EVENT = Apoli.id("prevent_game_event");
     public static final ResourceLocation PREVENT_SLEEP = Apoli.id("prevent_sleep");
+    public static final ResourceLocation PREVENT_ITEM_PICKUP = Apoli.id("prevent_item_pickup");
+    public static final ResourceLocation ACTION_ON_ITEM_PICKUP = Apoli.id("action_on_item_pickup");
     public static final ResourceLocation WALK_ON_FLUID = Apoli.id("walk_on_fluid");
     public static final ResourceLocation IGNORE_FLUID = Apoli.id("ignore_fluid");
     public static final ResourceLocation STARTING_EQUIPMENT = Apoli.id("starting_equipment");
@@ -87,6 +89,18 @@ public final class ApoliIds {
     public static final ResourceLocation POWER_STORAGE = Apoli.id("power_storage");
     public static final ResourceLocation PREVENT_ENTITY_COLLISION = Apoli.id("prevent_entity_collision");
     public static final ResourceLocation KEEP_INVENTORY = Apoli.id("keep_inventory");
+    public static final ResourceLocation ATTRIBUTE_MODIFY_TRANSFER = Apoli.id("attribute_modify_transfer");
+    public static final ResourceLocation ACTION_ON_TAME = Apoli.id("action_on_tame");
+    public static final ResourceLocation ACTION_ON_BREED = Apoli.id("action_on_breed");
+    public static final ResourceLocation SHARE_EFFECTS = Apoli.id("share_effects");
+    public static final ResourceLocation MODIFY_PROJECTILE_DIVERGENCE = Apoli.id("modify_projectile_divergence");
+    public static final ResourceLocation MODIFY_ENCHANTABILITY = Apoli.id("modify_enchantability");
+    public static final ResourceLocation MODIFY_XP_GAIN = Apoli.id("modify_xp_gain");
+    public static final ResourceLocation INFINITE_TRADES = Apoli.id("infinite_trades");
+    public static final ResourceLocation EXTRA_TRADES = Apoli.id("extra_trades");
+    public static final ResourceLocation MODIFY_ANVIL = Apoli.id("modify_anvil");
+    public static final ResourceLocation SNEAKY = Apoli.id("sneaky");
+    public static final ResourceLocation PREVENT_LEVEL_EVENT = Apoli.id("prevent_level_event");
 
     private ApoliIds() {}
 }

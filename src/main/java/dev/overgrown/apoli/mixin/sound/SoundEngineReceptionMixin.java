@@ -32,21 +32,23 @@ public abstract class SoundEngineReceptionMixin {
         ReplaceableSound access = (ReplaceableSound) instance;
         SoundEngine self = (SoundEngine) (Object) this;
         SoundEvent original = SoundEvent.createVariableRangeEvent(instance.getLocation());
-        boolean[] first = {true};
 
         apoli$reentrant = true;
         try {
             SoundReplacer.receive(player, original, access.apoli$baseVolume(), access.apoli$basePitch(),
-                (replaced, volume, pitch) -> {
-                    if (first[0]) {
-                        first[0] = false;
-                        access.apoli$replaceWith(replaced.getLocation(), volume, pitch);
+                new SoundReplacer.Emitter() {
+                    @Override
+                    public void play(SoundEvent sound, float volume, float pitch) {
+                        access.apoli$replaceWith(sound.getLocation(), volume, pitch);
                         self.play(instance);
-                    } else {
-                        self.play(new SimpleSoundInstance(replaced.getLocation(), instance.getSource(),
-                            volume, pitch, SoundInstance.createUnseededRandom(), instance.isLooping(),
-                            instance.getDelay(), instance.getAttenuation(),
-                            instance.getX(), instance.getY(), instance.getZ(), instance.isRelative()));
+                    }
+
+                    @Override
+                    public void layer(SoundEvent sound, float volume, float pitch) {
+                        self.play(new SimpleSoundInstance(sound.getLocation(), instance.getSource(),
+                            volume, pitch, SoundInstance.createUnseededRandom(), false, 0,
+                            instance.getAttenuation(), instance.getX(), instance.getY(), instance.getZ(),
+                            instance.isRelative()));
                     }
                 });
         } finally {

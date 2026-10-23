@@ -2,41 +2,30 @@ package dev.overgrown.apoli.mixin.flag;
 
 import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Unit;
-import dev.overgrown.apoli.Apoli;
-import dev.overgrown.apoli.condition.context.BlockCtx;
-import dev.overgrown.apoli.power.PowerLookup;
-import dev.overgrown.apoli.power.builtin.PreventSleepPower;
-import dev.overgrown.apoli.power.ApoliIds;
+import dev.overgrown.apoli.power.builtin.PreventSleepHandler;
+import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(Player.class)
+@Mixin(ServerPlayer.class)
 public abstract class PreventSleepMixin {
-    @Inject(method = "startSleepInBed", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "startSleepInBed(Lnet/minecraft/core/BlockPos;)Lcom/mojang/datafixers/util/Either;",
+        at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/server/level/ServerPlayer;setRespawnPosition(Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/core/BlockPos;FZZ)V"),
+        cancellable = true)
     private void apoli$preventSleep(BlockPos pos, CallbackInfoReturnable<Either<Player.BedSleepingProblem, Unit>> cir) {
-        Player self = (Player) (Object) this;
-        Level level = self.level();
-        BlockState state = level.getBlockState(pos);
-        BlockCtx ctx = new BlockCtx(pos.immutable(), state, level);
-        PreventSleepPower.Config[] best = new PreventSleepPower.Config[]{null};
-        PowerLookup.forEach(self, ApoliIds.PREVENT_SLEEP, PreventSleepPower.Config.class, cfg -> {
-            if (cfg.blockCondition().isPresent() && !cfg.blockCondition().get().test(ctx)) return;
-            if (best[0] == null || cfg.priority() > best[0].priority()) {
-                best[0] = cfg;
-            }
-        });
-        if (best[0] == null) return;
-        if (self instanceof ServerPlayer sp) {
-            sp.displayClientMessage(best[0].message(), true);
+        ServerPlayer self = (ServerPlayer) (Object) this;
+        PreventSleepHandler.Decision decision = PreventSleepHandler.decide(self, pos);
+        if (decision == null) return;
+        if (decision.setsSpawn() && EntitySleepEvents.ALLOW_SETTING_SPAWN.invoker().allowSettingSpawn(self, pos)) {
+            self.setRespawnPosition(self.level().dimension(), pos, self.getYRot(), false, true);
         }
+        self.displayClientMessage(decision.message(), true);
         cir.setReturnValue(Either.left(Player.BedSleepingProblem.OTHER_PROBLEM));
     }
 }
