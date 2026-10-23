@@ -35,12 +35,15 @@ import dev.overgrown.apoli.power.builtin.EntitySetPower;
 import dev.overgrown.apoli.power.builtin.HitActionHandler;
 import dev.overgrown.apoli.power.builtin.ModifyDamageHandler;
 import dev.overgrown.apoli.power.builtin.ModifyProjectileDamageHandler;
+import dev.overgrown.apoli.power.builtin.PreventSleepHandler;
+import dev.overgrown.apoli.power.builtin.SleepDecisionHolder;
 import dev.overgrown.apoli.power.builtin.TogglePower;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -59,6 +62,7 @@ import net.neoforged.neoforge.event.entity.living.LivingConversionEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
+import net.neoforged.neoforge.event.entity.player.CanPlayerSleepEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -316,6 +320,17 @@ public final class Apoli {
             event.setCancellationResult(result);
             event.setCanceled(true);
         }
+    }
+
+    @SubscribeEvent
+    public void onCanPlayerSleep(CanPlayerSleepEvent event) {
+        PreventSleepHandler.Decision decision = ((SleepDecisionHolder) event.getEntity()).apoli$takeSleepDecision();
+        if (decision == null) return;
+        Player.BedSleepingProblem vanilla = event.getVanillaProblem();
+        if (vanilla != null && vanilla != Player.BedSleepingProblem.NOT_POSSIBLE_NOW
+            && vanilla != Player.BedSleepingProblem.NOT_SAFE) return;
+        event.setProblem(Player.BedSleepingProblem.OTHER_PROBLEM);
+        event.getEntity().displayClientMessage(decision.message(), true);
     }
 
     @SubscribeEvent

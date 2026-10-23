@@ -198,8 +198,18 @@ public final class ExprVars {
             onPeer(enchantment(args, name, at), ExprPeer.TARGET));
         ExprParser.registerBracketFunction("actor_enchantment", (args, name, at) ->
             onPeer(enchantment(args, name, at), ExprPeer.ACTOR));
+        ExprParser.registerBracketFunction("durability", ExprVars::durability);
+        ExprParser.registerBracketFunction("target_durability", (args, name, at) ->
+            onPeer(durability(args, name, at), ExprPeer.TARGET));
+        ExprParser.registerBracketFunction("actor_durability", (args, name, at) ->
+            onPeer(durability(args, name, at), ExprPeer.ACTOR));
         ExprParser.registerBracketFunction("nbt", ExprVars::nbt);
         ExprParser.registerBracketFunction("data", ExprVars::nbt);
+        ExprParser.registerBracketFunction("attribute", ExprAttributes::query);
+        ExprParser.registerBracketFunction("target_attribute", (args, name, at) ->
+            onPeer(ExprAttributes.query(args, name, at), ExprPeer.TARGET));
+        ExprParser.registerBracketFunction("actor_attribute", (args, name, at) ->
+            onPeer(ExprAttributes.query(args, name, at), ExprPeer.ACTOR));
     }
 
     private static ResolvedVar onPeer(ResolvedVar delegate, int slot) {
@@ -261,6 +271,19 @@ public final class ExprVars {
                 if (value > best) best = value;
             }
             return useMax ? best : total;
+        }, false);
+    }
+
+    private static ResolvedVar durability(java.util.List<String> args, String name, int at) throws ExprParseException {
+        if (args.isEmpty() || args.get(0).isEmpty()) {
+            throw new ExprParseException(name + "[slot] expects an item slot", at);
+        }
+        ItemSlot slot = ItemSlot.parse(args.get(0)).result().orElse(null);
+        if (slot == null) throw new ExprParseException("'" + args.get(0) + "' is not an item slot", at);
+        return new ResolvedVar((e, c, l, v) -> {
+            net.minecraft.world.item.ItemStack stack = SlotStacks.get(e, slot);
+            int max = stack.getMaxDamage();
+            return max > 0 ? max - stack.getDamageValue() : 0;
         }, false);
     }
 

@@ -63,14 +63,20 @@ public final class AttachmentParts {
                 reset(out);
                 tinted = true;
             }
+            ModelColorPower.Tint tint = colour.tint();
+            float red = tint.red(source);
+            float green = tint.green(source);
+            float blue = tint.blue(source);
+            float alpha = tint.alpha(source);
+            boolean whiten = tint.whitens(red, green, blue);
             while (bits != 0) {
                 int at = Integer.numberOfTrailingZeros(bits) * STRIDE;
                 bits &= bits - 1;
-                out[at] *= colour.red();
-                out[at + 1] *= colour.green();
-                out[at + 2] *= colour.blue();
-                out[at + 3] *= colour.alpha();
-                if (colour.whiten()) out[at + 4] = 1.0F;
+                out[at] *= red;
+                out[at + 1] *= green;
+                out[at + 2] *= blue;
+                out[at + 3] *= alpha;
+                if (whiten) out[at + 4] = 1.0F;
             }
         }
         return tinted;

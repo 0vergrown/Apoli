@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.power.builtin;
 
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.BiEntityAction;
@@ -15,7 +16,8 @@ public final class ActionOnItemPickupPower extends PowerType<ActionOnItemPickupP
         Optional<BiEntityAction> bientityAction,
         Optional<ItemAction> itemAction,
         Optional<BiEntityCondition> bientityCondition,
-        Optional<ItemCondition> itemCondition
+        Optional<ItemCondition> itemCondition,
+        int priority
     ) {}
 
     @Override
@@ -24,7 +26,8 @@ public final class ActionOnItemPickupPower extends PowerType<ActionOnItemPickupP
             dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Config::bientityAction),
             dev.overgrown.apoli.codec.LoggedOptionalField.of("item_action", ItemAction.CODEC).forGetter(Config::itemAction),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("bientity_condition", BiEntityCondition.CODEC).forGetter(Config::bientityCondition),
-            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Config::itemCondition)
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Config::itemCondition),
+            Codec.INT.optionalFieldOf("priority", 0).forGetter(Config::priority)
         ).apply(i, Config::new));
     }
 }

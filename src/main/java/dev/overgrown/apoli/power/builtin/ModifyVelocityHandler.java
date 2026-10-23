@@ -24,7 +24,9 @@ public final class ModifyVelocityHandler {
         PowerContainer container = PowerContainer.of(entity);
         if (container == null || container.isEmpty()) return movement;
         List<ResourceLocation> powers = container.powersOfType(ApoliIds.MODIFY_VELOCITY);
-        if (powers.isEmpty()) return movement;
+        LivingEntity living = entity instanceof LivingEntity le ? le : null;
+        boolean transferred = living != null && AttributeModifyTransferPower.VELOCITY.appliesTo(container);
+        if (powers.isEmpty() && !transferred) return movement;
 
         ModifyVelocityPower.Config first = null;
         List<ModifyVelocityPower.Config> several = null;
@@ -49,12 +51,14 @@ public final class ModifyVelocityHandler {
             }
             several.add(cfg);
         }
-        if (first == null) return movement;
+        List<AttributeModifier> transfers = transferred
+            ? AttributeModifyTransferPower.VELOCITY.merge(living, container, List.of())
+            : List.of();
+        if (first == null && transfers.isEmpty()) return movement;
 
-        List<AttributeModifier> xMods = modifiersFor(RelativeRotationCondition.Axis.X, first, several);
-        List<AttributeModifier> yMods = modifiersFor(RelativeRotationCondition.Axis.Y, first, several);
-        List<AttributeModifier> zMods = modifiersFor(RelativeRotationCondition.Axis.Z, first, several);
-        LivingEntity living = entity instanceof LivingEntity le ? le : null;
+        List<AttributeModifier> xMods = withTransfers(modifiersFor(RelativeRotationCondition.Axis.X, first, several), transfers);
+        List<AttributeModifier> yMods = withTransfers(modifiersFor(RelativeRotationCondition.Axis.Y, first, several), transfers);
+        List<AttributeModifier> zMods = withTransfers(modifiersFor(RelativeRotationCondition.Axis.Z, first, several), transfers);
         PowerContainer source = living == null ? null : container;
 
         Vec3 velocity = entity.getDeltaMovement();
@@ -74,9 +78,19 @@ public final class ModifyVelocityHandler {
         return new Vec3(x, y, z);
     }
 
+    private static List<AttributeModifier> withTransfers(List<AttributeModifier> axis, List<AttributeModifier> transfers) {
+        if (transfers.isEmpty()) return axis;
+        if (axis.isEmpty()) return transfers;
+        List<AttributeModifier> merged = new ArrayList<>(axis.size() + transfers.size());
+        merged.addAll(axis);
+        merged.addAll(transfers);
+        return AttributeModifierHelper.ensureSorted(merged);
+    }
+
     private static List<AttributeModifier> modifiersFor(RelativeRotationCondition.Axis axis,
-                                                        ModifyVelocityPower.Config first,
+                                                        @Nullable ModifyVelocityPower.Config first,
                                                         @Nullable List<ModifyVelocityPower.Config> several) {
+        if (first == null) return List.of();
         if (several == null) return first.affects(axis) ? first.combined() : List.of();
         List<AttributeModifier> merged = null;
         for (int i = 0; i < several.size(); i++) {

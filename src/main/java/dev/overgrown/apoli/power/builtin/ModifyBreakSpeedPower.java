@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.BlockCondition;
 import dev.overgrown.apoli.data.AttributeModifier;
+import dev.overgrown.apoli.data.ConnectedBlocks;
 import dev.overgrown.apoli.power.PowerType;
 
 import java.util.List;
@@ -15,7 +16,8 @@ public final class ModifyBreakSpeedPower extends PowerType<ModifyBreakSpeedPower
         Optional<AttributeModifier> modifier,
         Optional<List<AttributeModifier>> modifiers,
         Optional<AttributeModifier> hardnessModifier,
-        Optional<List<AttributeModifier>> hardnessModifiers
+        Optional<List<AttributeModifier>> hardnessModifiers,
+        Optional<ConnectedBlocks> connectedBlocks
     ) {}
 
     @Override
@@ -25,7 +27,8 @@ public final class ModifyBreakSpeedPower extends PowerType<ModifyBreakSpeedPower
             AttributeModifier.CODEC.optionalFieldOf("modifier").forGetter(Config::modifier),
             AttributeModifier.LIST_OR_SINGLE.optionalFieldOf("modifiers").forGetter(Config::modifiers),
             AttributeModifier.CODEC.optionalFieldOf("hardness_modifier").forGetter(Config::hardnessModifier),
-            AttributeModifier.LIST_OR_SINGLE.optionalFieldOf("hardness_modifiers").forGetter(Config::hardnessModifiers)
+            AttributeModifier.LIST_OR_SINGLE.optionalFieldOf("hardness_modifiers").forGetter(Config::hardnessModifiers),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("connected_blocks", ConnectedBlocks.CODEC).forGetter(Config::connectedBlocks)
         ).apply(i, Config::new));
     }
 }

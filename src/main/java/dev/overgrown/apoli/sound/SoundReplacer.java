@@ -23,7 +23,14 @@ public final class SoundReplacer {
     @FunctionalInterface
     public interface Emitter {
         void play(SoundEvent sound, float volume, float pitch);
+
+        default void layer(SoundEvent sound, float volume, float pitch) {
+            play(sound, volume, pitch);
+        }
     }
+
+    private static final Comparator<ReplaceSoundPower.Config> BY_PRIORITY =
+        Comparator.comparingInt(ReplaceSoundPower.Config::priority).reversed();
 
     private SoundReplacer() {}
 
@@ -55,49 +62,60 @@ public final class SoundReplacer {
 
     private static void apply(ResourceLocation typeId, @Nullable Entity holder, SoundEvent sound,
                               float volume, float pitch, boolean runActions, Emitter emitter) {
-        List<Entry> entries = collect(typeId, holder);
+        List<ReplaceSoundPower.Config> entries = collect(typeId, holder);
         if (entries.isEmpty()) {
             emitter.play(sound, volume, pitch);
             return;
         }
 
         RandomSource random = holder.level().random;
+        ResourceLocation soundId = sound.getLocation();
         EntityCtx ctx = null;
-        boolean handled = false;
+        WeightedSound replacement = null;
+        WeightedSound[] layers = null;
+        int layerCount = 0;
 
         for (int i = 0; i < entries.size(); i++) {
-            ReplaceSoundPower.Config cfg = entries.get(i).config();
-            WeightedSound replacement = cfg.sounds().find(sound.getLocation(), random);
-            if (replacement == null) continue;
+            ReplaceSoundPower.Config cfg = entries.get(i);
+            WeightedSound picked = cfg.sounds().find(soundId, random);
+            if (picked == null) continue;
 
             if (runActions && cfg.entityAction().isPresent()) {
                 if (ctx == null) ctx = new EntityCtx(holder, holder.level());
                 cfg.entityAction().get().run(ctx);
             }
 
-            if (!replacement.mutes()) {
-                SoundEvent replaced = resolve(replacement.id(), sound);
-                if (replaced != null) {
-                    emitter.play(replaced, replacement.volumeOr(volume), replacement.pitchOr(pitch));
-                }
+            if (cfg.replace()) {
+                replacement = picked;
+                break;
             }
-            if (cfg.replace()) return;
-            handled = true;
+            if (layers == null) layers = new WeightedSound[entries.size() - i];
+            layers[layerCount++] = picked;
         }
 
-        if (!handled) emitter.play(sound, volume, pitch);
+        if (replacement == null) emitter.play(sound, volume, pitch);
+        else emit(emitter, replacement, volume, pitch, false);
+        for (int i = 0; i < layerCount; i++) {
+            emit(emitter, layers[i], volume, pitch, true);
+        }
     }
 
-    private record Entry(ResourceLocation powerId, ReplaceSoundPower.Config config) {}
+    private static void emit(Emitter emitter, WeightedSound picked, float volume, float pitch, boolean layered) {
+        if (picked.mutes()) return;
+        SoundEvent resolved = resolve(picked.id());
+        if (resolved == null) return;
+        if (layered) emitter.layer(resolved, picked.volumeOr(volume), picked.pitchOr(pitch));
+        else emitter.play(resolved, picked.volumeOr(volume), picked.pitchOr(pitch));
+    }
 
-    private static List<Entry> collect(ResourceLocation typeId, @Nullable Entity holder) {
+    private static List<ReplaceSoundPower.Config> collect(ResourceLocation typeId, @Nullable Entity holder) {
         if (holder == null) return List.of();
         PowerContainer container = PowerContainer.of(holder);
         if (container == null || container.isEmpty()) return List.of();
         List<ResourceLocation> powers = container.powersOfType(typeId);
         if (powers.isEmpty()) return List.of();
 
-        List<Entry> entries = null;
+        List<ReplaceSoundPower.Config> entries = null;
         EntityCtx ctx = null;
         for (int i = 0; i < powers.size(); i++) {
             ResourceLocation powerId = powers.get(i);
@@ -110,16 +128,14 @@ public final class SoundReplacer {
                 if (!power.condition().get().test(ctx)) continue;
             }
             if (entries == null) entries = new ArrayList<>(2);
-            entries.add(new Entry(powerId, cfg));
+            entries.add(cfg);
         }
         if (entries == null) return List.of();
-        if (entries.size() > 1) {
-            entries.sort(Comparator.comparingInt((Entry e) -> e.config().priority()).reversed());
-        }
+        if (entries.size() > 1) entries.sort(BY_PRIORITY);
         return entries;
     }
 
-    private static @Nullable SoundEvent resolve(String id, SoundEvent original) {
+    private static @Nullable SoundEvent resolve(String id) {
         ResourceLocation location = ResourceLocation.tryParse(id);
         if (location == null) return null;
         SoundEvent registered = BuiltInRegistries.SOUND_EVENT.get(location);

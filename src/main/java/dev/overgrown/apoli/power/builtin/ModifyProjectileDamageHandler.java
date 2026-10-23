@@ -8,7 +8,6 @@ import dev.overgrown.apoli.data.AttributeModifierHelper;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
-import dev.overgrown.apoli.power.PowerTypeRegistry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
@@ -44,15 +43,18 @@ public final class ModifyProjectileDamageHandler {
         if (shooter == null) return amount;
         if (!isProjectile(source) && !fromActiveProjectile(shooter)) return amount;
         PowerContainer container = PowerContainer.of(shooter);
-        if (container == null) return amount;
+        if (container == null || container.isEmpty()) return amount;
+        List<ResourceLocation> powers = container.powersOfType(CANONICAL);
+        boolean transferred = AttributeModifyTransferPower.PROJECTILE_DAMAGE.appliesTo(container);
+        if (powers.isEmpty() && !transferred) return amount;
 
         DamageCtx damageCtx = new DamageCtx(source, target, level, amount);
         List<ModifyProjectileDamagePower.Config> matches = new ArrayList<>();
-        for (ResourceLocation powerId : container.allPowers()) {
+        for (int i = 0, n = powers.size(); i < n; i++) {
+            ResourceLocation powerId = powers.get(i);
             Power power = ApoliPowers.get(powerId);
             if (power == null) continue;
             if (container.isSuppressed(powerId)) continue;
-            if (!CANONICAL.equals(PowerTypeRegistry.resolveId(power.typeId()))) continue;
             if (!(power.config() instanceof ModifyProjectileDamagePower.Config cfg)) continue;
             if (power.condition().isPresent()
                 && !power.condition().get().test(new EntityCtx(shooter, level))) continue;
@@ -62,12 +64,12 @@ public final class ModifyProjectileDamageHandler {
                 && !cfg.targetCondition().get().test(new EntityCtx(target, level))) continue;
             matches.add(cfg);
         }
-        if (matches.isEmpty()) return amount;
-
         List<AttributeModifier> allMods = new ArrayList<>();
         for (ModifyProjectileDamagePower.Config cfg : matches) {
             allMods.addAll(AttributeModifierHelper.flatten(cfg.modifier(), cfg.modifiers()));
         }
+        if (transferred) allMods = AttributeModifyTransferPower.PROJECTILE_DAMAGE.merge(shooter, container, allMods);
+        if (matches.isEmpty() && allMods.isEmpty()) return amount;
         float modified = (float) AttributeModifierHelper.apply(amount, allMods, shooter, container, shooter, target);
 
         if (runActions) {

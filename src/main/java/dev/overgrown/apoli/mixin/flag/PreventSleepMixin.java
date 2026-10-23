@@ -2,41 +2,48 @@ package dev.overgrown.apoli.mixin.flag;
 
 import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Unit;
-import dev.overgrown.apoli.Apoli;
-import dev.overgrown.apoli.condition.context.BlockCtx;
-import dev.overgrown.apoli.power.PowerLookup;
-import dev.overgrown.apoli.power.builtin.PreventSleepPower;
-import dev.overgrown.apoli.power.ApoliIds;
+import dev.overgrown.apoli.power.builtin.PreventSleepHandler;
+import dev.overgrown.apoli.power.builtin.SleepDecisionHolder;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(Player.class)
-public abstract class PreventSleepMixin {
-    @Inject(method = "startSleepInBed", at = @At("HEAD"), cancellable = true)
-    private void apoli$preventSleep(BlockPos pos, CallbackInfoReturnable<Either<Player.BedSleepingProblem, Unit>> cir) {
-        Player self = (Player) (Object) this;
-        Level level = self.level();
-        BlockState state = level.getBlockState(pos);
-        BlockCtx ctx = new BlockCtx(pos.immutable(), state, level);
-        PreventSleepPower.Config[] best = new PreventSleepPower.Config[]{null};
-        PowerLookup.forEach(self, ApoliIds.PREVENT_SLEEP, PreventSleepPower.Config.class, cfg -> {
-            if (cfg.blockCondition().isPresent() && !cfg.blockCondition().get().test(ctx)) return;
-            if (best[0] == null || cfg.priority() > best[0].priority()) {
-                best[0] = cfg;
-            }
-        });
-        if (best[0] == null) return;
-        if (self instanceof ServerPlayer sp) {
-            sp.displayClientMessage(best[0].message(), true);
-        }
-        cir.setReturnValue(Either.left(Player.BedSleepingProblem.OTHER_PROBLEM));
+@Mixin(ServerPlayer.class)
+public abstract class PreventSleepMixin implements SleepDecisionHolder {
+    @Unique
+    private PreventSleepHandler.Decision apoli$sleepDecision;
+
+    @Inject(method = "startSleepInBed(Lnet/minecraft/core/BlockPos;)Lcom/mojang/datafixers/util/Either;", at = @At("HEAD"))
+    private void apoli$decideSleep(BlockPos pos, CallbackInfoReturnable<Either<Player.BedSleepingProblem, Unit>> cir) {
+        this.apoli$sleepDecision = PreventSleepHandler.decide((ServerPlayer) (Object) this, pos);
+    }
+
+    @Inject(method = "startSleepInBed(Lnet/minecraft/core/BlockPos;)Lcom/mojang/datafixers/util/Either;", at = @At("RETURN"))
+    private void apoli$forgetSleep(BlockPos pos, CallbackInfoReturnable<Either<Player.BedSleepingProblem, Unit>> cir) {
+        this.apoli$sleepDecision = null;
+    }
+
+    @Inject(method = "setRespawnPosition(Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/core/BlockPos;FZZ)V",
+        at = @At("HEAD"), cancellable = true)
+    private void apoli$keepSpawn(ResourceKey<Level> dimension, @Nullable BlockPos pos, float angle, boolean forced,
+                                 boolean sendMessage, CallbackInfo ci) {
+        PreventSleepHandler.Decision decision = this.apoli$sleepDecision;
+        if (decision != null && !decision.setsSpawn() && decision.pos().equals(pos)) ci.cancel();
+    }
+
+    @Override
+    public PreventSleepHandler.Decision apoli$takeSleepDecision() {
+        PreventSleepHandler.Decision decision = this.apoli$sleepDecision;
+        this.apoli$sleepDecision = null;
+        return decision;
     }
 }

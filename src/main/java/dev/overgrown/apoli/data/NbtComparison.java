@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.data;
 
+import net.minecraft.nbt.CollectionTag;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NumericTag;
@@ -43,6 +44,31 @@ public final class NbtComparison {
             return expectedNum.getAsDouble() == actualNum.getAsDouble();
         }
         return expected.equals(actual);
+    }
+
+    public static boolean sameValue(Tag a, Tag b) {
+        if (a == b) return true;
+        if (a == null || b == null) return false;
+        if (a instanceof CompoundTag aCompound) {
+            if (!(b instanceof CompoundTag bCompound) || aCompound.size() != bCompound.size()) return false;
+            for (String key : aCompound.getAllKeys()) {
+                if (!sameValue(aCompound.get(key), bCompound.get(key))) return false;
+            }
+            return true;
+        }
+        if (a instanceof CollectionTag<?> aList) {
+            if (!(b instanceof CollectionTag<?> bList) || aList.size() != bList.size()) return false;
+            for (int i = 0; i < aList.size(); i++) {
+                if (!sameValue(aList.get(i), bList.get(i))) return false;
+            }
+            return true;
+        }
+        if (a instanceof NumericTag aNum) {
+            if (!(b instanceof NumericTag bNum)) return false;
+            if (isIntegral(a) && isIntegral(b)) return aNum.getAsLong() == bNum.getAsLong();
+            return aNum.getAsDouble() == bNum.getAsDouble();
+        }
+        return a.equals(b);
     }
 
     private static boolean isIntegral(Tag tag) {

@@ -1,12 +1,12 @@
 package dev.overgrown.apoli.power.builtin;
 
-import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.condition.EntityCondition;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.BodyPart;
+import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.power.PowerLookup;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
@@ -20,10 +20,68 @@ import java.util.Optional;
 public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
     public static final ResourceLocation CANONICAL = Apoli.id("model_color");
 
-    public record PartColor(BodyPart part, float red, float green, float blue, float alpha,
-                            boolean whiten, Optional<EntityCondition> condition) {}
+    public record Tint(Expression red, Expression green, Expression blue, Expression alpha, boolean explicitRgb) {
+        private static final Expression ONE = Expression.constant(1);
 
-    public record Config(float red, float green, float blue, float alpha, boolean whiten, List<PartColor> parts) {
+        public static final MapCodec<Tint> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("red").forGetter(t -> t.channel(t.red())),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("green").forGetter(t -> t.channel(t.green())),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("blue").forGetter(t -> t.channel(t.blue())),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("alpha", ONE).forGetter(Tint::alpha)
+        ).apply(i, (r, g, b, alpha) -> new Tint(r.orElse(ONE), g.orElse(ONE), b.orElse(ONE), alpha,
+            r.isPresent() && g.isPresent() && b.isPresent())));
+
+        private Optional<Expression> channel(Expression value) {
+            boolean one = value.constantValue().isPresent() && value.constantValue().getAsDouble() == 1.0;
+            return explicitRgb || !one ? Optional.of(value) : Optional.empty();
+        }
+
+        public float red(@Nullable Entity entity) {
+            return (float) red.eval(entity);
+        }
+
+        public float green(@Nullable Entity entity) {
+            return (float) green.eval(entity);
+        }
+
+        public float blue(@Nullable Entity entity) {
+            return (float) blue.eval(entity);
+        }
+
+        public float alpha(@Nullable Entity entity) {
+            return (float) alpha.eval(entity);
+        }
+
+        public boolean whitens(float r, float g, float b) {
+            return explicitRgb && r >= 0.999f && g >= 0.999f && b >= 0.999f;
+        }
+
+        public void resolve(@Nullable Entity entity, float[] out) {
+            float r = red(entity);
+            float g = green(entity);
+            float b = blue(entity);
+            out[0] = r;
+            out[1] = g;
+            out[2] = b;
+            out[3] = alpha(entity);
+            out[4] = whitens(r, g, b) ? 1f : 0f;
+        }
+
+        public void applyTo(@Nullable Entity entity, float[] rgba) {
+            float r = red(entity);
+            float g = green(entity);
+            float b = blue(entity);
+            rgba[0] *= r;
+            rgba[1] *= g;
+            rgba[2] *= b;
+            rgba[3] *= alpha(entity);
+            if (whitens(r, g, b)) rgba[4] = 1f;
+        }
+    }
+
+    public record PartColor(BodyPart part, Tint tint, Optional<EntityCondition> condition) {}
+
+    public record Config(Tint tint, List<PartColor> parts) {
         public boolean hasParts() {
             return !parts.isEmpty();
         }
@@ -33,35 +91,18 @@ public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
 
     private static final ThreadLocal<List<Config>> CONFIGS = ThreadLocal.withInitial(() -> new ArrayList<>(2));
 
-    private static Optional<Float> channel(float value, boolean whiten) {
-        return whiten || value != 1f ? Optional.of(value) : Optional.empty();
-    }
-
-    private static boolean explicitWhite(Optional<Float> r, Optional<Float> g, Optional<Float> b) {
-        return r.isPresent() && g.isPresent() && b.isPresent()
-            && r.get() >= 0.999f && g.get() >= 0.999f && b.get() >= 0.999f;
-    }
-
     private static final MapCodec<PartColor> PART_COLOR_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
         BodyPart.CODEC.fieldOf("part").forGetter(PartColor::part),
-        Codec.FLOAT.optionalFieldOf("red").forGetter(pc -> channel(pc.red(), pc.whiten())),
-        Codec.FLOAT.optionalFieldOf("green").forGetter(pc -> channel(pc.green(), pc.whiten())),
-        Codec.FLOAT.optionalFieldOf("blue").forGetter(pc -> channel(pc.blue(), pc.whiten())),
-        Codec.FLOAT.optionalFieldOf("alpha", 1f).forGetter(PartColor::alpha),
+        Tint.MAP_CODEC.forGetter(PartColor::tint),
         dev.overgrown.apoli.codec.LoggedOptionalField.strict("condition", EntityCondition.CODEC).forGetter(PartColor::condition)
-    ).apply(i, (part, r, g, b, alpha, condition) -> new PartColor(
-        part, r.orElse(1f), g.orElse(1f), b.orElse(1f), alpha, explicitWhite(r, g, b), condition)));
+    ).apply(i, PartColor::new));
 
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.FLOAT.optionalFieldOf("red").forGetter(c -> channel(c.red(), c.whiten())),
-            Codec.FLOAT.optionalFieldOf("green").forGetter(c -> channel(c.green(), c.whiten())),
-            Codec.FLOAT.optionalFieldOf("blue").forGetter(c -> channel(c.blue(), c.whiten())),
-            Codec.FLOAT.optionalFieldOf("alpha", 1f).forGetter(Config::alpha),
+            Tint.MAP_CODEC.forGetter(Config::tint),
             PART_COLOR_CODEC.codec().listOf().optionalFieldOf("parts", List.of()).forGetter(Config::parts)
-        ).apply(i, (r, g, b, alpha, parts) -> new Config(
-            r.orElse(1f), g.orElse(1f), b.orElse(1f), alpha, explicitWhite(r, g, b), parts)));
+        ).apply(i, Config::new));
     }
 
     public static float[] colorFor(@Nullable Entity entity) {
@@ -73,11 +114,7 @@ public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
             Config cfg = configs.get(i);
             if (cfg.hasParts()) continue;
             if (rgba == null) rgba = new float[]{1f, 1f, 1f, 1f, 0f};
-            rgba[0] *= cfg.red();
-            rgba[1] *= cfg.green();
-            rgba[2] *= cfg.blue();
-            rgba[3] *= cfg.alpha();
-            if (cfg.whiten()) rgba[4] = 1f;
+            cfg.tint().applyTo(entity, rgba);
         }
         configs.clear();
         return rgba == null ? IDENTITY : rgba;
@@ -97,11 +134,7 @@ public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
         for (int i = 0; i < configs.size(); i++) {
             Config cfg = configs.get(i);
             if (!cfg.hasParts()) {
-                whole[0] *= cfg.red();
-                whole[1] *= cfg.green();
-                whole[2] *= cfg.blue();
-                whole[3] *= cfg.alpha();
-                if (cfg.whiten()) whole[4] = 1f;
+                cfg.tint().applyTo(entity, whole);
                 continue;
             }
             List<PartColor> partList = cfg.parts();
@@ -149,7 +182,7 @@ public final class ModelColorPower extends PowerType<ModelColorPower.Config> {
         parts.clear();
         collectPartColors(entity, parts);
         for (int i = 0; i < parts.size(); i++) {
-            min = Math.min(min, parts.get(i).alpha());
+            min = Math.min(min, parts.get(i).tint().alpha(entity));
         }
         parts.clear();
         return min;

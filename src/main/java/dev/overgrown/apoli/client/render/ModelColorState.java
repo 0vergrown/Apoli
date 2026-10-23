@@ -136,7 +136,7 @@ public final class ModelColorState {
                 || this.whole[3] != 1f || this.whole[4] != 0f;
             float min = this.whole[3];
             for (int i = 0; i < this.partColors.size(); i++) {
-                min = Math.min(min, this.partColors.get(i).alpha());
+                min = Math.min(min, this.partColors.get(i).tint().alpha(source));
             }
             this.minAlpha = min;
             return true;

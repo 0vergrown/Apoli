@@ -17,7 +17,7 @@ public class LivingEntityCustomEffectMixin {
     private void apoli$onRemoveEffect(MobEffectInstance mobEffectInstance, CallbackInfo ci) {
         if (!(mobEffectInstance.getEffect().value() instanceof CustomMobEffect effect)) return;
         PowerContainer holder = PowerContainer.of((LivingEntity) (Object) this);
-        if (holder != null) holder.removeAllFromSource(effect.id);
+        if (holder != null) effect.revokePowers(holder);
     }
 
     @Inject(method = "canBeAffected", at = @At(value = "HEAD"), cancellable = true)

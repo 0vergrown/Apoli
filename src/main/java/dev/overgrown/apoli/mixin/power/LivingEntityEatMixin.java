@@ -1,5 +1,7 @@
 package dev.overgrown.apoli.mixin.power;
 
+import com.llamalad7.mixinextras.sugar.Share;
+import com.llamalad7.mixinextras.sugar.ref.LocalRef;
 import dev.overgrown.apoli.power.builtin.ModifyFoodHandler;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -27,9 +29,19 @@ public abstract class LivingEntityEatMixin {
 
     @Inject(
         method = "eat(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/food/FoodProperties;)Lnet/minecraft/world/item/ItemStack;",
+        at = @At("HEAD"))
+    private void apoli$beforeEat(Level level, ItemStack stack, FoodProperties properties,
+                                 CallbackInfoReturnable<ItemStack> cir,
+                                 @Share("apoli$eaten") LocalRef<ModifyFoodHandler.Eaten> eaten) {
+        eaten.set(ModifyFoodHandler.beforeEat((LivingEntity) (Object) this, stack));
+    }
+
+    @Inject(
+        method = "eat(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/food/FoodProperties;)Lnet/minecraft/world/item/ItemStack;",
         at = @At("RETURN"))
     private void apoli$afterEat(Level level, ItemStack stack, FoodProperties properties,
-                                CallbackInfoReturnable<ItemStack> cir) {
-        ModifyFoodHandler.afterEat((LivingEntity) (Object) this, stack);
+                                CallbackInfoReturnable<ItemStack> cir,
+                                @Share("apoli$eaten") LocalRef<ModifyFoodHandler.Eaten> eaten) {
+        ModifyFoodHandler.afterEat((LivingEntity) (Object) this, stack, eaten.get());
     }
 }

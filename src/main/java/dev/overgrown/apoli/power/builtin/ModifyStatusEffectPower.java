@@ -54,8 +54,10 @@ public final class ModifyStatusEffectPower extends PowerType<ModifyStatusEffectP
     public static MobEffectInstance apply(LivingEntity entity, MobEffectInstance original) {
         PowerContainer container = PowerContainer.of(entity);
         if (container == null || container.isEmpty()) return original;
-        boolean anyAmplifier = !container.powersOfType(ApoliIds.MODIFY_STATUS_EFFECT_AMPLIFIER).isEmpty();
-        boolean anyDuration = !container.powersOfType(ApoliIds.MODIFY_STATUS_EFFECT_DURATION).isEmpty();
+        boolean anyAmplifier = !container.powersOfType(ApoliIds.MODIFY_STATUS_EFFECT_AMPLIFIER).isEmpty()
+            || AttributeModifyTransferPower.STATUS_EFFECT_AMPLIFIER.appliesTo(container);
+        boolean anyDuration = !container.powersOfType(ApoliIds.MODIFY_STATUS_EFFECT_DURATION).isEmpty()
+            || AttributeModifyTransferPower.STATUS_EFFECT_DURATION.appliesTo(container);
         if (!anyAmplifier && !anyDuration) return original;
 
         Holder<MobEffect> effect = original.getEffect();
@@ -63,10 +65,12 @@ public final class ModifyStatusEffectPower extends PowerType<ModifyStatusEffectP
         if (effectId == null) return original;
 
         int amplifier = anyAmplifier
-            ? Math.round(collect(entity, ApoliIds.MODIFY_STATUS_EFFECT_AMPLIFIER, effectId, original.getAmplifier()))
+            ? Math.round(collect(entity, container, ApoliIds.MODIFY_STATUS_EFFECT_AMPLIFIER,
+                AttributeModifyTransferPower.STATUS_EFFECT_AMPLIFIER, effectId, original.getAmplifier()))
             : original.getAmplifier();
         int duration = anyDuration
-            ? Math.round(collect(entity, ApoliIds.MODIFY_STATUS_EFFECT_DURATION, effectId, original.getDuration()))
+            ? Math.round(collect(entity, container, ApoliIds.MODIFY_STATUS_EFFECT_DURATION,
+                AttributeModifyTransferPower.STATUS_EFFECT_DURATION, effectId, original.getDuration()))
             : original.getDuration();
 
         if (amplifier == original.getAmplifier() && duration == original.getDuration()) return original;
@@ -74,12 +78,16 @@ public final class ModifyStatusEffectPower extends PowerType<ModifyStatusEffectP
             original.isAmbient(), original.isVisible(), original.showIcon());
     }
 
-    private static float collect(LivingEntity entity, ResourceLocation typeId, ResourceLocation effectId, float base) {
-        List<AttributeModifier> mods = new ArrayList<>();
+    private static float collect(LivingEntity entity, PowerContainer container, ResourceLocation typeId,
+                                 AttributeModifyTransferPower.Target transfers, ResourceLocation effectId, float base) {
+        List<AttributeModifier> collected = new ArrayList<>();
         PowerLookup.forEach(entity, typeId, Config.class, cfg -> {
             if (!cfg.applies(effectId)) return;
-            mods.addAll(AttributeModifierHelper.flatten(cfg.modifier(), cfg.modifiers()));
+            collected.addAll(AttributeModifierHelper.flatten(cfg.modifier(), cfg.modifiers()));
         });
+        List<AttributeModifier> mods = transfers.appliesTo(container)
+            ? transfers.merge(entity, container, collected)
+            : collected;
         if (mods.isEmpty()) return base;
         return AttributeModifierHelper.apply(base, AttributeModifierHelper.ensureSorted(mods), entity);
     }

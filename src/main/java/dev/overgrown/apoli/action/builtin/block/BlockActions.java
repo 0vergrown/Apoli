@@ -21,6 +21,7 @@ public final class BlockActions {
         ActionTypes.BLOCK.register(Apoli.id("tick_rate"), new TickRateBlockAction());
         ActionTypes.BLOCK.register(Apoli.id("offset"), new OffsetBlockMetaAction());
         ActionTypes.BLOCK.register(Apoli.id("area_of_effect"), new AreaOfEffectBlockMetaAction());
+        ActionTypes.BLOCK.register(Apoli.id("connected_blocks"), new ConnectedBlocksBlockMetaAction());
 
         ActionTypes.BLOCK.register(Apoli.id("script"), new ScriptBlockAction());
     }

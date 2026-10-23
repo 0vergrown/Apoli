@@ -33,7 +33,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public final class ApoliNetwork {
 
-    private static final String PROTOCOL_VERSION = "17";
+    private static final String PROTOCOL_VERSION = "18";
 
     private ApoliNetwork() {}
 
