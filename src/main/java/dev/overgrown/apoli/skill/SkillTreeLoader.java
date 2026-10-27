@@ -7,21 +7,29 @@ import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.JsonOps;
 import dev.overgrown.apoli.loader.IdWildcards;
+import dev.overgrown.apoli.loader.JsonFormatParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
+import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public final class SkillTreeLoader extends SimpleJsonResourceReloadListener {
+public final class SkillTreeLoader extends SimplePreparableReloadListener<Map<ResourceLocation, JsonElement>> {
     private static final Logger LOG = LogUtils.getLogger();
     private static final Gson GSON = new GsonBuilder().setLenient().create();
+    private static final String DIR = "skill_trees";
 
     public SkillTreeLoader() {
-        super(GSON, "skill_trees");
+        super();
+    }
+
+    @Override
+    protected @NotNull Map<ResourceLocation, JsonElement> prepare(ResourceManager resourceManager, ProfilerFiller profilerFiller) {
+        return JsonFormatParser.apply(resourceManager, DIR, GSON, LOG);
     }
 
     @Override
