@@ -3,6 +3,9 @@ package dev.overgrown.apoli.power.builtin;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.overgrown.apoli.codec.LoggedOptionalField;
+import dev.overgrown.apoli.condition.BiomeCondition;
+import dev.overgrown.apoli.condition.BlockCondition;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.codec.IdCodecs;
@@ -20,9 +23,13 @@ public final class ModifyPlayerSpawnPower extends PowerType<ModifyPlayerSpawnPow
     public record Config(
         ResourceLocation dimension,
         Optional<ResourceLocation> biome,
+        Optional<BiomeCondition> biomeCondition,
         Optional<ResourceLocation> structure,
+        Optional<ResourceLocation> structureTag,
+        Optional<BlockCondition> blockCondition,
         SpawnStrategy spawnStrategy,
-        Optional<Float> dimensionDistanceMultiplier
+        Optional<Float> dimensionDistanceMultiplier,
+        int searchRadius
     ) {}
 
     public enum SpawnStrategy implements StringRepresentable {
@@ -55,9 +62,13 @@ public final class ModifyPlayerSpawnPower extends PowerType<ModifyPlayerSpawnPow
         return RecordCodecBuilder.mapCodec(i -> i.group(
             IdCodecs.ID.fieldOf("dimension").forGetter(Config::dimension),
             IdCodecs.ID.optionalFieldOf("biome").forGetter(Config::biome),
+            LoggedOptionalField.of("biome_condition", BiomeCondition.CODEC).forGetter(Config::biomeCondition),
             IdCodecs.ID.optionalFieldOf("structure").forGetter(Config::structure),
+            IdCodecs.TAG.optionalFieldOf("structure_tag").forGetter(Config::structureTag),
+            LoggedOptionalField.of("block_condition", BlockCondition.CODEC).forGetter(Config::blockCondition),
             SpawnStrategy.CODEC.optionalFieldOf("spawn_strategy", SpawnStrategy.DEFAULT).forGetter(Config::spawnStrategy),
-            Codec.FLOAT.optionalFieldOf("dimension_distance_multiplier").forGetter(Config::dimensionDistanceMultiplier)
+            Codec.FLOAT.optionalFieldOf("dimension_distance_multiplier").forGetter(Config::dimensionDistanceMultiplier),
+            Codec.INT.optionalFieldOf("search_radius", 64).forGetter(Config::searchRadius)
         ).apply(i, Config::new));
     }
 
