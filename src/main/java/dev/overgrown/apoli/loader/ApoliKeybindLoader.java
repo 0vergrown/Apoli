@@ -12,14 +12,15 @@ import dev.overgrown.apoli.network.payload.SyncKeybindsS2C;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
+import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public final class ApoliKeybindLoader extends SimpleJsonResourceReloadListener {
+public final class ApoliKeybindLoader extends SimplePreparableReloadListener<Map<ResourceLocation, JsonElement>> {
     private static final Logger LOG = LogUtils.getLogger();
     private static final Gson GSON = new GsonBuilder().setLenient().create();
     private static final String DIR = "keybinds";
@@ -27,7 +28,12 @@ public final class ApoliKeybindLoader extends SimpleJsonResourceReloadListener {
     private MinecraftServer server;
 
     public ApoliKeybindLoader() {
-        super(GSON, DIR);
+        super();
+    }
+
+    @Override
+    protected @NotNull Map<ResourceLocation, JsonElement> prepare(ResourceManager resourceManager, ProfilerFiller profilerFiller) {
+        return JsonFormatParser.apply(resourceManager, DIR, GSON, LOG);
     }
 
     public void attachServer(MinecraftServer server) {
