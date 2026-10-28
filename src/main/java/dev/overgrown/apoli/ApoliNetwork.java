@@ -250,6 +250,10 @@ public final class ApoliNetwork {
         for (ServerPlayer p : level.players()) send(p, RopeCreateS2C.CHANNEL, payload::write);
     }
 
+    public static void sendRopeCreate(ServerPlayer recipient, RopeCreateS2C payload) {
+        send(recipient, RopeCreateS2C.CHANNEL, payload::write);
+    }
+
     public static void broadcastRopeDelete(net.minecraft.server.level.ServerLevel level, RopeDeleteS2C payload) {
         for (ServerPlayer p : level.players()) send(p, RopeDeleteS2C.CHANNEL, payload::write);
     }

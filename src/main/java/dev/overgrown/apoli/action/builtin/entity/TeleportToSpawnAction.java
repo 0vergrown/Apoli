@@ -8,6 +8,7 @@ import dev.overgrown.apoli.action.EntityAction;
 import dev.overgrown.apoli.codec.LoggedOptionalField;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.entity.TeleportHelper;
+import dev.overgrown.apoli.power.builtin.ModifyPlayerSpawnHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -51,7 +52,7 @@ public final class TeleportToSpawnAction implements ActionType<EntityCtx, Telepo
         float yaw = 0.0F;
 
         if (cfg.playerSpawn && entity instanceof ServerPlayer player) {
-            BlockPos respawn = player.getRespawnPosition();
+            BlockPos respawn = ModifyPlayerSpawnHandler.respawnPosition(player, player.getRespawnPosition());
             ResourceKey<Level> dimension = player.getRespawnDimension();
             ServerLevel respawnLevel = respawn == null ? null : server.getLevel(dimension);
             if (respawnLevel != null) {

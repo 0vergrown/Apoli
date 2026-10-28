@@ -9,10 +9,6 @@ group = project.maven_group
 loom {
 	runs {
 		client {
-			// Pin a stable dev username so runClient reuses the same offline UUID (and player save)
-			// each launch. Without it Loom assigns a random "PlayerNNN" per run → a brand-new player
-			// save every time → resources/origins/inventory all look "reset" on relog. That is a dev
-			// harness artifact, NOT a real persistence bug (NeoForge dev already uses a fixed "Dev").
 			programArgs("--username", "Dev")
 		}
 	}
@@ -28,7 +24,6 @@ repositories {
 			includeGroup "dev.engine-room.vanillin"
 		}
 	}
-	// Icarus (optional compile-time dependency for the apoli:wings compat power type).
 	maven {
 		name = "Modrinth"
 		url = "https://api.modrinth.com/maven"
@@ -36,22 +31,18 @@ repositories {
 			includeGroup "maven.modrinth"
 		}
 	}
-	// Trinkets (accessory-slot compat backend).
 	maven {
 		name = "TerraformersMC"
 		url = "https://maven.terraformersmc.com/releases"
 	}
-	// Cardinal Components API — Trinkets' transitive dependency.
 	maven {
 		name = "Ladysnake"
 		url = "https://maven.ladysnake.org/releases"
 	}
-	// Accessories (accessory-slot compat backend).
 	maven {
 		name = "Wispforest"
 		url = "https://maven.wispforest.io/releases"
 	}
-	// Blay09 mods (Balm) for the revival compat.
 	maven {
 		name = "TwelveIterations"
 		url = "https://maven.twelveiterations.com/repository/maven-public/"
@@ -60,11 +51,12 @@ repositories {
 		name = "Henkel"
 		url = "https://maven.maxhenkel.de/repository/public"
 	}
+
 	maven {
 		name = "QuiltMC"
 		url = "https://maven.quiltmc.org/repository/release/"
 	}
-	// KubeJS + Rhino (optional compile-time dependency for the apoli:script types and ApoliEvents).
+
 	maven {
 		name = "Saps"
 		url = "https://maven.saps.dev/releases"
@@ -73,7 +65,6 @@ repositories {
 			includeGroup "dev.latvian.apps"
 		}
 	}
-	// Rhino for 1.20.1 is only published on LatvianModder's own maven, not on Saps.
 	maven {
 		name = "LatvianDev"
 		url = "https://maven.latvian.dev/releases"
@@ -82,87 +73,47 @@ repositories {
 }
 
 dependencies {
-	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings loom.officialMojangMappings()
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
-	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-	// Icarus — compiled against, never bundled and not a runtime dependency. The apoli:wings power
-	// and its mixins are gated on Icarus being present (ModCompat.ICARUS / IcarusCompatMixinPlugin),
-	// so Apoli runs fine without it. Adjust icarus_version per the Icarus file you target.
 	modCompileOnly "maven.modrinth:icarus:${project.icarus_version}"
 	modCompileOnly "maven.modrinth:icarus-rewinged:${project.icarus_rewinged_version}"
 
-	// Figura (compile-only, optional at runtime) — modify_player_model equips Figura avatars.
-	// Gated at runtime by ModCompat.FIGURA / FiguraCompatMixinPlugin, so Apoli runs fine without it.
 	modCompileOnly "maven.modrinth:figura:${project.figura_version}"
 
-
-	// Trinkets + Accessories (compile-only, optional at runtime) — the unified accessory compat types.
-	// Gated at runtime by ModCompat / the Accessories facade, so Apoli runs fine with neither present.
 	modCompileOnly "dev.emi:trinkets:${project.trinkets_version}"
-	// Exclude the backport's UI-only transitive (cloth-config); not needed to compile against the API.
 	modCompileOnly("io.wispforest:accessories-fabric:${project.accessories_version}") {
 		exclude group: "me.shedaniel.cloth"
 	}
 
-	// Hardcore Revival + Balm (compile-only, optional at runtime) — the revival compat types.
-	// The backported HardcoreRevivalAPI + revive/rescue events only exist in HR 12.0.14-SNAPSHOT, which
-	// is published to the Blay09 maven-snapshots repo behind auth (401) and not in the public group —
-	// so it can't be resolved anonymously. Until an API build is on a public release (or Modrinth), we
-	// compile against the newest public jar (Modrinth 12.0.13) and keep the manager-based 1.20.1 code.
-	// Balm is the released 7.3.39 (its unpublished runtime-only shared-bridge is excluded).
 	modCompileOnly "maven.modrinth:hardcore-revival:${project.hardcore_revival_version}"
 	modCompileOnly("net.blay09.mods:balm-fabric:${project.balm_version}") {
 		exclude group: "net.blay09.mods", module: "shared-bridge"
 	}
 
-	// Mod Menu (compile-only, optional at runtime) — supplies Apoli's in-game settings screen.
-	// The "modmenu" entrypoint is only resolved when Mod Menu is installed, and Menulogue forwards
-	// it to Catalogue. Catalogue on its own goes through custom.catalogue.configFactory instead,
-	// which is reflective and needs no dependency at all.
 	modCompileOnly("com.terraformersmc:modmenu:${project.modmenu_version}") {
 		exclude group: "net.fabricmc.fabric-api"
 	}
 
-	// 3D Skin Layers + Ears (compile-only, optional at runtime) — the render powers that recolour or
-	// replace the player skin have to reach into these mods, because they draw their own geometry
-	// from the raw skin file instead of the vanilla model. Gated by their mixin config plugins.
 	modCompileOnly "maven.modrinth:3dskinlayers:${project.skinlayers_version}"
 	modCompileOnly "maven.modrinth:ears:${project.ears_version}"
 
-	// Pufferfish's Skills (compile-only, optional at runtime) — the skill-tree compat registers the
-	// apoli:power / apoli:modify_resource rewards and lets apoli:grant_skill_tree unlock a Skills
-	// category. Gated by ModCompat.PUFFISH_SKILLS, so Apoli runs fine without it.
 	modCompileOnly "maven.modrinth:skills:${project.puffish_skills_version}"
 
-	// Sodium (compile-only, optional at runtime) — Sodium meshes chunks from its own WorldSlice
-	// instead of vanilla RenderChunkRegion, so apoli:modify_block_render needs a second hook there.
-	// Gated by SodiumCompatMixinPlugin, so Apoli runs fine without it.
 	modCompileOnly "maven.modrinth:sodium:${project.sodium_version}"
 	modCompileOnly "dev.engine-room.flywheel:flywheel-fabric-1.20.1:${project.flywheel_version}"
 	modCompileOnly "dev.engine-room.vanillin:vanillin-fabric-1.20.1:${project.vanillin_version}"
 
-	// You're in Grave Danger and Gravestones (compile-only, optional at runtime) — power inventories and
-	// keep_inventory go through their grave APIs, and the grave shows the GraveInscriptions lines. YIGD's own
-	// OriginsCompat targets upstream Apoli's classes, so it is switched off and replaced.
-	// Gated by ModCompat and the compat mixin plugins, so Apoli runs fine without either.
 	modCompileOnly "maven.modrinth:yigd:${project.yigd_version}"
 	modCompileOnly "maven.modrinth:pneumono_gravestones:${project.gravestones_version}"
 
 	modCompileOnly "me.lucko:fabric-permissions-api:0.3.1"
 
-	// Simple Voice Chat API (compile-only, optional at runtime) — the voice_* conditions and
-	// action_on_speak/reply. The compat plugin is only discovered when SVC is installed (fabric.mod.json
-	// "voicechat" entrypoint), so Apoli runs fine without it.
 	compileOnly "de.maxhenkel.voicechat:voicechat-api:${project.voicechat_api_version}"
 
-	// KubeJS — compiled against, never bundled and not a runtime dependency. The apoli:script types
-	// and the ApoliEvents script API are gated on KubeJS being present (ModCompat.KUBEJS), so Apoli
-	// runs fine without it and apoli:script simply logs that no backend is installed.
 	modCompileOnly("dev.latvian.mods:kubejs-fabric:${project.kubejs_version}") {
 		transitive = false
 	}
@@ -170,8 +121,6 @@ dependencies {
 		transitive = false
 	}
 
-	// Vosk offline speech — the fallback transcriber for browsers without the Web Speech API. JiJ-bundled
-	// via include so it ships with the mod; the user supplies a model at <gamedir>/apoli/vosk-model.
 	implementation "com.alphacephei:vosk:${project.vosk_version}"
 	include "com.alphacephei:vosk:${project.vosk_version}"
 	include "net.java.dev.jna:jna:5.7.0"
@@ -201,9 +150,6 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 java {
-	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-	// if it is present.
-	// If you remove this line, sources will not be generated.
 	withSourcesJar()
 
 	sourceCompatibility = JavaVersion.VERSION_17
@@ -219,17 +165,14 @@ jar {
 	}
 }
 
-// configure the maven publication
 publishing {
 	publications {
 		create("mavenJava", MavenPublication) {
 			from components.java
-			// Publish under the loader+MC-qualified coordinate; the jar/fabric.mod.json keep mod_version.
 			version = project.maven_version
 		}
 	}
 
-	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
 	repositories {
 		// Add repositories to publish to here.
 		// Notice: This block does NOT have the same function as the block in the top level.

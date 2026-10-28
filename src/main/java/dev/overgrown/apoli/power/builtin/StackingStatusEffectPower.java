@@ -12,6 +12,7 @@ import dev.overgrown.apoli.power.PowerContainerImpl;
 import dev.overgrown.apoli.power.PowerType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.List;
@@ -43,7 +44,7 @@ public final class StackingStatusEffectPower extends PowerType<StackingStatusEff
     public void onAdded(ResourceLocation powerId, Config cfg, PowerContainer holder, ResourceLocation source) {
         if (!(holder instanceof PowerContainerImpl impl)) return;
         if (impl.getAuxInt(powerId).isPresent()) return;
-        impl.setAuxInt(powerId, 0);
+        impl.setAuxInt(powerId, Math.min(0, cfg.minStacks));
     }
 
     @Override
@@ -61,22 +62,24 @@ public final class StackingStatusEffectPower extends PowerType<StackingStatusEff
         if (!(holder instanceof PowerContainerImpl impl)) return;
         if (owner.tickCount % cfg.tickRate != 0) return;
         int current = impl.getAuxInt(powerId).orElse(0);
-        boolean active = conditionActive(powerId, owner, level);
-        int next;
-        if (active) {
-            next = Math.min(cfg.maxStacks, current + 1);
-            if (next < cfg.minStacks) next = cfg.minStacks;
-        } else {
-            next = Math.max(0, current - 1);
+        if (conditionActive(powerId, owner, level)) {
+            int next = Mth.clamp(current + 1, cfg.minStacks, cfg.maxStacks);
+            if (next != current) impl.setAuxInt(powerId, next);
+            if (next > 0) applyEffects(owner, cfg, next);
+        } else if (current > cfg.minStacks) {
+            impl.setAuxInt(powerId, Math.min(current - 1, cfg.maxStacks));
         }
-        if (next != current) impl.setAuxInt(powerId, next);
-        if (next > 0) reapplyEffects(owner, cfg, next);
     }
 
-    private static void reapplyEffects(LivingEntity owner, Config cfg, int stacks) {
+    private static void applyEffects(LivingEntity owner, Config cfg, int stacks) {
         int duration = stacks * cfg.durationPerStack;
-        cfg.effect.ifPresent(spec -> owner.addEffect(spec.resolveWithDuration(owner, duration)));
-        cfg.effects.ifPresent(list -> list.forEach(spec -> owner.addEffect(spec.resolveWithDuration(owner, duration))));
+        if (duration <= 0) return;
+        if (cfg.effect.isPresent()) owner.addEffect(cfg.effect.get().resolveWithDuration(owner, duration));
+        if (cfg.effects.isEmpty()) return;
+        List<EffectSpec> list = cfg.effects.get();
+        for (int i = 0, n = list.size(); i < n; i++) {
+            owner.addEffect(list.get(i).resolveWithDuration(owner, duration));
+        }
     }
 
     private static boolean conditionActive(ResourceLocation powerId, LivingEntity owner, ServerLevel level) {

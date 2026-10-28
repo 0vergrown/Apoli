@@ -6,7 +6,6 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.util.Mth;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.Constant;
@@ -17,18 +16,16 @@ public abstract class GameRendererReachMixin {
 
     @ModifyConstant(method = "pick(F)V", constant = @Constant(doubleValue = 3.0))
     private double apoli$entityPickRange(double original) {
-        return apoli$range();
+        return original + apoli$bonus();
     }
 
     @ModifyConstant(method = "pick(F)V", constant = @Constant(doubleValue = 9.0))
     private double apoli$entityPickRangeSquared(double original) {
-        return Mth.square(apoli$range());
+        return ApoliAttributes.extendSquared(original, apoli$bonus());
     }
 
-    private static double apoli$range() {
+    private static double apoli$bonus() {
         LocalPlayer player = Minecraft.getInstance().player;
-        return player == null
-            ? ApoliAttributes.DEFAULT_ENTITY_INTERACTION_RANGE
-            : ApoliAttributes.entityInteractionRange(player);
+        return player == null ? 0.0 : ApoliAttributes.entityInteractionBonus(player);
     }
 }

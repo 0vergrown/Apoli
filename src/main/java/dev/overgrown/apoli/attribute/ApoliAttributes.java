@@ -4,6 +4,7 @@ import dev.overgrown.apoli.Apoli;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -64,6 +65,19 @@ public final class ApoliAttributes {
 
     public static double entityInteractionRange(LivingEntity entity) {
         return valueOf(entity, ENTITY_INTERACTION_RANGE, DEFAULT_ENTITY_INTERACTION_RANGE);
+    }
+
+    public static double blockInteractionBonus(LivingEntity entity) {
+        return blockInteractionRange(entity) - DEFAULT_BLOCK_INTERACTION_RANGE;
+    }
+
+    public static double entityInteractionBonus(LivingEntity entity) {
+        return entityInteractionRange(entity) - DEFAULT_ENTITY_INTERACTION_RANGE;
+    }
+
+    public static double extendSquared(double squaredDistance, double bonus) {
+        if (bonus == 0.0) return squaredDistance;
+        return Mth.square(Math.max(0.0, Math.sqrt(squaredDistance) + bonus));
     }
 
     private static double valueOf(LivingEntity entity, Attribute attribute, double fallback) {

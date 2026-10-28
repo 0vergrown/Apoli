@@ -15,4 +15,6 @@ public interface ModifiedPoseHolder {
 
     @Nullable Pose apoli$getPreviousEntityPose();
     void apoli$setPreviousEntityPose(@Nullable Pose entityPose);
+
+    int apoli$getPoseTicks();
 }

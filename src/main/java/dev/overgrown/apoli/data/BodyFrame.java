@@ -3,6 +3,7 @@ package dev.overgrown.apoli.data;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
@@ -18,7 +19,8 @@ public final class BodyFrame {
     private final float bodyRoll;
     private final double modelScale;
     private final double entityScale;
-    private final boolean crawling;
+    private final double offsetY;
+    private final double offsetZ;
     private final double yawCos;
     private final double yawSin;
     private final double pitchCos;
@@ -27,13 +29,14 @@ public final class BodyFrame {
     private final double rollSin;
 
     private BodyFrame(float bodyYaw, float bodyPitch, float bodyRoll, double modelScale, double entityScale,
-                      boolean crawling) {
+                      double offsetY, double offsetZ) {
         this.bodyYaw = bodyYaw;
         this.bodyPitch = bodyPitch;
         this.bodyRoll = bodyRoll;
         this.modelScale = modelScale;
         this.entityScale = entityScale;
-        this.crawling = crawling;
+        this.offsetY = offsetY;
+        this.offsetZ = offsetZ;
         double yaw = (180.0 - bodyYaw) * DEG_TO_RAD;
         this.yawCos = Math.cos(yaw);
         this.yawSin = Math.sin(yaw);
@@ -57,22 +60,32 @@ public final class BodyFrame {
             : Mth.rotLerp(partialTick, entity.yRotO, entity.getYRot());
         float bodyPitch = 0.0F;
         float bodyRoll = 0.0F;
-        boolean crawling = false;
+        double offsetY = 0.0;
+        double offsetZ = 0.0;
+        double modelScale = entity instanceof Player ? PLAYER_MODEL_SCALE : 1.0;
         if (entity instanceof Player player) {
             float swimAmount = player.getSwimAmount(partialTick);
             float xRot = player.getViewXRot(partialTick);
-            if (player.isFallFlying()) {
-                float ticks = player.getFallFlyingTicks() + tickOffset;
+            Pose forced = EntityPoses.forced(player);
+            boolean forcedGlide = !player.isFallFlying() && forced == Pose.FALL_FLYING;
+            if (player.isFallFlying() || forcedGlide) {
+                float ticks = (forcedGlide ? EntityPoses.forcedTicks(player) : player.getFallFlyingTicks()) + tickOffset;
                 bodyPitch = Mth.clamp(ticks * ticks / 100.0F, 0.0F, 1.0F) * (-90.0F - xRot) * (float) DEG_TO_RAD;
                 bodyRoll = glideRoll(player, partialTick);
             } else if (swimAmount > 0.0F) {
                 float target = player.isInWater() ? -90.0F - xRot : -90.0F;
                 bodyPitch = Mth.lerp(swimAmount, 0.0F, target) * (float) DEG_TO_RAD;
-                crawling = player.isVisuallySwimming();
+                if (player.isVisuallySwimming()) {
+                    offsetY = -1.0;
+                    offsetZ = 0.3;
+                }
+            } else if (forced != null && EntityPoses.movesBody(forced)) {
+                float progress = EntityPoses.progress(player, tickOffset);
+                bodyPitch = EntityPoses.bodyPitch(forced) * progress * (float) DEG_TO_RAD;
+                offsetY = -EntityPoses.bodyDrop(forced) * progress * PIXEL * modelScale;
             }
         }
-        double modelScale = entity instanceof Player ? PLAYER_MODEL_SCALE : 1.0;
-        return new BodyFrame(bodyYaw, bodyPitch, bodyRoll, modelScale, entityScale(entity), crawling);
+        return new BodyFrame(bodyYaw, bodyPitch, bodyRoll, modelScale, entityScale(entity), offsetY, offsetZ);
     }
 
     private static double entityScale(Entity entity) {
@@ -86,11 +99,8 @@ public final class BodyFrame {
     public void modelToWorld(double x, double y, double z, double[] out) {
         double lx = -x * PIXEL * modelScale;
         double ly = (MODEL_ORIGIN - y * PIXEL) * modelScale;
-        double lz = z * PIXEL * modelScale;
-        if (crawling) {
-            ly -= 1.0;
-            lz += 0.3;
-        }
+        double lz = z * PIXEL * modelScale + offsetZ;
+        ly += offsetY;
         toWorld(lx, ly, lz, out);
         out[0] *= entityScale;
         out[1] *= entityScale;
@@ -101,12 +111,8 @@ public final class BodyFrame {
         double scale = entityScale == 0.0 ? 1.0 : entityScale;
         fromWorld(wx / scale, wy / scale, wz / scale, out);
         double lx = out[0];
-        double ly = out[1];
-        double lz = out[2];
-        if (crawling) {
-            ly += 1.0;
-            lz -= 0.3;
-        }
+        double ly = out[1] - offsetY;
+        double lz = out[2] - offsetZ;
         out[0] = -lx / (PIXEL * modelScale);
         out[1] = (MODEL_ORIGIN - ly / modelScale) / PIXEL;
         out[2] = lz / (PIXEL * modelScale);
