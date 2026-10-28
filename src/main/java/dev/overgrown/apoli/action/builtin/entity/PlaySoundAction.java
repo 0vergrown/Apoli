@@ -6,7 +6,9 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.codec.IdCodecs;
-import net.minecraft.core.registries.BuiltInRegistries;
+import dev.overgrown.apoli.data.Expression;
+import dev.overgrown.apoli.sound.SoundVariants;
+import dev.overgrown.apoli.sound.Sounds;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
@@ -47,7 +49,7 @@ public final class PlaySoundAction implements ActionType<EntityCtx, PlaySoundAct
     }
 
     public record Cfg(ResourceLocation sound, Optional<Category> category, float volume, float pitch,
-                      boolean followEntity, Optional<Boolean> global, boolean internal) {
+                      boolean followEntity, Optional<Boolean> global, boolean internal, Optional<Expression> index) {
         public boolean isGlobal() {
             return global.orElse(followEntity);
         }
@@ -62,19 +64,22 @@ public final class PlaySoundAction implements ActionType<EntityCtx, PlaySoundAct
             Codec.FLOAT.optionalFieldOf("pitch", 1.0f).forGetter(Cfg::pitch),
             Codec.BOOL.optionalFieldOf("follow_entity", false).forGetter(Cfg::followEntity),
             Codec.BOOL.optionalFieldOf("global").forGetter(Cfg::global),
-            Codec.BOOL.optionalFieldOf("internal", false).forGetter(Cfg::internal)
+            Codec.BOOL.optionalFieldOf("internal", false).forGetter(Cfg::internal),
+            Expression.INT_OR_EXPR.optionalFieldOf("index").forGetter(Cfg::index)
         ).apply(i, Cfg::new));
     }
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
-        SoundEvent registered = BuiltInRegistries.SOUND_EVENT.get(cfg.sound);
-        if (registered == null) return;
-        SoundEvent event = cfg.isGlobal()
-            ? SoundEvent.createFixedRangeEvent(cfg.sound, Float.MAX_VALUE)
-            : registered;
-
         Entity e = ctx.raw();
+        int index = cfg.index.isPresent() ? cfg.index.get().evalInt(e) : -1;
+        SoundEvent event;
+        if (cfg.isGlobal()) {
+            event = SoundEvent.createFixedRangeEvent(index >= 0 ? SoundVariants.encode(cfg.sound, index) : cfg.sound, Float.MAX_VALUE);
+        } else {
+            event = index >= 0 ? Sounds.variant(cfg.sound, index) : Sounds.event(cfg.sound);
+        }
+
         SoundSource source = cfg.category.map(Category::vanilla).orElse(e.getSoundSource());
         Player except = cfg.internal && e instanceof Player player ? player : null;
 

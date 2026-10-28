@@ -25,6 +25,7 @@ public class VerletRopeState {
     public List<RopePoint> points;
     public double segmentLength;
     public ResourceLocation texture;
+    public boolean visible;
 
     public VerletRopeState(int id, RopeAnchor from, RopeAnchor to, double length, float maxLength,
                            ResourceLocation texture, @Nullable UUID owner, boolean controllable, Level level) {
@@ -44,12 +45,22 @@ public class VerletRopeState {
 
         Vec3 a = from.position(level);
         Vec3 b = to.position(level);
+        this.visible = a != null && b != null;
         if (a == null) a = (b != null ? b.add(0, length, 0) : Vec3.ZERO);
         if (b == null) b = a.subtract(0, length, 0);
 
         Vec3 jitter = new Vec3((Math.random() - 0.5) * 1e-4, 0, (Math.random() - 0.5) * 1e-4);
         for (int i = 0; i <= segments; i++) {
             points.add(new RopePoint(a.lerp(b, i / (double) segments).add(jitter)));
+        }
+    }
+
+    public void relay(Vec3 a, Vec3 b) {
+        int last = points.size() - 1;
+        for (int i = 0; i <= last; i++) {
+            RopePoint p = points.get(i);
+            p.pos = a.lerp(b, i / (double) last);
+            p.prevPos = p.pos;
         }
     }
 

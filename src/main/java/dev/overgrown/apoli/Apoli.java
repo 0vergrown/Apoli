@@ -147,6 +147,7 @@ public final class Apoli implements ModInitializer {
         }));
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> {
             dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
+            dev.overgrown.apoli.power.builtin.ModifyPlayerSpawnHandler.clearCache();
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(server);
             dev.overgrown.apoli.global.GlobalPowers.reapplyAll(server);
             if (EffectConfig.get().enabled()) CustomEffectRegistry.finishReload(success);
@@ -174,6 +175,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.block.GhostBlocks.clear();
             DelayedActionQueue.clear();
             dev.overgrown.apoli.rope.RopeManager.clear();
+            dev.overgrown.apoli.power.builtin.ModifyPlayerSpawnHandler.clearCache();
             dev.overgrown.apoli.mount.MountOffsets.clearServer();
             dev.overgrown.apoli.entity.ProjectileTickManager.clearAll();
             dev.overgrown.apoli.compat.icarus.WingsAccess.clear();
@@ -419,6 +421,7 @@ public final class Apoli implements ModInitializer {
                     ApoliNetwork.sendSkillState(sp);
                     dev.overgrown.apoli.power.builtin.EntitySetPower.syncAllTo(sp);
                     dev.overgrown.apoli.scale.Scales.syncIfScaled(sp);
+                    dev.overgrown.apoli.rope.RopeManager.syncTo(sp);
                 });
             }
         });

@@ -4,6 +4,7 @@ import dev.overgrown.apoli.ApoliNetwork;
 import dev.overgrown.apoli.network.payload.RopeCreateS2C;
 import dev.overgrown.apoli.network.payload.RopeDeleteS2C;
 import dev.overgrown.apoli.network.payload.RopeVerletLengthS2C;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -12,6 +13,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -64,9 +66,21 @@ public final class RopeManager {
         if (toEntity != null) BY_ENTITY.computeIfAbsent(toEntity, k -> new HashSet<>()).add(id);
         if (owner != null) BY_OWNER.computeIfAbsent(owner, k -> new HashSet<>()).add(id);
 
-        ApoliNetwork.broadcastRopeCreate(level,
-            new RopeCreateS2C(id, from, to, rope.length, params.maxLength(), texture, owner, params.controllable()));
+        ApoliNetwork.broadcastRopeCreate(level, createPayload(rope));
         return rope;
+    }
+
+    public static void syncTo(ServerPlayer player) {
+        if (BY_ID.isEmpty()) return;
+        ResourceKey<Level> dimension = player.level().dimension();
+        for (Rope rope : BY_ID.values()) {
+            if (rope.dimension.equals(dimension)) ApoliNetwork.sendRopeCreate(player, createPayload(rope));
+        }
+    }
+
+    private static RopeCreateS2C createPayload(Rope rope) {
+        return new RopeCreateS2C(rope.id, rope.from, rope.to, rope.length, rope.params.maxLength(),
+            rope.texture, rope.owner, rope.params.controllable());
     }
 
     public static void remove(int id) {

@@ -7,7 +7,6 @@ import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.builtin.ReplaceSoundPower;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.util.RandomSource;
@@ -138,8 +137,6 @@ public final class SoundReplacer {
     private static @Nullable SoundEvent resolve(String id) {
         ResourceLocation location = ResourceLocation.tryParse(id);
         if (location == null) return null;
-        SoundEvent registered = BuiltInRegistries.SOUND_EVENT.get(location);
-        if (registered != null) return registered;
-        return SoundEvent.createVariableRangeEvent(location);
+        return Sounds.event(location);
     }
 }

@@ -223,37 +223,6 @@ public final class ApoliClient implements ClientModInitializer {
                 if (rope != null) rope.targetLength = payload.length();
             }));
 
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) ->
-            mc.execute(() -> {
-                DynamicKeyMappingManager.unregisterAll();
-                ClientPowerState.clear();
-                KeyReleases.clear();
-                StatusBarTextures.clear();
-                dev.overgrown.apoli.client.ClientEntitySets.clear();
-                ClientDevMode.clear();
-                dev.overgrown.apoli.mount.MountOffsets.clearClient();
-                ShaderPowerState.clear();
-                ScreenCloseKeys.clear();
-                ClientResolvedPowers.clear();
-                dev.overgrown.apoli.client.camera.CameraController.reset();
-                CameraPerspectiveReporter.reset();
-                dev.overgrown.apoli.client.render.BlockRenderRules.clear();
-                dev.overgrown.apoli.client.render.ClientRenderFlags.clear();
-                TextOverlayRenderer.clear();
-                ClientLabelState.clear();
-                RopeClientManager.clear();
-                KeyPressWatcher.reset();
-                ApoliKeyMappings.reset();
-                ForcedKeys.clear();
-                BlockedKeys.clear();
-                CursorSpeedState.reset();
-                dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
-                dev.overgrown.apoli.client.skill.ClientSkillState.clear();
-                dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.clear();
-                dev.overgrown.apoli.client.speech.SpeechClient.onLeave();
-                ClientProtocolState.reset();
-            }));
-
         net.fabricmc.fabric.api.resource.ResourceManagerHelper.get(net.minecraft.server.packs.PackType.CLIENT_RESOURCES)
             .registerReloadListener(new net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener() {
                 @Override
@@ -269,6 +238,7 @@ public final class ApoliClient implements ClientModInitializer {
                     dev.overgrown.apoli.client.particle.ParticleSheet.clearCache();
                     dev.overgrown.apoli.client.particle.ParticleTextures.clearCache();
                     dev.overgrown.apoli.client.render.AnimatedTextures.clearCache();
+                    TextureFallbacks.clear();
                 }
             });
 
@@ -335,5 +305,35 @@ public final class ApoliClient implements ClientModInitializer {
         HudRenderCallback.EVENT.register((gfx, tracker) -> TextOverlayRenderer.render(gfx, tracker.getGameTimeDeltaPartialTick(false)));
         HudRenderCallback.EVENT.register((gfx, tracker) -> OverlayRenderer.renderAboveHud(gfx, tracker.getGameTimeDeltaPartialTick(false)));
         HudRenderCallback.EVENT.register((gfx, tracker) -> DevHudRenderer.render(gfx, tracker.getGameTimeDeltaPartialTick(false)));
+    }
+
+    public static void clearSession() {
+        DynamicKeyMappingManager.unregisterAll();
+        ClientPowerState.clear();
+        KeyReleases.clear();
+        StatusBarTextures.clear();
+        dev.overgrown.apoli.client.ClientEntitySets.clear();
+        ClientDevMode.clear();
+        dev.overgrown.apoli.mount.MountOffsets.clearClient();
+        ShaderPowerState.clear();
+        ScreenCloseKeys.clear();
+        ClientResolvedPowers.clear();
+        dev.overgrown.apoli.client.camera.CameraController.reset();
+        CameraPerspectiveReporter.reset();
+        dev.overgrown.apoli.client.render.BlockRenderRules.clear();
+        dev.overgrown.apoli.client.render.ClientRenderFlags.clear();
+        TextOverlayRenderer.clear();
+        ClientLabelState.clear();
+        RopeClientManager.clear();
+        KeyPressWatcher.reset();
+        ApoliKeyMappings.reset();
+        ForcedKeys.clear();
+        BlockedKeys.clear();
+        CursorSpeedState.reset();
+        dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
+        dev.overgrown.apoli.client.skill.ClientSkillState.clear();
+        dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.clear();
+        dev.overgrown.apoli.client.speech.SpeechClient.onLeave();
+        ClientProtocolState.reset();
     }
 }

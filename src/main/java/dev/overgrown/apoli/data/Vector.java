@@ -48,4 +48,8 @@ public record Vector(float x, float y, float z) {
     public double length() {
         return Math.sqrt(x * x + y * y + z * z);
     }
+
+    public boolean isZero() {
+        return x == 0f && y == 0f && z == 0f;
+    }
 }

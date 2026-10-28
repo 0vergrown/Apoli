@@ -122,6 +122,10 @@ public final class ApoliNetwork {
         for (ServerPlayer p : level.players()) ServerPlayNetworking.send(p, payload);
     }
 
+    public static void sendRopeCreate(ServerPlayer recipient, RopeCreateS2C payload) {
+        if (connected(recipient)) ServerPlayNetworking.send(recipient, payload);
+    }
+
     public static void broadcastRopeDelete(ServerLevel level, RopeDeleteS2C payload) {
         for (ServerPlayer p : level.players()) ServerPlayNetworking.send(p, payload);
     }

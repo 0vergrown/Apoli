@@ -9,7 +9,6 @@ import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
 import net.minecraft.advancements.CriteriaTriggers;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -149,8 +148,7 @@ public final class EdibleItemHandler {
     }
 
     private static void playConsumeSound(Level level, LivingEntity entity, EdibleItemPower.Config cfg) {
-        SoundEvent sound = BuiltInRegistries.SOUND_EVENT.get(cfg.consumeSound());
-        if (sound == null) return;
+        SoundEvent sound = dev.overgrown.apoli.sound.Sounds.event(cfg.consumeSound());
         level.playSound(null, entity.getX(), entity.getY(), entity.getZ(), sound, SoundSource.NEUTRAL,
             1.0F, 1.0F + (level.getRandom().nextFloat() - level.getRandom().nextFloat()) * 0.4F);
     }

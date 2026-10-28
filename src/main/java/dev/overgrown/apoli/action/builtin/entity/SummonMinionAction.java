@@ -7,6 +7,7 @@ import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.action.BiEntityAction;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.Space;
 import dev.overgrown.apoli.data.Vector;
 import dev.overgrown.apoli.entity.ApoliEntities;
 import dev.overgrown.apoli.entity.summon.MinionEntity;
@@ -31,7 +32,9 @@ public final class SummonMinionAction implements ActionType<EntityCtx, SummonMin
         int maxLifeTicks,
         Optional<ResourceLocation> summonId,
         List<ResourceLocation> powers,
-        Optional<BiEntityAction> bientityAction
+        Optional<BiEntityAction> bientityAction,
+        Vector offset,
+        Space space
     ) {}
 
     @Override
@@ -45,7 +48,9 @@ public final class SummonMinionAction implements ActionType<EntityCtx, SummonMin
             Codec.INT.optionalFieldOf("max_life_ticks", 1200).forGetter(Cfg::maxLifeTicks),
             IdCodecs.ID.optionalFieldOf("summon_id").forGetter(Cfg::summonId),
             IdCodecs.ID.listOf().optionalFieldOf("powers", List.of()).forGetter(Cfg::powers),
-            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Cfg::bientityAction)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Cfg::bientityAction),
+            Vector.CODEC.optionalFieldOf("offset", Vector.ZERO).forGetter(Cfg::offset),
+            Space.CODEC.optionalFieldOf("space", Space.WORLD).forGetter(Cfg::space)
         ).apply(i, Cfg::new));
     }
 
@@ -64,7 +69,7 @@ public final class SummonMinionAction implements ActionType<EntityCtx, SummonMin
         minion.setMaxLifeTime(cfg.maxLifeTicks);
         cfg.summonId.ifPresent(minion::setSummonId);
 
-        Vec3 pos = owner.position();
+        Vec3 pos = cfg.space.position(owner, cfg.offset);
         if (cfg.followOffset.isPresent()) {
             Vector offset = cfg.followOffset.get();
             if (cfg.followOwner) minion.setFollowOffset(offset.x(), offset.y(), offset.z());
