@@ -45,6 +45,12 @@ public enum Space implements StringRepresentable {
         return transformVectorToBase(forward, input, entity.getYRot(), normalize);
     }
 
+    public Vec3 position(Entity entity, Vector offset) {
+        Vec3 origin = entity.position();
+        if (offset.isZero()) return origin;
+        return origin.add(toGlobal(entity, new Vec3(offset.x(), offset.y(), offset.z())));
+    }
+
     public boolean isLocal() {
         return this == LOCAL || this == LOCAL_HORIZONTAL || this == LOCAL_HORIZONTAL_NORMALIZED;
     }

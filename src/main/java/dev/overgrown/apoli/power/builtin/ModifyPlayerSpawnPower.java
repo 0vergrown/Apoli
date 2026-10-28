@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.power.builtin;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.codec.LoggedOptionalField;
@@ -14,18 +15,25 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.TagKey;
+import net.minecraft.util.Mth;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.structure.Structure;
 
 import java.util.Optional;
 
 public final class ModifyPlayerSpawnPower extends PowerType<ModifyPlayerSpawnPower.Config> {
+    private static final int DEFAULT_SEARCH_RADIUS = 32;
+    private static final int MAX_SEARCH_RADIUS = 64;
+    private static final Codec<Integer> SEARCH_RADIUS = Codec.INT.flatXmap(ModifyPlayerSpawnPower::checkRadius, DataResult::success);
+
     public record Config(
         ResourceLocation dimension,
         Optional<ResourceLocation> biome,
         Optional<BiomeCondition> biomeCondition,
         Optional<ResourceLocation> structure,
-        Optional<ResourceLocation> structureTag,
+        Optional<TagKey<Structure>> structureTag,
         Optional<BlockCondition> blockCondition,
         SpawnStrategy spawnStrategy,
         Optional<Float> dimensionDistanceMultiplier,
@@ -64,12 +72,19 @@ public final class ModifyPlayerSpawnPower extends PowerType<ModifyPlayerSpawnPow
             IdCodecs.ID.optionalFieldOf("biome").forGetter(Config::biome),
             LoggedOptionalField.of("biome_condition", BiomeCondition.CODEC).forGetter(Config::biomeCondition),
             IdCodecs.ID.optionalFieldOf("structure").forGetter(Config::structure),
-            IdCodecs.TAG.optionalFieldOf("structure_tag").forGetter(Config::structureTag),
+            IdCodecs.tagKey(Registries.STRUCTURE).optionalFieldOf("structure_tag").forGetter(Config::structureTag),
             LoggedOptionalField.of("block_condition", BlockCondition.CODEC).forGetter(Config::blockCondition),
             SpawnStrategy.CODEC.optionalFieldOf("spawn_strategy", SpawnStrategy.DEFAULT).forGetter(Config::spawnStrategy),
             Codec.FLOAT.optionalFieldOf("dimension_distance_multiplier").forGetter(Config::dimensionDistanceMultiplier),
-            Codec.INT.optionalFieldOf("search_radius", 64).forGetter(Config::searchRadius)
+            SEARCH_RADIUS.optionalFieldOf("search_radius", DEFAULT_SEARCH_RADIUS).forGetter(Config::searchRadius)
         ).apply(i, Config::new));
+    }
+
+    private static DataResult<Integer> checkRadius(int radius) {
+        if (radius >= 1 && radius <= MAX_SEARCH_RADIUS) return DataResult.success(radius);
+        int clamped = Mth.clamp(radius, 1, MAX_SEARCH_RADIUS);
+        return DataResult.error(() -> "search_radius " + radius + " is outside 1 to " + MAX_SEARCH_RADIUS
+            + ", so " + clamped + " is used", clamped);
     }
 
     @Override

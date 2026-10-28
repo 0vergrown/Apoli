@@ -38,4 +38,8 @@ public record Vector(float x, float y, float z) {
     public Vector add(Vector o) { return new Vector(x + o.x, y + o.y, z + o.z); }
     public Vector scale(float k) { return new Vector(x * k, y * k, z * k); }
     public double length() { return Math.sqrt(x * x + y * y + z * z); }
+
+    public boolean isZero() {
+        return x == 0f && y == 0f && z == 0f;
+    }
 }

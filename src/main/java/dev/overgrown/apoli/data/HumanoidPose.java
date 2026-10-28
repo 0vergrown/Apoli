@@ -6,6 +6,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.UseAnim;
 
@@ -173,7 +174,8 @@ public final class HumanoidPose {
     private void animate(LivingEntity entity, ModelPartTimeline timeline, double now, float partialTick,
                          float ageInTicks) {
         boolean overridden = timeline.overridesPose(entity, now);
-        boolean fallFlying = !overridden && entity.getFallFlyingTicks() > 4;
+        Pose forced = overridden ? null : EntityPoses.forced(entity);
+        boolean fallFlying = !overridden && EntityPoses.fallFlyingTicks(entity, entity.getFallFlyingTicks()) > 4;
         boolean riding = !overridden && entity.isPassenger();
         boolean crouching = !overridden && entity.isCrouching();
         float swimAmount = overridden ? 0.0F : entity.getSwimAmount(partialTick);
@@ -191,6 +193,7 @@ public final class HumanoidPose {
             limbSwing = entity.walkAnimation.position(partialTick);
             if (entity.isBaby()) limbSwing *= 3.0F;
         }
+        if (forced != null && EntityPoses.holdsStill(forced)) limbSwingAmount = 0.0F;
 
         put(HEAD, Y_ROT, netHeadYaw * DEG_TO_RAD);
         if (fallFlying) {
@@ -288,6 +291,10 @@ public final class HumanoidPose {
 
         if (swimAmount > 0.0F) {
             swim(entity, limbSwing, swimAmount, attackTime, mainArm);
+        }
+
+        if (forced != null && EntityPoses.shapes(forced)) {
+            EntityPoses.shape(forced, parts, EntityPoses.progress(entity, partialTick), ageInTicks);
         }
     }
 

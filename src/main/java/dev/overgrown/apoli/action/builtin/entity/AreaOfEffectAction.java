@@ -57,11 +57,7 @@ public final class AreaOfEffectAction implements ActionType<EntityCtx, AreaOfEff
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
         Entity actor = ctx.entity();
-        Vec3 origin = actor.position();
-        Vector offset = cfg.offset;
-        if (offset.x() != 0f || offset.y() != 0f || offset.z() != 0f) {
-            origin = origin.add(cfg.space.toGlobal(actor, new Vec3(offset.x(), offset.y(), offset.z())));
-        }
+        Vec3 origin = cfg.space.position(actor, cfg.offset);
         BlockPos center = BlockPos.containing(origin);
         int rx = (int) Math.ceil(cfg.radius.x());
         int ry = (int) Math.ceil(cfg.radius.y());

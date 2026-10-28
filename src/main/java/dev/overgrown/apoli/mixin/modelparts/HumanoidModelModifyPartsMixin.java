@@ -1,9 +1,11 @@
 package dev.overgrown.apoli.mixin.modelparts;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.sugar.Local;
 import dev.overgrown.apoli.access.PartVisibilityUndo;
 import dev.overgrown.apoli.compat.entitymodelfeatures.EntityModelFeaturesCompat;
 import dev.overgrown.apoli.client.render.AnimationPlayer;
+import dev.overgrown.apoli.client.render.ForcedPoseShapes;
 import dev.overgrown.apoli.client.render.HandRenderPass;
 import dev.overgrown.apoli.client.render.ModelPartAnimator;
 import dev.overgrown.apoli.client.render.ModelPartEdits;
@@ -12,6 +14,7 @@ import dev.overgrown.apoli.power.builtin.ModifyPlayerModelPower;
 import dev.overgrown.apoli.data.ModelPartTimeline;
 import dev.overgrown.apoli.client.render.ModelPartLookup;
 import dev.overgrown.apoli.data.BodyPart;
+import dev.overgrown.apoli.data.EntityPoses;
 import dev.overgrown.apoli.data.FirstPersonFrame;
 import dev.overgrown.apoli.data.HumanoidPose;
 import dev.overgrown.apoli.data.ModelPartTransformation;
@@ -23,10 +26,12 @@ import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.ArrayList;
@@ -72,6 +77,8 @@ public abstract class HumanoidModelModifyPartsMixin implements PartVisibilityUnd
     @Unique
     private boolean apoli$savedRiding;
     @Unique
+    private boolean apoli$forcedCrouch;
+    @Unique
     private ModelPart[] apoli$visibilityParts = new ModelPart[4];
     @Unique
     private byte[] apoli$visibilityStates = new byte[4];
@@ -104,16 +111,39 @@ public abstract class HumanoidModelModifyPartsMixin implements PartVisibilityUnd
             model.crouching = false;
             model.riding = false;
         }
+
+        HumanoidModel<?> humanoid = (HumanoidModel<?>) (Object) this;
+        apoli$forcedCrouch = !apoli$poseOverridden && !humanoid.crouching && !HandRenderPass.active()
+            && EntityPoses.forced(entity) == Pose.CROUCHING;
+        if (apoli$forcedCrouch) humanoid.crouching = true;
+    }
+
+    @ModifyVariable(method = SETUP_ANIM, at = @At("HEAD"), argsOnly = true, ordinal = 1)
+    private float apoli$holdStill(float limbSwingAmount, @Local(argsOnly = true) LivingEntity entity) {
+        Pose pose = EntityPoses.forced(entity);
+        if (pose == null || !EntityPoses.holdsStill(pose) || ModelPartAnimator.overridesPose(entity)) return limbSwingAmount;
+        return 0.0F;
     }
 
     @ModifyExpressionValue(method = SETUP_ANIM, at = @At(value = "INVOKE",
         target = "Lnet/minecraft/world/entity/LivingEntity;getFallFlyingTicks()I"))
-    private int apoli$neutralizeFallFlying(int original) {
-        return apoli$poseOverridden ? 0 : original;
+    private int apoli$neutralizeFallFlying(int original, @Local(argsOnly = true) LivingEntity entity) {
+        return apoli$poseOverridden ? 0 : EntityPoses.fallFlyingTicks(entity, original);
     }
 
     @Inject(method = SETUP_ANIM, at = @At("TAIL"))
     private void apoli$modifyPartsTail(LivingEntity entity, float f, float g, float h, float i, float j, CallbackInfo ci) {
+        if (apoli$forcedCrouch) {
+            ((HumanoidModel<?>) (Object) this).crouching = false;
+            apoli$forcedCrouch = false;
+        }
+        if ((Object) this instanceof PlayerModel) {
+            Pose forced = EntityPoses.forced(entity);
+            if (forced != null && !apoli$poseOverridden && EntityPoses.shapes(forced) && !HandRenderPass.active()) {
+                ForcedPoseShapes.apply((HumanoidModel<?>) (Object) this, entity, forced, h);
+            }
+        }
+
         List<ModelPartTimeline.Slot> slots = ModelPartAnimator.update(entity);
         if (!slots.isEmpty()) {
             HumanoidModel<?> model = (HumanoidModel<?>) (Object) this;
