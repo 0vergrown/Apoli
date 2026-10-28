@@ -51,6 +51,12 @@ repositories {
 		name = "Henkel"
 		url = "https://maven.maxhenkel.de/repository/public"
 	}
+
+	maven {
+		name = "QuiltMC"
+		url = "https://maven.quiltmc.org/repository/release/"
+	}
+
 	maven {
 		name = "Saps"
 		url = "https://maven.saps.dev/releases"
@@ -118,6 +124,12 @@ dependencies {
 	implementation "com.alphacephei:vosk:${project.vosk_version}"
 	include "com.alphacephei:vosk:${project.vosk_version}"
 	include "net.java.dev.jna:jna:5.7.0"
+
+	implementation("org.quiltmc.parsers:gson:0.3.1")
+	include("org.quiltmc.parsers:gson:0.3.1")
+
+	implementation("org.quiltmc.parsers:json:0.3.1")
+	include("org.quiltmc.parsers:json:0.3.1")
 
 	testImplementation platform("org.junit:junit-bom:5.10.2")
 	testImplementation "org.junit.jupiter:junit-jupiter"
