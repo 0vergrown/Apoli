@@ -176,7 +176,10 @@ dependencies {
 	include "com.alphacephei:vosk:${project.vosk_version}"
 	include "net.java.dev.jna:jna:5.7.0"
 
+	implementation("org.quiltmc.parsers:gson:0.3.1")
 	include("org.quiltmc.parsers:gson:0.3.1")
+
+	implementation("org.quiltmc.parsers:json:0.3.1")
 	include("org.quiltmc.parsers:json:0.3.1")
 
 	testImplementation platform("org.junit:junit-bom:5.10.2")
