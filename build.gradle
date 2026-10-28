@@ -239,12 +239,8 @@ dependencies {
     voskRuntime "com.alphacephei:vosk:${project.vosk_version}"
     voskRuntime "net.java.dev.jna:jna:5.7.0"
 
-    jarJar(implementation("org.quiltmc.parsers:gson:0.3.1")) {
-
-    }
-    jarJar(implementation("org.quiltmc.parsers:json:0.3.1")) {
-
-    }
+    jarJar(implementation("org.quiltmc.parsers:gson:0.3.1")) {}
+    jarJar(implementation("org.quiltmc.parsers:json:0.3.1")) {}
 
     additionalRuntimeClasspath "org.quiltmc.parsers:gson:0.3.1"
     additionalRuntimeClasspath "org.quiltmc.parsers:json:0.3.1"
