@@ -6,6 +6,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.EntityCondition;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.codec.IdCodecs;
+import dev.overgrown.apoli.codec.SingleOrList;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,7 +16,7 @@ import java.util.Optional;
 public record HudRender(List<Entry> entries) {
     public static final ResourceLocation DEFAULT_SPRITE_LOCATION = new ResourceLocation("apoli", "textures/gui/resource_bar.png");
 
-    public static final Entry HIDDEN = new Entry(false, DEFAULT_SPRITE_LOCATION, 0, 0, Optional.empty(), false, Optional.empty(), Optional.empty());
+    public static final Entry HIDDEN = new Entry(false, DEFAULT_SPRITE_LOCATION, 0, 0, Optional.empty(), false, Optional.empty(), Optional.empty(), List.of());
     public static final HudRender DONT_RENDER = new HudRender(List.of(HIDDEN));
 
     public static final Codec<HudRender> CODEC = Codec.either(Entry.CODEC, Codec.list(Entry.CODEC))
@@ -50,7 +51,8 @@ public record HudRender(List<Entry> entries) {
         Optional<EntityCondition> condition,
         boolean inverted,
         Optional<Integer> order,
-        Optional<Expression> max
+        Optional<Expression> max,
+        List<Look> fallback
     ) {
         public static final Codec<Entry> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.BOOL.optionalFieldOf("should_render", true).forGetter(Entry::shouldRender),
@@ -60,7 +62,22 @@ public record HudRender(List<Entry> entries) {
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("condition", EntityCondition.CODEC).forGetter(Entry::condition),
             Codec.BOOL.optionalFieldOf("inverted", false).forGetter(Entry::inverted),
             Codec.INT.optionalFieldOf("order").forGetter(Entry::order),
-            Expression.INT_OR_EXPR.optionalFieldOf("max").forGetter(Entry::max)
+            Expression.INT_OR_EXPR.optionalFieldOf("max").forGetter(Entry::max),
+            SingleOrList.of(Look.CODEC).optionalFieldOf("fallback", List.of()).forGetter(Entry::fallback)
         ).apply(i, Entry::new));
+    }
+
+    public record Look(ResourceLocation spriteLocation, Optional<Integer> barIndex, Optional<Integer> iconIndex) {
+        private static final Codec<Look> OBJECT_CODEC = RecordCodecBuilder.create(i -> i.group(
+            IdCodecs.ID.fieldOf("sprite_location").forGetter(Look::spriteLocation),
+            Codec.INT.optionalFieldOf("bar_index").forGetter(Look::barIndex),
+            Codec.INT.optionalFieldOf("icon_index").forGetter(Look::iconIndex)
+        ).apply(i, Look::new));
+
+        public static final Codec<Look> CODEC = Codec.either(IdCodecs.ID, OBJECT_CODEC).xmap(
+            either -> either.map(id -> new Look(id, Optional.empty(), Optional.empty()), look -> look),
+            look -> look.barIndex.isEmpty() && look.iconIndex.isEmpty()
+                ? Either.left(look.spriteLocation)
+                : Either.right(look));
     }
 }

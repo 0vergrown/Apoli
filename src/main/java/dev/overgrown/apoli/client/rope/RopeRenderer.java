@@ -18,7 +18,7 @@ public final class RopeRenderer {
 
     public static void render(WorldRenderContext context) {
         for (VerletRopeState rope : RopeClientManager.getAll()) {
-            if (rope.points.size() < 2) continue;
+            if (!rope.visible || rope.points.size() < 2) continue;
             drawRope(context, rope);
         }
     }

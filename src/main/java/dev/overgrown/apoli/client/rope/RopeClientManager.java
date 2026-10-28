@@ -137,7 +137,14 @@ public final class RopeClientManager {
             resegment(rope);
             Vec3 fromPos = rope.from.position(level);
             Vec3 toPos = rope.to.position(level);
-            if (fromPos == null || toPos == null) continue;
+            if (fromPos == null || toPos == null) {
+                rope.visible = false;
+                continue;
+            }
+            if (!rope.visible) {
+                rope.relay(fromPos, toPos);
+                rope.visible = true;
+            }
 
             verletStep(rope);
             for (int i = 0; i < 10; i++) applyConstraints(rope, fromPos, toPos);

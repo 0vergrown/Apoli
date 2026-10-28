@@ -411,9 +411,10 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
     }
 
     private static void playSound(Entity owner, ServerLevel level, Params p) {
-        p.sound().flatMap(BuiltInRegistries.SOUND_EVENT::getOptional).ifPresent(se ->
-            level.playSound(null, owner.getX(), owner.getY(), owner.getZ(), se, SoundSource.NEUTRAL,
-                0.5F, 0.4F / (level.random.nextFloat() * 0.4F + 0.8F)));
+        if (p.sound().isEmpty()) return;
+        level.playSound(null, owner.getX(), owner.getY(), owner.getZ(),
+            dev.overgrown.apoli.sound.Sounds.event(p.sound().get()), SoundSource.NEUTRAL,
+            0.5F, 0.4F / (level.random.nextFloat() * 0.4F + 0.8F));
     }
 
     private static void fireOne(Entity owner, ServerLevel level, Config cfg) {

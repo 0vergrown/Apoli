@@ -2,6 +2,7 @@ package dev.overgrown.apoli.mixin.pose;
 
 import dev.overgrown.apoli.access.ModifiedPoseHolder;
 import dev.overgrown.apoli.data.ArmPoseReference;
+import dev.overgrown.apoli.data.EntityPoses;
 import dev.overgrown.apoli.data.Hand;
 import dev.overgrown.apoli.power.builtin.PosePower;
 import net.minecraft.world.InteractionHand;
@@ -21,6 +22,7 @@ public abstract class EntityPoseMixin implements ModifiedPoseHolder {
     @Unique private ArmPoseReference apoli$modifiedArmPoseMain;
     @Unique private ArmPoseReference apoli$modifiedArmPoseOff;
     @Unique private Pose apoli$previousEntityPose;
+    @Unique private int apoli$poseTicks;
 
     @Override public Pose apoli$getModifiedEntityPose() { return apoli$modifiedEntityPose; }
     @Override public void apoli$setModifiedEntityPose(Pose entityPose) { this.apoli$modifiedEntityPose = entityPose; }
@@ -37,9 +39,12 @@ public abstract class EntityPoseMixin implements ModifiedPoseHolder {
     @Override public Pose apoli$getPreviousEntityPose() { return apoli$previousEntityPose; }
     @Override public void apoli$setPreviousEntityPose(Pose entityPose) { this.apoli$previousEntityPose = entityPose; }
 
+    @Override public int apoli$getPoseTicks() { return apoli$poseTicks; }
+
     @Inject(method = "tick", at = @At("TAIL"))
     private void apoli$applyPose(CallbackInfo ci) {
         Entity self = (Entity) (Object) this;
+        Pose before = apoli$modifiedEntityPose;
         PosePower.Config chosen = PosePower.chooseBest(self);
 
         if (chosen != null) {
@@ -64,6 +69,15 @@ public abstract class EntityPoseMixin implements ModifiedPoseHolder {
                 self.setPose(apoli$previousEntityPose);
                 apoli$previousEntityPose = null;
             }
+        }
+
+        if (apoli$modifiedEntityPose != before) {
+            apoli$poseTicks = 0;
+            if (self instanceof Player && (EntityPoses.resizesPlayer(before) || EntityPoses.resizesPlayer(apoli$modifiedEntityPose))) {
+                self.refreshDimensions();
+            }
+        } else if (apoli$modifiedEntityPose != null && apoli$poseTicks < EntityPoses.MAX_TICKS) {
+            apoli$poseTicks++;
         }
     }
 }

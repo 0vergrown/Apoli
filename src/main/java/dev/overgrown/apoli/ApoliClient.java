@@ -310,37 +310,6 @@ public final class ApoliClient implements ClientModInitializer {
             });
         });
 
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) ->
-            mc.execute(() -> {
-                DynamicKeyMappingManager.unregisterAll();
-                ClientPowerState.clear();
-                KeyReleases.clear();
-                StatusBarTextures.clear();
-                dev.overgrown.apoli.client.ClientEntitySets.clear();
-                dev.overgrown.apoli.client.ClientDevMode.clear();
-                dev.overgrown.apoli.mount.MountOffsets.clearClient();
-                dev.overgrown.apoli.client.ShaderPowerState.clear();
-                dev.overgrown.apoli.client.ScreenCloseKeys.clear();
-                dev.overgrown.apoli.client.ClientResolvedPowers.clear();
-                dev.overgrown.apoli.client.camera.CameraController.reset();
-                dev.overgrown.apoli.client.CameraPerspectiveReporter.reset();
-                dev.overgrown.apoli.client.render.BlockRenderRules.clear();
-                dev.overgrown.apoli.client.render.ClientRenderFlags.clear();
-                dev.overgrown.apoli.client.TextOverlayRenderer.clear();
-                dev.overgrown.apoli.client.ClientLabelState.clear();
-                RopeClientManager.clear();
-                KeyPressWatcher.reset();
-                dev.overgrown.apoli.client.ApoliKeyMappings.reset();
-                dev.overgrown.apoli.client.ForcedKeys.clear();
-                dev.overgrown.apoli.client.BlockedKeys.clear();
-                dev.overgrown.apoli.client.CursorSpeedState.reset();
-                dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
-                dev.overgrown.apoli.client.skill.ClientSkillState.clear();
-                dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.clear();
-                dev.overgrown.apoli.client.ClientProtocolState.reset();
-                dev.overgrown.apoli.client.speech.SpeechClient.onLeave();
-            }));
-
         net.fabricmc.fabric.api.resource.ResourceManagerHelper.get(net.minecraft.server.packs.PackType.CLIENT_RESOURCES)
             .registerReloadListener(new net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener() {
                 @Override
@@ -355,6 +324,7 @@ public final class ApoliClient implements ClientModInitializer {
                     dev.overgrown.apoli.client.particle.ParticleSheet.clearCache();
                     dev.overgrown.apoli.client.particle.ParticleTextures.clearCache();
                     dev.overgrown.apoli.client.render.AnimatedTextures.clearCache();
+                    dev.overgrown.apoli.client.TextureFallbacks.clear();
                 }
             });
 
@@ -419,5 +389,35 @@ public final class ApoliClient implements ClientModInitializer {
         HudRenderCallback.EVENT.register(dev.overgrown.apoli.client.TextOverlayRenderer::render);
         HudRenderCallback.EVENT.register(OverlayRenderer::renderAboveHud);
         HudRenderCallback.EVENT.register(dev.overgrown.apoli.client.DevHudRenderer::render);
+    }
+
+    public static void clearSession() {
+        DynamicKeyMappingManager.unregisterAll();
+        ClientPowerState.clear();
+        KeyReleases.clear();
+        StatusBarTextures.clear();
+        dev.overgrown.apoli.client.ClientEntitySets.clear();
+        dev.overgrown.apoli.client.ClientDevMode.clear();
+        dev.overgrown.apoli.mount.MountOffsets.clearClient();
+        dev.overgrown.apoli.client.ShaderPowerState.clear();
+        dev.overgrown.apoli.client.ScreenCloseKeys.clear();
+        dev.overgrown.apoli.client.ClientResolvedPowers.clear();
+        dev.overgrown.apoli.client.camera.CameraController.reset();
+        dev.overgrown.apoli.client.CameraPerspectiveReporter.reset();
+        dev.overgrown.apoli.client.render.BlockRenderRules.clear();
+        dev.overgrown.apoli.client.render.ClientRenderFlags.clear();
+        dev.overgrown.apoli.client.TextOverlayRenderer.clear();
+        dev.overgrown.apoli.client.ClientLabelState.clear();
+        RopeClientManager.clear();
+        KeyPressWatcher.reset();
+        dev.overgrown.apoli.client.ApoliKeyMappings.reset();
+        dev.overgrown.apoli.client.ForcedKeys.clear();
+        dev.overgrown.apoli.client.BlockedKeys.clear();
+        dev.overgrown.apoli.client.CursorSpeedState.reset();
+        dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
+        dev.overgrown.apoli.client.skill.ClientSkillState.clear();
+        dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.clear();
+        dev.overgrown.apoli.client.ClientProtocolState.reset();
+        dev.overgrown.apoli.client.speech.SpeechClient.onLeave();
     }
 }
