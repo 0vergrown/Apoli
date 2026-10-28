@@ -11,18 +11,21 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.client.settings.KeyModifier;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,6 +33,7 @@ import java.util.Set;
 @OnlyIn(Dist.CLIENT)
 public final class DynamicKeyMappingManager {
     private static final Logger LOG = LogUtils.getLogger();
+    private static final String KEY_PREFIX = "key_";
 
     private static final List<KeyMapping> SESSION_BINDINGS = new ArrayList<>();
     private static final Map<String, Component> NAME_HINTS = new HashMap<>();
@@ -48,6 +52,7 @@ public final class DynamicKeyMappingManager {
             return;
         }
 
+        Map<String, String> saved = savedKeyLines(new File(mc.gameDirectory, "options.txt"));
         for (Keybind def : definitions) {
             String translationKey = def.translationKey();
             def.name().ifPresent(component -> {
@@ -63,7 +68,8 @@ public final class DynamicKeyMappingManager {
             ensureCategoryExists(def.category());
 
             KeyMapping km = new KeyMapping(translationKey, defaultKey.getType(), defaultKey.getValue(), def.category());
-            restoreSavedBinding(km, new File(mc.gameDirectory, "options.txt"));
+            String binding = saved.get(KEY_PREFIX + translationKey);
+            if (binding != null) restoreSavedBinding(km, binding);
 
             KeyMapping[] current = mc.options.keyMappings;
             KeyMapping[] extended = Arrays.copyOf(current, current.length + 1);
@@ -146,25 +152,42 @@ public final class DynamicKeyMappingManager {
         }
     }
 
-    private static void restoreSavedBinding(KeyMapping km, File optionsFile) {
-        if (optionsFile == null || !optionsFile.exists()) return;
-        String prefix = "key_" + km.getName() + ":";
-        try (BufferedReader reader = new BufferedReader(new FileReader(optionsFile))) {
+    private static void restoreSavedBinding(KeyMapping km, String savedKey) {
+        String binding = savedKey.trim();
+        int colon = binding.indexOf(':');
+        try {
+            if (colon < 0) {
+                km.setKeyModifierAndCode(KeyModifier.NONE, InputConstants.getKey(binding));
+            } else {
+                km.setKeyModifierAndCode(KeyModifier.valueFromString(binding.substring(colon + 1)),
+                    InputConstants.getKey(binding.substring(0, colon)));
+            }
+        } catch (Exception ex) {
+            LOG.warn("[Apoli] Ignoring invalid saved binding '{}' for '{}': {}",
+                savedKey, km.getName(), ex.getMessage());
+        }
+    }
+
+    public static Map<String, String> retainedKeyLines(File optionsFile, KeyMapping[] registered) {
+        Map<String, String> lines = savedKeyLines(optionsFile);
+        if (lines.isEmpty()) return lines;
+        for (KeyMapping km : registered) lines.remove(KEY_PREFIX + km.getName());
+        return lines;
+    }
+
+    private static Map<String, String> savedKeyLines(File optionsFile) {
+        Map<String, String> lines = new LinkedHashMap<>();
+        if (optionsFile == null || !optionsFile.exists()) return lines;
+        try (BufferedReader reader = Files.newBufferedReader(optionsFile.toPath(), StandardCharsets.UTF_8)) {
             String line;
             while ((line = reader.readLine()) != null) {
-                if (!line.startsWith(prefix)) continue;
-                String savedKey = line.substring(prefix.length()).trim();
-                try {
-                    km.setKey(InputConstants.getKey(savedKey));
-                } catch (Exception ex) {
-                    LOG.warn("[Apoli] Ignoring invalid saved binding '{}' for '{}': {}",
-                        savedKey, km.getName(), ex.getMessage());
-                }
-                return;
+                if (!line.startsWith(KEY_PREFIX)) continue;
+                int colon = line.indexOf(':');
+                if (colon > 0) lines.put(line.substring(0, colon), line.substring(colon + 1));
             }
         } catch (IOException ex) {
-            LOG.warn("[Apoli] Could not read options.txt to restore binding for '{}': {}",
-                km.getName(), ex.getMessage());
+            LOG.warn("[Apoli] Could not read {} to restore keybinds: {}", optionsFile.getName(), ex.getMessage());
         }
+        return lines;
     }
 }

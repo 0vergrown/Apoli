@@ -216,6 +216,7 @@ public final class Apoli {
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(event.getPlayerList().getServer());
             dev.overgrown.apoli.global.GlobalPowers.reapplyAll(event.getPlayerList().getServer());
             dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
+            dev.overgrown.apoli.power.builtin.ModifyPlayerSpawnHandler.clearCache();
             if (EffectConfig.get().enabled()) CustomEffectRegistry.finishReload(true);
             for (ServerPlayer player : event.getPlayerList().getPlayers()) {
                 dev.overgrown.apoli.skill.SkillTrees.grantOnJoin(player);
@@ -262,6 +263,7 @@ public final class Apoli {
             ApoliNetwork.sendSkillState(sp);
             dev.overgrown.apoli.power.builtin.EntitySetPower.syncAllTo(sp);
             dev.overgrown.apoli.scale.Scales.syncIfScaled(sp);
+            dev.overgrown.apoli.rope.RopeManager.syncTo(sp);
         }
     }
 
@@ -449,6 +451,7 @@ public final class Apoli {
                 dev.overgrown.apoli.power.builtin.StartingEquipmentPower.Config.class,
                 cfg -> dev.overgrown.apoli.power.builtin.StartingEquipmentPower.onRespawn(sp, cfg));
             ActionOnCallbackPower.fireRespawn(sp);
+            dev.overgrown.apoli.rope.RopeManager.syncTo(sp);
         }
     }
 
@@ -457,6 +460,7 @@ public final class Apoli {
         if (event.getEntity() instanceof ServerPlayer sp) {
             resumePowers(sp);
             dev.overgrown.apoli.scale.Scales.syncIfScaled(sp);
+            dev.overgrown.apoli.rope.RopeManager.syncTo(sp);
         }
     }
 
@@ -486,6 +490,7 @@ public final class Apoli {
             dev.overgrown.apoli.tick.TickRates.clear();
         DelayedActionQueue.clear();
         dev.overgrown.apoli.rope.RopeManager.clear();
+        dev.overgrown.apoli.power.builtin.ModifyPlayerSpawnHandler.clearCache();
         dev.overgrown.apoli.mount.MountOffsets.clearServer();
         dev.overgrown.apoli.entity.ProjectileTickManager.clearAll();
         dev.overgrown.apoli.compat.icarus.WingsAccess.clear();

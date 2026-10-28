@@ -33,7 +33,7 @@ public final class RopeRenderer {
 
         boolean drewAny = false;
         for (VerletRopeState rope : RopeClientManager.getAll()) {
-            if (rope.points.size() < 2) continue;
+            if (!rope.visible || rope.points.size() < 2) continue;
             drawRope(poseStack, buffers, camera, level, tickDelta, rope);
             drewAny = true;
         }

@@ -8,6 +8,8 @@ import dev.overgrown.apoli.action.EntityAction;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.Nbt;
+import dev.overgrown.apoli.data.Space;
+import dev.overgrown.apoli.data.Vector;
 import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -17,6 +19,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.Optional;
 
@@ -25,7 +28,9 @@ public final class SpawnEntityAction implements ActionType<EntityCtx, SpawnEntit
         ResourceLocation entityType,
         Optional<Nbt> tag,
         Optional<EntityAction> entityAction,
-        Optional<BiEntityAction> bientityAction
+        Optional<BiEntityAction> bientityAction,
+        Vector offset,
+        Space space
     ) {}
 
     @Override
@@ -34,7 +39,9 @@ public final class SpawnEntityAction implements ActionType<EntityCtx, SpawnEntit
             IdCodecs.ID.fieldOf("entity_type").forGetter(Cfg::entityType),
             Nbt.CODEC.optionalFieldOf("tag").forGetter(Cfg::tag),
             dev.overgrown.apoli.codec.LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(Cfg::entityAction),
-            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Cfg::bientityAction)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Cfg::bientityAction),
+            Vector.CODEC.optionalFieldOf("offset", Vector.ZERO).forGetter(Cfg::offset),
+            Space.CODEC.optionalFieldOf("space", Space.WORLD).forGetter(Cfg::space)
         ).apply(i, Cfg::new));
     }
 
@@ -47,8 +54,9 @@ public final class SpawnEntityAction implements ActionType<EntityCtx, SpawnEntit
         CompoundTag spawnTag = new CompoundTag();
         cfg.tag.ifPresent(n -> spawnTag.merge(n.tag()));
         spawnTag.putString("id", cfg.entityType.toString());
+        Vec3 pos = cfg.space.position(actor, cfg.offset);
         Entity spawned = EntityType.loadEntityRecursive(spawnTag, level, e -> {
-            e.moveTo(actor.getX(), actor.getY(), actor.getZ(), actor.getYRot(), actor.getXRot());
+            e.moveTo(pos.x, pos.y, pos.z, actor.getYRot(), actor.getXRot());
             return e;
         });
         if (spawned == null) return;

@@ -2,38 +2,40 @@ package dev.overgrown.apoli.power.builtin;
 
 import com.mojang.datafixers.util.Pair;
 import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.condition.BiomeCondition;
+import dev.overgrown.apoli.condition.BlockCondition;
 import dev.overgrown.apoli.condition.context.BiomeCtx;
 import dev.overgrown.apoli.condition.context.BlockCtx;
 import dev.overgrown.apoli.power.ApoliIds;
-import dev.overgrown.apoli.power.ApoliPowers;
-import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerLookup;
-import dev.overgrown.apoli.power.PowerTypeRegistry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
+import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.level.TicketType;
-import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
-import net.minecraft.util.Unit;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.vehicle.DismountHelper;
-import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.portal.DimensionTransition;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Optional;
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Predicate;
 
 public final class ModifyPlayerSpawnHandler {
     private ModifyPlayerSpawnHandler() {}
@@ -42,27 +44,44 @@ public final class ModifyPlayerSpawnHandler {
     private static final int BIOME_HORIZONTAL_STEP = 32;
     private static final int BIOME_VERTICAL_STEP = 64;
     private static final int STRUCTURE_SEARCH_RADIUS = 100;
-    private static final int SPAWN_CHUNK_TICKET_RADIUS = 11;
+    private static final long FAILED_SCAN_RETRY_TICKS = 6000L;
+
+    private static final Map<ModifyPlayerSpawnPower.Config, Search> SEARCHES = new IdentityHashMap<>();
+
+    private record Spawn(ServerLevel level, Vec3 position) {
+        BlockPos blockPos() {
+            return BlockPos.containing(position);
+        }
+    }
+
+    private static final class Search {
+        private final ServerLevel level;
+        private final BlockPos origin;
+        private final @Nullable BlockPos start;
+        private final @Nullable String missing;
+        private long retryScanAt;
+
+        private Search(ServerLevel level, BlockPos origin, @Nullable BlockPos start, @Nullable String missing) {
+            this.level = level;
+            this.origin = origin;
+            this.start = start;
+            this.missing = missing;
+        }
+    }
+
+    public static void clearCache() {
+        SEARCHES.clear();
+    }
 
     public static @Nullable ModifyPlayerSpawnPower.Config firstActive(ServerPlayer player) {
-        PowerContainer container = PowerContainer.of(player);
-        if (container == null || container.isEmpty()) return null;
-        if (container.powersOfType(ApoliIds.MODIFY_PLAYER_SPAWN).isEmpty()) return null;
-
-        ModifyPlayerSpawnPower.Config[] found = new ModifyPlayerSpawnPower.Config[1];
-        PowerLookup.forEach(player, ApoliIds.MODIFY_PLAYER_SPAWN, ModifyPlayerSpawnPower.Config.class, cfg -> {
-            if (found[0] == null) found[0] = cfg;
-        });
-        return found[0];
+        return PowerLookup.firstActive(player, ApoliIds.MODIFY_PLAYER_SPAWN, ModifyPlayerSpawnPower.Config.class);
     }
 
     public static boolean anyOtherActive(PowerContainer holder, ResourceLocation ignored) {
-        for (ResourceLocation id : holder.allPowers()) {
-            if (id.equals(ignored) || holder.isSuppressed(id)) continue;
-            Power power = ApoliPowers.get(id);
-            if (power == null) continue;
-            if (!ApoliIds.MODIFY_PLAYER_SPAWN.equals(PowerTypeRegistry.resolveId(power.typeId()))) continue;
-            return true;
+        List<ResourceLocation> powers = holder.powersOfType(ApoliIds.MODIFY_PLAYER_SPAWN);
+        for (int i = 0; i < powers.size(); i++) {
+            ResourceLocation id = powers.get(i);
+            if (!id.equals(ignored) && !holder.isSuppressed(id)) return true;
         }
         return false;
     }
@@ -73,36 +92,33 @@ public final class ModifyPlayerSpawnHandler {
         ModifyPlayerSpawnPower.Config cfg = firstActive(player);
         if (cfg == null) return original;
 
-        Pair<ServerLevel, BlockPos> spawn = resolve(player, cfg);
+        Spawn spawn = resolve(player, cfg);
         if (spawn == null) return original;
 
-        ServerLevel level = spawn.getFirst();
-        BlockPos pos = spawn.getSecond();
-        player.setRespawnPosition(level.dimension(), pos, player.getYRot(), true, false);
-        return new DimensionTransition(level, Vec3.atBottomCenterOf(pos), Vec3.ZERO,
+        player.setRespawnPosition(spawn.level().dimension(), spawn.blockPos(), player.getYRot(), true, false);
+        return new DimensionTransition(spawn.level(), spawn.position(), Vec3.ZERO,
             player.getYRot(), 0.0F, original.postDimensionTransition());
     }
 
     public static void teleportToModifiedSpawn(ServerPlayer player) {
         ModifyPlayerSpawnPower.Config cfg = firstActive(player);
         if (cfg == null) return;
-        if (player.getRespawnPosition() != null
-            && ResourceKey.create(Registries.DIMENSION, cfg.dimension()).equals(player.getRespawnDimension())) {
-            return;
-        }
+        if (player.getRespawnPosition() != null && dimension(cfg).equals(player.getRespawnDimension())) return;
 
-        Pair<ServerLevel, BlockPos> spawn = resolve(player, cfg);
+        Spawn spawn = resolve(player, cfg);
         if (spawn == null) return;
 
-        ServerLevel level = spawn.getFirst();
-        BlockPos pos = spawn.getSecond();
-        player.setRespawnPosition(level.dimension(), pos, player.getYRot(), true, false);
-        player.teleportTo(level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5,
-            player.getYRot(), player.getXRot());
+        Vec3 at = spawn.position();
+        player.setRespawnPosition(spawn.level().dimension(), spawn.blockPos(), player.getYRot(), true, false);
+        player.teleportTo(spawn.level(), at.x, at.y, at.z, player.getYRot(), player.getXRot());
     }
 
-    private static @Nullable Pair<ServerLevel, BlockPos> resolve(ServerPlayer player, ModifyPlayerSpawnPower.Config cfg) {
-        ServerLevel target = player.server.getLevel(ResourceKey.create(Registries.DIMENSION, cfg.dimension()));
+    private static ResourceKey<Level> dimension(ModifyPlayerSpawnPower.Config cfg) {
+        return ResourceKey.create(Registries.DIMENSION, cfg.dimension());
+    }
+
+    private static @Nullable Spawn resolve(ServerPlayer player, ModifyPlayerSpawnPower.Config cfg) {
+        ServerLevel target = player.server.getLevel(dimension(cfg));
         if (target == null) {
             Apoli.LOGGER.warn("[Apoli] apoli:modify_player_spawn refers to unknown dimension '{}'.", cfg.dimension());
             return null;
@@ -112,86 +128,89 @@ public final class ModifyPlayerSpawnHandler {
         BlockPos origin = cfg.spawnStrategy().apply(
             player.serverLevel().getSharedSpawnPos(), center, cfg.dimensionDistanceMultiplier().orElse(1.0F));
 
-        BlockPos biomeOrigin = locateBiome(player, target, cfg, origin);
-        if (biomeOrigin == null) return null;
+        Search search = search(target, cfg, origin);
+        if (search.start == null) {
+            complain(player, cfg, search.missing);
+            return null;
+        }
 
-        BlockPos searchStart = locateStructure(player, target, cfg, biomeOrigin);
-        if (searchStart == null) return null;
+        long now = target.getGameTime();
+        if (now < search.retryScanAt) return null;
 
-        Vec3 spawn = findValidSpawn(target, searchStart, center, cfg);
+        Vec3 spawn = findValidSpawn(target, search.start, center, cfg);
         if (spawn == null) {
-            Apoli.LOGGER.warn("[Apoli] apoli:modify_player_spawn could not find a safe spot for {} in '{}'.",
-                player.getName().getString(), cfg.dimension());
+            search.retryScanAt = now + FAILED_SCAN_RETRY_TICKS;
+            Apoli.LOGGER.warn("[Apoli] apoli:modify_player_spawn could not find a safe spot for {} within {} blocks of {} in '{}'.",
+                player.getName().getString(), cfg.searchRadius(), search.start.toShortString(), cfg.dimension());
             return null;
         }
-
-        BlockPos pos = BlockPos.containing(spawn);
-        target.getChunkSource().addRegionTicket(TicketType.START, new ChunkPos(pos), SPAWN_CHUNK_TICKET_RADIUS, Unit.INSTANCE);
-        return Pair.of(target, pos);
+        return new Spawn(target, spawn);
     }
 
-    private static @Nullable BlockPos locateBiome(ServerPlayer player, ServerLevel target,
-                                                  ModifyPlayerSpawnPower.Config cfg, BlockPos origin) {
-        if (cfg.biome().isEmpty()) {
-            if (cfg.biomeCondition().isEmpty()) return origin;
-
-            Pair<BlockPos, Holder<Biome>> found = target.findClosestBiome3d(holder -> cfg.biomeCondition().get().test(new BiomeCtx(holder, origin, target)),
-                    origin, BIOME_SEARCH_RADIUS, BIOME_HORIZONTAL_STEP, BIOME_VERTICAL_STEP);
-            if (found != null) return found.getFirst();
-
-            complain(player, cfg, "biomes that match \"" + cfg.biomeCondition().get().typeId() + "\"");
-            return null;
-        }
-
-        ResourceKey<Biome> key = ResourceKey.create(Registries.BIOME, cfg.biome().get());
-        Pair<BlockPos, Holder<Biome>> found = target.findClosestBiome3d(
-            holder -> holder.is(key), origin, BIOME_SEARCH_RADIUS, BIOME_HORIZONTAL_STEP, BIOME_VERTICAL_STEP);
-        if (found != null) return found.getFirst();
-
-        complain(player, cfg, "biome \"" + cfg.biome().get() + "\"");
-        return null;
+    private static Search search(ServerLevel target, ModifyPlayerSpawnPower.Config cfg, BlockPos origin) {
+        Search cached = SEARCHES.get(cfg);
+        if (cached != null && cached.level == target && cached.origin.equals(origin)) return cached;
+        Search fresh = locate(target, cfg, origin);
+        SEARCHES.put(cfg, fresh);
+        return fresh;
     }
 
-    private static @Nullable BlockPos locateStructure(ServerPlayer player, ServerLevel target,
-                                                      ModifyPlayerSpawnPower.Config cfg, BlockPos origin) {
-        if (cfg.structure().isEmpty()) {
-            if (cfg.structureTag().isEmpty()) return origin;
+    private static Search locate(ServerLevel target, ModifyPlayerSpawnPower.Config cfg, BlockPos origin) {
+        BlockPos start = origin;
 
-            TagKey<Structure> key = TagKey.create(Registries.STRUCTURE, cfg.structureTag().get());
-
-            Optional<HolderSet.Named<Structure>> holder = target.registryAccess().registryOrThrow(Registries.STRUCTURE).getTag(key);
-            if (holder.isEmpty()) {
-                complain(player, cfg, "structures of tag \"" + cfg.structureTag().get() + "\"");
-
-                return origin;
-            }
-
-            Pair<BlockPos, Holder<Structure>> found = target.getChunkSource().getGenerator().findNearestMapStructure(target, holder.get(), origin, STRUCTURE_SEARCH_RADIUS, false);
-
-            if (found == null) {
-                complain(player, cfg, "structures of tag \"" + cfg.structureTag().get() + "\"");
-
-                return origin;
-            }
-
-            return found.getFirst();
+        if (cfg.biome().isPresent() || cfg.biomeCondition().isPresent()) {
+            Pair<BlockPos, Holder<Biome>> biome = target.findClosestBiome3d(biomes(target, cfg, origin),
+                origin, BIOME_SEARCH_RADIUS, BIOME_HORIZONTAL_STEP, BIOME_VERTICAL_STEP);
+            if (biome == null) return new Search(target, origin, null, biomeName(cfg));
+            start = biome.getFirst();
         }
 
-        ResourceKey<Structure> key = ResourceKey.create(Registries.STRUCTURE, cfg.structure().get());
-        Holder.Reference<Structure> holder = target.registryAccess()
-                .registryOrThrow(Registries.STRUCTURE).getHolder(key).orElse(null);
-
-        if (holder == null) {
-            complain(player, cfg, "structure \"" + cfg.structure().get() + "\"");
-            return null;
+        if (cfg.structure().isPresent() || cfg.structureTag().isPresent()) {
+            Pair<BlockPos, Holder<Structure>> structure = target.getChunkSource().getGenerator()
+                .findNearestMapStructure(target, structures(target, cfg), start, STRUCTURE_SEARCH_RADIUS, false);
+            if (structure == null) return new Search(target, origin, null, structureName(cfg));
+            start = structure.getFirst();
         }
 
-        Pair<BlockPos, Holder<Structure>> found = target.getChunkSource().getGenerator()
-            .findNearestMapStructure(target, HolderSet.direct(holder), origin, STRUCTURE_SEARCH_RADIUS, false);
-        if (found != null) return found.getFirst();
+        return new Search(target, origin, start, null);
+    }
 
-        complain(player, cfg, "structure \"" + cfg.structure().get() + "\"");
-        return null;
+    private static Predicate<Holder<Biome>> biomes(ServerLevel target, ModifyPlayerSpawnPower.Config cfg, BlockPos origin) {
+        ResourceKey<Biome> key = cfg.biome().map(id -> ResourceKey.create(Registries.BIOME, id)).orElse(null);
+        BiomeCondition condition = cfg.biomeCondition().orElse(null);
+        return holder -> (key != null && holder.is(key))
+            || (condition != null && condition.test(new BiomeCtx(holder, origin, target)));
+    }
+
+    private static HolderSet<Structure> structures(ServerLevel target, ModifyPlayerSpawnPower.Config cfg) {
+        Registry<Structure> registry = target.registryAccess().registryOrThrow(Registries.STRUCTURE);
+        List<Holder<Structure>> holders = new ArrayList<>();
+        cfg.structure()
+            .flatMap(id -> registry.getHolder(ResourceKey.create(Registries.STRUCTURE, id)))
+            .ifPresent(holders::add);
+        cfg.structureTag().flatMap(registry::getTag).ifPresent(tag -> {
+            for (Holder<Structure> holder : tag) {
+                if (!holders.contains(holder)) holders.add(holder);
+            }
+        });
+        return HolderSet.direct(holders);
+    }
+
+    private static String biomeName(ModifyPlayerSpawnPower.Config cfg) {
+        return either(
+            cfg.biome().map(id -> "biome \"" + id + "\"").orElse(null),
+            cfg.biomeCondition().isPresent() ? "a biome matching its biome_condition" : null);
+    }
+
+    private static String structureName(ModifyPlayerSpawnPower.Config cfg) {
+        return either(
+            cfg.structure().map(id -> "structure \"" + id + "\"").orElse(null),
+            cfg.structureTag().map(tag -> "a structure in \"#" + tag.location() + "\"").orElse(null));
+    }
+
+    private static String either(@Nullable String first, @Nullable String second) {
+        if (first == null) return second;
+        return second == null ? first : first + " or " + second;
     }
 
     private static void complain(ServerPlayer player, ModifyPlayerSpawnPower.Config cfg, String what) {
@@ -204,64 +223,42 @@ public final class ModifyPlayerSpawnHandler {
 
     private static @Nullable Vec3 findValidSpawn(ServerLevel level, BlockPos start, int preferredY, ModifyPlayerSpawnPower.Config cfg) {
         int minY = level.getMinBuildHeight() + 1;
-        int maxY = level.getMaxBuildHeight() - 2;
+        int maxY = Math.min(level.getMaxBuildHeight(),
+            level.getMinBuildHeight() + level.dimensionType().logicalHeight()) - 2;
         int startY = Mth.clamp(preferredY, minY, maxY);
+        BlockCondition condition = cfg.blockCondition().orElse(null);
 
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-        int x = start.getX();
-        int z = start.getZ();
-        int dx = 1;
-        int dz = 0;
-        int segment = 1;
-        int passed = 0;
-
-        for (int step = 0; step < cfg.searchRadius() * cfg.searchRadius(); step++) {
-            Vec3 found = findInColumn(level, cursor, x, z, startY, minY, maxY, cfg);
+        for (BlockPos column : BlockPos.spiralAround(start, cfg.searchRadius(), Direction.EAST, Direction.SOUTH)) {
+            Vec3 found = findInColumn(level, cursor, column.getX(), column.getZ(), startY, minY, maxY, condition);
             if (found != null) return found;
-
-            x += dx;
-            z += dz;
-            if (++passed == segment) {
-                passed = 0;
-                int turn = dx;
-                dx = -dz;
-                dz = turn;
-                if (dz == 0) segment++;
-            }
-            if (segment > cfg.searchRadius()) break;
         }
         return null;
     }
 
-    private static @Nullable Vec3 findInColumn(ServerLevel level, BlockPos.MutableBlockPos cursor,
-                                               int x, int z, int startY, int minY, int maxY, ModifyPlayerSpawnPower.Config cfg) {
+    private static @Nullable Vec3 findInColumn(ServerLevel level, BlockPos.MutableBlockPos cursor, int x, int z,
+                                               int startY, int minY, int maxY, @Nullable BlockCondition condition) {
         for (int offset = 0; offset <= maxY - minY; offset++) {
             int down = startY - offset;
             int up = startY + offset;
             if (down < minY && up > maxY) break;
 
             if (down >= minY) {
-                cursor.set(x, down, z);
-                Vec3 found = DismountHelper.findSafeDismountLocation(EntityType.PLAYER, level, cursor, true);
-                if (found != null) {
-                    BlockPos blockPos = new BlockPos((int) found.x, (int) found.y, (int) found.z);
-                    if(cfg.blockCondition().isEmpty() || cfg.blockCondition().get().test(new BlockCtx(blockPos, level.getBlockState(blockPos), level))) {
-                        return found;
-                    }
-                }
+                Vec3 found = safeSpot(level, cursor.set(x, down, z), condition);
+                if (found != null) return found;
             }
             if (offset > 0 && up <= maxY) {
-                cursor.set(x, up, z);
-                Vec3 found = DismountHelper.findSafeDismountLocation(EntityType.PLAYER, level, cursor, true);
-                if (found != null) {
-                    BlockPos blockPos = new BlockPos((int) found.x, (int) found.y, (int) found.z);
-                    if(cfg.blockCondition().isEmpty() || cfg.blockCondition().get().test(new BlockCtx(blockPos, level.getBlockState(blockPos), level))) {
-                        return found;
-                    }
-                }
+                Vec3 found = safeSpot(level, cursor.set(x, up, z), condition);
+                if (found != null) return found;
             }
         }
-
         return null;
+    }
+
+    private static @Nullable Vec3 safeSpot(ServerLevel level, BlockPos.MutableBlockPos cursor, @Nullable BlockCondition condition) {
+        Vec3 found = DismountHelper.findSafeDismountLocation(EntityType.PLAYER, level, cursor, true);
+        if (found == null || condition == null) return found;
+        BlockPos pos = cursor.immutable();
+        return condition.test(new BlockCtx(pos, level.getBlockState(pos), level)) ? found : null;
     }
 }

@@ -7,6 +7,8 @@ import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.action.BiEntityAction;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.Space;
+import dev.overgrown.apoli.data.Vector;
 import dev.overgrown.apoli.entity.ApoliEntities;
 import dev.overgrown.apoli.entity.summon.CloneEntity;
 import dev.overgrown.apoli.entity.summon.Summons;
@@ -16,6 +18,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
 import java.util.Optional;
@@ -34,7 +37,9 @@ public final class SummonCloneAction implements ActionType<EntityCtx, SummonClon
         int maxLifeTicks,
         Optional<ResourceLocation> summonId,
         List<ResourceLocation> powers,
-        Optional<BiEntityAction> bientityAction
+        Optional<BiEntityAction> bientityAction,
+        Vector offset,
+        Space space
     ) {}
 
     @Override
@@ -51,7 +56,9 @@ public final class SummonCloneAction implements ActionType<EntityCtx, SummonClon
             Codec.INT.optionalFieldOf("max_life_ticks", 1200).forGetter(Cfg::maxLifeTicks),
             IdCodecs.ID.optionalFieldOf("summon_id").forGetter(Cfg::summonId),
             IdCodecs.ID.listOf().optionalFieldOf("powers", List.of()).forGetter(Cfg::powers),
-            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Cfg::bientityAction)
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action", BiEntityAction.CODEC).forGetter(Cfg::bientityAction),
+            Vector.CODEC.optionalFieldOf("offset", Vector.ZERO).forGetter(Cfg::offset),
+            Space.CODEC.optionalFieldOf("space", Space.WORLD).forGetter(Cfg::space)
         ).apply(i, Cfg::new));
     }
 
@@ -72,8 +79,9 @@ public final class SummonCloneAction implements ActionType<EntityCtx, SummonClon
         clone.setMaxLifeTime(cfg.maxLifeTicks);
         cfg.summonId.ifPresent(clone::setSummonId);
         clone.setCustomName(owner.getName());
-        clone.moveTo(owner.getX(), owner.getY(), owner.getZ(), owner.getYHeadRot(), 0);
-        net.minecraft.world.phys.Vec3 spawnedAt = clone.position();
+        Vec3 pos = cfg.space.position(owner, cfg.offset);
+        clone.moveTo(pos.x, pos.y, pos.z, owner.getYHeadRot(), 0);
+        Vec3 spawnedAt = clone.position();
 
         if (cfg.inheritEquipment) {
             for (EquipmentSlot slot : EquipmentSlot.values()) {

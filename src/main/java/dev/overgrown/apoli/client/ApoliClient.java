@@ -93,6 +93,7 @@ public final class ApoliClient {
             dev.overgrown.apoli.client.particle.ParticleSheet.clearCache();
             dev.overgrown.apoli.client.particle.ParticleTextures.clearCache();
             dev.overgrown.apoli.client.render.AnimatedTextures.clearCache();
+            TextureFallbacks.clear();
         });
         event.registerReloadListener(dev.overgrown.apoli.client.render.CustomModelManager.INSTANCE);
         event.registerReloadListener(dev.overgrown.apoli.client.render.AnimationManager.INSTANCE);

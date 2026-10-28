@@ -372,6 +372,10 @@ public final class ApoliNetwork {
         for (ServerPlayer p : level.players()) { if (connected(p)) PacketDistributor.sendToPlayer(p, payload); }
     }
 
+    public static void sendRopeCreate(ServerPlayer recipient, RopeCreateS2C payload) {
+        if (connected(recipient)) PacketDistributor.sendToPlayer(recipient, payload);
+    }
+
     public static void broadcastRopeDelete(net.minecraft.server.level.ServerLevel level, RopeDeleteS2C payload) {
         for (ServerPlayer p : level.players()) { if (connected(p)) PacketDistributor.sendToPlayer(p, payload); }
     }

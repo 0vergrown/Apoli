@@ -143,8 +143,21 @@ public final class PowerHudRenderer {
 
     private static void drawEntry(GuiGraphics graphics, int x, int y, HudRender.Entry entry, float fill) {
         ResourceLocation tex = entry.spriteLocation();
-        int barV = BAR_HEIGHT + entry.barIndex() * BAR_INDEX_OFFSET;
-        int iconU = ICONS_U_OFFSET + entry.iconIndex() * ICON_INDEX_OFFSET;
+        int barIndex = entry.barIndex();
+        int iconIndex = entry.iconIndex();
+        List<HudRender.Look> fallback = entry.fallback();
+        if (!fallback.isEmpty() && !TextureFallbacks.exists(tex)) {
+            for (int i = 0, n = fallback.size(); i < n; i++) {
+                HudRender.Look look = fallback.get(i);
+                if (!TextureFallbacks.exists(look.spriteLocation())) continue;
+                tex = look.spriteLocation();
+                if (look.barIndex().isPresent()) barIndex = look.barIndex().get();
+                if (look.iconIndex().isPresent()) iconIndex = look.iconIndex().get();
+                break;
+            }
+        }
+        int barV = BAR_HEIGHT + barIndex * BAR_INDEX_OFFSET;
+        int iconU = ICONS_U_OFFSET + iconIndex * ICON_INDEX_OFFSET;
 
         RenderSystem.enableBlend();
         graphics.blit(tex, x, y, 0, 0, BAR_WIDTH, EMPTY_BAR_HEIGHT);

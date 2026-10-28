@@ -6,8 +6,11 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.EffectSpec;
+import dev.overgrown.apoli.data.Space;
+import dev.overgrown.apoli.data.Vector;
 import net.minecraft.world.entity.AreaEffectCloud;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,7 +21,9 @@ public final class SpawnEffectCloudAction implements ActionType<EntityCtx, Spawn
         float radiusOnUse,
         int waitTime,
         Optional<EffectSpec> effect,
-        Optional<List<EffectSpec>> effects
+        Optional<List<EffectSpec>> effects,
+        Vector offset,
+        Space space
     ) {}
 
     @Override
@@ -28,14 +33,17 @@ public final class SpawnEffectCloudAction implements ActionType<EntityCtx, Spawn
             Codec.FLOAT.optionalFieldOf("radius_on_use", -0.5f).forGetter(Cfg::radiusOnUse),
             Codec.INT.optionalFieldOf("wait_time", 10).forGetter(Cfg::waitTime),
             EffectSpec.CODEC.optionalFieldOf("effect").forGetter(Cfg::effect),
-            Codec.list(EffectSpec.CODEC).optionalFieldOf("effects").forGetter(Cfg::effects)
+            Codec.list(EffectSpec.CODEC).optionalFieldOf("effects").forGetter(Cfg::effects),
+            Vector.CODEC.optionalFieldOf("offset", Vector.ZERO).forGetter(Cfg::offset),
+            Space.CODEC.optionalFieldOf("space", Space.WORLD).forGetter(Cfg::space)
         ).apply(i, Cfg::new));
     }
 
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
         Entity e = ctx.entity();
-        AreaEffectCloud cloud = new AreaEffectCloud(e.level(), e.getX(), e.getY(), e.getZ());
+        Vec3 pos = cfg.space.position(e, cfg.offset);
+        AreaEffectCloud cloud = new AreaEffectCloud(e.level(), pos.x, pos.y, pos.z);
         cloud.setOwner(ctx.living());
         cloud.setRadius(cfg.radius);
         cloud.setRadiusOnUse(cfg.radiusOnUse);

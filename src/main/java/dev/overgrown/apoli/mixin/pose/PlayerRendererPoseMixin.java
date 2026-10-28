@@ -7,6 +7,7 @@ import dev.overgrown.apoli.access.ModifiedPoseHolder;
 import dev.overgrown.apoli.client.ArmPoseReferenceClient;
 import dev.overgrown.apoli.client.render.ModelPartAnimator;
 import dev.overgrown.apoli.data.ArmPoseReference;
+import dev.overgrown.apoli.data.EntityPoses;
 import dev.overgrown.apoli.power.builtin.PosePower;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -38,6 +39,12 @@ public abstract class PlayerRendererPoseMixin {
     private boolean apoli$forceFallFlyingPose(boolean original, @Local(argsOnly = true) AbstractClientPlayer player) {
         if (ModelPartAnimator.overridesPose(player)) return false;
         return original || PosePower.hasEntityPose(player, Pose.FALL_FLYING);
+    }
+
+    @ModifyExpressionValue(method = SETUP_ROTATIONS, at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/client/player/AbstractClientPlayer;getFallFlyingTicks()I"))
+    private int apoli$forcedFallFlyingTicks(int original, @Local(argsOnly = true) AbstractClientPlayer player) {
+        return EntityPoses.fallFlyingTicks(player, original);
     }
 
     @ModifyExpressionValue(method = SETUP_ROTATIONS, at = @At(value = "INVOKE",
