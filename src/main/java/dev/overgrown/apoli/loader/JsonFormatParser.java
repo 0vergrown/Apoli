@@ -13,9 +13,11 @@ import org.quiltmc.parsers.json.JsonFormat;
 import org.slf4j.Logger;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public final class JsonFormatParser {
     private final FileToIdConverter JSON;
@@ -86,39 +88,31 @@ public final class JsonFormatParser {
         return result;
     }
 
-    public Map<ResourceLocation, Pair<JsonFormat, List<Resource>>> getMergedStacks(ResourceManager resourceManager) {
+    public Map<ResourceLocation, List<Pair<JsonFormat, Resource>>> getMergedStacks(ResourceManager resourceManager) {
         Map<ResourceLocation, List<Resource>> json = JSON.listMatchingResourceStacks(resourceManager);
         Map<ResourceLocation, List<Resource>> jsonc = JSONC.listMatchingResourceStacks(resourceManager);
         Map<ResourceLocation, List<Resource>> json5 = JSON5.listMatchingResourceStacks(resourceManager);
 
-        Map<ResourceLocation, Pair<JsonFormat, List<Resource>>> result = new HashMap<>();
+        Map<ResourceLocation, List<Pair<JsonFormat, Resource>>> result = new HashMap<>();
 
         for (var entry : json.entrySet()) {
-            result.putIfAbsent(entry.getKey(), new Pair<>(JsonFormat.JSON, entry.getValue()));
+            result.put(JSON.fileToId(entry.getKey()), entry.getValue().stream().map(e -> new Pair<>(JsonFormat.JSON, e)).collect(Collectors.toCollection(ArrayList::new)));
         }
 
         for (var entry : jsonc.entrySet()) {
-            result.putIfAbsent(entry.getKey(), new Pair<>(JsonFormat.JSONC, entry.getValue()));
+            var abs = result.putIfAbsent(JSONC.fileToId(entry.getKey()), entry.getValue().stream().map(e -> new Pair<>(JsonFormat.JSONC, e)).collect(Collectors.toCollection(ArrayList::new)));
+            if (abs != null) {
+                result.get(JSONC.fileToId(entry.getKey())).addAll(entry.getValue().stream().map(e -> new Pair<>(JsonFormat.JSONC, e)).toList());
+            }
         }
 
         for (var entry : json5.entrySet()) {
-            result.putIfAbsent(entry.getKey(), new Pair<>(JsonFormat.JSON5, entry.getValue()));
+            var abs = result.putIfAbsent(JSON5.fileToId(entry.getKey()), entry.getValue().stream().map(e -> new Pair<>(JsonFormat.JSON5, e)).collect(Collectors.toCollection(ArrayList::new)));
+            if (abs != null) {
+                result.get(JSON5.fileToId(entry.getKey())).addAll(entry.getValue().stream().map(e -> new Pair<>(JsonFormat.JSON5, e)).toList());
+            }
         }
 
         return result;
-    }
-
-    public ResourceLocation getFileId(ResourceLocation resourceLocation, @NotNull JsonFormat format) {
-        switch (format) {
-            case JSONC -> {
-                return JSONC.fileToId(resourceLocation);
-            }
-            case JSON5 -> {
-                return JSON5.fileToId(resourceLocation);
-            }
-            default -> {
-                return JSON.fileToId(resourceLocation);
-            }
-        }
     }
 }
