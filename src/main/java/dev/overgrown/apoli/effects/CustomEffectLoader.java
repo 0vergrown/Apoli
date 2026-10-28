@@ -16,10 +16,7 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import org.quiltmc.parsers.json.JsonFormat;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public final class CustomEffectLoader {
     private static final Logger LOG = LogUtils.getLogger();
@@ -31,11 +28,11 @@ public final class CustomEffectLoader {
     public static List<CustomEffect> load(ResourceManager resourceManager) {
         List<CustomEffect> loaded = new ArrayList<>();
         JsonFormatParser parser = new JsonFormatParser(DIR);
-        for (Map.Entry<ResourceLocation, Pair<JsonFormat, List<Resource>>> entry : parser.getMergedStacks(resourceManager).entrySet()) {
-            ResourceLocation id = parser.getFileId(entry.getKey(), entry.getValue().getFirst());
+        for (Map.Entry<ResourceLocation, List<Pair<JsonFormat, Resource>>> entry : parser.getMergedStacks(resourceManager).entrySet()) {
             CustomEffect chosen = null;
-            for (Resource resource : entry.getValue().getSecond()) {
-                CustomEffect effect = parse(id, resource, entry.getValue().getFirst());
+            for (Pair<JsonFormat, Resource> pair : entry.getValue()) {
+                ResourceLocation id = entry.getKey();
+                CustomEffect effect = parse(id, pair.getSecond(), pair.getFirst());
                 if (effect != null && (chosen == null || effect.loadingPriority() >= chosen.loadingPriority())) {
                     chosen = effect;
                 }
