@@ -1,4 +1,4 @@
-package dev.overgrown.apoli.compat.voicechat;
+package dev.overgrown.apoli.power.builtin;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;

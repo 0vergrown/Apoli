@@ -1,13 +1,11 @@
 package dev.overgrown.apoli.skill;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.JsonOps;
 import dev.overgrown.apoli.loader.IdWildcards;
-import dev.overgrown.apoli.loader.JsonFormatParser;
+import dev.overgrown.apoli.loader.JsonDataFiles;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
@@ -20,7 +18,6 @@ import java.util.Map;
 
 public final class SkillTreeLoader extends SimplePreparableReloadListener<Map<ResourceLocation, JsonElement>> {
     private static final Logger LOG = LogUtils.getLogger();
-    private static final Gson GSON = new GsonBuilder().setLenient().create();
     private static final String DIR = "skill_trees";
 
     public SkillTreeLoader() {
@@ -29,7 +26,7 @@ public final class SkillTreeLoader extends SimplePreparableReloadListener<Map<Re
 
     @Override
     protected @NotNull Map<ResourceLocation, JsonElement> prepare(ResourceManager resourceManager, ProfilerFiller profilerFiller) {
-        return JsonFormatParser.apply(resourceManager, DIR, GSON, LOG);
+        return JsonDataFiles.load(resourceManager, DIR, LOG);
     }
 
     @Override

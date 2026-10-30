@@ -47,15 +47,6 @@ repositories {
 		name = "TwelveIterations"
 		url = "https://maven.twelveiterations.com/repository/maven-public/"
 	}
-	maven {
-		name = "Henkel"
-		url = "https://maven.maxhenkel.de/repository/public"
-	}
-
-	maven {
-		name = "QuiltMC"
-		url = "https://maven.quiltmc.org/repository/release/"
-	}
 
 	maven {
 		name = "Saps"
@@ -112,24 +103,12 @@ dependencies {
 
 	modCompileOnly "me.lucko:fabric-permissions-api:0.3.1"
 
-	compileOnly "de.maxhenkel.voicechat:voicechat-api:${project.voicechat_api_version}"
-
 	modCompileOnly("dev.latvian.mods:kubejs-fabric:${project.kubejs_version}") {
 		transitive = false
 	}
 	modCompileOnly("dev.latvian.mods:rhino-fabric:${project.rhino_version}") {
 		transitive = false
 	}
-
-	implementation "com.alphacephei:vosk:${project.vosk_version}"
-	include "com.alphacephei:vosk:${project.vosk_version}"
-	include "net.java.dev.jna:jna:5.7.0"
-
-	implementation("org.quiltmc.parsers:gson:0.3.1")
-	include("org.quiltmc.parsers:gson:0.3.1")
-
-	implementation("org.quiltmc.parsers:json:0.3.1")
-	include("org.quiltmc.parsers:json:0.3.1")
 
 	testImplementation platform("org.junit:junit-bom:5.10.2")
 	testImplementation "org.junit.jupiter:junit-jupiter"
@@ -174,9 +153,5 @@ publishing {
 	}
 
 	repositories {
-		// Add repositories to publish to here.
-		// Notice: This block does NOT have the same function as the block in the top level.
-		// The repositories here will be used for publishing your artifact, not for
-		// retrieving dependencies.
 	}
 }

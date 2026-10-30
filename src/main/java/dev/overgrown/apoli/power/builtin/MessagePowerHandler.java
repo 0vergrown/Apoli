@@ -1,4 +1,4 @@
-package dev.overgrown.apoli.compat.voicechat;
+package dev.overgrown.apoli.power.builtin;
 
 import dev.overgrown.apoli.Apoli;
 import net.minecraft.core.registries.Registries;

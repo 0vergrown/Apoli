@@ -7,21 +7,16 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
-import java.util.Locale;
 import java.util.function.IntConsumer;
 
 @Environment(EnvType.CLIENT)
 public class ApoliConfigScreen extends Screen {
-
-    private static final List<String> SPEECH_SOURCES = List.of("auto", "microphone", "voicechat");
 
     private static final int ROW_HEIGHT = 24;
     private static final int OFFSET_RANGE = 64;
@@ -29,8 +24,6 @@ public class ApoliConfigScreen extends Screen {
 
     @Nullable
     private final Screen parent;
-    @Nullable
-    private EditBox inputDevice;
     @Nullable
     private Integer hudOffsetX;
     @Nullable
@@ -45,34 +38,7 @@ public class ApoliConfigScreen extends Screen {
     protected void init() {
         ApoliClientConfig config = ApoliClientConfig.get();
         int x = this.width / 2 - WIDGET_WIDTH / 2;
-        int y = Math.max(20, this.height / 2 - ROW_HEIGHT * 5);
-
-        this.addRenderableWidget(toggle("speech_to_action", config.speechToAction(), x, y, config::setSpeechToAction));
-        y += ROW_HEIGHT;
-        this.addRenderableWidget(toggle("speech_push_to_talk", config.speechPushToTalk(), x, y, config::setSpeechPushToTalk));
-        y += ROW_HEIGHT;
-        this.addRenderableWidget(toggle("speech_instant", config.speechInstant(), x, y, config::setSpeechInstant));
-        y += ROW_HEIGHT;
-        this.addRenderableWidget(toggle("speech_echo", config.speechEcho(), x, y, config::setSpeechEcho));
-        y += ROW_HEIGHT;
-
-        this.addRenderableWidget(CycleButton.<String>builder(ApoliConfigScreen::speechSourceLabel)
-            .withValues(SPEECH_SOURCES)
-            .withInitialValue(SPEECH_SOURCES.contains(config.speechSource()) ? config.speechSource() : "auto")
-            .withTooltip(value -> Tooltip.create(Component.translatable("apoli.config.speech_source.tooltip")))
-            .create(x, y, WIDGET_WIDTH, 20,
-                Component.translatable("apoli.config.speech_source"),
-                (button, value) -> config.setSpeechSource(value)));
-        y += ROW_HEIGHT;
-
-        this.inputDevice = new EditBox(this.font, x, y, WIDGET_WIDTH, 20,
-            Component.translatable("apoli.config.speech_input_device"));
-        this.inputDevice.setMaxLength(128);
-        this.inputDevice.setValue(config.speechInputDevice());
-        this.inputDevice.setHint(Component.translatable("apoli.config.speech_input_device.hint"));
-        this.inputDevice.setTooltip(Tooltip.create(Component.translatable("apoli.config.speech_input_device.tooltip")));
-        this.addRenderableWidget(this.inputDevice);
-        y += ROW_HEIGHT;
+        int y = Math.max(40, this.height / 2 - ROW_HEIGHT * 2);
 
         this.addRenderableWidget(toggle("hud_auto_stack", config.hudAutoStack(), x, y, config::setHudAutoStack));
         y += ROW_HEIGHT;
@@ -96,10 +62,6 @@ public class ApoliConfigScreen extends Screen {
                 (button, value) -> setter.set(value));
     }
 
-    private static Component speechSourceLabel(String value) {
-        return Component.translatable("apoli.config.speech_source." + value.toLowerCase(Locale.ROOT));
-    }
-
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(graphics);
@@ -110,9 +72,6 @@ public class ApoliConfigScreen extends Screen {
     @Override
     public void onClose() {
         ApoliClientConfig config = ApoliClientConfig.get();
-        if (this.inputDevice != null) {
-            config.setSpeechInputDevice(this.inputDevice.getValue().trim());
-        }
         if (this.hudOffsetX != null) {
             config.setHudOffsetX(this.hudOffsetX);
         }

@@ -30,16 +30,10 @@ public final class ApoliClient implements ClientModInitializer {
         "key.apoli.skill_tree", com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
         org.lwjgl.glfw.GLFW.GLFW_KEY_K, "key.categories.apoli");
 
-    private static final net.minecraft.client.KeyMapping SPEECH_KEY = new net.minecraft.client.KeyMapping(
-        "key.apoli.speech_to_action", com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
-        com.mojang.blaze3d.platform.InputConstants.UNKNOWN.getValue(), "key.categories.apoli");
-
 
     @Override
     public void onInitializeClient() {
         net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper.registerKeyBinding(SKILL_TREE_KEY);
-        net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper.registerKeyBinding(SPEECH_KEY);
-        dev.overgrown.apoli.client.speech.SpeechClient.setPushToTalkKey(SPEECH_KEY);
         net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
             dev.overgrown.apoli.entity.ApoliEntities.CUSTOM_PROJECTILE,
             dev.overgrown.apoli.client.CustomProjectileRenderer::new);
@@ -270,9 +264,6 @@ public final class ApoliClient implements ClientModInitializer {
             new dev.overgrown.apoli.network.payload.ProtocolVersionPayload(
                 dev.overgrown.apoli.network.ProtocolCompat.VERSION).write(buf);
             ClientPlayNetworking.send(dev.overgrown.apoli.network.payload.ProtocolVersionPayload.CHANNEL, buf);
-            if (dev.overgrown.apoli.client.ApoliClientConfig.get().speechToAction()) {
-                dev.overgrown.apoli.client.speech.SpeechClient.onJoin();
-            }
         });
 
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SkillDefsSyncS2C.CHANNEL, (mc, handler, buf, sender) -> {
@@ -370,7 +361,6 @@ public final class ApoliClient implements ClientModInitializer {
             RopeClientManager.tick();
             dev.overgrown.apoli.client.TextOverlayRenderer.tick();
             dev.overgrown.apoli.client.disguise.ClientDisguiseManager.tick(mc);
-            dev.overgrown.apoli.client.speech.SpeechClient.clientTick(mc);
             if (dev.overgrown.apoli.compat.ModCompat.FIGURA) {
                 dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.tick(mc);
             }
@@ -418,6 +408,5 @@ public final class ApoliClient implements ClientModInitializer {
         dev.overgrown.apoli.client.skill.ClientSkillState.clear();
         dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.clear();
         dev.overgrown.apoli.client.ClientProtocolState.reset();
-        dev.overgrown.apoli.client.speech.SpeechClient.onLeave();
     }
 }

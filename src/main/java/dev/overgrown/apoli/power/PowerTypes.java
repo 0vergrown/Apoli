@@ -297,11 +297,7 @@ public final class PowerTypes {
             AliasDefault.of("green", Codec.FLOAT, 0.5F),
             AliasDefault.of("blue", Codec.FLOAT, 0.5F));
         PowerTypeRegistry.register(Apoli.id("modify_hearing_range"), new ModifyHearingRangePower());
-        PowerTypeRegistry.register(Apoli.id("modify_speaking_range"), new ModifySpeakingRangePower());
-        PowerTypeRegistry.register(Apoli.id("action_on_speak"), new dev.overgrown.apoli.compat.voicechat.ActionOnSpeakPower());
-        PowerTypeRegistry.register(Apoli.id("action_on_reply"), new dev.overgrown.apoli.compat.voicechat.ActionOnReplyPower());
-        PowerTypeRegistry.register(Apoli.id("action_on_sending_message"), new dev.overgrown.apoli.compat.voicechat.ActionOnSendingMessagePower());
-        PowerTypeRegistry.register(Apoli.id("action_on_speech"), new dev.overgrown.apoli.compat.voicechat.ActionOnSpeechPower());
+        PowerTypeRegistry.register(Apoli.id("action_on_sending_message"), new ActionOnSendingMessagePower());
         PowerTypeRegistry.register(Apoli.id("overlay"), new OverlayPower());
         PowerTypeRegistry.register(Apoli.id("shader"), new ShaderPower());
         PowerTypeRegistry.register(Apoli.id("tooltip"), new TooltipPower());

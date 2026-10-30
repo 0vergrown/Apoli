@@ -21,9 +21,6 @@
     "client": [
       "dev.overgrown.apoli.ApoliClient"
     ],
-    "voicechat": [
-      "dev.overgrown.apoli.compat.voicechat.ApoliVoicechatPlugin"
-    ],
     "modmenu": [
       "dev.overgrown.apoli.compat.modmenu.ApoliModMenu"
     ]
@@ -58,12 +55,12 @@
     "apoli-gravestones.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=0.19.3",
+    "fabricloader": ">=0.20.1",
     "minecraft": "~1.20.1",
     "java": ">=17",
     "fabric-api": "*"
   },
   "breaks": {
-    "origins": "<1.39.0"
+    "origins": "<1.49.0"
   }
 }
