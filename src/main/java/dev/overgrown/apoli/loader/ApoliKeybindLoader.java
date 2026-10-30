@@ -1,7 +1,5 @@
 package dev.overgrown.apoli.loader;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.JsonOps;
@@ -22,7 +20,6 @@ import java.util.Map;
 
 public final class ApoliKeybindLoader extends SimplePreparableReloadListener<Map<ResourceLocation, JsonElement>> {
     private static final Logger LOG = LogUtils.getLogger();
-    private static final Gson GSON = new GsonBuilder().setLenient().create();
     private static final String DIR = "keybinds";
 
     private MinecraftServer server;
@@ -33,7 +30,7 @@ public final class ApoliKeybindLoader extends SimplePreparableReloadListener<Map
 
     @Override
     protected @NotNull Map<ResourceLocation, JsonElement> prepare(ResourceManager resourceManager, ProfilerFiller profilerFiller) {
-        return JsonFormatParser.apply(resourceManager, DIR, GSON, LOG);
+        return JsonDataFiles.load(resourceManager, DIR, LOG);
     }
 
     public void attachServer(MinecraftServer server) {

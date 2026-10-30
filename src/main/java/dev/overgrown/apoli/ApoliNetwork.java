@@ -92,7 +92,6 @@ public final class ApoliNetwork {
         PayloadTypeRegistry.playC2S().register(
             dev.overgrown.apoli.network.payload.CameraPerspectiveC2S.TYPE,
             dev.overgrown.apoli.network.payload.CameraPerspectiveC2S.STREAM_CODEC);
-        PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.SpeechTriggerC2S.TYPE, dev.overgrown.apoli.network.payload.SpeechTriggerC2S.STREAM_CODEC);
 
         PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.TYPE,
             dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.STREAM_CODEC);

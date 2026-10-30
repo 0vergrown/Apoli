@@ -1,6 +1,5 @@
 package dev.overgrown.apoli.data.expr;
 
-import dev.overgrown.apoli.compat.voicechat.VoiceState;
 import dev.overgrown.apoli.condition.builtin.entity.SimpleFlagConditions;
 import dev.overgrown.apoli.data.AttackStrengthContext;
 import dev.overgrown.apoli.data.EnchantmentLevels;
@@ -465,17 +464,6 @@ public final class ExprVars {
         register("xp_progress", (e, c, l, v) -> e instanceof Player p ? p.experienceProgress : 0);
 
         register("power_count", (e, c, l, v) -> c == null ? 0 : c.allPowers().size());
-
-        register("voice_loudness", (e, c, l, v) ->
-            e == null ? 0 : VoiceState.loudness(e.getUUID()));
-        register("voice_loudness_normalized", (e, c, l, v) ->
-            e == null ? 0 : VoiceState.loudness(e.getUUID()) / 100.0);
-        register("voice_speaking", (e, c, l, v) ->
-            e != null && VoiceState.isSpeaking(e.getUUID()) ? 1 : 0);
-        register("voice_whispering", (e, c, l, v) ->
-            e != null && VoiceState.isWhispering(e.getUUID()) ? 1 : 0);
-        register("voice_disabled", (e, c, l, v) ->
-            e != null && (VoiceState.isDisabled(e.getUUID()) || VoiceState.isDisconnected(e.getUUID())) ? 1 : 0);
 
         registerIdFunctions();
         registerBracketFunctions();

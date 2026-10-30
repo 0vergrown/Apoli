@@ -25,7 +25,7 @@ public final class ModCompat {
 
     public static final boolean HARDCORE_REVIVAL = FabricLoader.getInstance().isModLoaded("hardcorerevival");
 
-    public static final boolean VOICECHAT = FabricLoader.getInstance().isModLoaded("voicechat");
+    public static final boolean BIRDSONG = FabricLoader.getInstance().isModLoaded("birdsong");
 
     public static final boolean NERB = FabricLoader.getInstance().isModLoaded("nerb");
 
