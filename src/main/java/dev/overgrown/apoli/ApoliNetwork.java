@@ -105,8 +105,6 @@ public final class ApoliNetwork {
             dev.overgrown.apoli.network.payload.CameraPerspectiveC2S.TYPE,
             dev.overgrown.apoli.network.payload.CameraPerspectiveC2S.STREAM_CODEC,
             ApoliNetwork::onCameraPerspective);
-        registrar.playToServer(dev.overgrown.apoli.network.payload.SpeechTriggerC2S.TYPE,
-            dev.overgrown.apoli.network.payload.SpeechTriggerC2S.STREAM_CODEC, ApoliNetwork::onSpeechTrigger);
 
         registrar.playToClient(dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.TYPE,
             dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.STREAM_CODEC, ApoliNetwork::onRadialMenuOpen);
@@ -292,14 +290,6 @@ public final class ApoliNetwork {
         ctx.enqueueWork(() -> {
             if (ctx.player() instanceof ServerPlayer sp) {
                 dev.overgrown.apoli.keybind.HeldKeys.setServerHeld(sp, payload.keys());
-            }
-        });
-    }
-
-    private static void onSpeechTrigger(dev.overgrown.apoli.network.payload.SpeechTriggerC2S payload, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> {
-            if (ctx.player() instanceof net.minecraft.server.level.ServerPlayer sp) {
-                dev.overgrown.apoli.compat.voicechat.ActionOnSpeechPower.fireTrigger(sp, payload.power());
             }
         });
     }

@@ -92,6 +92,9 @@ public final class Apoli {
         ConditionTypes.bootstrap();
         ActionTypes.bootstrap();
         PowerTypes.bootstrap();
+        if (!dev.overgrown.apoli.compat.ModCompat.BIRDSONG) {
+            dev.overgrown.apoli.compat.birdsong.BirdsongPlaceholders.register();
+        }
         dev.overgrown.apoli.scale.ScaleTypes.bootstrap();
         dev.overgrown.apoli.power.PowerSources.bootstrap();
         dev.overgrown.apoli.attribution.PowerCause.bootstrap();
@@ -163,25 +166,14 @@ public final class Apoli {
         if (dev.overgrown.apoli.compat.ModCompat.anyAccessory()) {
             dev.overgrown.apoli.compat.accessory.command.AccessoryCommand.register(event.getDispatcher());
         }
-        event.getDispatcher().register(net.minecraft.commands.Commands.literal("apoli:speech")
-            .requires(source -> source.hasPermission(0))
-            .then(net.minecraft.commands.Commands.argument("text", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
-                .executes(ctx -> {
-                    ServerPlayer player = ctx.getSource().getPlayerOrException();
-                    String text = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "text");
-                    String language = dev.overgrown.apoli.util.SpeechLanguage.of(player);
-                    dev.overgrown.apoli.compat.voicechat.ActionOnSpeechPower.fire(player, text, language);
-                    ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal("[Apoli] Simulated speech: \"" + text + "\""), false);
-                    return 1;
-                })));
         event.getDispatcher().register(net.minecraft.commands.Commands.literal("apoli:message")
             .requires(source -> source.hasPermission(0))
             .then(net.minecraft.commands.Commands.argument("text", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
                 .executes(ctx -> {
                     net.minecraft.world.entity.Entity holder = ctx.getSource().getEntityOrException();
                     String text = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "text");
-                    dev.overgrown.apoli.compat.voicechat.ActionOnSendingMessagePower.Report report =
-                        dev.overgrown.apoli.compat.voicechat.ActionOnSendingMessagePower.diagnose(
+                    dev.overgrown.apoli.power.builtin.ActionOnSendingMessagePower.Report report =
+                        dev.overgrown.apoli.power.builtin.ActionOnSendingMessagePower.diagnose(
                             holder, text, net.minecraft.network.chat.ChatType.CHAT.location());
                     for (String line : report.lines()) {
                         ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(line), false);
@@ -196,7 +188,7 @@ public final class Apoli {
         if (sender == null) {
             return;
         }
-        dev.overgrown.apoli.compat.voicechat.MessagePowerHandler.handle(event);
+        dev.overgrown.apoli.power.builtin.MessagePowerHandler.handle(event);
     }
 
     @SubscribeEvent
@@ -240,10 +232,6 @@ public final class Apoli {
         dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(event.getServer());
         dev.overgrown.apoli.entity.GrabManager.clearAll();
         dev.overgrown.apoli.block.GhostBlocks.clear();
-        dev.overgrown.apoli.compat.voicechat.VoiceState.setServer(event.getServer());
-        dev.overgrown.apoli.compat.voicechat.VoiceState.setCallbacks(
-            dev.overgrown.apoli.compat.voicechat.VoicePowerHandler::onSpeakStart,
-            dev.overgrown.apoli.compat.voicechat.VoicePowerHandler::onSpeakStop);
         if (EffectConfig.get().enabled()) CustomEffectRegistry.finishReload(true);
     }
 
@@ -413,7 +401,6 @@ public final class Apoli {
         if (event.getEntity() instanceof ServerPlayer sp) {
             dev.overgrown.apoli.keybind.HeldKeys.clearServer(sp.getUUID());
             dev.overgrown.apoli.dev.DevMode.forget(sp.getUUID());
-            dev.overgrown.apoli.compat.voicechat.ActionOnSpeechPower.forget(sp.getUUID());
             if (dev.overgrown.apoli.power.PowerTypeRegistry.get(dev.overgrown.apoli.power.ApoliIds.ACTION_ON_KEY_SEQUENCE)
                 instanceof dev.overgrown.apoli.power.builtin.ActionOnKeySequencePower seq) {
                 seq.forget(sp.getUUID());
@@ -433,8 +420,6 @@ public final class Apoli {
         dev.overgrown.apoli.action.builtin.entity.TextAction.onPlayerLeave(event.getEntity().getUUID());
         dev.overgrown.apoli.entity.PlayerModelTypes.remove(event.getEntity().getUUID());
         dev.overgrown.apoli.power.builtin.InventoryPower.onPlayerLeave(event.getEntity().getUUID());
-        dev.overgrown.apoli.compat.voicechat.VoiceHearing.forget(event.getEntity().getUUID());
-        dev.overgrown.apoli.compat.voicechat.VoiceState.forget(event.getEntity().getUUID());
         dev.overgrown.apoli.power.ResolvedPowers.forget(event.getEntity().getUUID());
         CustomEffectRegistry.waiting.remove(event.getEntity().getUUID());
     }
@@ -494,8 +479,6 @@ public final class Apoli {
         dev.overgrown.apoli.mount.MountOffsets.clearServer();
         dev.overgrown.apoli.entity.ProjectileTickManager.clearAll();
         dev.overgrown.apoli.compat.icarus.WingsAccess.clear();
-        dev.overgrown.apoli.compat.voicechat.VoiceState.clear();
-        dev.overgrown.apoli.compat.voicechat.VoiceHearing.reset();
             dev.overgrown.apoli.tick.TickRates.clear();
     }
 
@@ -541,8 +524,6 @@ public final class Apoli {
         DelayedActionQueue.tick();
         CustomEffectRegistry.tick(event.getServer());
         dev.overgrown.apoli.keybind.HeldKeys.tickForced(event.getServer());
-        dev.overgrown.apoli.compat.voicechat.VoiceState.tick(event.getServer());
-        dev.overgrown.apoli.compat.voicechat.VoiceHearing.tick(event.getServer());
         dev.overgrown.apoli.rope.RopeManager.tick(event.getServer());
         dev.overgrown.apoli.entity.GrabManager.tick(event.getServer());
         dev.overgrown.apoli.entity.ProjectileTickManager.tick(event.getServer());

@@ -5,7 +5,7 @@ import net.neoforged.fml.ModList;
 public final class ModCompat {
     private ModCompat() {}
 
-    public static final boolean VOICECHAT = ModList.get().isLoaded("voicechat");
+    public static final boolean BIRDSONG = ModList.get().isLoaded("birdsong");
 
     public static final boolean NERB = ModList.get().isLoaded("nerb");
 

@@ -34,15 +34,9 @@ public final class ApoliClient {
         "key.apoli.skill_tree", com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
         org.lwjgl.glfw.GLFW.GLFW_KEY_K, "key.categories.apoli");
 
-    public static final net.minecraft.client.KeyMapping SPEECH_KEY = new net.minecraft.client.KeyMapping(
-        "key.apoli.speech_to_action", com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
-        com.mojang.blaze3d.platform.InputConstants.UNKNOWN.getValue(), "key.categories.apoli");
-
     @SubscribeEvent
     public static void onRegisterKeyMappings(net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent event) {
         event.register(SKILL_TREE_KEY);
-        event.register(SPEECH_KEY);
-        dev.overgrown.apoli.client.speech.SpeechClient.setPushToTalkKey(SPEECH_KEY);
     }
 
     @SubscribeEvent
@@ -153,7 +147,6 @@ public final class ApoliClient {
             if (dev.overgrown.apoli.compat.ModCompat.FLYWHEEL) {
                 dev.overgrown.apoli.compat.flywheel.FlywheelBridge.clientTick(mc);
             }
-            dev.overgrown.apoli.client.speech.SpeechClient.clientTick(mc);
             if (dev.overgrown.apoli.compat.ModCompat.FIGURA) {
                 dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.tick(mc);
             }
@@ -204,7 +197,6 @@ public final class ApoliClient {
             dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
             dev.overgrown.apoli.client.skill.ClientSkillState.clear();
             dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.clear();
-            dev.overgrown.apoli.client.speech.SpeechClient.onLeave();
         }
 
         @SubscribeEvent
@@ -216,9 +208,6 @@ public final class ApoliClient {
 
         @SubscribeEvent
         public static void onLogin(ClientPlayerNetworkEvent.LoggingIn event) {
-            if (ApoliClientConfig.get().speechToAction()) {
-                dev.overgrown.apoli.client.speech.SpeechClient.onJoin();
-            }
         }
 
         @SubscribeEvent

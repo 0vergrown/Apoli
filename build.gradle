@@ -1,7 +1,7 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
-    id 'net.neoforged.moddev' version '2.0.143'
+    id 'net.neoforged.moddev' version '2.0.148'
     id 'idea'
 }
 
@@ -51,21 +51,12 @@ repositories {
         }
     }
     maven {
-        name = "Henkel"
-        url = "https://maven.maxhenkel.de/repository/public"
-    }
-    maven {
         name = "Saps"
         url = "https://maven.saps.dev/releases"
         content {
             includeGroup "dev.latvian.mods"
             includeGroup "dev.latvian.apps"
         }
-    }
-
-    maven {
-        name = "QuiltMC"
-        url = "https://maven.quiltmc.org/repository/release/"
     }
 }
 
@@ -125,10 +116,6 @@ configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 
-configurations {
-    voskRuntime { transitive = false }
-}
-
 dependencies {
     compileOnly "maven.modrinth:icarus:${project.icarus_version}"
     compileOnly "maven.modrinth:icarus-rewinged:${project.icarus_rewinged_version}"
@@ -153,19 +140,9 @@ dependencies {
 
     compileOnly "maven.modrinth:skills:${project.puffish_skills_version}"
 
-    compileOnly "de.maxhenkel.voicechat:voicechat-api:${project.voicechat_api_version}"
-
     compileOnly "dev.latvian.mods:kubejs-neoforge:${project.kubejs_version}"
     compileOnly "dev.latvian.mods:rhino:${project.rhino_version}"
 
-    voskRuntime "com.alphacephei:vosk:${project.vosk_version}"
-    voskRuntime "net.java.dev.jna:jna:5.7.0"
-
-    jarJar(implementation("org.quiltmc.parsers:gson:0.3.1")) {}
-    jarJar(implementation("org.quiltmc.parsers:json:0.3.1")) {}
-
-    additionalRuntimeClasspath "org.quiltmc.parsers:gson:0.3.1"
-    additionalRuntimeClasspath "org.quiltmc.parsers:json:0.3.1"
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
@@ -222,18 +199,4 @@ jar {
         rename { "${it}_$projectName" }
     }
 
-}
-
-
-tasks.register('collectVoskRuntime', Copy) {
-    from configurations.voskRuntime
-    into layout.buildDirectory.dir('voskRuntime')
-    rename { it.startsWith('vosk') ? 'vosk.jar' : 'jna.jar' }
-}
-
-tasks.named('processResources') {
-    dependsOn 'collectVoskRuntime'
-    from(layout.buildDirectory.dir('voskRuntime')) {
-        into 'apoli/runtime'
-    }
 }
