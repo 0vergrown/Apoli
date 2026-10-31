@@ -359,7 +359,6 @@ public final class Apoli {
         Entity.RemovalReason reason = e.getRemovalReason();
         if (reason != null && reason.shouldDestroy()) {
             EntitySetPower.onEntityGone(e);
-            dev.overgrown.apoli.power.builtin.AttributePower.onEntityGone(e.getUUID());
         }
     }
 

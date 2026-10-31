@@ -3,6 +3,7 @@ package dev.overgrown.apoli.power.builtin;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.overgrown.apoli.condition.EntityCondition;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.AttributeModifier;
 import dev.overgrown.apoli.power.ApoliPowers;
@@ -20,34 +21,39 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class AttributePower extends PowerType<AttributePower.Cfg> {
-
-    private static final String MAX_HEALTH_ID = "minecraft:generic.max_health";
 
     public record Cfg(
         List<AttributeModifier> modifiers,
         boolean updateHealth
     ) {}
 
-    private static final java.util.Map<TrackKey, Double> APPLIED = new java.util.concurrent.ConcurrentHashMap<>();
+    private record Slot(
+        Holder<Attribute> attribute,
+        ResourceLocation id,
+        net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation operation,
+        boolean maxHealth,
+        AttributeModifier modifier
+    ) {}
 
-    private record TrackKey(java.util.UUID entityUUID, ResourceLocation powerId, int idx) {}
+    private record Plan(Cfg cfg, Optional<EntityCondition> condition, Slot[] slots) {}
 
-    public static void onEntityGone(java.util.UUID entityId) {
-        APPLIED.keySet().removeIf(key -> key.entityUUID().equals(entityId));
-    }
+    private static final Map<ResourceLocation, Plan> PLANS = new ConcurrentHashMap<>();
 
     private static final MapCodec<Cfg> CFG_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
         AttributeModifier.CODEC.optionalFieldOf("modifier").forGetter(c -> Optional.empty()),
         AttributeModifier.LIST_OR_SINGLE.optionalFieldOf("modifiers", List.of()).forGetter(Cfg::modifiers),
         Codec.BOOL.optionalFieldOf("update_health", true).forGetter(Cfg::updateHealth)
     ).apply(i, (single, list, updateHealth) -> {
-        List<AttributeModifier> all = new java.util.ArrayList<>(list);
+        List<AttributeModifier> all = new ArrayList<>(list);
         single.ifPresent(all::add);
         return new Cfg(List.copyOf(all), updateHealth);
     }));
@@ -61,19 +67,14 @@ public final class AttributePower extends PowerType<AttributePower.Cfg> {
     public void onAdded(ResourceLocation powerId, Cfg cfg, PowerContainer holder, ResourceLocation source) {
         LivingEntity entity = holder.owner();
         if (entity == null || holder.isSuppressed(powerId)) return;
-        for (int idx = 0; idx < cfg.modifiers.size(); idx++) {
-            reapplyOne(entity, holder, powerId, idx, cfg.modifiers.get(idx), cfg.updateHealth);
-        }
+        apply(entity, holder, plan(powerId, cfg), cfg.updateHealth);
     }
 
     @Override
     public void onSuppressed(ResourceLocation powerId, Cfg cfg, PowerContainer holder) {
         LivingEntity entity = holder.owner();
         if (entity == null) return;
-        for (int idx = 0; idx < cfg.modifiers.size(); idx++) {
-            removeOne(entity, powerId, idx, cfg.modifiers.get(idx), cfg.updateHealth);
-            APPLIED.remove(new TrackKey(entity.getUUID(), powerId, idx));
-        }
+        strip(entity, plan(powerId, cfg).slots, cfg.updateHealth);
     }
 
     @Override
@@ -81,61 +82,86 @@ public final class AttributePower extends PowerType<AttributePower.Cfg> {
         if (holder.hasPower(powerId)) return;
         LivingEntity entity = holder.owner();
         if (entity == null) return;
-        for (int idx = 0; idx < cfg.modifiers.size(); idx++) {
-            removeOne(entity, powerId, idx, cfg.modifiers.get(idx), cfg.updateHealth);
-            APPLIED.remove(new TrackKey(entity.getUUID(), powerId, idx));
-        }
+        strip(entity, plan(powerId, cfg).slots, cfg.updateHealth);
     }
 
     @Override
     public void tick(ResourceLocation powerId, Cfg cfg, PowerContainer holder) {
         LivingEntity entity = holder.owner();
         if (entity == null) return;
+        apply(entity, holder, plan(powerId, cfg), cfg.updateHealth);
+    }
+
+    public static void purge(LivingEntity entity, ResourceLocation powerId) {
+        Plan plan = PLANS.get(powerId);
+        if (plan != null) strip(entity, plan.slots, false);
+    }
+
+    private static Plan plan(ResourceLocation powerId, Cfg cfg) {
+        Plan plan = PLANS.get(powerId);
+        if (plan != null && plan.cfg == cfg) return plan;
+        String prefix = "attribute/" + powerId.getNamespace() + "/" + powerId.getPath().replace('/', '_') + "/";
+        List<Slot> slots = new ArrayList<>(cfg.modifiers.size());
         for (int idx = 0; idx < cfg.modifiers.size(); idx++) {
-            reapplyOne(entity, holder, powerId, idx, cfg.modifiers.get(idx), cfg.updateHealth);
+            AttributeModifier modifier = cfg.modifiers.get(idx);
+            if (modifier.attribute().isEmpty()) continue;
+            Holder<Attribute> attribute = BuiltInRegistries.ATTRIBUTE.getHolder(modifier.attribute().get()).orElse(null);
+            if (attribute == null) continue;
+            slots.add(new Slot(attribute, ResourceLocation.fromNamespaceAndPath("apoli", prefix + idx),
+                modifier.operation().vanillaOperation(), attribute.value() == Attributes.MAX_HEALTH.value(), modifier));
+        }
+        Power loaded = ApoliPowers.get(powerId);
+        plan = new Plan(cfg, loaded == null ? Optional.empty() : loaded.condition(), slots.toArray(new Slot[0]));
+        PLANS.put(powerId, plan);
+        return plan;
+    }
+
+    private static void apply(LivingEntity entity, PowerContainer holder, Plan plan, boolean updateHealth) {
+        Slot[] slots = plan.slots;
+        if (slots.length == 0) return;
+        boolean active = conditionHolds(entity, plan.condition);
+        for (Slot slot : slots) {
+            AttributeInstance instance = entity.getAttribute(slot.attribute);
+            if (instance == null) continue;
+            net.minecraft.world.entity.ai.attributes.AttributeModifier current = instance.getModifier(slot.id);
+            if (!active) {
+                if (current != null) replace(entity, instance, slot, null, updateHealth);
+                continue;
+            }
+            double value = slot.modifier.resolveInput(entity, holder, instance.getBaseValue());
+            if (current != null && current.operation() == slot.operation
+                    && Math.abs(current.amount() - value) < 1.0e-6) {
+                continue;
+            }
+            replace(entity, instance, slot,
+                new net.minecraft.world.entity.ai.attributes.AttributeModifier(slot.id, value, slot.operation),
+                updateHealth);
         }
     }
 
-    private void reapplyOne(LivingEntity entity, PowerContainer holder, ResourceLocation powerId, int idx,
-                            AttributeModifier modifier, boolean updateHealth) {
-        Optional<ResourceLocation> attrId = modifier.attribute();
-        if (attrId.isEmpty()) return;
-        Holder<Attribute> attr = BuiltInRegistries.ATTRIBUTE.getHolder(attrId.get()).orElse(null);
-        if (attr == null) return;
-        AttributeInstance instance = entity.getAttribute(attr);
-        if (instance == null) return;
-
-        TrackKey key = new TrackKey(entity.getUUID(), powerId, idx);
-        ResourceLocation modId = idFor(powerId, idx);
-        boolean affectsMaxHealth = MAX_HEALTH_ID.equals(attrId.get().toString());
-        float prevMax = affectsMaxHealth ? entity.getMaxHealth() : 0f;
-        float prevHealth = affectsMaxHealth ? entity.getHealth() : 0f;
-        boolean changed = false;
-
-        if (!conditionHolds(entity, powerId)) {
-            if (APPLIED.remove(key) != null) {
-                instance.removeModifier(modId);
-                changed = true;
-            }
-        } else {
-            double newValue = modifier.resolveInput(entity, holder, instance.getBaseValue());
-
-            Double last = APPLIED.get(key);
-            if (last == null || Math.abs(last - newValue) >= 1.0e-6 || instance.getModifier(modId) == null) {
-                instance.removeModifier(modId);
-                net.minecraft.world.entity.ai.attributes.AttributeModifier vanillaMod =
-                    new net.minecraft.world.entity.ai.attributes.AttributeModifier(
-                        modId, newValue, modifier.operation().vanillaOperation()
-                    );
-                instance.addTransientModifier(vanillaMod);
-                APPLIED.put(key, newValue);
-                changed = true;
+    private static void strip(LivingEntity entity, Slot[] slots, boolean updateHealth) {
+        for (Slot slot : slots) {
+            AttributeInstance instance = entity.getAttribute(slot.attribute);
+            if (instance != null && instance.getModifier(slot.id) != null) {
+                replace(entity, instance, slot, null, updateHealth);
             }
         }
+    }
 
-        if (changed && affectsMaxHealth) {
-            reconcileHealth(entity, prevMax, prevHealth, updateHealth);
-        }
+    private static void replace(LivingEntity entity, AttributeInstance instance, Slot slot,
+                                @Nullable net.minecraft.world.entity.ai.attributes.AttributeModifier next,
+                                boolean updateHealth) {
+        float prevMax = slot.maxHealth ? entity.getMaxHealth() : 0f;
+        float prevHealth = slot.maxHealth ? entity.getHealth() : 0f;
+        instance.removeModifier(slot.id);
+        if (next != null) instance.addTransientModifier(next);
+        if (slot.maxHealth) reconcileHealth(entity, prevMax, prevHealth, updateHealth);
+    }
+
+    private static boolean conditionHolds(LivingEntity entity, Optional<EntityCondition> condition) {
+        if (condition.isEmpty()) return true;
+        if (!(entity.level() instanceof ServerLevel level)) return true;
+        return condition.get().test(new EntityCtx(entity, level));
     }
 
     private static void reconcileHealth(LivingEntity entity, float prevMax, float prevHealth, boolean updateHealth) {
@@ -154,59 +180,9 @@ public final class AttributePower extends PowerType<AttributePower.Cfg> {
         if (!(entity instanceof ServerPlayer player) || player.connection == null) return;
         AttributeInstance maxHealth = player.getAttribute(Attributes.MAX_HEALTH);
         if (maxHealth != null) {
-            player.connection.send(new ClientboundUpdateAttributesPacket(player.getId(), java.util.List.of(maxHealth)));
+            player.connection.send(new ClientboundUpdateAttributesPacket(player.getId(), List.of(maxHealth)));
         }
         player.connection.send(new ClientboundSetHealthPacket(
             player.getHealth(), player.getFoodData().getFoodLevel(), player.getFoodData().getSaturationLevel()));
-    }
-
-    private static boolean conditionHolds(LivingEntity entity, ResourceLocation powerId) {
-        Power loaded = ApoliPowers.get(powerId);
-        if (loaded == null || loaded.condition().isEmpty()) return true;
-        if (!(entity.level() instanceof ServerLevel level)) return true;
-        return loaded.condition().get().test(new EntityCtx(entity, level));
-    }
-
-    private void removeOne(LivingEntity entity, ResourceLocation powerId, int idx, AttributeModifier modifier, boolean updateHealth) {
-        Optional<ResourceLocation> attrId = modifier.attribute();
-        if (attrId.isEmpty()) return;
-        Holder<Attribute> attr = BuiltInRegistries.ATTRIBUTE.getHolder(attrId.get()).orElse(null);
-        if (attr == null) return;
-        AttributeInstance instance = entity.getAttribute(attr);
-        if (instance == null) return;
-        boolean affectsMaxHealth = MAX_HEALTH_ID.equals(attrId.get().toString());
-        float prevMax = affectsMaxHealth ? entity.getMaxHealth() : 0f;
-        float prevHealth = affectsMaxHealth ? entity.getHealth() : 0f;
-        instance.removeModifier(idFor(powerId, idx));
-        if (affectsMaxHealth) {
-            reconcileHealth(entity, prevMax, prevHealth, updateHealth);
-        }
-    }
-
-    public static void purge(LivingEntity entity, ResourceLocation powerId) {
-        java.util.UUID uuid = entity.getUUID();
-        boolean touchedMaxHealth = false;
-        float prevMax = entity.getMaxHealth();
-        float prevHealth = entity.getHealth();
-        for (java.util.Iterator<TrackKey> it = APPLIED.keySet().iterator(); it.hasNext(); ) {
-            TrackKey key = it.next();
-            if (!key.entityUUID().equals(uuid) || !key.powerId().equals(powerId)) continue;
-            ResourceLocation modId = idFor(powerId, key.idx());
-            for (Holder<Attribute> attr : BuiltInRegistries.ATTRIBUTE.asHolderIdMap()) {
-                AttributeInstance instance = entity.getAttribute(attr);
-                if (instance == null || instance.getModifier(modId) == null) continue;
-                instance.removeModifier(modId);
-                if (MAX_HEALTH_ID.equals(attr.unwrapKey().map(k -> k.location().toString()).orElse(""))) {
-                    touchedMaxHealth = true;
-                }
-            }
-            it.remove();
-        }
-        if (touchedMaxHealth) reconcileHealth(entity, prevMax, prevHealth, false);
-    }
-
-    private static ResourceLocation idFor(ResourceLocation powerId, int idx) {
-        String path = "attribute/" + powerId.getNamespace() + "/" + powerId.getPath().replace('/', '_') + "/" + idx;
-        return ResourceLocation.fromNamespaceAndPath("apoli", path);
     }
 }
