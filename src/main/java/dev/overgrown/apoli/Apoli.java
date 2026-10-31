@@ -441,7 +441,6 @@ public final class Apoli implements ModInitializer {
             Entity.RemovalReason reason = entity.getRemovalReason();
             if (reason != null && reason.shouldDestroy()) {
                 dev.overgrown.apoli.power.builtin.EntitySetPower.onEntityGone(entity);
-                dev.overgrown.apoli.power.builtin.AttributePower.onEntityGone(entity.getUUID());
             }
         });
 

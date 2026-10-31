@@ -139,7 +139,6 @@
     "power.TamableAnimalTameMixin",
     "power.AbstractHorseTameMixin",
     "power.AnimalBreedMixin",
-    "power.LivingEntityShareEffectsMixin",
     "projectile.ProjectileDivergenceMixin",
     "enchantment.EnchantmentMenuEnchantabilityMixin",
     "enchantment.EnchantmentHelperEnchantabilityMixin",
@@ -149,7 +148,6 @@
     "trade.AbstractVillagerInfiniteTradesMixin",
     "trade.AbstractVillagerExtraTradesMixin",
     "power.AnvilMenuRepairMixin",
-    "power.EntitySneakyMixin",
     "power.ServerLevelLevelEventMixin"
   ],
   "client": [
