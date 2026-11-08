@@ -1,13 +1,11 @@
 # Apoli
 
-**Apoli** is a data-pack-driven power system for Minecraft. It lets pack authors build custom abilities, status effects, and game mechanics — movement, combat, rendering, world interaction, and more — entirely through JSON. No Java required. It's the engine behind [Overgrown's Origins](https://github.com/0vergrown/Origins).
-
-> **This branch:** `NeoForge-1.21.1` — NeoForge, Minecraft 1.21.1.
+**Apoli** is a data-pack-driven power system for Minecraft. It gives pack authors the tools to create custom abilities, status effects, and game mechanics covering movement, combat, rendering, and world interaction. Everything is defined through JSON, so no Java is required. Apoli is the engine behind [Overgrown's Origins](https://github.com/0vergrown/Origins).
 
 ## Branches
 
-This repository holds one branch per Minecraft version / mod loader combination, all kept at feature parity and sharing the same data pack format:
-[moddev](build/moddev)
+Each Minecraft version and mod loader combination has its own branch. All branches share the same data pack format and are kept in feature parity.
+
 | Branch                                                                       | Loader   | Minecraft |
 |------------------------------------------------------------------------------|----------|-----------|
 | [`Fabric-1.20.1`](https://github.com/0vergrown/Apoli/tree/Fabric-1.20.1)     | Fabric   | 1.20.1    |
@@ -17,32 +15,38 @@ This repository holds one branch per Minecraft version / mod loader combination,
 ## Features
 
 ### Power system
-- 100+ built-in power types spanning movement, combat, resource & attribute manipulation, rendering/HUD, world interaction, and meta/utility behavior.
-- A typed action system (entity, bi-entity, block, item, meta) and a condition system spanning 7 context types.
-- Every power supports a universal `condition` field, condition inversion, and source-based suppression — temporarily disable a granted power without removing it.
 
-### Beyond the basics
-- **Data-driven skill trees** — progression paths and unlockable abilities, defined entirely in a data pack.
-- **Physics-based rope & grapple system** — swing, leap, and reel, anchored to entities or blocks.
-- **Entity disguise system** — transform mobs and players, fully synced in multiplayer.
-- **Custom entities** — projectiles, minions, and player clones, grantable via powers.
-- **Data-driven keybindings** — bind an active power to a key entirely from JSON.
+- Over 100 built-in power types covering movement, combat, resource and attribute manipulation, rendering and HUD elements, world interaction, and utility behavior.
+- A typed action system for entities, bi-entities, blocks, items, and meta actions, alongside conditions for seven different context types.
+- Every power supports a universal `condition` field, condition inversion, and source-based suppression. This lets you temporarily disable a granted power without removing it.
+
+### Additional systems
+
+- **Data-driven skill trees:** Define progression paths and unlockable abilities entirely through data packs.
+- **Physics-based ropes and grappling:** Swing, leap, and reel in while anchored to entities or blocks.
+- **Entity disguises:** Transform mobs and players, with full multiplayer synchronization.
+- **Custom entities:** Create projectiles, minions, and player clones that can be granted through powers.
+- **Data-driven keybindings:** Assign keys to active powers using JSON.
 - Custom recipes and loot functions that grant powers.
-- A built-in expression engine for math-driven values — resource caps, attribute modifiers, damage scaling, and more, written as formulas instead of fixed numbers.
+- A built-in expression engine for formula-based values, including resource caps, attribute modifiers, and damage scaling.
 
-### Built for real servers
-- Powers are indexed per-entity at grant/revoke time, so hot paths (tick, collision, damage) do O(1) lookups against a cached index instead of scanning every power on every check.
-- Power sync to clients is chunked and compressed, so large data packs never hit Minecraft's packet string limit.
-- A versioned network protocol checks client/server compatibility on join, so a mismatched build fails with a readable message instead of a silent desync.
-- Backward-compatible JSON handling — fields renamed or restructured across versions still parse from their older form, so existing data packs keep working after an update.
+### Server performance and networking
+
+- Powers are indexed per entity when granted or revoked. Tick, collision, and damage checks use the cached index for O(1) lookups instead of scanning every power.
+- Power synchronization is chunked and compressed, allowing large data packs to sync without hitting Minecraft's packet string limit.
+- A versioned network protocol checks client/server compatibility when players join. Mismatched builds produce a readable error message instead of silently desynchronizing.
+- JSON handling remains backward-compatible across versions. Renamed or restructured fields still accept their older formats, so existing data packs continue to work after updates.
 
 ### Compatibility
-- Optional integration with Trinkets, Curios, and Accessories, unified behind one facade — use whichever accessory-slot mod the pack's modpack already has.
-- Optional integration with Figura, Icarus, and Hardcore Revival. Each compiles against the mod's API but no-ops cleanly if the mod isn't installed.
+
+- Optional integration with Trinkets, Curios, and Accessories. A shared facade handles accessory slots, allowing packs to use whichever of these mods their modpack includes.
+- Optional integration with Figura, Icarus, and Hardcore Revival. Apoli compiles against each mod's API and safely does nothing when the mod isn't installed.
 
 ## For pack authors
 
-Powers live under `data/<namespace>/powers/<power>.json` in a data pack and get granted to entities directly, or through an [Overgrown's Origins](https://github.com/0vergrown/Origins) origin. A minimal power looks like:
+Powers are defined as JSON files under `data/<namespace>/powers/<power>.json` in a data pack. They can be granted directly to entities or through an [Overgrown's Origins](https://github.com/0vergrown/Origins) origin.
+
+Here's a minimal example of a power that applies Speed when used:
 
 ```json
 {
@@ -54,18 +58,18 @@ Powers live under `data/<namespace>/powers/<power>.json` in a data pack and get 
     "amplifier": 1
   }
 }
-```
+````
 
-## For developers
+### For developers
 
-Requires JDK 21.
+Apoli requires JDK 21.
 
-```
+```sh
 ./gradlew build
 ```
 
-Use `./gradlew runClient` / `./gradlew runServer` for a dev environment. See the [NeoForge documentation](https://docs.neoforged.net/) for IDE setup.
+To launch a development environment, use `./gradlew runClient` or `./gradlew runServer`. For IDE setup, see the [NeoForge documentation](https://docs.neoforged.net/).
 
-## License
+### License
 
-The A/O License — see [`LICENSE`](LICENSE). The canonical, always-current text lives on the Handbook: <https://0vergrown.github.io/Handbook/license>.
+Apoli is licensed under the A/O License. See `LICENSE` for the repository copy, or visit the Handbook for the [always-current license text](https://0vergrown.github.io/Handbook/license).
