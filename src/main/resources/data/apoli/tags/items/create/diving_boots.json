@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    { "id": "create:copper_diving_boots", "required": false },
+    { "id": "create:netherite_diving_boots", "required": false }
+  ]
+}

@@ -9,7 +9,7 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashSet;
-import java.util.OptionalInt;
+import java.util.OptionalDouble;
 import java.util.Set;
 
 public final class ItemPowers {
@@ -65,20 +65,20 @@ public final class ItemPowers {
         tag.put(POWERS, list);
     }
 
-    public static OptionalInt readValue(ItemStack stack, ResourceLocation power, EquipmentSlot slot) {
+    public static OptionalDouble readValue(ItemStack stack, ResourceLocation power, EquipmentSlot slot) {
         ListTag list = read(stack);
-        if (list == null) return OptionalInt.empty();
+        if (list == null) return OptionalDouble.empty();
         String id = power.toString();
         String slotName = slot.getSerializedName();
         for (Tag entry : list) {
             if (entry instanceof CompoundTag c && id.equals(c.getString(ID)) && slotName.equals(c.getString(SLOT))) {
-                return c.contains(VALUE, Tag.TAG_INT) ? OptionalInt.of(c.getInt(VALUE)) : OptionalInt.empty();
+                return c.contains(VALUE, Tag.TAG_ANY_NUMERIC) ? OptionalDouble.of(c.getDouble(VALUE)) : OptionalDouble.empty();
             }
         }
-        return OptionalInt.empty();
+        return OptionalDouble.empty();
     }
 
-    public static void saveValue(ItemStack stack, ResourceLocation power, EquipmentSlot slot, int value) {
+    public static void saveValue(ItemStack stack, ResourceLocation power, EquipmentSlot slot, double value) {
         if (stack == null || stack.isEmpty()) return;
         CompoundTag tag = stack.getTag();
         if (tag == null || !tag.contains(POWERS, Tag.TAG_LIST)) return;
@@ -87,7 +87,11 @@ public final class ItemPowers {
         ListTag list = tag.getList(POWERS, Tag.TAG_COMPOUND);
         for (Tag entry : list) {
             if (entry instanceof CompoundTag c && id.equals(c.getString(ID)) && slotName.equals(c.getString(SLOT))) {
-                c.putInt(VALUE, value);
+                if (value == Math.rint(value) && value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE) {
+                    c.putInt(VALUE, (int) value);
+                } else {
+                    c.putDouble(VALUE, value);
+                }
                 return;
             }
         }

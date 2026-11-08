@@ -128,18 +128,18 @@ public final class GameEventListenerPower extends PowerType<GameEventListenerPow
 
 
     @Override
-    public java.util.OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+    public java.util.OptionalDouble readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         return dev.overgrown.apoli.power.PowerResources.readDeadline(holder, powerId);
     }
 
     @Override
-    public java.util.OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
+    public java.util.OptionalDouble writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, double value) {
         return dev.overgrown.apoli.power.PowerResources.writeDeadline(holder, powerId, value, dev.overgrown.apoli.power.PowerResources.cooldownTicks(cfg.cooldown(), holder));
     }
 
     @Override
-    public java.util.OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
-        return java.util.OptionalInt.of(max ? Math.max(dev.overgrown.apoli.power.PowerResources.cooldownTicks(cfg.cooldown(), holder), 0) : 0);
+    public java.util.OptionalDouble resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
+        return java.util.OptionalDouble.of(max ? Math.max(dev.overgrown.apoli.power.PowerResources.cooldownTicks(cfg.cooldown(), holder), 0) : 0);
     }
 
     @Override

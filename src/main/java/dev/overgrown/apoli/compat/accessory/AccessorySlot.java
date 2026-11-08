@@ -49,16 +49,32 @@ public record AccessorySlot(Optional<String> provider, Optional<String> group,
     );
 
     public boolean test(AccessorySlotRef ref) {
-        return (provider.isEmpty() || provider.get().equalsIgnoreCase(ref.provider()))
-            && (group.isEmpty() || group.get().equals(ref.group()))
-            && (type.isEmpty() || type.get().equals(ref.type()))
-            && (index.isEmpty() || index.get() == ref.index());
+        return test(ref.provider(), ref.group(), ref.type(), ref.index());
+    }
+
+    public boolean test(String provider, String group, String type, int index) {
+        return (this.provider.isEmpty() || isWildcard(this.provider.get()) || this.provider.get().equalsIgnoreCase(provider))
+            && (this.group.isEmpty() || isWildcard(this.group.get()) || this.group.get().equals(group))
+            && (this.type.isEmpty() || isWildcard(this.type.get()) || this.type.get().equals(type))
+            && (this.index.isEmpty() || this.index.get() == index);
+    }
+
+    private static boolean isWildcard(String value) {
+        return value.length() == 1 && value.charAt(0) == '*';
     }
 
     public static boolean matchesAny(List<AccessorySlot> filters, AccessorySlotRef ref) {
         if (filters.isEmpty()) return true;
-        for (AccessorySlot f : filters) {
-            if (f.test(ref)) return true;
+        for (int i = 0, n = filters.size(); i < n; i++) {
+            if (filters.get(i).test(ref)) return true;
+        }
+        return false;
+    }
+
+    public static boolean matchesAny(List<AccessorySlot> filters, String provider, String group, String type, int index) {
+        if (filters.isEmpty()) return true;
+        for (int i = 0, n = filters.size(); i < n; i++) {
+            if (filters.get(i).test(provider, group, type, index)) return true;
         }
         return false;
     }

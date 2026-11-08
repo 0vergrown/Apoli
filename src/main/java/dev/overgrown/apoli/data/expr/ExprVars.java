@@ -20,7 +20,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.OptionalInt;
+import java.util.OptionalDouble;
 
 public final class ExprVars {
     private ExprVars() {}
@@ -114,8 +114,8 @@ public final class ExprVars {
         if (depth[0] >= 8) return 0;
         depth[0]++;
         try {
-            OptionalInt bound = PowerResources.bound(container, base, max);
-            if (bound.isPresent()) return bound.getAsInt();
+            OptionalDouble bound = PowerResources.bound(container, base, max);
+            if (bound.isPresent()) return bound.getAsDouble();
         } finally {
             depth[0]--;
         }
@@ -124,14 +124,14 @@ public final class ExprVars {
 
     public static double readResource(@Nullable PowerContainer container, ResourceLocation id) {
         if (container == null) return 0;
-        OptionalInt value = PowerResources.read(container, id);
-        return value.isPresent() ? value.getAsInt() : container.getAuxIntOr(id, 0);
+        OptionalDouble value = PowerResources.read(container, id);
+        return value.isPresent() ? value.getAsDouble() : container.getAuxDoubleOr(id, 0);
     }
 
     public static double readResourceAt(@Nullable PowerContainer container, ResourceLocation id, int slot) {
         if (container == null) return 0;
-        OptionalInt value = PowerResources.readAt(container, id, slot);
-        return value.isPresent() ? value.getAsInt() : 0;
+        OptionalDouble value = PowerResources.readAt(container, id, slot);
+        return value.isPresent() ? value.getAsDouble() : 0;
     }
 
     private static void registerIdFunctions() {
@@ -179,7 +179,7 @@ public final class ExprVars {
             }
             ExprNode wanted = args.get(0);
             return new ResolvedVar((e, c, l, v) ->
-                PowerResources.indexOf(c, id, (int) Math.round(wanted.eval(e, c, l, v))) >= 0 ? 1 : 0, true);
+                PowerResources.indexOf(c, id, wanted.eval(e, c, l, v)) >= 0 ? 1 : 0, true);
         });
         ExprParser.registerIdFunction("resource_index_of", (id, args, name, at) -> {
             if (args.isEmpty()) {
@@ -187,7 +187,7 @@ public final class ExprVars {
             }
             ExprNode wanted = args.get(0);
             return new ResolvedVar((e, c, l, v) ->
-                PowerResources.indexOf(c, id, (int) Math.round(wanted.eval(e, c, l, v))), true);
+                PowerResources.indexOf(c, id, wanted.eval(e, c, l, v)), true);
         });
     }
 

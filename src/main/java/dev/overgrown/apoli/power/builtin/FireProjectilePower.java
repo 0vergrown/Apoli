@@ -39,12 +39,41 @@ import net.minecraft.world.phys.Vec3;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalInt;
+import java.util.OptionalDouble;
 import java.util.UUID;
 
 public final class FireProjectilePower extends PowerType<FireProjectilePower.Config> {
     public record Config(Params params, Hooks hooks, Optional<Return> returning, Optional<Homing> homing,
-                         Optional<Reflect> reflective, Expression lifetime, Expression pierce) {}
+                         Optional<Reflect> reflective, Optional<Sticky> sticky, Expression lifetime,
+                         Expression pierce) {}
+
+    public record Sticky(
+        Expression duration,
+        Expression depth,
+        Optional<BlockCondition> blockCondition,
+        Optional<BiEntityAction> bientityActionOnStick
+    ) {
+        private static final Expression DEFAULT_DURATION = Expression.constant(1200);
+        private static final Expression DEFAULT_DEPTH = Expression.constant(0.0);
+        public static final Sticky DEFAULT = new Sticky(DEFAULT_DURATION, DEFAULT_DEPTH, Optional.empty(), Optional.empty());
+
+        public static final Codec<Sticky> CODEC = RecordCodecBuilder.create(i -> i.group(
+            Expression.INT_OR_EXPR.optionalFieldOf("duration", DEFAULT_DURATION).forGetter(Sticky::duration),
+            Expression.FLOAT_OR_EXPR.optionalFieldOf("depth", DEFAULT_DEPTH).forGetter(Sticky::depth),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("block_condition", BlockCondition.CODEC).forGetter(Sticky::blockCondition),
+            dev.overgrown.apoli.codec.LoggedOptionalField.of("bientity_action_on_stick", BiEntityAction.CODEC).forGetter(Sticky::bientityActionOnStick)
+        ).apply(i, Sticky::new));
+    }
+
+    private static final MapCodec<Optional<Sticky>> STICKY =
+        dev.overgrown.apoli.codec.LoggedOptionalField.of("sticky", Codec.either(Codec.BOOL, Sticky.CODEC)).xmap(
+            FireProjectilePower::stickyFrom,
+            sticky -> sticky.map(s -> Either.<Boolean, Sticky>right(s)));
+
+    private static Optional<Sticky> stickyFrom(Optional<Either<Boolean, Sticky>> field) {
+        if (field.isEmpty()) return Optional.empty();
+        return field.get().map(enabled -> enabled ? Optional.of(Sticky.DEFAULT) : Optional.empty(), Optional::of);
+    }
 
     public record Homing(
         Expression delay,
@@ -228,6 +257,7 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         dev.overgrown.apoli.codec.LoggedOptionalField.of("return", Return.CODEC).forGetter(Config::returning),
         dev.overgrown.apoli.codec.LoggedOptionalField.of("homing", Homing.CODEC).forGetter(Config::homing),
         REFLECTIVE.forGetter(Config::reflective),
+        STICKY.forGetter(Config::sticky),
         Expression.INT_OR_EXPR.optionalFieldOf("lifetime", NO_LIFETIME).forGetter(Config::lifetime),
         Expression.INT_OR_EXPR.optionalFieldOf("pierce", NO_PIERCE).forGetter(Config::pierce)
     ).apply(i, Config::new));
@@ -319,31 +349,31 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
 
 
     @Override
-    public OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+    public OptionalDouble readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         Entity owner = holder.rawOwner();
         if (owner.level().isClientSide()) {
-            return OptionalInt.of(PowerResources.clientCooldown(holder, powerId));
+            return OptionalDouble.of(PowerResources.clientCooldown(holder, powerId));
         }
         FireState st = states.get(new StateKey(owner.getUUID(), powerId));
-        return OptionalInt.of(st == null ? 0 : Math.max(0, st.cooldown));
+        return OptionalDouble.of(st == null ? 0 : Math.max(0, st.cooldown));
     }
 
     @Override
-    public OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
+    public OptionalDouble writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, double value) {
         Entity owner = holder.rawOwner();
-        if (owner.level().isClientSide()) return OptionalInt.empty();
-        int clamped = Math.max(0, Math.min(value, Math.max(PowerResources.cooldownTicks(cfg.params().cooldown(), holder), 0)));
+        if (owner.level().isClientSide()) return OptionalDouble.empty();
+        int clamped = Math.max(0, Math.min(PowerResources.whole(value), Math.max(PowerResources.cooldownTicks(cfg.params().cooldown(), holder), 0)));
         states.computeIfAbsent(new StateKey(owner.getUUID(), powerId), x -> new FireState()).cooldown = clamped;
         if (owner instanceof net.minecraft.server.level.ServerPlayer player) {
             dev.overgrown.apoli.ApoliNetwork.sendActivated(player,
                 new dev.overgrown.apoli.network.payload.PowerActivatedS2C(powerId, clamped));
         }
-        return OptionalInt.of(clamped);
+        return OptionalDouble.of(clamped);
     }
 
     @Override
-    public OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
-        return OptionalInt.of(max ? Math.max(PowerResources.cooldownTicks(cfg.params().cooldown(), holder), 0) : 0);
+    public OptionalDouble resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
+        return OptionalDouble.of(max ? Math.max(PowerResources.cooldownTicks(cfg.params().cooldown(), holder), 0) : 0);
     }
 
     @Override

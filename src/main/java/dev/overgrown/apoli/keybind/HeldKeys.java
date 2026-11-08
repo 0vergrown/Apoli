@@ -118,7 +118,7 @@ public final class HeldKeys {
             release(entity, key);
             return;
         }
-        FORCED.computeIfAbsent(entity, u -> new ConcurrentHashMap<>()).put(key, ticks);
+        FORCED.computeIfAbsent(entity, u -> new ConcurrentHashMap<>()).merge(key, ticks, Math::max);
     }
 
     public static void release(UUID entity, String key) {

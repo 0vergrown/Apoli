@@ -140,10 +140,17 @@ public final class ApoliClient implements ClientModInitializer {
             });
 
         ClientPlayNetworking.registerGlobalReceiver(
-            dev.overgrown.apoli.network.payload.SyncAuxIntsS2C.CHANNEL, (mc, handler, buf, sender) -> {
-                dev.overgrown.apoli.network.payload.SyncAuxIntsS2C aux =
-                    dev.overgrown.apoli.network.payload.SyncAuxIntsS2C.read(buf);
-                mc.execute(() -> ClientPowerState.applyAuxInts(aux));
+            dev.overgrown.apoli.network.payload.SyncAuxValuesS2C.CHANNEL, (mc, handler, buf, sender) -> {
+                dev.overgrown.apoli.network.payload.SyncAuxValuesS2C aux =
+                    dev.overgrown.apoli.network.payload.SyncAuxValuesS2C.read(buf);
+                mc.execute(() -> ClientPowerState.applyAuxValues(aux));
+            });
+
+        ClientPlayNetworking.registerGlobalReceiver(
+            dev.overgrown.apoli.network.payload.BlockGlowsS2C.CHANNEL, (mc, handler, buf, sender) -> {
+                dev.overgrown.apoli.network.payload.BlockGlowsS2C glows =
+                    dev.overgrown.apoli.network.payload.BlockGlowsS2C.read(buf);
+                mc.execute(() -> dev.overgrown.apoli.client.glow.ClientBlockGlows.apply(glows));
             });
 
         ClientPlayNetworking.registerGlobalReceiver(PowerActivatedS2C.CHANNEL, (mc, handler, buf, sender) -> {
@@ -344,6 +351,8 @@ public final class ApoliClient implements ClientModInitializer {
             dev.overgrown.apoli.client.MouseMovementWatcher.clientTick(mc);
             dev.overgrown.apoli.client.render.ClientRenderFlags.clientTick(mc);
             dev.overgrown.apoli.client.render.BlockRenderRules.clientTick(mc);
+            dev.overgrown.apoli.client.glow.ClientBlockGlows.clientTick(mc);
+            dev.overgrown.apoli.client.glow.BlockGlowScanner.clientTick(mc);
             if (dev.overgrown.apoli.compat.ModCompat.FLYWHEEL) {
                 dev.overgrown.apoli.compat.flywheel.FlywheelBridge.clientTick(mc);
             }
@@ -395,6 +404,9 @@ public final class ApoliClient implements ClientModInitializer {
         dev.overgrown.apoli.client.camera.CameraController.reset();
         dev.overgrown.apoli.client.CameraPerspectiveReporter.reset();
         dev.overgrown.apoli.client.render.BlockRenderRules.clear();
+        dev.overgrown.apoli.client.glow.ClientBlockGlows.clear();
+        dev.overgrown.apoli.client.glow.BlockGlowScanner.clear();
+        dev.overgrown.apoli.client.glow.BlockGlowRenderer.clear();
         dev.overgrown.apoli.client.render.ClientRenderFlags.clear();
         dev.overgrown.apoli.client.TextOverlayRenderer.clear();
         dev.overgrown.apoli.client.ClientLabelState.clear();

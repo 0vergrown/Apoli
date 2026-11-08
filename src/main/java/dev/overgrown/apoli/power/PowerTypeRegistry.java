@@ -176,17 +176,17 @@ public final class PowerTypeRegistry {
         }
 
         @Override
-        public java.util.OptionalInt readResource(ResourceLocation id, C cfg, PowerContainer h) {
+        public java.util.OptionalDouble readResource(ResourceLocation id, C cfg, PowerContainer h) {
             return inner.readResource(id, cfg, h);
         }
 
         @Override
-        public java.util.OptionalInt writeResource(ResourceLocation id, C cfg, PowerContainer h, int value) {
+        public java.util.OptionalDouble writeResource(ResourceLocation id, C cfg, PowerContainer h, double value) {
             return inner.writeResource(id, cfg, h, value);
         }
 
         @Override
-        public java.util.OptionalInt resourceBound(ResourceLocation id, C cfg, PowerContainer h, boolean max) {
+        public java.util.OptionalDouble resourceBound(ResourceLocation id, C cfg, PowerContainer h, boolean max) {
             return inner.resourceBound(id, cfg, h, max);
         }
 
@@ -196,17 +196,17 @@ public final class PowerTypeRegistry {
         }
 
         @Override
-        public java.util.OptionalInt readResourceAt(ResourceLocation id, C cfg, PowerContainer h, int slot) {
+        public java.util.OptionalDouble readResourceAt(ResourceLocation id, C cfg, PowerContainer h, int slot) {
             return inner.readResourceAt(id, cfg, h, slot);
         }
 
         @Override
-        public java.util.OptionalInt writeResourceAt(ResourceLocation id, C cfg, PowerContainer h, int slot, int value) {
+        public java.util.OptionalDouble writeResourceAt(ResourceLocation id, C cfg, PowerContainer h, int slot, double value) {
             return inner.writeResourceAt(id, cfg, h, slot, value);
         }
 
         @Override
-        public int resourceIndexOf(ResourceLocation id, C cfg, PowerContainer h, int value) {
+        public int resourceIndexOf(ResourceLocation id, C cfg, PowerContainer h, double value) {
             return inner.resourceIndexOf(id, cfg, h, value);
         }
     }

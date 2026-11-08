@@ -7,6 +7,7 @@ import dev.overgrown.apoli.compat.sable.SableSubLevels;
 import dev.overgrown.apoli.data.Vector;
 import dev.overgrown.apoli.dev.DevMode;
 import dev.overgrown.apoli.dev.DevParticles;
+import dev.overgrown.apoli.util.BlockClips;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.StringRepresentable;
@@ -80,7 +81,7 @@ public record RopeEndpointSource(Type type, float distance, boolean entities, bo
         double blockDistSq = Double.POSITIVE_INFINITY;
         double maxDistSq = (distance + 2.0) * (distance + 2.0);
         if (blocks) {
-            BlockHitResult blockHit = level.clip(new ClipContext(origin, end,
+            BlockHitResult blockHit = level.clip(BlockClips.ignoringEntity(origin, end,
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, actor));
             if (blockHit.getType() == HitResult.Type.BLOCK) {
                 blockHitPos = blockHit.getLocation();

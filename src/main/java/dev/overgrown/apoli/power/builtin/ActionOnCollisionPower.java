@@ -24,7 +24,7 @@ import net.minecraft.world.phys.AABB;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
+import java.util.OptionalDouble;
 
 public final class ActionOnCollisionPower extends PowerType<ActionOnCollisionPower.Config> {
     public record Config(
@@ -117,18 +117,18 @@ public final class ActionOnCollisionPower extends PowerType<ActionOnCollisionPow
 
 
     @Override
-    public OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+    public OptionalDouble readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         return PowerResources.readDeadline(holder, powerId);
     }
 
     @Override
-    public OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
+    public OptionalDouble writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, double value) {
         return PowerResources.writeDeadline(holder, powerId, value, PowerResources.cooldownTicks(cfg.cooldown(), holder));
     }
 
     @Override
-    public OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
-        return OptionalInt.of(max ? Math.max(PowerResources.cooldownTicks(cfg.cooldown(), holder), 0) : 0);
+    public OptionalDouble resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
+        return OptionalDouble.of(max ? Math.max(PowerResources.cooldownTicks(cfg.cooldown(), holder), 0) : 0);
     }
 
 }

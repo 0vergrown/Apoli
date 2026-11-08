@@ -107,7 +107,7 @@ public final class EdibleItemHandler {
         boolean server = !level.isClientSide();
         FoodComponent food = cfg.foodComponent();
 
-        playConsumeSound(level, entity, cfg);
+        playConsumeSound(level, entity, stack, cfg);
 
         ModifyFoodHandler.Values modified = ModifyFoodHandler.values(entity, stack, food.hunger(), food.saturation());
 
@@ -159,8 +159,21 @@ public final class EdibleItemHandler {
         }
     }
 
-    private static void playConsumeSound(Level level, LivingEntity entity, EdibleItemPower.Config cfg) {
-        SoundEvent sound = dev.overgrown.apoli.sound.Sounds.event(cfg.consumeSound());
+    public static SoundEvent consumeSound(@Nullable LivingEntity entity, ItemStack stack, SoundEvent original) {
+        EdibleItemPower.Config cfg = find(entity, stack);
+        if (cfg == null || cfg.consumeSound().isEmpty()) return original;
+        return dev.overgrown.apoli.sound.Sounds.event(cfg.consumeSound().get());
+    }
+
+    private static void playConsumeSound(Level level, LivingEntity entity, ItemStack stack, EdibleItemPower.Config cfg) {
+        SoundEvent sound;
+        if (cfg.consumeSound().isPresent()) {
+            sound = dev.overgrown.apoli.sound.Sounds.event(cfg.consumeSound().get());
+        } else {
+            sound = cfg.consumeAnimation() == EdibleItemPower.ConsumeAnimation.DRINK
+                ? stack.getDrinkingSound()
+                : stack.getEatingSound();
+        }
         level.playSound(null, entity.getX(), entity.getY(), entity.getZ(), sound, SoundSource.NEUTRAL,
             1.0F, 1.0F + (level.getRandom().nextFloat() - level.getRandom().nextFloat()) * 0.4F);
     }

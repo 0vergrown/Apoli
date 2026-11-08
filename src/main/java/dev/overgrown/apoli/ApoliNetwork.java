@@ -75,14 +75,21 @@ public final class ApoliNetwork {
         }
     }
 
-    public static boolean canSendAuxInts(ServerPlayer recipient) {
+    public static boolean canSendAuxValues(ServerPlayer recipient) {
         return connected(recipient)
-            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.SyncAuxIntsS2C.CHANNEL);
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.SyncAuxValuesS2C.CHANNEL);
     }
 
-    public static void sendAuxInts(ServerPlayer recipient,
-                                   dev.overgrown.apoli.network.payload.SyncAuxIntsS2C payload) {
-        send(recipient, dev.overgrown.apoli.network.payload.SyncAuxIntsS2C.CHANNEL, payload::write);
+    public static void sendAuxValues(ServerPlayer recipient,
+                                     dev.overgrown.apoli.network.payload.SyncAuxValuesS2C payload) {
+        send(recipient, dev.overgrown.apoli.network.payload.SyncAuxValuesS2C.CHANNEL, payload::write);
+    }
+
+    public static void sendBlockGlows(ServerPlayer recipient, dev.overgrown.apoli.network.payload.BlockGlowsS2C payload) {
+        if (connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.BlockGlowsS2C.CHANNEL)) {
+            send(recipient, dev.overgrown.apoli.network.payload.BlockGlowsS2C.CHANNEL, payload::write);
+        }
     }
 
     public static void sendDevMode(ServerPlayer recipient,

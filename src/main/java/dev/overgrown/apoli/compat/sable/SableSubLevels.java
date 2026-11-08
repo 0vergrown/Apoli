@@ -15,12 +15,64 @@ public final class SableSubLevels {
 
     private static volatile Method transformPosition;
     private static volatile Method transformPositionInverse;
+    private static volatile Method transformNormal;
     private static volatile Method transformNormalInverse;
     private static volatile Method massTracker;
     private static volatile Method massValue;
 
     public static boolean available() {
         return Bridge.INSTANCE != null;
+    }
+
+    public static @Nullable Frame frameAt(Level level, Vec3 point) {
+        Bridge bridge = Bridge.INSTANCE;
+        if (bridge == null) return null;
+        try {
+            Object subLevel = bridge.getContaining.invoke(bridge.helper, level, point);
+            if (subLevel == null) return null;
+            Object pose = bridge.logicalPose.invoke(subLevel);
+            return pose == null ? null : new Frame(pose);
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    public static @Nullable Vec3 worldPosition(Level level, Vec3 point) {
+        Frame frame = frameAt(level, point);
+        return frame == null ? point : frame.toWorld(point);
+    }
+
+    public static final class Frame {
+        private final Object pose;
+
+        private Frame(Object pose) {
+            this.pose = pose;
+        }
+
+        public @Nullable Vec3 toWorld(Vec3 local) {
+            return apply(poseMethod(pose, false), local);
+        }
+
+        public @Nullable Vec3 toLocal(Vec3 world) {
+            return apply(poseMethod(pose, true), world);
+        }
+
+        public @Nullable Vec3 directionToWorld(Vec3 direction) {
+            return apply(normalMethod(pose, false), direction);
+        }
+
+        public @Nullable Vec3 directionToLocal(Vec3 direction) {
+            return apply(normalMethod(pose, true), direction);
+        }
+
+        private @Nullable Vec3 apply(@Nullable Method method, Vec3 value) {
+            if (method == null) return null;
+            try {
+                return (Vec3) method.invoke(pose, value);
+            } catch (Throwable t) {
+                return null;
+            }
+        }
     }
 
     public static @Nullable UUID subLevelAt(Level level, Vec3 pos) {
@@ -70,7 +122,7 @@ public final class SableSubLevels {
             if (body == null) return false;
             Object pose = bridge.logicalPose.invoke(handle);
             if (pose == null) return false;
-            Method normal = normalMethod(pose);
+            Method normal = normalMethod(pose, true);
             if (normal == null) return false;
             double magnitude = speed * forceScale * mass(handle);
             if (magnitude == 0) return false;
@@ -141,11 +193,14 @@ public final class SableSubLevels {
         return found;
     }
 
-    private static @Nullable Method normalMethod(Object pose) {
-        Method cached = transformNormalInverse;
+    private static @Nullable Method normalMethod(Object pose, boolean inverse) {
+        Method cached = inverse ? transformNormalInverse : transformNormal;
         if (cached != null) return cached;
-        Method found = findVec3Method(pose.getClass(), "transformNormalInverse");
-        if (found != null) transformNormalInverse = found;
+        String name = inverse ? "transformNormalInverse" : "transformNormal";
+        Method found = findVec3Method(pose.getClass(), name);
+        if (found == null) return null;
+        if (inverse) transformNormalInverse = found;
+        else transformNormal = found;
         return found;
     }
 

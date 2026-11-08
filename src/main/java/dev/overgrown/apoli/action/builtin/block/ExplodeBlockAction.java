@@ -37,7 +37,7 @@ public final class ExplodeBlockAction implements ActionType<BlockCtx, ExplodeBlo
     @Override
     public void run(Cfg cfg, BlockCtx ctx) {
         ExplosionHelper.detonate(
-            ctx.level(), null,
+            ctx.level(), null, true, ExplosionHelper.attackerFor(ctx.actor()),
             Vec3.atCenterOf(ctx.pos()),
             cfg.power, cfg.createFire, cfg.destructionType,
             cfg.indestructible, cfg.destructible, cfg.damageTargets, Optional.empty()

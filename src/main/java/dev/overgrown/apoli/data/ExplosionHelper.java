@@ -5,9 +5,13 @@ import dev.overgrown.apoli.condition.BiEntityCondition;
 import dev.overgrown.apoli.condition.BlockCondition;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.condition.context.BlockCtx;
+import dev.overgrown.apoli.data.expr.ExprPeer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.TraceableEntity;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.ExplosionDamageCalculator;
 import net.minecraft.world.level.Level;
@@ -23,32 +27,49 @@ public final class ExplosionHelper {
 
     private ExplosionHelper() {}
 
-    public static void detonate(Level level, @Nullable Entity source, Vec3 pos, float power,
-                                boolean createFire, DestructionType destructionType,
+    public static void detonate(Level level, @Nullable Entity self, boolean damageSelf, @Nullable Entity attacker,
+                                Vec3 pos, float power, boolean createFire, DestructionType destructionType,
                                 Optional<BlockCondition> indestructible,
                                 Optional<BlockCondition> destructible,
                                 boolean damageTargets,
                                 Optional<BiEntityCondition> targetCondition) {
         if (level.isClientSide()) return;
-        DamageSource damageSource = level.damageSources().explosion(source, source);
+        DamageSource damageSource = damageSource(level, self, attacker != null ? attacker : self);
         ExplosionDamageCalculator calculator = (indestructible.isPresent() || destructible.isPresent())
             ? new ConditionedCalculator(level, indestructible.orElse(null), destructible.orElse(null))
             : null;
 
         Explosion explosion = new Explosion(
-            level, source, damageSource, calculator,
+            level, damageSelf ? null : self, damageSource, calculator,
             pos.x, pos.y, pos.z, power, createFire, destructionType.vanilla()
         );
         if (!damageTargets) {
-            ((ExplosionDamageToggle) explosion).apoli$sparePassersby(source);
+            ((ExplosionDamageToggle) explosion).apoli$sparePassersby(self);
         }
         if (targetCondition.isPresent()) {
             BiEntityCondition condition = targetCondition.get();
             ((ExplosionDamageToggle) explosion).apoli$setDamageFilter(
-                entity -> condition.test(BiEntityCtx.of(source, entity, level)));
+                entity -> condition.test(BiEntityCtx.of(self, entity, level)));
         }
         explosion.explode();
         explosion.finalizeExplosion(true);
+    }
+
+    public static @Nullable Entity attackerFor(@Nullable Entity entity) {
+        if (entity == null) return null;
+        Entity actor = ExprPeer.actor();
+        Entity credited = actor != null && actor != entity && ExprPeer.target() == entity ? actor : entity;
+        if (credited instanceof TraceableEntity traceable) {
+            Entity owner = traceable.getOwner();
+            if (owner != null) return owner;
+        }
+        return credited;
+    }
+
+    private static DamageSource damageSource(Level level, @Nullable Entity direct, @Nullable Entity causing) {
+        if (causing == null) return level.damageSources().explosion(direct, null);
+        return new DamageSource(level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE)
+            .getHolderOrThrow(DamageTypes.PLAYER_EXPLOSION), direct, causing);
     }
 
     private static final class ConditionedCalculator extends ExplosionDamageCalculator {

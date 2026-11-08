@@ -5,9 +5,11 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 public final class Accessories {
     private Accessories() {}
@@ -53,6 +55,19 @@ public final class Accessories {
             if (AccessorySlot.matchesAny(filter, ref)) out.add(ref);
         }
         return out;
+    }
+
+    public static int count(LivingEntity entity, List<AccessorySlot> filter, @Nullable Predicate<ItemStack> item, int limit) {
+        if (limit <= 0) return 0;
+        int count = 0;
+        for (int i = 0, n = PROVIDERS.size(); i < n && count < limit; i++) {
+            count += PROVIDERS.get(i).count(entity, filter, item, limit - count);
+        }
+        return count;
+    }
+
+    public static boolean anyEquipped(LivingEntity entity, List<AccessorySlot> filter, @Nullable Predicate<ItemStack> item) {
+        return count(entity, filter, item, 1) > 0;
     }
 
     public static List<AccessorySlotRef> slots(LivingEntity entity) {

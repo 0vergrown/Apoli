@@ -27,25 +27,25 @@ public final class ResourceTrigger extends SimpleCriterionTrigger<ResourceTrigge
                                              DeserializationContext context) {
         ResourceLocation resource = json.has("resource")
             ? new ResourceLocation(GsonHelper.getAsString(json, "resource")) : null;
-        return new TriggerInstance(player, resource, MinMaxBounds.Ints.fromJson(json.get("value")));
+        return new TriggerInstance(player, resource, MinMaxBounds.Doubles.fromJson(json.get("value")));
     }
 
-    public void trigger(ServerPlayer player, ResourceLocation resource, int value) {
+    public void trigger(ServerPlayer player, ResourceLocation resource, double value) {
         this.trigger(player, instance -> instance.matches(resource, value));
     }
 
     public static final class TriggerInstance extends AbstractCriterionTriggerInstance {
         private final @Nullable ResourceLocation resource;
-        private final MinMaxBounds.Ints value;
+        private final MinMaxBounds.Doubles value;
 
         public TriggerInstance(ContextAwarePredicate player, @Nullable ResourceLocation resource,
-                               MinMaxBounds.Ints value) {
+                               MinMaxBounds.Doubles value) {
             super(ID, player);
             this.resource = resource;
             this.value = value;
         }
 
-        public boolean matches(ResourceLocation changed, int current) {
+        public boolean matches(ResourceLocation changed, double current) {
             if (resource != null && !resource.equals(changed)) return false;
             return value.matches(current);
         }

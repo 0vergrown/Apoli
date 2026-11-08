@@ -37,7 +37,7 @@ public record AttributeModifier(
         Codec<AttributeModifier>[] ref = (Codec<AttributeModifier>[]) new Codec[1];
         MapCodec<AttributeModifier> rawMap = RecordCodecBuilder.mapCodec(i -> i.group(
             AttributeModifierOperation.CODEC.fieldOf("operation").forGetter(AttributeModifier::operation),
-            Expression.FLOAT_OR_EXPR.optionalFieldOf("value", Expression.constant(0.0)).forGetter(AttributeModifier::value),
+            Expression.DOUBLE_OR_EXPR.optionalFieldOf("value", Expression.constant(0.0)).forGetter(AttributeModifier::value),
             IdCodecs.ID.optionalFieldOf("attribute").forGetter(AttributeModifier::attribute),
             Codec.STRING.optionalFieldOf("name").forGetter(AttributeModifier::name),
             IdCodecs.ID.optionalFieldOf("resource").forGetter(AttributeModifier::resource),

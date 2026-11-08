@@ -19,6 +19,7 @@ import java.util.Map;
 public final class SkillTreeLoader extends SimplePreparableReloadListener<Map<ResourceLocation, JsonElement>> {
     private static final Logger LOG = LogUtils.getLogger();
     private static final String DIR = "skill_trees";
+    private volatile Map<ResourceLocation, JsonDataFiles.Source> sources = Map.of();
 
     public SkillTreeLoader() {
         super();
@@ -26,19 +27,23 @@ public final class SkillTreeLoader extends SimplePreparableReloadListener<Map<Re
 
     @Override
     protected @NotNull Map<ResourceLocation, JsonElement> prepare(ResourceManager resourceManager, ProfilerFiller profilerFiller) {
-        return JsonDataFiles.load(resourceManager, DIR, LOG);
+        Map<ResourceLocation, JsonDataFiles.Source> found = new HashMap<>();
+        Map<ResourceLocation, JsonElement> loaded = JsonDataFiles.load(resourceManager, DIR, LOG, found);
+        sources = found;
+        return loaded;
     }
 
     @Override
     protected void apply(Map<ResourceLocation, JsonElement> data, ResourceManager rm, ProfilerFiller profiler) {
         Map<ResourceLocation, SkillTree> trees = new HashMap<>();
         Map<ResourceLocation, Skill> skills = new HashMap<>();
+        Map<ResourceLocation, JsonDataFiles.Source> files = sources;
 
         for (Map.Entry<ResourceLocation, JsonElement> e : data.entrySet()) {
             ResourceLocation id = e.getKey();
             Dynamic<JsonElement> file = IdWildcards.apply(new Dynamic<>(JsonOps.INSTANCE, e.getValue()), id);
             if (file.getMapValues().result().isEmpty()) {
-                LOG.error("[Apoli] Skill tree file {} is empty or not a JSON object — skipping.", id);
+                dev.overgrown.apoli.loader.LoadProblems.error("skill tree", id, files.get(id), "The file is empty or isn't a JSON object, so it was skipped.");
                 continue;
             }
             if (file.get("parent").result().isPresent()) {
@@ -46,13 +51,11 @@ public final class SkillTreeLoader extends SimplePreparableReloadListener<Map<Re
                 if (power != null && file.get("powers").result().isEmpty()) {
                     file = file.remove("power").set("powers", power);
                 }
-                Skill.fileCodec(id).codec().parse(file)
-                    .resultOrPartial(err -> LOG.error("[Apoli] Failed to parse skill {}: {}", id, err))
+                dev.overgrown.apoli.loader.LoadProblems.parse("skill", id, files.get(id), "$", Skill.fileCodec(id).codec(), file)
                     .ifPresent(skill -> skills.put(id, skill));
                 continue;
             }
-            SkillTree.codec(id).codec().parse(file)
-                .resultOrPartial(err -> LOG.error("[Apoli] Failed to parse skill tree {}: {}", id, err))
+            dev.overgrown.apoli.loader.LoadProblems.parse("skill tree", id, files.get(id), "$", SkillTree.codec(id).codec(), file)
                 .ifPresent(tree -> trees.put(id, tree));
         }
 

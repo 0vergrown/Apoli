@@ -10,7 +10,6 @@ import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.data.DestructionType;
 import dev.overgrown.apoli.data.ExplosionHelper;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.phys.Vec3;
 
 import java.util.Optional;
 
@@ -47,18 +46,10 @@ public final class ExplodeBiEntityAction implements ActionType<BiEntityCtx, Expl
         Entity actor = ctx.actor();
         Entity origin = cfg.atTarget ? ctx.target() : actor;
         if (origin == null) return;
-        Vec3 pos = origin.position();
-        boolean spareActor = !cfg.damageSelf && actor != null;
-        boolean wasInvulnerable = actor != null && actor.isInvulnerable();
-        if (spareActor) actor.setInvulnerable(true);
-        try {
-            ExplosionHelper.detonate(
-                ctx.level(), actor, pos,
-                cfg.power, cfg.createFire, cfg.destructionType,
-                cfg.indestructible, cfg.destructible, cfg.damageTargets, cfg.bientityCondition
-            );
-        } finally {
-            if (spareActor) actor.setInvulnerable(wasInvulnerable);
-        }
+        ExplosionHelper.detonate(
+            ctx.level(), actor, cfg.damageSelf, ExplosionHelper.attackerFor(actor), origin.position(),
+            cfg.power, cfg.createFire, cfg.destructionType,
+            cfg.indestructible, cfg.destructible, cfg.damageTargets, cfg.bientityCondition
+        );
     }
 }

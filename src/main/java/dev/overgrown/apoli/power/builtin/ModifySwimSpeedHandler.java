@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.power.builtin;
 
+import dev.overgrown.apoli.compat.create.CreateCompat;
 import dev.overgrown.apoli.data.AttributeModifier;
 import dev.overgrown.apoli.data.AttributeModifierHelper;
 import dev.overgrown.apoli.power.ApoliIds;
@@ -22,6 +23,7 @@ public final class ModifySwimSpeedHandler {
         boolean own = !container.powersOfType(ApoliIds.MODIFY_SWIM_SPEED).isEmpty();
         boolean transferred = AttributeModifyTransferPower.SWIM_SPEED.appliesTo(container);
         if (!own && !transferred) return original;
+        if (CreateCompat.wearsDivingBoots(entity)) return original;
 
         List<AttributeModifier> mods = List.of();
         if (own) {

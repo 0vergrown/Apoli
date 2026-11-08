@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.network.payload;
 
 import dev.overgrown.apoli.Apoli;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 
@@ -12,7 +13,7 @@ import java.util.Set;
 public record SyncEntityPowersS2C(
     int entityId,
     Map<ResourceLocation, Set<ResourceLocation>> powersBySource,
-    Map<ResourceLocation, Integer> auxInt,
+    Object2DoubleMap<ResourceLocation> auxValues,
     Set<ResourceLocation> suppressed
 ) {
     public static final ResourceLocation CHANNEL = Apoli.id("sync_entity_powers");
@@ -24,11 +25,7 @@ public record SyncEntityPowersS2C(
             buf.writeResourceLocation(e.getKey());
             buf.writeCollection(e.getValue(), FriendlyByteBuf::writeResourceLocation);
         }
-        buf.writeVarInt(auxInt.size());
-        for (Map.Entry<ResourceLocation, Integer> e : auxInt.entrySet()) {
-            buf.writeResourceLocation(e.getKey());
-            buf.writeVarInt(e.getValue());
-        }
+        AuxValues.write(buf, auxValues);
         buf.writeCollection(suppressed, FriendlyByteBuf::writeResourceLocation);
     }
 
@@ -41,13 +38,7 @@ public record SyncEntityPowersS2C(
             Set<ResourceLocation> srcs = new HashSet<>(buf.readList(FriendlyByteBuf::readResourceLocation));
             map.put(key, srcs);
         }
-        int m = buf.readVarInt();
-        Map<ResourceLocation, Integer> aux = new HashMap<>(m);
-        for (int i = 0; i < m; i++) {
-            ResourceLocation key = buf.readResourceLocation();
-            int value = buf.readVarInt();
-            aux.put(key, value);
-        }
+        Object2DoubleMap<ResourceLocation> aux = AuxValues.read(buf);
         Set<ResourceLocation> suppressed = new HashSet<>(buf.readList(FriendlyByteBuf::readResourceLocation));
         return new SyncEntityPowersS2C(entityId, map, aux, suppressed);
     }

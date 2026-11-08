@@ -18,7 +18,7 @@ public final class ApoliCriteria {
         POWER = CriteriaTriggers.register(new PowerTrigger());
     }
 
-    public static void resourceChanged(@Nullable Entity owner, ResourceLocation resource, int value) {
+    public static void resourceChanged(@Nullable Entity owner, ResourceLocation resource, double value) {
         if (RESOURCE != null && owner instanceof ServerPlayer player) RESOURCE.trigger(player, resource, value);
     }
 

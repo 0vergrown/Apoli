@@ -18,7 +18,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 
 import java.util.Optional;
-import java.util.OptionalInt;
+import java.util.OptionalDouble;
 import java.util.stream.Stream;
 
 public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyResourceAction.Cfg> {
@@ -82,7 +82,7 @@ public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyR
             }
             Expression change = Expression.constant(0);
             if (changeRaw != null) {
-                DataResult<Expression> c = Expression.INT_OR_EXPR.parse(ops, changeRaw);
+                DataResult<Expression> c = Expression.DOUBLE_OR_EXPR.parse(ops, changeRaw);
                 if (c.error().isPresent()) {
                     return DataResult.error(() -> "Invalid 'change': " + c.error().get().message());
                 }
@@ -153,20 +153,20 @@ public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyR
             return;
         }
         if (cfg.position.isEmpty()) {
-            OptionalInt cur = PowerResources.read(container, cfg.resource);
+            OptionalDouble cur = PowerResources.read(container, cfg.resource);
             if (cur.isEmpty()) return;
-            double next = cfg.modifier.applyToValue(cur.getAsInt(), entity, container);
-            PowerResources.write(container, cfg.resource, (int) Math.round(next));
+            double next = cfg.modifier.applyToValue(cur.getAsDouble(), entity, container);
+            PowerResources.write(container, cfg.resource, next);
             return;
         }
         applyAt(cfg, entity, container, cfg.position.get().evalIntWith(entity, container, 0));
     }
 
     private static void applyAt(Cfg cfg, Entity entity, PowerContainer container, int slot) {
-        OptionalInt cur = PowerResources.readAt(container, cfg.resource, slot);
+        OptionalDouble cur = PowerResources.readAt(container, cfg.resource, slot);
         if (cur.isEmpty()) return;
-        double next = cfg.modifier.applyToValue(cur.getAsInt(), entity, container);
-        PowerResources.writeAt(container, cfg.resource, slot, (int) Math.round(next));
+        double next = cfg.modifier.applyToValue(cur.getAsDouble(), entity, container);
+        PowerResources.writeAt(container, cfg.resource, slot, next);
     }
 
     private static void copy(Cfg cfg, Entity entity, PowerContainer container, PowerContainer sourceContainer) {
@@ -177,27 +177,27 @@ public final class ModifyResourceAction implements ActionType<EntityCtx, ModifyR
             int available = Math.max(1, PowerResources.size(sourceContainer, source));
             int slots = Math.min(destination, available);
             for (int slot = 0; slot < slots; slot++) {
-                OptionalInt value = PowerResources.readAt(sourceContainer, source, slot);
+                OptionalDouble value = PowerResources.readAt(sourceContainer, source, slot);
                 if (value.isEmpty()) continue;
-                writeInto(cfg, entity, container, slot, value.getAsInt());
+                writeInto(cfg, entity, container, slot, value.getAsDouble());
             }
             return;
         }
         int fromSlot = cfg.fromPosition.isPresent()
             ? cfg.fromPosition.get().evalIntWith(entity, container, 0)
             : 0;
-        OptionalInt value = PowerResources.readAt(sourceContainer, source, fromSlot);
+        OptionalDouble value = PowerResources.readAt(sourceContainer, source, fromSlot);
         if (value.isEmpty()) return;
         int toSlot = cfg.position.isPresent()
             ? cfg.position.get().evalIntWith(entity, container, 0)
             : fromSlot;
-        writeInto(cfg, entity, container, toSlot, value.getAsInt());
+        writeInto(cfg, entity, container, toSlot, value.getAsDouble());
     }
 
-    private static void writeInto(Cfg cfg, Entity entity, PowerContainer container, int slot, int incoming) {
-        OptionalInt cur = PowerResources.readAt(container, cfg.resource, slot);
+    private static void writeInto(Cfg cfg, Entity entity, PowerContainer container, int slot, double incoming) {
+        OptionalDouble cur = PowerResources.readAt(container, cfg.resource, slot);
         if (cur.isEmpty()) return;
-        double next = cfg.modifier.operation().applySingle(cur.getAsInt(), incoming);
-        PowerResources.writeAt(container, cfg.resource, slot, (int) Math.round(next));
+        double next = cfg.modifier.operation().applySingle(cur.getAsDouble(), incoming);
+        PowerResources.writeAt(container, cfg.resource, slot, next);
     }
 }

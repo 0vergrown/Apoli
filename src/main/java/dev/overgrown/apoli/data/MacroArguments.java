@@ -25,7 +25,7 @@ import org.slf4j.Logger;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalInt;
+import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -90,14 +90,23 @@ public record MacroArguments(Optional<ResourceLocation> storage, String path, Op
         for (Map.Entry<String, ResourceLocation> entry : wanted.entrySet()) {
             ResourceLocation powerId = entry.getValue();
             String key = entry.getKey();
-            OptionalInt value = container == null ? OptionalInt.empty() : PowerResources.read(container, powerId);
+            OptionalDouble value = container == null ? OptionalDouble.empty() : PowerResources.read(container, powerId);
             if (value.isEmpty()) {
                 reportUnreadable(holder, container, key, powerId);
                 continue;
             }
-            out.putInt(key, value.getAsInt());
-            PowerResources.bound(container, powerId, true).ifPresent(max -> out.putInt(key + "_max", max));
-            PowerResources.bound(container, powerId, false).ifPresent(min -> out.putInt(key + "_min", min));
+            putNumber(out, key, value.getAsDouble());
+            PowerResources.bound(container, powerId, true).ifPresent(max -> putNumber(out, key + "_max", max));
+            PowerResources.bound(container, powerId, false).ifPresent(min -> putNumber(out, key + "_min", min));
+        }
+    }
+
+    private static void putNumber(CompoundTag out, String key, double value) {
+        double shown = PowerResources.canonical(value);
+        if (PowerResources.isWhole(shown) && shown >= Integer.MIN_VALUE && shown <= Integer.MAX_VALUE) {
+            out.putInt(key, (int) shown);
+        } else {
+            out.putDouble(key, shown);
         }
     }
 
@@ -156,11 +165,20 @@ public record MacroArguments(Optional<ResourceLocation> storage, String path, Op
     }
 
     private static String render(Tag tag) {
-        if (tag instanceof FloatTag value) return String.valueOf(value.getAsFloat());
-        if (tag instanceof DoubleTag value) return String.valueOf(value.getAsDouble());
+        if (tag instanceof FloatTag value) return plain(Float.toString(value.getAsFloat()));
+        if (tag instanceof DoubleTag value) return plain(Double.toString(value.getAsDouble()));
         if (tag instanceof ByteTag value) return String.valueOf(value.getAsByte());
         if (tag instanceof ShortTag value) return String.valueOf(value.getAsShort());
         if (tag instanceof LongTag value) return String.valueOf(value.getAsLong());
         return tag.getAsString();
+    }
+
+    private static String plain(String number) {
+        if (number.indexOf('E') < 0) return number;
+        try {
+            return new java.math.BigDecimal(number).stripTrailingZeros().toPlainString();
+        } catch (NumberFormatException e) {
+            return number;
+        }
     }
 }

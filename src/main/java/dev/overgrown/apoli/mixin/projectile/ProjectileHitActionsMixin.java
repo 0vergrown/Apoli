@@ -90,6 +90,10 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
     private @Nullable IntArrayList apoli$passed;
     @Unique
     private int apoli$bouncedOff = -1;
+    @Unique
+    private int apoli$stuckTicks;
+    @Unique
+    private int apoli$stuckLimit;
 
     @Override
     public void apoli$setFireConfig(FireProjectilePower.Config config) {
@@ -125,6 +129,56 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
         if (ret != null) apoli$runOwnerAction((Projectile) (Object) this, ret.bientityActionOnCatch());
     }
 
+    @Override
+    public void apoli$tickStuck() {
+        Projectile self = (Projectile) (Object) this;
+        if (self.isRemoved() || !(self instanceof CustomProjectileEntity custom)) return;
+        FireProjectilePower.Config config = this.apoli$fireConfig;
+        if (config == null) {
+            self.discard();
+            return;
+        }
+        if (this.apoli$lifetime > 0 && ++this.apoli$age > this.apoli$lifetime) {
+            apoli$expire(self, config);
+            return;
+        }
+        FireProjectilePower.Return ret = config.returning().orElse(null);
+        if (ret != null && ret.after() > 0 && ++this.apoli$flightTicks >= ret.after()
+            && apoli$mayTurn(self, ret) && apoli$startReturn(self, custom, ret, null, false)) {
+            return;
+        }
+        if (this.apoli$stuckLimit > 0 && ++this.apoli$stuckTicks > this.apoli$stuckLimit) {
+            apoli$expire(self, config);
+            return;
+        }
+        if (custom.lostHold()) custom.fall();
+    }
+
+    @Unique
+    private void apoli$expire(Projectile self, FireProjectilePower.Config config) {
+        apoli$runOwnerAction(self, config.hooks().bientityActionOnExpire());
+        self.discard();
+    }
+
+    @Unique
+    private void apoli$tryStick(Projectile self, Level level, FireProjectilePower.Config config, HitResult result) {
+        FireProjectilePower.Sticky sticky = config.sticky().orElse(null);
+        if (sticky == null || self.isRemoved() || !(result instanceof BlockHitResult blockHit)) return;
+        if (!(self instanceof CustomProjectileEntity custom) || custom.isReturning()) return;
+        Entity owner = self.getOwner();
+        if (sticky.blockCondition().isPresent()) {
+            BlockPos pos = blockHit.getBlockPos();
+            BlockCtx blockCtx = new BlockCtx(pos.immutable(), level.getBlockState(pos), level,
+                owner != null ? owner : self, blockHit.getLocation());
+            if (!sticky.blockCondition().get().test(blockCtx)) return;
+        }
+        custom.stick(blockHit, sticky.depth().eval(owner));
+        this.apoli$stuckTicks = 0;
+        this.apoli$stuckLimit = sticky.duration().evalInt(owner);
+        apoli$newLeg();
+        apoli$runOwnerAction(self, sticky.bientityActionOnStick());
+    }
+
     @Inject(method = "tick()V", at = @At("HEAD"))
     private void apoli$tickFired(CallbackInfo ci) {
         FireProjectilePower.Config config = this.apoli$fireConfig;
@@ -132,8 +186,7 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
         Projectile self = (Projectile) (Object) this;
         if (self.level().isClientSide() || self.isRemoved()) return;
         if (this.apoli$lifetime > 0 && ++this.apoli$age > this.apoli$lifetime) {
-            apoli$runOwnerAction(self, config.hooks().bientityActionOnExpire());
-            self.discard();
+            apoli$expire(self, config);
             return;
         }
         CustomProjectileEntity custom = self instanceof CustomProjectileEntity projectile ? projectile : null;
@@ -163,8 +216,7 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
             if (!apoli$mayTurn(self, ret)) return;
             if (apoli$startReturn(self, custom, ret, null, false)) return;
         }
-        apoli$runOwnerAction(self, config.hooks().bientityActionOnExpire());
-        self.discard();
+        apoli$expire(self, config);
     }
 
     @Unique
@@ -234,6 +286,7 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
                 this.apoli$keepsFlying = true;
             } else {
                 apoli$runMissHooks(self, level, hooks, config.params().blockActionCancelsMissAction(), result);
+                apoli$tryStick(self, level, config, result);
             }
         } finally {
             if (attributed) dev.overgrown.apoli.attribution.PowerCause.pop();
@@ -243,7 +296,7 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
             ci.cancel();
             return;
         }
-        if (self instanceof CustomProjectileEntity custom && !custom.isReturning()) {
+        if (self instanceof CustomProjectileEntity custom && !custom.isReturning() && !custom.isStuck()) {
             FireProjectilePower.Return ret = config.returning().orElse(null);
             if (ret == null) return;
             if (entityHit ? ret.onHitEntity() : ret.onHitBlock() && result instanceof BlockHitResult) {

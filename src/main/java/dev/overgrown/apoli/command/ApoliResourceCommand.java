@@ -1,12 +1,16 @@
 package dev.overgrown.apoli.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.context.ParsedCommandNode;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import com.mojang.brigadier.tree.ArgumentCommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
@@ -22,6 +26,7 @@ import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.commands.arguments.ScoreHolderArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.scores.Score;
 import net.minecraft.world.scores.Scoreboard;
@@ -29,9 +34,12 @@ import net.minecraft.world.scores.Scoreboard;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.OptionalInt;
+import java.util.OptionalDouble;
 
 public final class ApoliResourceCommand {
+
+    private static final SimpleCommandExceptionType DIVIDE_BY_ZERO =
+        new SimpleCommandExceptionType(Component.translatable("arguments.operation.div0"));
 
     private ApoliResourceCommand() {}
 
@@ -50,7 +58,9 @@ public final class ApoliResourceCommand {
                     .suggests(RESOURCE_POWERS)
                     .executes(ApoliResourceCommand::get)
                     .then(Commands.argument("position", IntegerArgumentType.integer(0))
-                        .executes(ApoliResourceCommand::get)))));
+                        .executes(ApoliResourceCommand::get)
+                        .then(Commands.argument("scale", DoubleArgumentType.doubleArg())
+                            .executes(ApoliResourceCommand::get))))));
 
         root.then(Commands.literal("list")
             .then(Commands.argument("targets", EntityArgument.entities())
@@ -62,7 +72,7 @@ public final class ApoliResourceCommand {
             .then(Commands.argument("targets", EntityArgument.entities())
                 .then(Commands.argument("power", ResourceLocationArgument.id())
                     .suggests(RESOURCE_POWERS)
-                    .then(Commands.argument("value", IntegerArgumentType.integer())
+                    .then(Commands.argument("value", DoubleArgumentType.doubleArg())
                         .executes(ApoliResourceCommand::set)
                         .then(Commands.argument("position", IntegerArgumentType.integer(0))
                             .executes(ApoliResourceCommand::set))))));
@@ -71,7 +81,7 @@ public final class ApoliResourceCommand {
             .then(Commands.argument("targets", EntityArgument.entities())
                 .then(Commands.argument("power", ResourceLocationArgument.id())
                     .suggests(RESOURCE_POWERS)
-                    .then(Commands.argument("value", IntegerArgumentType.integer())
+                    .then(Commands.argument("value", DoubleArgumentType.doubleArg())
                         .executes(ApoliResourceCommand::change)
                         .then(Commands.argument("position", IntegerArgumentType.integer(0))
                             .executes(ApoliResourceCommand::change))))));
@@ -108,7 +118,8 @@ public final class ApoliResourceCommand {
     private static int operation(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ResourceLocation power = ResourceLocationArgument.getId(ctx, "power");
         int position = position(ctx);
-        OperationArgument.Operation operation = OperationArgument.getOperation(ctx, "operation");
+        OperationArgument.getOperation(ctx, "operation");
+        String symbol = operationSymbol(ctx);
         Scoreboard scoreboard = ctx.getSource().getServer().getScoreboard();
         Score source = scoreboard.getOrCreatePlayerScore(
             ScoreHolderArgument.getName(ctx, "source"), ObjectiveArgument.getObjective(ctx, "objective"));
@@ -117,26 +128,68 @@ public final class ApoliResourceCommand {
             if (!target.isAlive()) continue;
             PowerContainer c = PowerContainer.of(target);
             if (c == null) continue;
-            OptionalInt current = position < 0
+            OptionalDouble current = position < 0
                 ? PowerResources.read(c, power)
                 : PowerResources.readAt(c, power, position);
             if (current.isEmpty()) continue;
-            ResourceValue value = new ResourceValue(scoreboard, current.getAsInt());
-            operation.apply(value, source);
-            OptionalInt written = position < 0
-                ? writeAll(c, power, value.getScore())
-                : PowerResources.writeAt(c, power, position, value.getScore());
+            double before = current.getAsDouble();
+            double next;
+            if (symbol.equals("><")) {
+                next = source.getScore();
+                source.setScore(Mth.floor(before));
+            } else {
+                next = apply(symbol, before, source.getScore());
+            }
+            OptionalDouble written = position < 0
+                ? writeAll(c, power, next)
+                : PowerResources.writeAt(c, power, position, next);
             if (written.isEmpty()) continue;
-            int before = current.getAsInt();
-            int after = written.getAsInt();
+            String from = PowerResources.format(before);
+            String to = PowerResources.format(written.getAsDouble());
             ctx.getSource().sendSuccess(() -> Component.literal(
-                target.getName().getString() + " — " + power + " changed from " + before + " to " + after), true);
+                target.getName().getString() + " — " + power + " changed from " + from + " to " + to), true);
             affected++;
         }
         if (affected == 0) {
             ctx.getSource().sendFailure(Component.literal("No target holds the resource power " + power));
         }
         return affected;
+    }
+
+    private static String operationSymbol(CommandContext<CommandSourceStack> ctx) {
+        for (ParsedCommandNode<CommandSourceStack> parsed : ctx.getNodes()) {
+            if (parsed.getNode() instanceof ArgumentCommandNode<?, ?> argument && argument.getName().equals("operation")) {
+                return parsed.getRange().get(ctx.getInput());
+            }
+        }
+        return "=";
+    }
+
+    private static double apply(String symbol, double current, double source) throws CommandSyntaxException {
+        return switch (symbol) {
+            case "+=" -> current + source;
+            case "-=" -> current - source;
+            case "*=" -> current * source;
+            case "/=" -> {
+                if (source == 0) throw DIVIDE_BY_ZERO.create();
+                yield current / source;
+            }
+            case "%=" -> {
+                if (source == 0) throw DIVIDE_BY_ZERO.create();
+                yield current - Math.floor(current / source) * source;
+            }
+            case "<" -> Math.min(current, source);
+            case ">" -> Math.max(current, source);
+            default -> source;
+        };
+    }
+
+    private static double scale(CommandContext<CommandSourceStack> ctx) {
+        try {
+            return DoubleArgumentType.getDouble(ctx, "scale");
+        } catch (IllegalArgumentException absent) {
+            return 1.0;
+        }
     }
 
     private static int position(CommandContext<CommandSourceStack> ctx) {
@@ -157,10 +210,10 @@ public final class ApoliResourceCommand {
             StringBuilder line = new StringBuilder();
             boolean any = false;
             for (int slot = 0; slot < size; slot++) {
-                OptionalInt val = PowerResources.readAt(c, power, slot);
+                OptionalDouble val = PowerResources.readAt(c, power, slot);
                 if (val.isEmpty()) continue;
                 if (any) line.append(", ");
-                line.append(slot).append(": ").append(val.getAsInt());
+                line.append(slot).append(": ").append(PowerResources.format(val.getAsDouble()));
                 any = true;
             }
             if (!any) continue;
@@ -178,42 +231,43 @@ public final class ApoliResourceCommand {
     private static int get(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ResourceLocation power = ResourceLocationArgument.getId(ctx, "power");
         int position = position(ctx);
-        OptionalInt first = OptionalInt.empty();
+        double scale = scale(ctx);
+        OptionalDouble first = OptionalDouble.empty();
         int reported = 0;
         for (Entity e : EntityArgument.getEntities(ctx, "targets")) {
             PowerContainer c = PowerContainer.of(e);
             if (c == null) continue;
-            OptionalInt val = position < 0
+            OptionalDouble val = position < 0
                 ? PowerResources.read(c, power)
                 : PowerResources.readAt(c, power, position);
             if (val.isEmpty()) continue;
-            int v = val.getAsInt();
+            String shown = PowerResources.format(val.getAsDouble());
             String at = position < 0 ? "" : "[" + position + "]";
             ctx.getSource().sendSuccess(() -> Component.literal(
-                e.getName().getString() + " — " + power + at + ": " + v), false);
-            if (first.isEmpty()) first = OptionalInt.of(v);
+                e.getName().getString() + " — " + power + at + ": " + shown), false);
+            if (first.isEmpty()) first = val;
             reported++;
         }
         if (reported == 0) {
             ctx.getSource().sendFailure(Component.literal("No target has a resource value for " + power));
             return 0;
         }
-        return first.orElse(0);
+        return Mth.floor(first.getAsDouble() * scale);
     }
 
     private static int set(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ResourceLocation power = ResourceLocationArgument.getId(ctx, "power");
-        int value = IntegerArgumentType.getInteger(ctx, "value");
+        double value = DoubleArgumentType.getDouble(ctx, "value");
         int position = position(ctx);
         int affected = 0;
         for (Entity e : EntityArgument.getEntities(ctx, "targets")) {
             PowerContainer c = PowerContainer.of(e);
             if (c == null) continue;
-            OptionalInt written = position < 0
+            OptionalDouble written = position < 0
                 ? writeAll(c, power, value)
                 : PowerResources.writeAt(c, power, position, value);
             if (written.isEmpty()) continue;
-            int w = written.getAsInt();
+            String w = PowerResources.format(written.getAsDouble());
             ctx.getSource().sendSuccess(() -> Component.literal(
                 e.getName().getString() + " — " + power + " set to " + w), true);
             affected++;
@@ -226,21 +280,21 @@ public final class ApoliResourceCommand {
 
     private static int change(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ResourceLocation power = ResourceLocationArgument.getId(ctx, "power");
-        int delta = IntegerArgumentType.getInteger(ctx, "value");
+        double delta = DoubleArgumentType.getDouble(ctx, "value");
         int position = position(ctx);
         int affected = 0;
         for (Entity e : EntityArgument.getEntities(ctx, "targets")) {
             PowerContainer c = PowerContainer.of(e);
             if (c == null) continue;
-            OptionalInt cur = position < 0
+            OptionalDouble cur = position < 0
                 ? PowerResources.read(c, power)
                 : PowerResources.readAt(c, power, position);
             if (cur.isEmpty()) continue;
-            OptionalInt written = position < 0
-                ? PowerResources.write(c, power, cur.getAsInt() + delta)
-                : PowerResources.writeAt(c, power, position, cur.getAsInt() + delta);
+            OptionalDouble written = position < 0
+                ? PowerResources.write(c, power, cur.getAsDouble() + delta)
+                : PowerResources.writeAt(c, power, position, cur.getAsDouble() + delta);
             if (written.isEmpty()) continue;
-            int w = written.getAsInt();
+            String w = PowerResources.format(written.getAsDouble());
             ctx.getSource().sendSuccess(() -> Component.literal(
                 e.getName().getString() + " — " + power + " now " + w), true);
             affected++;
@@ -269,12 +323,12 @@ public final class ApoliResourceCommand {
         return count;
     }
 
-    public static OptionalInt writeAll(PowerContainer container, ResourceLocation power, int value) {
+    public static OptionalDouble writeAll(PowerContainer container, ResourceLocation power, double value) {
         int size = PowerResources.size(container, power);
         if (size <= 1) return PowerResources.write(container, power, value);
-        OptionalInt last = OptionalInt.empty();
+        OptionalDouble last = OptionalDouble.empty();
         for (int slot = 0; slot < size; slot++) {
-            OptionalInt written = PowerResources.writeAt(container, power, slot, value);
+            OptionalDouble written = PowerResources.writeAt(container, power, slot, value);
             if (written.isPresent()) last = written;
         }
         return last;
@@ -302,24 +356,5 @@ public final class ApoliResourceCommand {
             if (PowerResources.isResource(e.getKey())) out.add(e.getKey());
         }
         return out;
-    }
-
-    private static final class ResourceValue extends Score {
-        private int value;
-
-        private ResourceValue(Scoreboard scoreboard, int value) {
-            super(scoreboard, null, "");
-            this.value = value;
-        }
-
-        @Override
-        public int getScore() {
-            return value;
-        }
-
-        @Override
-        public void setScore(int value) {
-            this.value = value;
-        }
     }
 }

@@ -24,7 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalInt;
+import java.util.OptionalDouble;
 import java.util.UUID;
 
 public final class ActionOnKeyPressPower extends PowerType<ActionOnKeyPressPower.Config> {
@@ -135,31 +135,31 @@ public final class ActionOnKeyPressPower extends PowerType<ActionOnKeyPressPower
 
 
     @Override
-    public OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+    public OptionalDouble readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         Entity owner = holder.rawOwner();
         if (owner.level().isClientSide()) {
-            return OptionalInt.of(PowerResources.clientCooldown(holder, powerId));
+            return OptionalDouble.of(PowerResources.clientCooldown(holder, powerId));
         }
-        return OptionalInt.of(cooldowns.getOrDefault(new CooldownKey(owner.getUUID(), powerId), 0));
+        return OptionalDouble.of(cooldowns.getOrDefault(new CooldownKey(owner.getUUID(), powerId), 0));
     }
 
     @Override
-    public OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
+    public OptionalDouble writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, double value) {
         Entity owner = holder.rawOwner();
-        if (owner.level().isClientSide()) return OptionalInt.empty();
-        int clamped = Math.max(0, Math.min(value, Math.max(PowerResources.cooldownTicks(cfg.cooldown, holder), 0)));
+        if (owner.level().isClientSide()) return OptionalDouble.empty();
+        int clamped = Math.max(0, Math.min(PowerResources.whole(value), Math.max(PowerResources.cooldownTicks(cfg.cooldown, holder), 0)));
         CooldownKey key = new CooldownKey(owner.getUUID(), powerId);
         if (clamped <= 0) cooldowns.remove(key);
         else cooldowns.put(key, clamped);
         if (owner instanceof ServerPlayer player) {
             ApoliNetwork.sendActivated(player, new PowerActivatedS2C(powerId, clamped));
         }
-        return OptionalInt.of(clamped);
+        return OptionalDouble.of(clamped);
     }
 
     @Override
-    public OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
-        return OptionalInt.of(max ? Math.max(PowerResources.cooldownTicks(cfg.cooldown, holder), 0) : 0);
+    public OptionalDouble resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
+        return OptionalDouble.of(max ? Math.max(PowerResources.cooldownTicks(cfg.cooldown, holder), 0) : 0);
     }
 
     private record CooldownKey(UUID entity, ResourceLocation powerId) {}
