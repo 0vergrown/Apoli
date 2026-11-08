@@ -42,16 +42,10 @@ public final class ExplodeEntityAction implements ActionType<EntityCtx, ExplodeE
     @Override
     public void run(Cfg cfg, EntityCtx ctx) {
         Entity holder = ctx.raw();
-        boolean wasInvulnerable = holder.isInvulnerable();
-        if (!cfg.damageSelf) holder.setInvulnerable(true);
-        try {
-            ExplosionHelper.detonate(
-                ctx.level(), holder, holder.position(),
-                cfg.power, cfg.createFire, cfg.destructionType,
-                cfg.indestructible, cfg.destructible, cfg.damageTargets, cfg.bientityCondition
-            );
-        } finally {
-            if (!cfg.damageSelf) holder.setInvulnerable(wasInvulnerable);
-        }
+        ExplosionHelper.detonate(
+            ctx.level(), holder, cfg.damageSelf, ExplosionHelper.attackerFor(holder), holder.position(),
+            cfg.power, cfg.createFire, cfg.destructionType,
+            cfg.indestructible, cfg.destructible, cfg.damageTargets, cfg.bientityCondition
+        );
     }
 }

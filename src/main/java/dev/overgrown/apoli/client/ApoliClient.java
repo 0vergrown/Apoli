@@ -140,6 +140,8 @@ public final class ApoliClient {
             dev.overgrown.apoli.client.MouseMovementWatcher.clientTick(mc);
             dev.overgrown.apoli.client.render.ClientRenderFlags.clientTick(mc);
             dev.overgrown.apoli.client.render.BlockRenderRules.clientTick(mc);
+            dev.overgrown.apoli.client.glow.ClientBlockGlows.clientTick(mc);
+            dev.overgrown.apoli.client.glow.BlockGlowScanner.clientTick(mc);
             PhasingRenderState.clientTick(mc);
             RopeClientManager.tick();
             TextOverlayRenderer.tick();
@@ -185,6 +187,9 @@ public final class ApoliClient {
             dev.overgrown.apoli.client.camera.CameraController.reset();
             CameraPerspectiveReporter.reset();
             dev.overgrown.apoli.client.render.BlockRenderRules.clear();
+            dev.overgrown.apoli.client.glow.ClientBlockGlows.clear();
+            dev.overgrown.apoli.client.glow.BlockGlowScanner.clear();
+            dev.overgrown.apoli.client.glow.BlockGlowRenderer.clear();
             dev.overgrown.apoli.client.render.ClientRenderFlags.clear();
             TextOverlayRenderer.clear();
             ClientLabelState.clear();

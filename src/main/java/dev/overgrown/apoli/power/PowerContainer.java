@@ -9,6 +9,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.Set;
 
@@ -87,14 +88,28 @@ public interface PowerContainer {
 
     void markDirty();
 
-    OptionalInt getAuxInt(ResourceLocation powerId);
+    double getAuxDoubleOr(ResourceLocation powerId, double fallback);
 
-    default int getAuxIntOr(ResourceLocation powerId, int fallback) {
-        OptionalInt v = getAuxInt(powerId);
-        return v.isPresent() ? v.getAsInt() : fallback;
+    default OptionalDouble getAuxDouble(ResourceLocation powerId) {
+        double value = getAuxDoubleOr(powerId, Double.NaN);
+        return Double.isNaN(value) ? OptionalDouble.empty() : OptionalDouble.of(value);
     }
 
-    default int @Nullable [] getAuxInts(ResourceLocation powerId) {
+    default boolean hasAux(ResourceLocation powerId) {
+        return !Double.isNaN(getAuxDoubleOr(powerId, Double.NaN));
+    }
+
+    default OptionalInt getAuxInt(ResourceLocation powerId) {
+        double value = getAuxDoubleOr(powerId, Double.NaN);
+        return Double.isNaN(value) ? OptionalInt.empty() : OptionalInt.of((int) Math.floor(value));
+    }
+
+    default int getAuxIntOr(ResourceLocation powerId, int fallback) {
+        double value = getAuxDoubleOr(powerId, Double.NaN);
+        return Double.isNaN(value) ? fallback : (int) Math.floor(value);
+    }
+
+    default double @Nullable [] getAuxDoubles(ResourceLocation powerId) {
         return null;
     }
 

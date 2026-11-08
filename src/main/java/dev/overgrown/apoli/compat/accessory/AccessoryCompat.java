@@ -16,7 +16,7 @@ public final class AccessoryCompat {
             accessories.registerEvents();
         }
 
-        if (ModCompat.CURIOS) {
+        if (ModCompat.CURIOS && !(ModCompat.ACCESSORIES && net.neoforged.fml.ModList.get().isLoaded("cclayer"))) {
             Accessories.register(new CuriosBackend());
             NeoForge.EVENT_BUS.addListener(CuriosBackend::onCurioChange);
             NeoForge.EVENT_BUS.addListener(CuriosBackend::onCanEquip);

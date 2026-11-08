@@ -35,8 +35,8 @@ public final class GlobalPowerLoader extends SimplePreparableReloadListener<Map<
         List<GlobalPowerSet> loaded = new ArrayList<>(data.size());
         for (Map.Entry<ResourceLocation, JsonDataFiles.Version> entry : data.entrySet()) {
             ResourceLocation id = entry.getKey();
-            GlobalPowerSet.codec(id).parse(IdWildcards.apply(new Dynamic<>(dev.overgrown.apoli.codec.ApoliOps.of(JsonOps.INSTANCE), entry.getValue().json()), id))
-                .resultOrPartial(err -> LOG.error("[Apoli] Failed to parse global power set {}: {}", id, err))
+            dev.overgrown.apoli.loader.LoadProblems.parse("global power set", id, entry.getValue().source(), "$", GlobalPowerSet.codec(id),
+                    IdWildcards.apply(new Dynamic<>(dev.overgrown.apoli.codec.ApoliOps.of(JsonOps.INSTANCE), entry.getValue().json()), id))
                 .ifPresent(loaded::add);
         }
         GlobalPowers.replaceAll(loaded);

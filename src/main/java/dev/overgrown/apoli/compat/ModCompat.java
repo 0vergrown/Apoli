@@ -19,6 +19,8 @@ public final class ModCompat {
 
     public static final boolean ICARUS = ModList.get().isLoaded("icarus");
 
+    public static final boolean CREATE = ModList.get().isLoaded("create");
+
     public static final boolean FIGURA = ModList.get().isLoaded("figura");
 
     public static final boolean FLYWHEEL = ModList.get().isLoaded("flywheel");

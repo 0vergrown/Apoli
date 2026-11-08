@@ -62,7 +62,7 @@ public record HudRender(List<Entry> entries) {
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("condition", EntityCondition.CODEC).forGetter(Entry::condition),
             Codec.BOOL.optionalFieldOf("inverted", false).forGetter(Entry::inverted),
             Codec.INT.optionalFieldOf("order").forGetter(Entry::order),
-            Expression.INT_OR_EXPR.optionalFieldOf("max").forGetter(Entry::max),
+            Expression.DOUBLE_OR_EXPR.optionalFieldOf("max").forGetter(Entry::max),
             SingleOrList.of(Look.CODEC).optionalFieldOf("fallback", List.of()).forGetter(Entry::fallback)
         ).apply(i, Entry::new));
     }

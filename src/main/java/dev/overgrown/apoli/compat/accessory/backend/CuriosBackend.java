@@ -12,6 +12,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
+import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 import net.neoforged.neoforge.common.util.TriState;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.SlotContext;
@@ -24,6 +26,7 @@ import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 public final class CuriosBackend implements AccessoryProvider {
     public static final String ID = "curios";
@@ -59,6 +62,24 @@ public final class CuriosBackend implements AccessoryProvider {
             if (!ref.getStack().isEmpty()) out.add(ref);
         }
         return out;
+    }
+
+    @Override
+    public int count(LivingEntity entity, List<AccessorySlot> filter, @Nullable Predicate<ItemStack> item, int limit) {
+        ICuriosItemHandler inventory = CuriosApi.getCuriosInventory(entity).orElse(null);
+        if (inventory == null) return 0;
+        int count = 0;
+        for (Map.Entry<String, ICurioStacksHandler> e : inventory.getCurios().entrySet()) {
+            IDynamicStackHandler stacks = e.getValue().getStacks();
+            for (int i = 0, n = stacks.getSlots(); i < n; i++) {
+                ItemStack stack = stacks.getStackInSlot(i);
+                if (stack.isEmpty()) continue;
+                if (!AccessorySlot.matchesAny(filter, ID, "", e.getKey(), i)) continue;
+                if (item != null && !item.test(stack)) continue;
+                if (++count >= limit) return count;
+            }
+        }
+        return count;
     }
 
     @Override

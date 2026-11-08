@@ -70,9 +70,13 @@ public final class LoggedOptionalField<A> extends MapCodec<Optional<A>> {
                 + (where == null ? "" : " of " + where)
                 + " is present but failed to parse: " + reason);
         }
-        Apoli.LOGGER.warn("[Apoli] Ignoring the '{}' field{} — it is present but failed to parse, so it was dropped and everything else loaded. {}",
-            name, where == null ? "" : " of " + where,
-            parsed.error().map(e -> e.message()).orElse("unknown error"));
+        if (ErrorLocator.locating()) return DataResult.success(Optional.empty());
+        String reason = ErrorLocator.tidy(parsed.error().map(e -> e.message()).orElse("unknown error"));
+        if (!dev.overgrown.apoli.loader.LoadProblems.warnInContext("The '" + name
+            + "' field is present but failed to parse, so it was ignored and everything else loaded: " + reason)) {
+            Apoli.LOGGER.warn("[Apoli] Ignoring the '{}' field{}: it is present but failed to parse, so it was dropped and everything else loaded. {}",
+                name, where == null ? "" : " of " + where, reason);
+        }
         return DataResult.success(Optional.empty());
     }
 

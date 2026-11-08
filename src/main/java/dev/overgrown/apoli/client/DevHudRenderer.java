@@ -10,7 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.OptionalInt;
+import java.util.OptionalDouble;
 
 public final class DevHudRenderer {
 
@@ -32,14 +32,14 @@ public final class DevHudRenderer {
             if (!PowerResources.isResource(powerId)) continue;
             int size = Math.max(1, PowerResources.size(container, powerId));
             for (int slot = 0; slot < size; slot++) {
-                OptionalInt value = size > 1
+                OptionalDouble value = size > 1
                     ? PowerResources.readAt(container, powerId, slot)
                     : PowerResources.read(container, powerId);
                 if (value.isEmpty()) continue;
-                OptionalInt max = PowerResources.bound(container, powerId, true);
+                OptionalDouble max = PowerResources.bound(container, powerId, true);
                 StringBuilder line = new StringBuilder();
-                line.append(value.getAsInt());
-                if (max.isPresent()) line.append('/').append(max.getAsInt());
+                line.append(PowerResources.format(value.getAsDouble()));
+                if (max.isPresent()) line.append('/').append(PowerResources.format(max.getAsDouble()));
                 line.append(" - ").append(powerId);
                 if (size > 1) line.append('[').append(slot).append(']');
                 lines.add(line.toString());

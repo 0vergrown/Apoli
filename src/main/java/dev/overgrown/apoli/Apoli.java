@@ -130,6 +130,9 @@ public final class Apoli {
         if (dev.overgrown.apoli.compat.ModCompat.YIGD) {
             dev.overgrown.apoli.compat.yigd.YigdCompat.init();
         }
+        if (dev.overgrown.apoli.compat.ModCompat.CREATE) {
+            dev.overgrown.apoli.compat.create.CreateCompat.init();
+        }
 
         LOGGER.info("[Apoli] Ready. {} power type(s).", PowerTypeRegistry.view().size());
     }
@@ -232,6 +235,8 @@ public final class Apoli {
         dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(event.getServer());
         dev.overgrown.apoli.entity.GrabManager.clearAll();
         dev.overgrown.apoli.block.GhostBlocks.clear();
+        dev.overgrown.apoli.block.BlockGlows.clear();
+        dev.overgrown.apoli.block.BlockGlows.load(event.getServer());
         if (EffectConfig.get().enabled()) CustomEffectRegistry.finishReload(true);
     }
 
@@ -470,6 +475,7 @@ public final class Apoli {
         dev.overgrown.apoli.power.ResolvedPowers.clear();
         dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.clearServer();
         dev.overgrown.apoli.block.GhostBlocks.clear();
+        dev.overgrown.apoli.block.BlockGlows.clear();
         dev.overgrown.apoli.entity.PlayerModelTypes.clear();
             dev.overgrown.apoli.tick.TickRates.clear();
         DelayedActionQueue.clear();
@@ -488,7 +494,7 @@ public final class Apoli {
         PowerContainer c = PowerContainer.of(target);
         if (c instanceof PowerContainerImpl impl && !impl.isEmpty()) {
             ApoliNetwork.sendEntityPowers(viewer, new SyncEntityPowersS2C(
-                target.getId(), impl.snapshot(), impl.auxIntSnapshot(), impl.suppressedPowers()));
+                target.getId(), impl.snapshot(), impl.auxSnapshot(), impl.suppressedPowers()));
             dev.overgrown.apoli.network.payload.SyncResourceTablesS2C tables = tablePayload(target, impl);
             if (tables != null) ApoliNetwork.sendResourceTables(viewer, tables);
         }
@@ -539,14 +545,14 @@ public final class Apoli {
             if (forcedKeys) dev.overgrown.apoli.keybind.KeyDispatch.tickForcedNonPlayer(entity);
             if (impl.isStructureDirty()) {
                 ApoliNetwork.sendEntityPowersToTrackersAndSelf(entity, new SyncEntityPowersS2C(
-                    entity.getId(), impl.snapshot(), impl.auxIntSnapshot(), impl.suppressedPowers()));
+                    entity.getId(), impl.snapshot(), impl.auxSnapshot(), impl.suppressedPowers()));
                 dev.overgrown.apoli.network.payload.SyncResourceTablesS2C tables = tablePayload(entity, impl);
                 if (tables != null) ApoliNetwork.sendResourceTablesToTrackersAndSelf(entity, tables);
                 impl.clearStructureDirty();
                 impl.clearDirty();
             } else if (impl.isDirty()) {
-                ApoliNetwork.sendAuxIntsToTrackersAndSelf(entity,
-                    new dev.overgrown.apoli.network.payload.SyncAuxIntsS2C(entity.getId(), impl.auxIntSnapshot()));
+                ApoliNetwork.sendAuxValuesToTrackersAndSelf(entity,
+                    new dev.overgrown.apoli.network.payload.SyncAuxValuesS2C(entity.getId(), impl.auxSnapshot()));
                 dev.overgrown.apoli.network.payload.SyncResourceTablesS2C tables = tablePayload(entity, impl);
                 if (tables != null) ApoliNetwork.sendResourceTablesToTrackersAndSelf(entity, tables);
                 impl.clearDirty();
@@ -556,8 +562,10 @@ public final class Apoli {
         dev.overgrown.apoli.power.PowerTypeUsage.endSweep();
         dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.endScan();
         dev.overgrown.apoli.block.GhostBlocks.tick(event.getServer());
+        dev.overgrown.apoli.block.BlockGlows.tick(event.getServer());
         dev.overgrown.apoli.power.builtin.ShaderPower.tick(event.getServer());
         dev.overgrown.apoli.power.ResolvedPowers.tick(event.getServer());
+        dev.overgrown.apoli.loader.LoadProblems.tick(event.getServer());
         EntitySetPower.flushPendingRemovals();
         EntitySetPower.flushSync(event.getServer());
     }
@@ -574,14 +582,14 @@ public final class Apoli {
             return;
         }
         ApoliNetwork.sendEntityPowersToTrackers(entity, new SyncEntityPowersS2C(
-            entity.getId(), impl.snapshot(), impl.auxIntSnapshot(), impl.suppressedPowers()));
+            entity.getId(), impl.snapshot(), impl.auxSnapshot(), impl.suppressedPowers()));
         dev.overgrown.apoli.network.payload.SyncResourceTablesS2C tables = tablePayload(entity, impl);
         if (tables != null) ApoliNetwork.sendResourceTablesToTrackersAndSelf(entity, tables);
     }
 
     private static dev.overgrown.apoli.network.payload.SyncResourceTablesS2C tablePayload(Entity entity,
                                                                                           PowerContainerImpl impl) {
-        java.util.Map<net.minecraft.resources.ResourceLocation, int[]> tables = impl.auxIntsSnapshot();
+        java.util.Map<net.minecraft.resources.ResourceLocation, double[]> tables = impl.auxTablesSnapshot();
         if (tables.isEmpty()) return null;
         return new dev.overgrown.apoli.network.payload.SyncResourceTablesS2C(entity.getId(), tables);
     }
@@ -590,7 +598,7 @@ public final class Apoli {
         PowerContainer c = PowerContainer.of(player);
         if (!(c instanceof PowerContainerImpl impl)) return;
         ApoliNetwork.sendEntityPowersToTrackersAndSelf(player, new SyncEntityPowersS2C(
-            player.getId(), impl.snapshot(), impl.auxIntSnapshot(), impl.suppressedPowers()));
+            player.getId(), impl.snapshot(), impl.auxSnapshot(), impl.suppressedPowers()));
         dev.overgrown.apoli.network.payload.SyncResourceTablesS2C tables = tablePayload(player, impl);
         if (tables != null) ApoliNetwork.sendResourceTablesToTrackersAndSelf(player, tables);
         impl.clearDirty();

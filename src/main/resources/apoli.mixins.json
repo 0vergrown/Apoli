@@ -141,6 +141,8 @@
     "power.ServerLevelLevelEventMixin"
   ],
   "client": [
+    "glow.ClientLevelBlockGlowMixin",
+    "glow.LevelRendererBlockGlowMixin",
     "session.MinecraftLevelChangeMixin",
     "camera.AbstractClientPlayerFovMixin",
     "camera.CameraSetupMixin",

@@ -2,6 +2,7 @@ package dev.overgrown.apoli.condition.builtin.bientity;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.overgrown.apoli.compat.sable.SableSubLevels;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.data.FluidHandling;
@@ -43,8 +44,9 @@ public final class CanSeeCondition implements ConditionType<BiEntityCtx, CanSeeC
         boolean seen = hit.getType() == HitResult.Type.MISS;
         if (DevParticles.due(ctx.level(), ctx.actor(), ctx.target(), cfg)) {
             ServerLevel level = (ServerLevel) ctx.level();
+            Vec3 stop = seen ? null : SableSubLevels.worldPosition(level, hit.getLocation());
             DevParticles.segment(level, DevParticles.Ray.CONDITION, from, to,
-                seen ? Double.POSITIVE_INFINITY : from.distanceTo(hit.getLocation()));
+                stop == null ? Double.POSITIVE_INFINITY : from.distanceTo(stop));
             if (hit instanceof BlockHitResult blocked && !seen) {
                 DevParticles.mark(level, DevParticles.Ray.CONDITION, blocked.getBlockPos(), true);
             }

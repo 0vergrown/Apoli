@@ -7,7 +7,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.OptionalInt;
+import java.util.OptionalDouble;
 
 public abstract class PowerType<C> {
     public abstract MapCodec<C> configCodec();
@@ -48,32 +48,32 @@ public abstract class PowerType<C> {
         return -1;
     }
 
-    public OptionalInt readResource(ResourceLocation powerId, C cfg, PowerContainer holder) {
-        return OptionalInt.empty();
+    public OptionalDouble readResource(ResourceLocation powerId, C cfg, PowerContainer holder) {
+        return OptionalDouble.empty();
     }
 
-    public OptionalInt writeResource(ResourceLocation powerId, C cfg, PowerContainer holder, int value) {
-        return OptionalInt.empty();
+    public OptionalDouble writeResource(ResourceLocation powerId, C cfg, PowerContainer holder, double value) {
+        return OptionalDouble.empty();
     }
 
-    public OptionalInt resourceBound(ResourceLocation powerId, C cfg, PowerContainer holder, boolean max) {
-        return OptionalInt.empty();
+    public OptionalDouble resourceBound(ResourceLocation powerId, C cfg, PowerContainer holder, boolean max) {
+        return OptionalDouble.empty();
     }
 
     public int resourceSize(ResourceLocation powerId, C cfg, PowerContainer holder) {
         return 0;
     }
 
-    public OptionalInt readResourceAt(ResourceLocation powerId, C cfg, PowerContainer holder, int slot) {
-        return slot == 0 ? readResource(powerId, cfg, holder) : OptionalInt.empty();
+    public OptionalDouble readResourceAt(ResourceLocation powerId, C cfg, PowerContainer holder, int slot) {
+        return slot == 0 ? readResource(powerId, cfg, holder) : OptionalDouble.empty();
     }
 
-    public OptionalInt writeResourceAt(ResourceLocation powerId, C cfg, PowerContainer holder, int slot, int value) {
-        return slot == 0 ? writeResource(powerId, cfg, holder, value) : OptionalInt.empty();
+    public OptionalDouble writeResourceAt(ResourceLocation powerId, C cfg, PowerContainer holder, int slot, double value) {
+        return slot == 0 ? writeResource(powerId, cfg, holder, value) : OptionalDouble.empty();
     }
 
-    public int resourceIndexOf(ResourceLocation powerId, C cfg, PowerContainer holder, int value) {
-        OptionalInt only = readResource(powerId, cfg, holder);
-        return only.isPresent() && only.getAsInt() == value ? 0 : -1;
+    public int resourceIndexOf(ResourceLocation powerId, C cfg, PowerContainer holder, double value) {
+        OptionalDouble only = readResource(powerId, cfg, holder);
+        return only.isPresent() && only.getAsDouble() == value ? 0 : -1;
     }
 }

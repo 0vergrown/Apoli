@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.client.camera;
 
 import dev.overgrown.apoli.client.ClientResolvedPowers;
+import dev.overgrown.apoli.compat.sable.SableSubLevels;
 import dev.overgrown.apoli.data.CameraAnimation;
 import dev.overgrown.apoli.data.CameraLook;
 import dev.overgrown.apoli.data.Expression;
@@ -343,7 +344,9 @@ public final class CameraController {
             Vec3 to = new Vec3(from.x + dx * length, from.y + dy * length, from.z + dz * length);
             HitResult hit = mc.level.clip(new ClipContext(from, to, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, anchor));
             if (hit.getType() == HitResult.Type.MISS) continue;
-            double distance = hit.getLocation().distanceTo(base);
+            Vec3 at = SableSubLevels.worldPosition(mc.level, hit.getLocation());
+            if (at == null) continue;
+            double distance = at.distanceTo(base);
             if (distance < allowed) allowed = distance;
         }
         return allowed;

@@ -11,8 +11,6 @@ import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
-import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
-import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -35,15 +33,13 @@ public abstract class LivingEntityRendererPreventFeatureMixin {
             ? ClientDisguiseManager.powerSource(living)
             : rendered;
         Player viewer = Minecraft.getInstance().player;
-        if (layer instanceof HumanoidArmorLayer<?, ?, ?>
-            && InvisibilityPower.hidesArmor(source)
-            && rendered.isInvisibleTo(viewer)) {
-            return false;
-        }
-        if (layer instanceof ItemInHandLayer<?, ?>
-            && InvisibilityPower.hidesHeldItems(source)
-            && rendered.isInvisibleTo(viewer)) {
-            return false;
+        if (InvisibilityPower.inUse()) {
+            int kind = FeatureRenderers.kindOf(layer.getClass());
+            if (kind != FeatureRenderers.OWN
+                && (kind == FeatureRenderers.HELD ? InvisibilityPower.hidesHeldItems(source) : InvisibilityPower.hidesArmor(source))
+                && rendered.isInvisibleTo(viewer)) {
+                return false;
+            }
         }
         return !PreventFeatureRenderPower.prevents(source, FeatureRenderers.keysFor(layer.getClass()), viewer);
     }

@@ -3,6 +3,7 @@ package dev.overgrown.apoli.condition.builtin.entity;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.overgrown.apoli.compat.sable.SableSubLevels;
 import dev.overgrown.apoli.condition.BiEntityCondition;
 import dev.overgrown.apoli.condition.BlockCondition;
 import dev.overgrown.apoli.condition.ConditionType;
@@ -90,15 +91,19 @@ public final class RaycastEntityCondition implements ConditionType<EntityCtx, Ra
         float entityDist = entityDistance(source, cfg);
 
         BlockHitResult blockHit = null;
-        double nearestSq = Double.POSITIVE_INFINITY;
+        double blockSq = Double.POSITIVE_INFINITY;
         if (cfg.block) {
             Vec3 to = origin.add(dir.scale(blockDist));
             BlockHitResult hit = level.clip(new ClipContext(origin, to, cfg.shapeType.vanilla(), cfg.fluidHandling.vanilla(), source));
             if (hit.getType() != HitResult.Type.MISS) {
-                blockHit = hit;
-                nearestSq = origin.distanceToSqr(hit.getLocation());
+                Vec3 hitPos = SableSubLevels.worldPosition(level, hit.getLocation());
+                if (hitPos != null) {
+                    blockHit = hit;
+                    blockSq = origin.distanceToSqr(hitPos);
+                }
             }
         }
+        double nearestSq = blockSq;
 
         Entity entityHit = null;
         if (cfg.entity) {
@@ -137,19 +142,20 @@ public final class RaycastEntityCondition implements ConditionType<EntityCtx, Ra
             passed = false;
         }
         if (DevParticles.due(level, source, cfg)) {
-            outline((ServerLevel) level, cfg, origin, dir, blockDist, entityDist, blockHit, entityHit, nearestSq, passed);
+            outline((ServerLevel) level, cfg, origin, dir, blockDist, entityDist, blockHit, blockSq, entityHit,
+                nearestSq, passed);
         }
         return passed;
     }
 
     private static void outline(ServerLevel level, Cfg cfg, Vec3 origin, Vec3 dir, float blockDist, float entityDist,
-                                @Nullable BlockHitResult blockHit, @Nullable Entity entityHit, double stopSq,
-                                boolean passed) {
+                                @Nullable BlockHitResult blockHit, double blockSq, @Nullable Entity entityHit,
+                                double stopSq, boolean passed) {
         DevParticles.Ray kind = DevParticles.Ray.CONDITION;
         double reach = Math.max(cfg.block ? blockDist : 0.0, cfg.entity ? entityDist : 0.0);
         DevParticles.ray(level, kind, origin, dir, Double.isInfinite(stopSq) ? reach : Math.sqrt(stopSq), reach);
         if (cfg.entity) {
-            double length = blockHit == null ? entityDist : Math.min(entityDist, origin.distanceTo(blockHit.getLocation()));
+            double length = blockHit == null ? entityDist : Math.min(entityDist, Math.sqrt(blockSq));
             DevParticles.detection(level, kind, origin, dir, length, 0.0, 0.0, 0.0, -1.0);
         }
         if (entityHit != null) {

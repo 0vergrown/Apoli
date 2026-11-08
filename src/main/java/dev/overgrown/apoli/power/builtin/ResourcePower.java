@@ -15,6 +15,7 @@ import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerContainerImpl;
+import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.power.PowerTypeRegistry;
 import net.minecraft.resources.ResourceLocation;
@@ -25,11 +26,13 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalInt;
+import java.util.OptionalDouble;
 
 public class ResourcePower extends PowerType<ResourcePower.Cfg> {
 
     public static final int WARN_SIZE = 65536;
+    public static final double UNBOUNDED_MIN = Integer.MIN_VALUE;
+    public static final double UNBOUNDED_MAX = Integer.MAX_VALUE;
 
     private static final int MAX_ACTION_DEPTH = 64;
     private static final int DEV_REPORT_TICKS = 20;
@@ -58,27 +61,29 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         Optional<EntityAction> entityAction
     ) {
         public static final Codec<OnChange> CODEC = RecordCodecBuilder.create(i -> i.group(
-            Expression.INT_OR_EXPR.optionalFieldOf("value").forGetter(OnChange::value),
-            Codec.list(Expression.INT_OR_EXPR).optionalFieldOf("values", List.of()).forGetter(OnChange::values),
+            Expression.DOUBLE_OR_EXPR.optionalFieldOf("value").forGetter(OnChange::value),
+            Codec.list(Expression.DOUBLE_OR_EXPR).optionalFieldOf("values", List.of()).forGetter(OnChange::values),
             Comparison.CODEC.optionalFieldOf("comparison", Comparison.EQUAL).forGetter(OnChange::comparison),
             LoggedOptionalField.of("entity_action", EntityAction.CODEC).forGetter(OnChange::entityAction)
         ).apply(i, OnChange::new));
 
-        public boolean matches(int current, Entity owner) {
+        public boolean matches(double current, Entity owner) {
             if (entityAction.isEmpty()) return false;
             if (value.isEmpty() && values.isEmpty()) return true;
-            if (value.isPresent() && comparison.compare(current, value.get().evalInt(owner, current))) return true;
+            if (value.isPresent() && comparison.compare(current, PowerResources.canonical(value.get().eval(owner, current)))) {
+                return true;
+            }
             for (int i = 0; i < values.size(); i++) {
-                if (comparison.compare(current, values.get(i).evalInt(owner, current))) return true;
+                if (comparison.compare(current, PowerResources.canonical(values.get(i).eval(owner, current)))) return true;
             }
             return false;
         }
     }
 
     private static final MapCodec<Cfg> INNER = RecordCodecBuilder.mapCodec(i -> i.group(
-        Expression.INT_OR_EXPR.optionalFieldOf("min").forGetter(Cfg::min),
-        Expression.INT_OR_EXPR.optionalFieldOf("max").forGetter(Cfg::max),
-        Expression.INT_OR_EXPR.optionalFieldOf("start_value").forGetter(Cfg::startValue),
+        Expression.DOUBLE_OR_EXPR.optionalFieldOf("min").forGetter(Cfg::min),
+        Expression.DOUBLE_OR_EXPR.optionalFieldOf("max").forGetter(Cfg::max),
+        Expression.DOUBLE_OR_EXPR.optionalFieldOf("start_value").forGetter(Cfg::startValue),
         HudRender.CODEC.optionalFieldOf("hud_render", HudRender.DONT_RENDER).forGetter(Cfg::hudRender),
         Codec.BOOL.optionalFieldOf("enforce_limits", true).forGetter(Cfg::enforceLimits),
         Codec.BOOL.optionalFieldOf("retain_value", false).forGetter(Cfg::retainValue),
@@ -107,11 +112,11 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
             dev.overgrown.apoli.Apoli.LOGGER.warn(
                 "[Apoli] {} declares a resource of {} slots. Slots are only allocated once they are written, "
                 + "so this costs nothing until used, but writing near the top of that range will allocate "
-                + "roughly {} MB per holder.", powerId, cfg.size, (long) cfg.size * 4L / (1024L * 1024L));
+                + "roughly {} MB per holder.", powerId, cfg.size, (long) cfg.size * 8L / (1024L * 1024L));
         }
-        if (cfg.size > 1) impl.trimAuxInts(powerId, cfg.size);
-        if (impl.getAuxInt(powerId).isPresent()) return;
-        impl.setAuxInt(powerId, clampedStart(cfg, holder, powerId));
+        if (cfg.size > 1) impl.trimAuxDoubles(powerId, cfg.size);
+        if (impl.hasAux(powerId)) return;
+        impl.setAuxDouble(powerId, clampedStart(cfg, holder, powerId));
     }
 
     @Override
@@ -127,14 +132,14 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         if (!cfg.enforceLimits) return;
         if (!(holder instanceof PowerContainerImpl impl)) return;
         if (cfg.size > 1) {
-            int[] table = impl.getAuxInts(powerId);
+            double[] table = impl.getAuxDoubles(powerId);
             if (table != null) {
-                int min = currentMin(cfg, holder, powerId);
-                int max = currentMax(cfg, holder, powerId);
+                double min = currentMin(cfg, holder, powerId);
+                double max = currentMax(cfg, holder, powerId);
                 int limit = Math.min(table.length, cfg.size);
                 boolean changed = false;
                 for (int slot = 1; slot < limit; slot++) {
-                    int value = clamp(table[slot], min, max, cfg);
+                    double value = clamp(table[slot], min, max, cfg);
                     if (value == table[slot]) continue;
                     table[slot] = value;
                     changed = true;
@@ -142,30 +147,29 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
                 if (changed) impl.markDirty();
             }
         }
-        OptionalInt cur = impl.getAuxInt(powerId);
-        if (cur.isEmpty()) return;
-        int curVal = cur.getAsInt();
-        int min = currentMin(cfg, holder, powerId);
-        int max = currentMax(cfg, holder, powerId);
-        int clamped = clamp(curVal, min, max, cfg);
-        if (clamped != curVal) {
-            impl.setAuxInt(powerId, clamped);
-            fireBoundaryActions(powerId, cfg, holder.rawOwner(), curVal, clamped, min, max);
+        double current = impl.getAuxDoubleOr(powerId, Double.NaN);
+        if (Double.isNaN(current)) return;
+        double min = currentMin(cfg, holder, powerId);
+        double max = currentMax(cfg, holder, powerId);
+        double clamped = clamp(current, min, max, cfg);
+        if (clamped != current) {
+            impl.setAuxDouble(powerId, clamped);
+            fireBoundaryActions(powerId, cfg, holder.rawOwner(), current, clamped, min, max);
         }
     }
 
     @Override
-    public OptionalInt readResource(ResourceLocation powerId, Cfg cfg, PowerContainer holder) {
+    public OptionalDouble readResource(ResourceLocation powerId, Cfg cfg, PowerContainer holder) {
         return readValue(holder, powerId);
     }
 
     @Override
-    public OptionalInt writeResource(ResourceLocation powerId, Cfg cfg, PowerContainer holder, int value) {
+    public OptionalDouble writeResource(ResourceLocation powerId, Cfg cfg, PowerContainer holder, double value) {
         return writeValue(holder, powerId, value);
     }
 
     @Override
-    public OptionalInt resourceBound(ResourceLocation powerId, Cfg cfg, PowerContainer holder, boolean max) {
+    public OptionalDouble resourceBound(ResourceLocation powerId, Cfg cfg, PowerContainer holder, boolean max) {
         return boundOf(holder, powerId, max);
     }
 
@@ -175,45 +179,46 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
     }
 
     @Override
-    public OptionalInt readResourceAt(ResourceLocation powerId, Cfg cfg, PowerContainer holder, int slot) {
-        if (!holder.hasPower(powerId)) return OptionalInt.empty();
-        if (slot < 0 || slot >= cfg.size) return OptionalInt.empty();
-        if (slot == 0) return holder.getAuxInt(powerId);
-        int[] table = holder.getAuxInts(powerId);
-        if (table != null && slot < table.length) return OptionalInt.of(table[slot]);
-        return OptionalInt.of(clampedStart(cfg, holder, powerId));
+    public OptionalDouble readResourceAt(ResourceLocation powerId, Cfg cfg, PowerContainer holder, int slot) {
+        if (!holder.hasPower(powerId)) return OptionalDouble.empty();
+        if (slot < 0 || slot >= cfg.size) return OptionalDouble.empty();
+        if (slot == 0) return holder.getAuxDouble(powerId);
+        double[] table = holder.getAuxDoubles(powerId);
+        if (table != null && slot < table.length) return OptionalDouble.of(table[slot]);
+        return OptionalDouble.of(clampedStart(cfg, holder, powerId));
     }
 
     @Override
-    public OptionalInt writeResourceAt(ResourceLocation powerId, Cfg cfg, PowerContainer holder, int slot, int value) {
+    public OptionalDouble writeResourceAt(ResourceLocation powerId, Cfg cfg, PowerContainer holder, int slot, double value) {
         if (slot == 0) return writeValue(holder, powerId, value);
-        if (!(holder instanceof PowerContainerImpl impl)) return OptionalInt.empty();
-        if (!holder.hasPower(powerId)) return OptionalInt.empty();
-        if (slot < 0 || slot >= cfg.size) return OptionalInt.empty();
-        int min = currentMin(cfg, holder, powerId);
-        int max = currentMax(cfg, holder, powerId);
-        int[] table = impl.auxIntsAtLeast(powerId, slot + 1, clampedStart(cfg, holder, powerId));
-        table[0] = holder.getAuxIntOr(powerId, table[0]);
-        int prev = table[slot];
-        int target;
-        if (cfg.retainValue && cfg.enforceLimits && (value < min || value > max)) {
+        if (!(holder instanceof PowerContainerImpl impl)) return OptionalDouble.empty();
+        if (!holder.hasPower(powerId)) return OptionalDouble.empty();
+        if (slot < 0 || slot >= cfg.size) return OptionalDouble.empty();
+        double min = currentMin(cfg, holder, powerId);
+        double max = currentMax(cfg, holder, powerId);
+        double[] table = impl.auxDoublesAtLeast(powerId, slot + 1, clampedStart(cfg, holder, powerId));
+        table[0] = holder.getAuxDoubleOr(powerId, table[0]);
+        double prev = table[slot];
+        double wanted = PowerResources.canonical(value);
+        double target;
+        if (cfg.retainValue && cfg.enforceLimits && (wanted < min || wanted > max)) {
             target = prev;
         } else {
-            target = clamp(value, min, max, cfg);
+            target = clamp(wanted, min, max, cfg);
         }
         if (target != prev) {
             table[slot] = target;
             impl.markDirty();
             fireBoundaryActions(powerId, cfg, holder.rawOwner(), prev, target, min, max);
         }
-        return OptionalInt.of(target);
+        return OptionalDouble.of(target);
     }
 
     @Override
-    public int resourceIndexOf(ResourceLocation powerId, Cfg cfg, PowerContainer holder, int value) {
+    public int resourceIndexOf(ResourceLocation powerId, Cfg cfg, PowerContainer holder, double value) {
         if (!holder.hasPower(powerId)) return -1;
-        if (holder.getAuxIntOr(powerId, value + 1) == value) return 0;
-        int[] table = holder.getAuxInts(powerId);
+        if (holder.getAuxDoubleOr(powerId, Double.NaN) == value) return 0;
+        double[] table = holder.getAuxDoubles(powerId);
         int limit = table == null ? 1 : Math.min(table.length, cfg.size);
         for (int slot = 1; slot < limit; slot++) {
             if (table[slot] == value) return slot;
@@ -222,51 +227,51 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
         return -1;
     }
 
-    public int evalStartValue(Cfg cfg, PowerContainer holder) {
+    public double evalStartValue(Cfg cfg, PowerContainer holder) {
         Expression start = cfg.startValue.orElseGet(() -> cfg.min.orElse(null));
         if (start == null) return 0;
-        return start.evalIntWith(holder.rawOwner(), holder, 0);
+        return PowerResources.canonical(start.evalWith(holder.rawOwner(), holder, 0));
     }
 
-    public int currentMin(Cfg cfg, PowerContainer holder, ResourceLocation powerId) {
-        if (cfg.min.isEmpty()) return Integer.MIN_VALUE;
+    public double currentMin(Cfg cfg, PowerContainer holder, ResourceLocation powerId) {
+        if (cfg.min.isEmpty()) return UNBOUNDED_MIN;
         Expression min = cfg.min.get();
-        if (min.constantValue().isPresent()) return (int) Math.round(min.constantValue().getAsDouble());
-        int cur = holder.getAuxIntOr(powerId, 0);
-        return min.evalIntWith(holder.rawOwner(), holder, cur);
+        if (min.constantValue().isPresent()) return PowerResources.canonical(min.constantValue().getAsDouble());
+        double current = holder.getAuxDoubleOr(powerId, 0);
+        return PowerResources.canonical(min.evalWith(holder.rawOwner(), holder, current));
     }
 
-    public int currentMax(Cfg cfg, PowerContainer holder, ResourceLocation powerId) {
-        if (cfg.max.isEmpty()) return Integer.MAX_VALUE;
+    public double currentMax(Cfg cfg, PowerContainer holder, ResourceLocation powerId) {
+        if (cfg.max.isEmpty()) return UNBOUNDED_MAX;
         Expression max = cfg.max.get();
-        if (max.constantValue().isPresent()) return (int) Math.round(max.constantValue().getAsDouble());
-        int cur = holder.getAuxIntOr(powerId, 0);
-        return max.evalIntWith(holder.rawOwner(), holder, cur);
+        if (max.constantValue().isPresent()) return PowerResources.canonical(max.constantValue().getAsDouble());
+        double current = holder.getAuxDoubleOr(powerId, 0);
+        return PowerResources.canonical(max.evalWith(holder.rawOwner(), holder, current));
     }
 
-    public static int clamp(int value, int min, int max, Cfg cfg) {
+    public static double clamp(double value, double min, double max, Cfg cfg) {
         if (!cfg.enforceLimits) return value;
-        int hi = Math.max(min, max);
-        int lo = Math.min(min, max);
+        double hi = Math.max(min, max);
+        double lo = Math.min(min, max);
         return Math.min(hi, Math.max(lo, value));
     }
 
-    public static OptionalInt boundOf(@Nullable PowerContainer holder, ResourceLocation powerId, boolean max) {
+    public static OptionalDouble boundOf(@Nullable PowerContainer holder, ResourceLocation powerId, boolean max) {
         Power loaded = ApoliPowers.get(powerId);
-        if (loaded == null) return OptionalInt.empty();
-        if (!(PowerTypeRegistry.get(loaded.typeId()) instanceof ResourcePower rp)) return OptionalInt.empty();
-        if (!(loaded.config() instanceof Cfg cfg)) return OptionalInt.empty();
+        if (loaded == null) return OptionalDouble.empty();
+        if (!(PowerTypeRegistry.get(loaded.typeId()) instanceof ResourcePower rp)) return OptionalDouble.empty();
+        if (!(loaded.config() instanceof Cfg cfg)) return OptionalDouble.empty();
         Expression bound = (max ? cfg.max() : cfg.min()).orElse(null);
-        if (bound == null) return OptionalInt.of(max ? Integer.MAX_VALUE : Integer.MIN_VALUE);
+        if (bound == null) return OptionalDouble.of(max ? UNBOUNDED_MAX : UNBOUNDED_MIN);
         java.util.OptionalDouble constant = bound.constantValue();
-        if (constant.isPresent()) return OptionalInt.of((int) Math.round(constant.getAsDouble()));
-        if (holder == null) return OptionalInt.empty();
-        return OptionalInt.of(max ? rp.currentMax(cfg, holder, powerId) : rp.currentMin(cfg, holder, powerId));
+        if (constant.isPresent()) return OptionalDouble.of(PowerResources.canonical(constant.getAsDouble()));
+        if (holder == null) return OptionalDouble.empty();
+        return OptionalDouble.of(max ? rp.currentMax(cfg, holder, powerId) : rp.currentMin(cfg, holder, powerId));
     }
 
-    public static OptionalInt readValue(PowerContainer holder, ResourceLocation powerId) {
-        if (!holder.hasPower(powerId)) return OptionalInt.empty();
-        return holder.getAuxInt(powerId);
+    public static OptionalDouble readValue(PowerContainer holder, ResourceLocation powerId) {
+        if (!holder.hasPower(powerId)) return OptionalDouble.empty();
+        return holder.getAuxDouble(powerId);
     }
 
     public static void onEntityLoad(PowerContainer holder, ResourceLocation powerId) {
@@ -280,45 +285,46 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
     }
 
     protected void resetOnLoad(ResourceLocation powerId, Cfg cfg, PowerContainerImpl impl) {
-        if (cfg.size > 1) impl.trimAuxInts(powerId, cfg.persistent ? cfg.size : 0);
-        boolean present = impl.getAuxInt(powerId).isPresent();
-        if (present && cfg.persistent) return;
-        impl.setAuxInt(powerId, clampedStart(cfg, impl, powerId));
+        if (cfg.size > 1) impl.trimAuxDoubles(powerId, cfg.persistent ? cfg.size : 0);
+        if (impl.hasAux(powerId) && cfg.persistent) return;
+        impl.setAuxDouble(powerId, clampedStart(cfg, impl, powerId));
     }
 
-    protected int clampedStart(Cfg cfg, PowerContainer holder, ResourceLocation powerId) {
+    protected double clampedStart(Cfg cfg, PowerContainer holder, ResourceLocation powerId) {
         return clamp(evalStartValue(cfg, holder), currentMin(cfg, holder, powerId),
             currentMax(cfg, holder, powerId), cfg);
     }
 
-    public static OptionalInt writeValue(PowerContainer holder, ResourceLocation powerId, int newValue) {
-        if (!(holder instanceof PowerContainerImpl impl)) return OptionalInt.empty();
-        if (!holder.hasPower(powerId)) return OptionalInt.empty();
+    public static OptionalDouble writeValue(PowerContainer holder, ResourceLocation powerId, double newValue) {
+        if (!(holder instanceof PowerContainerImpl impl)) return OptionalDouble.empty();
+        if (!holder.hasPower(powerId)) return OptionalDouble.empty();
         Power loaded = ApoliPowers.get(powerId);
-        if (loaded == null) return OptionalInt.empty();
+        if (loaded == null) return OptionalDouble.empty();
         PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
-        if (!(type instanceof ResourcePower rp)) return OptionalInt.empty();
-        if (!(loaded.config() instanceof Cfg cfg)) return OptionalInt.empty();
-        int prev = impl.getAuxInt(powerId).orElse(rp.evalStartValue(cfg, holder));
-        int min = rp.currentMin(cfg, holder, powerId);
-        int max = rp.currentMax(cfg, holder, powerId);
-        int target;
-        if (cfg.retainValue && cfg.enforceLimits && (newValue < min || newValue > max)) {
+        if (!(type instanceof ResourcePower rp)) return OptionalDouble.empty();
+        if (!(loaded.config() instanceof Cfg cfg)) return OptionalDouble.empty();
+        double prev = impl.getAuxDoubleOr(powerId, Double.NaN);
+        if (Double.isNaN(prev)) prev = rp.evalStartValue(cfg, holder);
+        double min = rp.currentMin(cfg, holder, powerId);
+        double max = rp.currentMax(cfg, holder, powerId);
+        double wanted = PowerResources.canonical(newValue);
+        double target;
+        if (cfg.retainValue && cfg.enforceLimits && (wanted < min || wanted > max)) {
             target = prev;
         } else {
-            target = clamp(newValue, min, max, cfg);
+            target = clamp(wanted, min, max, cfg);
         }
         if (target != prev) {
-            impl.setAuxInt(powerId, target);
-            int[] table = impl.getAuxInts(powerId);
+            impl.setAuxDouble(powerId, target);
+            double[] table = impl.getAuxDoubles(powerId);
             if (table != null && table.length > 0) table[0] = target;
             rp.fireBoundaryActions(powerId, cfg, holder.rawOwner(), prev, target, min, max);
         }
-        return OptionalInt.of(target);
+        return OptionalDouble.of(target);
     }
 
-    protected void fireBoundaryActions(ResourceLocation powerId, Cfg cfg, Entity owner, int prev, int newVal,
-                                       int min, int max) {
+    protected void fireBoundaryActions(ResourceLocation powerId, Cfg cfg, Entity owner, double prev, double newVal,
+                                       double min, double max) {
         if (owner == null || newVal == prev) return;
         if (cfg.minAction.isEmpty() && cfg.maxAction.isEmpty() && cfg.onChange.isEmpty()) return;
         if (!(owner.level() instanceof ServerLevel level)) return;
@@ -355,7 +361,8 @@ public class ResourcePower extends PowerType<ResourcePower.Cfg> {
             depth[0]--;
         }
         if (fired != null && !fired.isEmpty()) {
-            DevMode.reportEvery(owner, powerId, DEV_REPORT_TICKS, powerId + " " + prev + " → " + newVal + " ran " + fired);
+            DevMode.reportEvery(owner, powerId, DEV_REPORT_TICKS, powerId + " " + PowerResources.format(prev) + " → "
+                + PowerResources.format(newVal) + " ran " + fired);
         }
     }
 }

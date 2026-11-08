@@ -29,7 +29,7 @@ public final class ApoliCriteria {
         TRIGGERS.register(modBus);
     }
 
-    public static void resourceChanged(@Nullable Entity owner, ResourceLocation resource, int value) {
+    public static void resourceChanged(@Nullable Entity owner, ResourceLocation resource, double value) {
         if (owner instanceof ServerPlayer player) RESOURCE.get().trigger(player, resource, value);
     }
 

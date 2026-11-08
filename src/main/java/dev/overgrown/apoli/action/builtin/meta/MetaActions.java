@@ -76,7 +76,7 @@ public final class MetaActions {
         TypedActionRegistry<dev.overgrown.apoli.condition.context.BlockCtx> reg = ActionTypes.BLOCK;
         reg.register(AND, new AndMetaAction<>(BlockAction.CODEC, BlockAction::run));
         reg.register(RANDOM_CHANCE, new RandomChanceMetaAction<>(BlockAction.CODEC, BlockAction::run,
-            ctx -> null,
+            dev.overgrown.apoli.condition.context.BlockCtx::actor,
             dev.overgrown.apoli.condition.context.BlockCtx::level), chanceAliases());
         reg.register(CHOICE, new ChoiceMetaAction<>(BlockAction.CODEC, BlockAction::run));
         reg.register(DELAY, new DelayMetaAction<>(BlockAction.CODEC, BlockAction::run, ActionLiveness.always(),

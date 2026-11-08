@@ -10,12 +10,13 @@ import dev.overgrown.apoli.data.HudRender;
 import dev.overgrown.apoli.dev.DevMode;
 import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerContainerImpl;
+import dev.overgrown.apoli.power.PowerResources;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
+import java.util.OptionalDouble;
 
 public final class CooldownPower extends ResourcePower {
 
@@ -55,13 +56,13 @@ public final class CooldownPower extends ResourcePower {
     @Override
     public void onAdded(ResourceLocation powerId, Cfg cfg, PowerContainer holder, ResourceLocation source) {
         if (!(holder instanceof PowerContainerImpl impl)) return;
-        if (impl.getAuxInt(powerId).isPresent()) return;
+        if (impl.hasAux(powerId)) return;
         impl.setAuxInt(powerId, deadline(holder, startTicks(cfg, holder, powerId)));
     }
 
     @Override
     protected void resetOnLoad(ResourceLocation powerId, Cfg cfg, PowerContainerImpl impl) {
-        if (impl.getAuxInt(powerId).isPresent() && cfg.persistent()) return;
+        if (impl.hasAux(powerId) && cfg.persistent()) return;
         impl.setAuxInt(powerId, deadline(impl, startTicks(cfg, impl, powerId)));
     }
 
@@ -74,7 +75,7 @@ public final class CooldownPower extends ResourcePower {
         int remaining = stored - now(holder);
         if (remaining > 0) {
             if (!cfg.onChange().isEmpty()) {
-                fireBoundaryActions(powerId, cfg, owner, remaining + 1, remaining, Integer.MIN_VALUE, Integer.MAX_VALUE);
+                fireBoundaryActions(powerId, cfg, owner, remaining + 1, remaining, UNBOUNDED_MIN, UNBOUNDED_MAX);
             }
             return;
         }
@@ -83,48 +84,48 @@ public final class CooldownPower extends ResourcePower {
     }
 
     @Override
-    public OptionalInt readResource(ResourceLocation powerId, Cfg cfg, PowerContainer holder) {
-        if (!holder.hasPower(powerId)) return OptionalInt.empty();
-        if (DevMode.isEnabled(holder.rawOwner())) return OptionalInt.of(0);
+    public OptionalDouble readResource(ResourceLocation powerId, Cfg cfg, PowerContainer holder) {
+        if (!holder.hasPower(powerId)) return OptionalDouble.empty();
+        if (DevMode.isEnabled(holder.rawOwner())) return OptionalDouble.of(0);
         int stored = holder.getAuxIntOr(powerId, 0);
-        if (stored == 0) return OptionalInt.of(0);
-        return OptionalInt.of(Math.max(0, stored - now(holder)));
+        if (stored == 0) return OptionalDouble.of(0);
+        return OptionalDouble.of(Math.max(0, stored - now(holder)));
     }
 
     @Override
-    public OptionalInt writeResource(ResourceLocation powerId, Cfg cfg, PowerContainer holder, int value) {
-        if (!(holder instanceof PowerContainerImpl impl)) return OptionalInt.empty();
-        if (!holder.hasPower(powerId)) return OptionalInt.empty();
+    public OptionalDouble writeResource(ResourceLocation powerId, Cfg cfg, PowerContainer holder, double value) {
+        if (!(holder instanceof PowerContainerImpl impl)) return OptionalDouble.empty();
+        if (!holder.hasPower(powerId)) return OptionalDouble.empty();
         int length = length(cfg, holder, powerId);
-        int target = Math.max(0, Math.min(value, Math.max(length, 0)));
-        int prev = readResource(powerId, cfg, holder).orElse(0);
+        int target = Math.max(0, Math.min(PowerResources.whole(value), Math.max(length, 0)));
+        int prev = (int) readResource(powerId, cfg, holder).orElse(0);
         impl.setAuxInt(powerId, deadline(holder, target));
         if (target != prev) fireBoundaryActions(powerId, cfg, holder.rawOwner(), prev, target, 0, length);
-        return OptionalInt.of(target);
+        return OptionalDouble.of(target);
     }
 
     @Override
-    public OptionalInt readResourceAt(ResourceLocation powerId, Cfg cfg, PowerContainer holder, int slot) {
-        return slot == 0 ? readResource(powerId, cfg, holder) : OptionalInt.empty();
+    public OptionalDouble readResourceAt(ResourceLocation powerId, Cfg cfg, PowerContainer holder, int slot) {
+        return slot == 0 ? readResource(powerId, cfg, holder) : OptionalDouble.empty();
     }
 
     @Override
-    public OptionalInt writeResourceAt(ResourceLocation powerId, Cfg cfg, PowerContainer holder, int slot, int value) {
-        return slot == 0 ? writeResource(powerId, cfg, holder, value) : OptionalInt.empty();
+    public OptionalDouble writeResourceAt(ResourceLocation powerId, Cfg cfg, PowerContainer holder, int slot, double value) {
+        return slot == 0 ? writeResource(powerId, cfg, holder, value) : OptionalDouble.empty();
     }
 
     @Override
-    public int resourceIndexOf(ResourceLocation powerId, Cfg cfg, PowerContainer holder, int value) {
-        OptionalInt current = readResource(powerId, cfg, holder);
-        return current.isPresent() && current.getAsInt() == value ? 0 : -1;
+    public int resourceIndexOf(ResourceLocation powerId, Cfg cfg, PowerContainer holder, double value) {
+        OptionalDouble current = readResource(powerId, cfg, holder);
+        return current.isPresent() && current.getAsDouble() == value ? 0 : -1;
     }
 
     private int length(Cfg cfg, PowerContainer holder, ResourceLocation powerId) {
-        return currentMax(cfg, holder, powerId);
+        return PowerResources.whole(currentMax(cfg, holder, powerId));
     }
 
     private int startTicks(Cfg cfg, PowerContainer holder, ResourceLocation powerId) {
-        int start = evalStartValue(cfg, holder);
+        int start = PowerResources.whole(evalStartValue(cfg, holder));
         return Math.max(0, Math.min(start, Math.max(length(cfg, holder, powerId), 0)));
     }
 

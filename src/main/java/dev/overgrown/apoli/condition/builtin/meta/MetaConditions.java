@@ -57,7 +57,9 @@ public final class MetaConditions {
         TypedConditionRegistry<dev.overgrown.apoli.condition.context.EntityCtx> reg = ConditionTypes.ENTITY;
         reg.register(ALL_OF, new AllOfMeta<>(EntityCondition.CODEC, EntityCondition::test), allOfAliases());
         reg.register(ANY_OF, new AnyOfMeta<>(EntityCondition.CODEC, EntityCondition::test), anyOfAliases());
-        reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
+        reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(
+            dev.overgrown.apoli.condition.context.EntityCtx::entity,
+            dev.overgrown.apoli.condition.context.EntityCtx::level), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
         reg.register(NOTHING, new NothingMetaCondition<>());
         registerUniversal(reg);
@@ -67,7 +69,9 @@ public final class MetaConditions {
         TypedConditionRegistry<dev.overgrown.apoli.condition.context.BiEntityCtx> reg = ConditionTypes.BI_ENTITY;
         reg.register(ALL_OF, new AllOfMeta<>(BiEntityCondition.CODEC, BiEntityCondition::test), allOfAliases());
         reg.register(ANY_OF, new AnyOfMeta<>(BiEntityCondition.CODEC, BiEntityCondition::test), anyOfAliases());
-        reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
+        reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(
+            dev.overgrown.apoli.condition.context.BiEntityCtx::actor,
+            dev.overgrown.apoli.condition.context.BiEntityCtx::level), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
         reg.register(NOTHING, new NothingMetaCondition<>());
         registerUniversal(reg);
@@ -77,7 +81,9 @@ public final class MetaConditions {
         TypedConditionRegistry<dev.overgrown.apoli.condition.context.BlockCtx> reg = ConditionTypes.BLOCK;
         reg.register(ALL_OF, new AllOfMeta<>(BlockCondition.CODEC, BlockCondition::test), allOfAliases());
         reg.register(ANY_OF, new AnyOfMeta<>(BlockCondition.CODEC, BlockCondition::test), anyOfAliases());
-        reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
+        reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(
+            dev.overgrown.apoli.condition.context.BlockCtx::actor,
+            dev.overgrown.apoli.condition.context.BlockCtx::level), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
         reg.register(NOTHING, new NothingMetaCondition<>());
         reg.register(Apoli.id("offset"), new OffsetBlockMetaCondition());
@@ -88,7 +94,9 @@ public final class MetaConditions {
         TypedConditionRegistry<dev.overgrown.apoli.condition.context.ItemCtx> reg = ConditionTypes.ITEM;
         reg.register(ALL_OF, new AllOfMeta<>(ItemCondition.CODEC, ItemCondition::test), allOfAliases());
         reg.register(ANY_OF, new AnyOfMeta<>(ItemCondition.CODEC, ItemCondition::test), anyOfAliases());
-        reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
+        reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(
+            dev.overgrown.apoli.condition.context.ItemCtx::holder,
+            dev.overgrown.apoli.condition.context.ItemCtx::level), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
         reg.register(NOTHING, new NothingMetaCondition<>());
         registerUniversal(reg);
@@ -98,7 +106,9 @@ public final class MetaConditions {
         TypedConditionRegistry<dev.overgrown.apoli.condition.context.DamageCtx> reg = ConditionTypes.DAMAGE;
         reg.register(ALL_OF, new AllOfMeta<>(DamageCondition.CODEC, DamageCondition::test), allOfAliases());
         reg.register(ANY_OF, new AnyOfMeta<>(DamageCondition.CODEC, DamageCondition::test), anyOfAliases());
-        reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
+        reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(
+            dev.overgrown.apoli.condition.context.DamageCtx::target,
+            dev.overgrown.apoli.condition.context.DamageCtx::level), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
         reg.register(NOTHING, new NothingMetaCondition<>());
         registerUniversal(reg);
@@ -108,7 +118,9 @@ public final class MetaConditions {
         TypedConditionRegistry<dev.overgrown.apoli.condition.context.FluidCtx> reg = ConditionTypes.FLUID;
         reg.register(ALL_OF, new AllOfMeta<>(FluidCondition.CODEC, FluidCondition::test), allOfAliases());
         reg.register(ANY_OF, new AnyOfMeta<>(FluidCondition.CODEC, FluidCondition::test), anyOfAliases());
-        reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
+        reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(
+            ctx -> null,
+            dev.overgrown.apoli.condition.context.FluidCtx::level), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
         reg.register(NOTHING, new NothingMetaCondition<>());
         registerUniversal(reg);
@@ -118,7 +130,9 @@ public final class MetaConditions {
         TypedConditionRegistry<dev.overgrown.apoli.condition.context.BiomeCtx> reg = ConditionTypes.BIOME;
         reg.register(ALL_OF, new AllOfMeta<>(BiomeCondition.CODEC, BiomeCondition::test), allOfAliases());
         reg.register(ANY_OF, new AnyOfMeta<>(BiomeCondition.CODEC, BiomeCondition::test), anyOfAliases());
-        reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(), randomChanceAliases());
+        reg.register(RANDOM_CHANCE, new RandomChanceMeta<>(
+            ctx -> null,
+            dev.overgrown.apoli.condition.context.BiomeCtx::level), randomChanceAliases());
         reg.register(CONSTANT, new ConstantMeta<>());
         reg.register(NOTHING, new NothingMetaCondition<>());
         registerUniversal(reg);

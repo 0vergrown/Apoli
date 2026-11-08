@@ -66,7 +66,29 @@ public final class FeatureRenderers {
         }
     };
 
+    public static final int WORN = 0;
+    public static final int HELD = 1;
+    public static final int OWN = 2;
+
+    private static final ClassValue<Integer> KINDS = new ClassValue<>() {
+        @Override
+        protected Integer computeValue(Class<?> type) {
+            if (ItemInHandLayer.class.isAssignableFrom(type)
+                || CrossedArmsItemLayer.class.isAssignableFrom(type)
+                || FoxHeldItemLayer.class.isAssignableFrom(type)
+                || PandaHoldsItemLayer.class.isAssignableFrom(type)
+                || DolphinCarryingItemLayer.class.isAssignableFrom(type)) {
+                return HELD;
+            }
+            return type.getName().startsWith("dev.overgrown.apoli.") ? OWN : WORN;
+        }
+    };
+
     private FeatureRenderers() {}
+
+    public static int kindOf(Class<?> layerClass) {
+        return KINDS.get(layerClass);
+    }
 
     private static void map(String name, Class<?> type) {
         MAPPINGS.put(name, type);

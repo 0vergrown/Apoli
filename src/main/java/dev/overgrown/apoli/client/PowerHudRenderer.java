@@ -9,6 +9,7 @@ import dev.overgrown.apoli.power.PowerContainer;
 import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.power.PowerTypeRegistry;
+import dev.overgrown.apoli.power.builtin.ResourcePower;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
@@ -19,7 +20,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.OptionalInt;
+import java.util.OptionalDouble;
 
 public final class PowerHudRenderer {
     private static final int BAR_WIDTH = 71;
@@ -86,20 +87,20 @@ public final class PowerHudRenderer {
         HudRender.Entry entry = hud.selectEntry(ctx);
         if (entry == null) return;
 
-        OptionalInt value = PowerResources.read(container, powerId);
+        OptionalDouble value = PowerResources.read(container, powerId);
         if (value.isEmpty()) return;
-        int current = value.getAsInt();
+        double current = value.getAsDouble();
 
-        float fill;
+        double fill;
         if (type.isCooldown()) {
             if (current <= 0) return;
-            int bound = entry.max().isPresent()
-                ? entry.max().get().evalIntWith(player, container, current)
+            double bound = entry.max().isPresent()
+                ? entry.max().get().evalWith(player, container, current)
                 : PowerResources.bound(container, powerId, true).orElse(0);
             fill = cooldownProgress(current, bound);
         } else {
             fill = resourceFill(player, container, powerId, current, entry);
-            if (fill < 0.0F) return;
+            if (fill < 0.0) return;
         }
 
         RENDERABLES.add(new Renderable(entry, fill, entry.order().orElse(0)));
@@ -110,38 +111,52 @@ public final class PowerHudRenderer {
         return type.hudRender(config);
     }
 
-    private static float cooldownProgress(int remaining, int max) {
-        if (max <= 0) return 1.0F;
-        return 1.0F - (remaining / (float) max);
+    private static double cooldownProgress(double remaining, double max) {
+        if (max <= 0) return 1.0;
+        return Mth.clamp(1.0 - remaining / max, 0.0, 1.0);
     }
 
     private static final java.util.Set<ResourceLocation> UNSCALED = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
-    private static float resourceFill(LocalPlayer player, PowerContainer container, ResourceLocation powerId,
-                                      int value, HudRender.Entry entry) {
-        int max;
+    private static double resourceFill(LocalPlayer player, PowerContainer container, ResourceLocation powerId,
+                                       double value, HudRender.Entry entry) {
+        double max;
         if (entry.max().isPresent()) {
-            max = entry.max().get().evalIntWith(player, container, value);
+            max = PowerResources.canonical(entry.max().get().evalWith(player, container, value));
         } else {
-            OptionalInt upper = PowerResources.bound(container, powerId, true);
-            if (upper.isEmpty() || upper.getAsInt() == Integer.MAX_VALUE) {
+            OptionalDouble upper = PowerResources.bound(container, powerId, true);
+            if (upper.isEmpty() || upper.getAsDouble() >= ResourcePower.UNBOUNDED_MAX) {
                 if (UNSCALED.add(powerId)) {
                     dev.overgrown.apoli.Apoli.LOGGER.warn(
                         "[Apoli] {} asks for a HUD bar but has no 'max', so there is no value that would fill it. "
                         + "Give the resource a 'max', or give its 'hud_render' one, or set 'should_render' to false.",
                         powerId);
                 }
-                return -1.0F;
+                return -1.0;
             }
-            max = upper.getAsInt();
+            max = upper.getAsDouble();
         }
-        OptionalInt lower = PowerResources.bound(container, powerId, false);
-        int min = lower.isPresent() && lower.getAsInt() != Integer.MIN_VALUE ? lower.getAsInt() : 0;
-        if (max == min) return value >= max ? 1.0F : 0.0F;
-        return Mth.clamp((value - min) / (float) (max - min), 0.0F, 1.0F);
+        OptionalDouble lower = PowerResources.bound(container, powerId, false);
+        double min = lower.isPresent() && lower.getAsDouble() > ResourcePower.UNBOUNDED_MIN ? lower.getAsDouble() : 0.0;
+        if (max == min) return value >= max ? 1.0 : 0.0;
+        if (max < min) {
+            double swap = max;
+            max = min;
+            min = swap;
+        }
+        if (value <= min) return 0.0;
+        if (value >= max) return 1.0;
+        return (value - min) / (max - min);
     }
 
-    private static void drawEntry(GuiGraphics graphics, int x, int y, HudRender.Entry entry, float fill) {
+    static int fillWidth(double ratio) {
+        if (!(ratio > 0.0)) return 0;
+        if (ratio >= 1.0) return BAR_WIDTH;
+        int inner = BAR_WIDTH - 2;
+        return 1 + Mth.clamp((int) Math.round(inner * ratio), 1, inner - 1);
+    }
+
+    private static void drawEntry(GuiGraphics graphics, int x, int y, HudRender.Entry entry, double fill) {
         ResourceLocation tex = entry.spriteLocation();
         int barIndex = entry.barIndex();
         int iconIndex = entry.iconIndex();
@@ -161,8 +176,7 @@ public final class PowerHudRenderer {
 
         RenderSystem.enableBlend();
         graphics.blit(tex, x, y, 0, 0, BAR_WIDTH, EMPTY_BAR_HEIGHT);
-        float ratio = entry.inverted() ? 1.0F - fill : fill;
-        int fillWidth = (int) (BAR_WIDTH * Mth.clamp(ratio, 0.0F, 1.0F));
+        int fillWidth = fillWidth(entry.inverted() ? 1.0 - fill : fill);
         if (fillWidth > 0) {
             graphics.blit(tex, x, y - 2, 0, barV, fillWidth, BAR_HEIGHT);
         }
@@ -170,5 +184,5 @@ public final class PowerHudRenderer {
         RenderSystem.disableBlend();
     }
 
-    private record Renderable(HudRender.Entry entry, float fill, int order) {}
+    private record Renderable(HudRender.Entry entry, double fill, int order) {}
 }
