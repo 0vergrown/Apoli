@@ -36,6 +36,7 @@ public final class ApoliDevModeCommand {
                 .withStyle(enabled ? ChatFormatting.GREEN : ChatFormatting.GRAY));
             if (enabled) {
                 for (Component line : MacroReport.latest().lines()) player.sendSystemMessage(line);
+                for (Component line : dev.overgrown.apoli.loader.LoadProblems.lines(false)) player.sendSystemMessage(line);
             }
             changed++;
         }

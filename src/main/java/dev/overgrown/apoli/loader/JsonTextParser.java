@@ -26,17 +26,49 @@ public final class JsonTextParser {
     private static final JsonPrimitive NEGATIVE_INFINITY = new JsonPrimitive(Double.NEGATIVE_INFINITY);
 
     private final char[] text;
+    private final int begin;
     private final int end;
     private final JsonFormat format;
     private int pos;
     private JsonElement[] containers = new JsonElement[16];
     private String[] names = new String[16];
     private int depth;
+    private String target;
+    private int found = -1;
+    private int foundLength = -1;
 
     public record Parsed(JsonElement value, int trailingLine) {}
 
+    public record Location(int line, int column, String text, int caret) {}
+
+    public static final class SyntaxError extends JsonParseException {
+        private final String reason;
+        private final String path;
+        private final Location location;
+
+        private SyntaxError(String reason, String path, Location location) {
+            super(reason + " at line " + location.line() + " column " + location.column() + " path " + path);
+            this.reason = reason;
+            this.path = path;
+            this.location = location;
+        }
+
+        public String reason() {
+            return reason;
+        }
+
+        public String path() {
+            return path;
+        }
+
+        public Location location() {
+            return location;
+        }
+    }
+
     private JsonTextParser(char[] text, int start, int end, JsonFormat format) {
         this.text = text;
+        this.begin = start;
         this.pos = start;
         this.end = end;
         this.format = format;
@@ -52,9 +84,23 @@ public final class JsonTextParser {
     }
 
     public static Parsed read(byte[] utf8, JsonFormat format) {
+        return of(utf8, format).document();
+    }
+
+    public static Location locate(byte[] utf8, JsonFormat format, String path) {
+        JsonTextParser parser = of(utf8, format);
+        parser.target = path;
+        try {
+            parser.document();
+        } catch (JsonParseException ignored) {
+        }
+        return parser.found < 0 ? null : parser.locationOf(parser.found);
+    }
+
+    private static JsonTextParser of(byte[] utf8, JsonFormat format) {
         CharBuffer chars = StandardCharsets.UTF_8.decode(ByteBuffer.wrap(utf8));
         return new JsonTextParser(chars.array(), chars.arrayOffset() + chars.position(),
-            chars.arrayOffset() + chars.limit(), format).document();
+            chars.arrayOffset() + chars.limit(), format);
     }
 
     private Parsed document() {
@@ -69,6 +115,7 @@ public final class JsonTextParser {
     private JsonElement value(int first) {
         int c = first;
         while (true) {
+            if (target != null) mark();
             JsonElement done;
             if (c == '{') {
                 int n = next();
@@ -583,16 +630,40 @@ public final class JsonTextParser {
     }
 
     private JsonParseException error(String message) {
-        int at = Math.max(0, Math.min(pos, end));
+        return new SyntaxError(message, path(), locationOf(Math.max(0, Math.min(pos, end))));
+    }
+
+    private void mark() {
+        String here = path();
+        int length = here.length();
+        if (length <= foundLength || !target.startsWith(here)) return;
+        if (length < target.length()) {
+            char next = target.charAt(length);
+            if (next != '.' && next != '[') return;
+        }
+        found = pos - 1;
+        foundLength = length;
+    }
+
+    private Location locationOf(int at) {
+        int start = begin < end && text[begin] == '\uFEFF' ? begin + 1 : begin;
         int line = 1;
-        int lineStart = 0;
-        for (int i = 0; i < at; i++) {
+        int lineStart = start;
+        for (int i = start; i < at && i < end; i++) {
             if (text[i] == '\n') {
                 line++;
                 lineStart = i + 1;
             }
         }
-        return new JsonParseException(message + " at line " + line + " column " + (at - lineStart + 1) + " path " + path());
+        int lineEnd = lineStart;
+        while (lineEnd < end && text[lineEnd] != '\n' && text[lineEnd] != '\r') lineEnd++;
+        int column = at - lineStart + 1;
+        int from = lineStart;
+        if (column > 120) from = at - 60;
+        int to = Math.min(lineEnd, from + 160);
+        String prefix = from > lineStart ? "..." : "";
+        String shown = new String(text, from, Math.max(0, to - from)).replace('\t', ' ');
+        return new Location(line, column, prefix + shown, prefix.length() + Math.max(0, at - from));
     }
 
     private String path() {

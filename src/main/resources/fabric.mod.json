@@ -62,6 +62,6 @@
     "fabric-api": "*"
   },
   "breaks": {
-    "origins": "<1.49.0"
+    "origins": "<1.51.0"
   }
 }

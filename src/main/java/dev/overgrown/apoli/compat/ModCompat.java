@@ -7,6 +7,8 @@ public final class ModCompat {
 
     public static final boolean ICARUS = FabricLoader.getInstance().isModLoaded("icarus");
 
+    public static final boolean CREATE = FabricLoader.getInstance().isModLoaded("create");
+
     public static final boolean FIGURA = FabricLoader.getInstance().isModLoaded("figura");
 
     public static final boolean FLYWHEEL = FabricLoader.getInstance().isModLoaded("flywheel");

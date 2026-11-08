@@ -24,7 +24,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.OptionalInt;
+import java.util.OptionalDouble;
 import java.util.UUID;
 
 public final class ActionOnMouseMovementPower extends PowerType<ActionOnMouseMovementPower.Config> {
@@ -167,29 +167,29 @@ public final class ActionOnMouseMovementPower extends PowerType<ActionOnMouseMov
 
 
     @Override
-    public OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+    public OptionalDouble readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         Entity owner = holder.rawOwner();
         if (owner.level().isClientSide()) {
-            return OptionalInt.of(PowerResources.clientCooldown(holder, powerId));
+            return OptionalDouble.of(PowerResources.clientCooldown(holder, powerId));
         }
         Integer left = cooldowns.get(new StateKey(owner.getUUID(), powerId));
-        return OptionalInt.of(left == null ? 0 : Math.max(0, left));
+        return OptionalDouble.of(left == null ? 0 : Math.max(0, left));
     }
 
     @Override
-    public OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
+    public OptionalDouble writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, double value) {
         Entity owner = holder.rawOwner();
-        if (owner.level().isClientSide()) return OptionalInt.empty();
-        int clamped = Math.max(0, Math.min(value, Math.max(PowerResources.cooldownTicks(cfg.cooldown(), holder), 0)));
+        if (owner.level().isClientSide()) return OptionalDouble.empty();
+        int clamped = Math.max(0, Math.min(PowerResources.whole(value), Math.max(PowerResources.cooldownTicks(cfg.cooldown(), holder), 0)));
         cooldowns.put(new StateKey(owner.getUUID(), powerId), clamped);
         if (owner instanceof ServerPlayer player) {
             ApoliNetwork.sendActivated(player, new PowerActivatedS2C(powerId, clamped));
         }
-        return OptionalInt.of(clamped);
+        return OptionalDouble.of(clamped);
     }
 
     @Override
-    public OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
-        return OptionalInt.of(max ? Math.max(PowerResources.cooldownTicks(cfg.cooldown(), holder), 0) : 0);
+    public OptionalDouble resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
+        return OptionalDouble.of(max ? Math.max(PowerResources.cooldownTicks(cfg.cooldown(), holder), 0) : 0);
     }
 }

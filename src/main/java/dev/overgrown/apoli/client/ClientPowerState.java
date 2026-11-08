@@ -11,6 +11,7 @@ import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerTypeRegistry;
 import dev.overgrown.apoli.util.CopyOnWriteIntMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import net.fabricmc.api.EnvType;
@@ -22,7 +23,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -30,7 +30,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class ClientPowerState {
     private static final Map<ResourceLocation, Integer> COOLDOWNS = new ConcurrentHashMap<>();
     private static final CopyOnWriteIntMap<Map<ResourceLocation, Set<ResourceLocation>>> ENTITY_POWERS = new CopyOnWriteIntMap<>();
-    private static final CopyOnWriteIntMap<Map<ResourceLocation, Integer>> ENTITY_AUX = new CopyOnWriteIntMap<>();
+    private static final Object2DoubleMap<ResourceLocation> EMPTY_AUX =
+        dev.overgrown.apoli.network.payload.AuxValues.newMap(0);
+    private static final CopyOnWriteIntMap<Object2DoubleMap<ResourceLocation>> ENTITY_AUX = new CopyOnWriteIntMap<>();
     private static final CopyOnWriteIntMap<Set<ResourceLocation>> ENTITY_SUPPRESSED = new CopyOnWriteIntMap<>();
 
     private ClientPowerState() {}
@@ -93,7 +95,7 @@ public final class ClientPowerState {
     public static void applyEntityPowersSync(SyncEntityPowersS2C payload) {
         ENTITY_POWERS.put(payload.entityId(), Map.copyOf(payload.powersBySource()));
         holdersDirty = true;
-        ENTITY_AUX.put(payload.entityId(), Map.copyOf(payload.auxInt()));
+        ENTITY_AUX.put(payload.entityId(), dev.overgrown.apoli.network.payload.AuxValues.copy(payload.auxValues()));
         ENTITY_SUPPRESSED.put(payload.entityId(), Set.copyOf(payload.suppressed()));
         net.minecraft.client.multiplayer.ClientLevel level = Minecraft.getInstance().level;
         if (level == null) return;
@@ -101,9 +103,9 @@ public final class ClientPowerState {
         if (entity != null) dev.overgrown.apoli.scale.Scales.invalidate(entity);
     }
 
-    public static void applyAuxInts(dev.overgrown.apoli.network.payload.SyncAuxIntsS2C payload) {
+    public static void applyAuxValues(dev.overgrown.apoli.network.payload.SyncAuxValuesS2C payload) {
         if (!ENTITY_POWERS.containsKey(payload.entityId())) return;
-        ENTITY_AUX.put(payload.entityId(), Map.copyOf(payload.auxInt()));
+        ENTITY_AUX.put(payload.entityId(), dev.overgrown.apoli.network.payload.AuxValues.copy(payload.values()));
     }
 
     private static final Map<ResourceLocation, TypeHolders> HOLDERS = new ConcurrentHashMap<>();
@@ -166,14 +168,14 @@ public final class ClientPowerState {
         return created;
     }
 
-    private static final CopyOnWriteIntMap<Map<ResourceLocation, int[]>> ENTITY_TABLES = new CopyOnWriteIntMap<>();
+    private static final CopyOnWriteIntMap<Map<ResourceLocation, double[]>> ENTITY_TABLES = new CopyOnWriteIntMap<>();
 
     public static void applyResourceTables(dev.overgrown.apoli.network.payload.SyncResourceTablesS2C payload) {
         if (payload.tables().isEmpty()) ENTITY_TABLES.remove(payload.entityId());
         else ENTITY_TABLES.put(payload.entityId(), Map.copyOf(payload.tables()));
     }
 
-    public static Map<ResourceLocation, int[]> tablesFor(int entityId) {
+    public static Map<ResourceLocation, double[]> tablesFor(int entityId) {
         return ENTITY_TABLES.getOrDefault(entityId, Map.of());
     }
 
@@ -208,8 +210,8 @@ public final class ClientPowerState {
         return ENTITY_POWERS.getOrDefault(entityId, Map.of());
     }
 
-    public static Map<ResourceLocation, Integer> auxFor(int entityId) {
-        return ENTITY_AUX.getOrDefault(entityId, Map.of());
+    public static Object2DoubleMap<ResourceLocation> auxFor(int entityId) {
+        return ENTITY_AUX.getOrDefault(entityId, EMPTY_AUX);
     }
 
     private static int localId() {
@@ -232,13 +234,8 @@ public final class ClientPowerState {
         return out;
     }
 
-    public static Map<ResourceLocation, Integer> localAuxInt() {
+    public static Object2DoubleMap<ResourceLocation> localAux() {
         return auxFor(localId());
-    }
-
-    public static OptionalInt getAuxInt(ResourceLocation powerId) {
-        Integer v = auxFor(localId()).get(powerId);
-        return v == null ? OptionalInt.empty() : OptionalInt.of(v);
     }
 
     public static void setCooldown(ResourceLocation power, int ticks) {

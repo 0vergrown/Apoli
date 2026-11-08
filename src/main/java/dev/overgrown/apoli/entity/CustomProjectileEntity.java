@@ -3,6 +3,7 @@ package dev.overgrown.apoli.entity;
 import dev.overgrown.apoli.action.BiEntityAction;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.power.builtin.ModifyProjectileDamageHandler;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -13,6 +14,8 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.ThrowableProjectile;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -34,11 +37,20 @@ public class CustomProjectileEntity extends ThrowableProjectile {
         SynchedEntityData.defineId(CustomProjectileEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> HOMING_TURN =
         SynchedEntityData.defineId(CustomProjectileEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Boolean> STUCK =
+        SynchedEntityData.defineId(CustomProjectileEntity.class, EntityDataSerializers.BOOLEAN);
 
     @Nullable
     private ProjectileHoming homing;
     private String modelPowersRaw = "";
     private List<ResourceLocation> modelPowers = List.of();
+    @Nullable
+    private BlockPos stuckPos;
+    @Nullable
+    private BlockState stuckState;
+    private float stuckYRot;
+    private float stuckXRot;
+    private boolean discardOnLoad;
 
     public CustomProjectileEntity(EntityType<? extends CustomProjectileEntity> type, Level level) {
         super(type, level);
@@ -58,6 +70,7 @@ public class CustomProjectileEntity extends ThrowableProjectile {
         builder.define(RETURN_PULL, 0.0F);
         builder.define(HOMING_TARGET, ProjectileHoming.NONE);
         builder.define(HOMING_TURN, 0.0F);
+        builder.define(STUCK, false);
     }
 
     public void setTexture(ResourceLocation texture) {
@@ -111,10 +124,63 @@ public class CustomProjectileEntity extends ThrowableProjectile {
     }
 
     public void startReturning(float pull) {
+        this.unstick();
         this.entityData.set(RETURN_PULL, pull);
         this.setNoGravity(true);
         this.homing = null;
         this.entityData.set(HOMING_TARGET, ProjectileHoming.NONE);
+    }
+
+    public boolean isStuck() {
+        return this.entityData.get(STUCK);
+    }
+
+    public void stick(BlockHitResult hit, double depth) {
+        Vec3 velocity = this.getDeltaMovement();
+        Vec3 along = velocity.lengthSqr() > 1.0E-7
+            ? velocity.normalize()
+            : Vec3.atLowerCornerOf(hit.getDirection().getOpposite().getNormal());
+        Vec3 at = hit.getLocation().add(along.scale(depth));
+        this.setPos(at.x, at.y, at.z);
+        this.stuckYRot = this.getYRot();
+        this.stuckXRot = this.getXRot();
+        this.stuckPos = hit.getBlockPos().immutable();
+        this.stuckState = this.level().getBlockState(this.stuckPos);
+        this.setDeltaMovement(Vec3.ZERO);
+        this.homing = null;
+        this.entityData.set(HOMING_TARGET, ProjectileHoming.NONE);
+        this.entityData.set(STUCK, true);
+        this.hasImpulse = true;
+    }
+
+    public void unstick() {
+        if (!this.isStuck()) return;
+        this.entityData.set(STUCK, false);
+        this.stuckPos = null;
+        this.stuckState = null;
+    }
+
+    public boolean lostHold() {
+        if (this.stuckPos == null || !this.level().isLoaded(this.stuckPos)) return false;
+        BlockState now = this.level().getBlockState(this.stuckPos);
+        if (now == this.stuckState) return false;
+        this.stuckState = now;
+        return now.getCollisionShape(this.level(), this.stuckPos).isEmpty();
+    }
+
+    public void fall() {
+        this.unstick();
+        this.setNoGravity(false);
+        this.setDeltaMovement(0.0, -0.05, 0.0);
+        this.hasImpulse = true;
+    }
+
+    private void settle() {
+        this.setDeltaMovement(Vec3.ZERO);
+        this.setYRot(this.stuckYRot);
+        this.setXRot(this.stuckXRot);
+        this.yRotO = this.stuckYRot;
+        this.xRotO = this.stuckXRot;
     }
 
     public void startHoming(dev.overgrown.apoli.power.builtin.FireProjectilePower.Homing config, Entity shooter) {
@@ -128,6 +194,16 @@ public class CustomProjectileEntity extends ThrowableProjectile {
 
     @Override
     public void tick() {
+        boolean server = !this.level().isClientSide;
+        if (this.discardOnLoad && server) {
+            this.discard();
+            return;
+        }
+        if (this.isStuck()) {
+            this.baseTick();
+            if (server) ((ProjectileHitActions) this).apoli$tickStuck();
+            return;
+        }
         float pull = this.entityData.get(RETURN_PULL);
         if (pull > 0.0F) {
             if (!this.steerHome(pull)) return;
@@ -135,6 +211,7 @@ public class CustomProjectileEntity extends ThrowableProjectile {
             this.seek();
         }
         super.tick();
+        if (this.isStuck()) this.settle();
     }
 
     private void seek() {
@@ -187,7 +264,7 @@ public class CustomProjectileEntity extends ThrowableProjectile {
     protected void onHit(HitResult result) {
         if (this.isReturning() && result.getType() == HitResult.Type.BLOCK) return;
         super.onHit(result);
-        if (!this.level().isClientSide && !this.isReturning()
+        if (!this.level().isClientSide && !this.isReturning() && !this.isStuck()
             && !((ProjectileHitActions) this).apoli$keepsFlying()) {
             this.discard();
         }
@@ -198,6 +275,7 @@ public class CustomProjectileEntity extends ThrowableProjectile {
         super.addAdditionalSaveData(tag);
         tag.putString("Texture", this.entityData.get(TEXTURE));
         tag.putString("ModelPower", this.entityData.get(MODEL_POWER));
+        if (this.isStuck()) tag.putBoolean("Stuck", true);
     }
 
     @Override
@@ -205,5 +283,6 @@ public class CustomProjectileEntity extends ThrowableProjectile {
         super.readAdditionalSaveData(tag);
         this.entityData.set(TEXTURE, tag.getString("Texture"));
         this.entityData.set(MODEL_POWER, tag.getString("ModelPower"));
+        this.discardOnLoad = tag.getBoolean("Stuck");
     }
 }

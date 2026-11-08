@@ -74,6 +74,7 @@ public final class ApoliIds {
     public static final ResourceLocation PREVENT_BLOCK_SELECTION = Apoli.id("prevent_block_selection");
     public static final ResourceLocation ACTION_ON_WAKE_UP = Apoli.id("action_on_wake_up");
     public static final ResourceLocation MODIFY_BLOCK_RENDER = Apoli.id("modify_block_render");
+    public static final ResourceLocation BLOCK_GLOW = Apoli.id("block_glow");
     public static final ResourceLocation EDIBLE_ITEM = Apoli.id("edible_item");
     public static final ResourceLocation MODIFY_FOOD = Apoli.id("modify_food");
     public static final ResourceLocation MODIFY_TYPE_TAG = Apoli.id("modify_type_tag");

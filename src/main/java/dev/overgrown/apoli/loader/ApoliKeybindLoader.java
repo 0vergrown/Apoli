@@ -23,6 +23,7 @@ public final class ApoliKeybindLoader extends SimplePreparableReloadListener<Map
     private static final String DIR = "keybinds";
 
     private MinecraftServer server;
+    private volatile Map<ResourceLocation, JsonDataFiles.Source> sources = Map.of();
 
     public ApoliKeybindLoader() {
         super();
@@ -30,7 +31,10 @@ public final class ApoliKeybindLoader extends SimplePreparableReloadListener<Map
 
     @Override
     protected @NotNull Map<ResourceLocation, JsonElement> prepare(ResourceManager resourceManager, ProfilerFiller profilerFiller) {
-        return JsonDataFiles.load(resourceManager, DIR, LOG);
+        Map<ResourceLocation, JsonDataFiles.Source> found = new java.util.HashMap<>();
+        Map<ResourceLocation, JsonElement> loaded = JsonDataFiles.load(resourceManager, DIR, LOG, found);
+        sources = found;
+        return loaded;
     }
 
     public void attachServer(MinecraftServer server) {
@@ -40,10 +44,11 @@ public final class ApoliKeybindLoader extends SimplePreparableReloadListener<Map
     @Override
     protected void apply(Map<ResourceLocation, JsonElement> data, ResourceManager rm, ProfilerFiller profiler) {
         Map<ResourceLocation, Keybind> loaded = new LinkedHashMap<>();
+        Map<ResourceLocation, JsonDataFiles.Source> files = sources;
         for (Map.Entry<ResourceLocation, JsonElement> e : data.entrySet()) {
             ResourceLocation id = e.getKey();
-            Keybind.CODEC_NO_ID.parse(dev.overgrown.apoli.codec.ApoliOps.of(JsonOps.INSTANCE), e.getValue())
-                .resultOrPartial(err -> LOG.error("Failed to parse keybind {}: {}", id, err))
+            LoadProblems.parse("keybind", id, files.get(id), "$", Keybind.CODEC_NO_ID,
+                    new com.mojang.serialization.Dynamic<>(dev.overgrown.apoli.codec.ApoliOps.of(JsonOps.INSTANCE), e.getValue()))
                 .ifPresent(kb -> loaded.put(id, kb.withId(id)));
         }
         ApoliKeybinds.replaceAll(loaded);

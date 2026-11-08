@@ -5,9 +5,13 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.OptionalInt;
+import java.math.BigDecimal;
+import java.util.OptionalDouble;
 
 public final class PowerResources {
+
+    public static final double PRECISION = 1.0e6;
+    private static final double ROUNDING_LIMIT = 9.0e9;
 
     public interface ClientCooldownLookup {
         int remaining(Entity owner, ResourceLocation powerId);
@@ -30,64 +34,87 @@ public final class PowerResources {
         return cooldown.evalIntWith(holder == null ? null : holder.rawOwner(), holder, 0.0);
     }
 
-    public static OptionalInt read(@Nullable PowerContainer holder, ResourceLocation powerId) {
-        if (holder == null || !holder.hasPower(powerId)) return OptionalInt.empty();
+    public static double canonical(double value) {
+        if (!Double.isFinite(value)) return 0.0;
+        if (value == Math.rint(value) || Math.abs(value) >= ROUNDING_LIMIT) return value == 0.0 ? 0.0 : value;
+        double rounded = Math.rint(value * PRECISION) / PRECISION;
+        return rounded == 0.0 ? 0.0 : rounded;
+    }
+
+    public static int whole(double value) {
+        if (!Double.isFinite(value)) return 0;
+        long rounded = Math.round(value);
+        return (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, rounded));
+    }
+
+    public static boolean isWhole(double value) {
+        return value == Math.rint(value);
+    }
+
+    public static String format(double value) {
+        double shown = canonical(value);
+        if (isWhole(shown) && Math.abs(shown) < 1.0e15) return Long.toString((long) shown);
+        return BigDecimal.valueOf(shown).stripTrailingZeros().toPlainString();
+    }
+
+    public static OptionalDouble read(@Nullable PowerContainer holder, ResourceLocation powerId) {
+        if (holder == null || !holder.hasPower(powerId)) return OptionalDouble.empty();
         Power loaded = ApoliPowers.get(powerId);
         if (loaded != null) {
             PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
             if (type != null) {
-                OptionalInt typed = invokeRead(type, powerId, loaded.config(), holder);
+                OptionalDouble typed = invokeRead(type, powerId, loaded.config(), holder);
                 if (typed.isPresent()) return typed;
             }
         }
-        return holder.getAuxInt(powerId);
+        return holder.getAuxDouble(powerId);
     }
 
-    public static OptionalInt write(@Nullable PowerContainer holder, ResourceLocation powerId, int value) {
-        if (holder == null || !holder.hasPower(powerId)) return OptionalInt.empty();
+    public static OptionalDouble write(@Nullable PowerContainer holder, ResourceLocation powerId, double value) {
+        if (holder == null || !holder.hasPower(powerId)) return OptionalDouble.empty();
         Power loaded = ApoliPowers.get(powerId);
-        if (loaded == null) return OptionalInt.empty();
+        if (loaded == null) return OptionalDouble.empty();
         PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
-        if (type == null) return OptionalInt.empty();
-        int target = value;
+        if (type == null) return OptionalDouble.empty();
+        double target = value;
         if (dev.overgrown.apoli.power.builtin.ModifyResourceChangePower.inUse()) {
-            OptionalInt current = invokeRead(type, powerId, loaded.config(), holder);
-            int before = current.orElseGet(() -> holder.getAuxIntOr(powerId, value));
+            OptionalDouble current = invokeRead(type, powerId, loaded.config(), holder);
+            double before = current.isPresent() ? current.getAsDouble() : holder.getAuxDoubleOr(powerId, value);
             target = dev.overgrown.apoli.power.builtin.ModifyResourceChangePower.adjust(holder, powerId, before, value);
         }
-        OptionalInt written = invokeWrite(type, powerId, loaded.config(), holder, target);
+        OptionalDouble written = invokeWrite(type, powerId, loaded.config(), holder, target);
         if (written.isPresent()) {
-            dev.overgrown.apoli.advancement.ApoliCriteria.resourceChanged(holder.rawOwner(), powerId, written.getAsInt());
+            dev.overgrown.apoli.advancement.ApoliCriteria.resourceChanged(holder.rawOwner(), powerId, written.getAsDouble());
         }
         return written;
     }
 
-    public static OptionalInt readAt(@Nullable PowerContainer holder, ResourceLocation powerId, int slot) {
-        if (holder == null || !holder.hasPower(powerId)) return OptionalInt.empty();
+    public static OptionalDouble readAt(@Nullable PowerContainer holder, ResourceLocation powerId, int slot) {
+        if (holder == null || !holder.hasPower(powerId)) return OptionalDouble.empty();
         Power loaded = ApoliPowers.get(powerId);
-        if (loaded == null) return slot == 0 ? holder.getAuxInt(powerId) : OptionalInt.empty();
+        if (loaded == null) return slot == 0 ? holder.getAuxDouble(powerId) : OptionalDouble.empty();
         PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
-        if (type == null) return slot == 0 ? holder.getAuxInt(powerId) : OptionalInt.empty();
-        OptionalInt typed = invokeReadAt(type, powerId, loaded.config(), holder, slot);
+        if (type == null) return slot == 0 ? holder.getAuxDouble(powerId) : OptionalDouble.empty();
+        OptionalDouble typed = invokeReadAt(type, powerId, loaded.config(), holder, slot);
         if (typed.isPresent()) return typed;
-        return slot == 0 ? holder.getAuxInt(powerId) : OptionalInt.empty();
+        return slot == 0 ? holder.getAuxDouble(powerId) : OptionalDouble.empty();
     }
 
-    public static OptionalInt writeAt(@Nullable PowerContainer holder, ResourceLocation powerId, int slot, int value) {
-        if (holder == null || !holder.hasPower(powerId)) return OptionalInt.empty();
+    public static OptionalDouble writeAt(@Nullable PowerContainer holder, ResourceLocation powerId, int slot, double value) {
+        if (holder == null || !holder.hasPower(powerId)) return OptionalDouble.empty();
         Power loaded = ApoliPowers.get(powerId);
-        if (loaded == null) return OptionalInt.empty();
+        if (loaded == null) return OptionalDouble.empty();
         PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
-        if (type == null) return OptionalInt.empty();
-        int target = value;
+        if (type == null) return OptionalDouble.empty();
+        double target = value;
         if (dev.overgrown.apoli.power.builtin.ModifyResourceChangePower.inUse()) {
-            OptionalInt current = invokeReadAt(type, powerId, loaded.config(), holder, slot);
-            int before = current.orElseGet(() -> holder.getAuxIntOr(powerId, value));
+            OptionalDouble current = invokeReadAt(type, powerId, loaded.config(), holder, slot);
+            double before = current.isPresent() ? current.getAsDouble() : holder.getAuxDoubleOr(powerId, value);
             target = dev.overgrown.apoli.power.builtin.ModifyResourceChangePower.adjust(holder, powerId, before, value);
         }
-        OptionalInt written = invokeWriteAt(type, powerId, loaded.config(), holder, slot, target);
+        OptionalDouble written = invokeWriteAt(type, powerId, loaded.config(), holder, slot, target);
         if (written.isPresent()) {
-            dev.overgrown.apoli.advancement.ApoliCriteria.resourceChanged(holder.rawOwner(), powerId, written.getAsInt());
+            dev.overgrown.apoli.advancement.ApoliCriteria.resourceChanged(holder.rawOwner(), powerId, written.getAsDouble());
         }
         return written;
     }
@@ -100,36 +127,37 @@ public final class PowerResources {
         return invokeSize(type, powerId, loaded.config(), holder);
     }
 
-    public static int indexOf(@Nullable PowerContainer holder, ResourceLocation powerId, int value) {
+    public static int indexOf(@Nullable PowerContainer holder, ResourceLocation powerId, double value) {
         if (holder == null || !holder.hasPower(powerId)) return -1;
+        double wanted = canonical(value);
         Power loaded = ApoliPowers.get(powerId);
-        if (loaded == null) return holder.getAuxIntOr(powerId, value + 1) == value ? 0 : -1;
+        if (loaded == null) return holder.getAuxDoubleOr(powerId, Double.NaN) == wanted ? 0 : -1;
         PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
         if (type == null) return -1;
-        return invokeIndexOf(type, powerId, loaded.config(), holder, value);
+        return invokeIndexOf(type, powerId, loaded.config(), holder, wanted);
     }
 
-    public static OptionalInt readDeadline(PowerContainer holder, ResourceLocation powerId) {
-        if (dev.overgrown.apoli.dev.DevMode.isEnabled(holder.rawOwner())) return OptionalInt.of(0);
-        OptionalInt stored = holder.getAuxInt(powerId);
-        if (stored.isEmpty()) return OptionalInt.of(0);
+    public static OptionalDouble readDeadline(PowerContainer holder, ResourceLocation powerId) {
+        if (dev.overgrown.apoli.dev.DevMode.isEnabled(holder.rawOwner())) return OptionalDouble.of(0);
+        double stored = holder.getAuxDoubleOr(powerId, Double.NaN);
+        if (Double.isNaN(stored)) return OptionalDouble.of(0);
         int now = (int) holder.rawOwner().level().getGameTime();
-        return OptionalInt.of(Math.max(0, stored.getAsInt() - now));
+        return OptionalDouble.of(Math.max(0, (int) stored - now));
     }
 
-    public static OptionalInt writeDeadline(PowerContainer holder, ResourceLocation powerId, int remaining, int cooldown) {
-        if (!(holder instanceof PowerContainerImpl impl)) return OptionalInt.empty();
-        int clamped = Math.max(0, Math.min(remaining, Math.max(cooldown, 0)));
+    public static OptionalDouble writeDeadline(PowerContainer holder, ResourceLocation powerId, double remaining, int cooldown) {
+        if (!(holder instanceof PowerContainerImpl impl)) return OptionalDouble.empty();
+        int clamped = Math.max(0, Math.min(whole(remaining), Math.max(cooldown, 0)));
         int now = (int) holder.rawOwner().level().getGameTime();
         impl.setAuxInt(powerId, now + clamped);
-        return OptionalInt.of(clamped);
+        return OptionalDouble.of(clamped);
     }
 
-    public static OptionalInt bound(@Nullable PowerContainer holder, ResourceLocation powerId, boolean max) {
+    public static OptionalDouble bound(@Nullable PowerContainer holder, ResourceLocation powerId, boolean max) {
         Power loaded = ApoliPowers.get(powerId);
-        if (loaded == null) return OptionalInt.empty();
+        if (loaded == null) return OptionalDouble.empty();
         PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
-        if (type == null) return OptionalInt.empty();
+        if (type == null) return OptionalDouble.empty();
         if (type instanceof dev.overgrown.apoli.power.builtin.ResourcePower) {
             return dev.overgrown.apoli.power.builtin.ResourcePower.boundOf(holder, powerId, max);
         }
@@ -143,9 +171,9 @@ public final class PowerResources {
         PowerType<?> type = PowerTypeRegistry.get(loaded.typeId());
         if (type == null || !type.isCooldown()) return false;
         if (invokeRead(type, powerId, loaded.config(), holder).orElse(0) > 0) return false;
-        OptionalInt length = invokeBound(type, powerId, loaded.config(), holder, true);
-        if (length.isEmpty() || length.getAsInt() <= 0) return false;
-        return invokeWrite(type, powerId, loaded.config(), holder, length.getAsInt()).isPresent();
+        OptionalDouble length = invokeBound(type, powerId, loaded.config(), holder, true);
+        if (length.isEmpty() || length.getAsDouble() <= 0) return false;
+        return invokeWrite(type, powerId, loaded.config(), holder, length.getAsDouble()).isPresent();
     }
 
     public static boolean isResource(ResourceLocation powerId) {
@@ -158,31 +186,31 @@ public final class PowerResources {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private static OptionalInt invokeRead(PowerType type, ResourceLocation powerId, Object cfg, PowerContainer holder) {
+    private static OptionalDouble invokeRead(PowerType type, ResourceLocation powerId, Object cfg, PowerContainer holder) {
         return type.readResource(powerId, cfg, holder);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private static OptionalInt invokeWrite(PowerType type, ResourceLocation powerId, Object cfg,
-                                           PowerContainer holder, int value) {
+    private static OptionalDouble invokeWrite(PowerType type, ResourceLocation powerId, Object cfg,
+                                              PowerContainer holder, double value) {
         return type.writeResource(powerId, cfg, holder, value);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private static OptionalInt invokeReadAt(PowerType type, ResourceLocation powerId, Object cfg,
-                                            PowerContainer holder, int slot) {
+    private static OptionalDouble invokeReadAt(PowerType type, ResourceLocation powerId, Object cfg,
+                                               PowerContainer holder, int slot) {
         return type.readResourceAt(powerId, cfg, holder, slot);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private static OptionalInt invokeWriteAt(PowerType type, ResourceLocation powerId, Object cfg,
-                                             PowerContainer holder, int slot, int value) {
+    private static OptionalDouble invokeWriteAt(PowerType type, ResourceLocation powerId, Object cfg,
+                                                PowerContainer holder, int slot, double value) {
         return type.writeResourceAt(powerId, cfg, holder, slot, value);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static int invokeIndexOf(PowerType type, ResourceLocation powerId, Object cfg,
-                                     PowerContainer holder, int value) {
+                                     PowerContainer holder, double value) {
         return type.resourceIndexOf(powerId, cfg, holder, value);
     }
 
@@ -193,8 +221,8 @@ public final class PowerResources {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private static OptionalInt invokeBound(PowerType type, ResourceLocation powerId, Object cfg,
-                                           @Nullable PowerContainer holder, boolean max) {
+    private static OptionalDouble invokeBound(PowerType type, ResourceLocation powerId, Object cfg,
+                                              @Nullable PowerContainer holder, boolean max) {
         return type.resourceBound(powerId, cfg, holder, max);
     }
 }

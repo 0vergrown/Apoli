@@ -17,4 +17,6 @@ public interface ProjectileHitActions {
     boolean apoli$keepsFlying();
 
     void apoli$caught();
+
+    void apoli$tickStuck();
 }

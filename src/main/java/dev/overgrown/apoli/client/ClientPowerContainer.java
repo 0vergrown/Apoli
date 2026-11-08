@@ -15,7 +15,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.OptionalInt;
 import java.util.Set;
 
 @Environment(EnvType.CLIENT)
@@ -87,17 +86,11 @@ public final class ClientPowerContainer implements PowerContainer {
         return entity;
     }
 
-    @Override public OptionalInt getAuxInt(ResourceLocation powerId) {
-        Integer v = ClientPowerState.auxFor(entity.getId()).get(powerId);
-        return v == null ? OptionalInt.empty() : OptionalInt.of(v);
+    @Override public double getAuxDoubleOr(ResourceLocation powerId, double fallback) {
+        return ClientPowerState.auxFor(entity.getId()).getOrDefault(powerId, fallback);
     }
 
-    @Override public int getAuxIntOr(ResourceLocation powerId, int fallback) {
-        Integer v = ClientPowerState.auxFor(entity.getId()).get(powerId);
-        return v == null ? fallback : v;
-    }
-
-    @Override public int @org.jetbrains.annotations.Nullable [] getAuxInts(ResourceLocation powerId) {
+    @Override public double @org.jetbrains.annotations.Nullable [] getAuxDoubles(ResourceLocation powerId) {
         return ClientPowerState.tablesFor(entity.getId()).get(powerId);
     }
 

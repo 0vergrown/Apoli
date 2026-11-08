@@ -20,9 +20,11 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 public final class AccessoriesBackend implements AccessoryProvider {
     public static final String ID = "accessories";
@@ -50,6 +52,24 @@ public final class AccessoriesBackend implements AccessoryProvider {
             out.add(new Ref(entry.reference()));
         }
         return out;
+    }
+
+    @Override
+    public int count(LivingEntity entity, List<AccessorySlot> filter, @Nullable Predicate<ItemStack> item, int limit) {
+        AccessoriesCapability cap = capability(entity);
+        if (cap == null) return 0;
+        List<SlotEntryReference> all = cap.getAllEquipped();
+        int count = 0;
+        for (int i = 0, n = all.size(); i < n; i++) {
+            SlotEntryReference entry = all.get(i);
+            SlotReference reference = entry.reference();
+            if (!AccessorySlot.matchesAny(filter, ID, "", reference.slotName(), reference.slot())) continue;
+            ItemStack stack = entry.stack();
+            if (stack == null || stack.isEmpty()) continue;
+            if (item != null && !item.test(stack)) continue;
+            if (++count >= limit) return count;
+        }
+        return count;
     }
 
     @Override

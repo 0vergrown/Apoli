@@ -27,8 +27,8 @@ public final class CustomEffectLoader {
         for (Map.Entry<ResourceLocation, JsonDataFiles.Version> entry : versions.entrySet()) {
             ResourceLocation id = entry.getKey();
             JsonDataFiles.Version version = entry.getValue();
-            CustomEffect.codec(id).parse(IdWildcards.apply(new Dynamic<>(ApoliOps.of(JsonOps.INSTANCE), version.json()), id))
-                .resultOrPartial(err -> LOG.error("[Apoli] Failed to parse custom effect {} from pack {}: {}", id, version.source().packId(), err))
+            dev.overgrown.apoli.loader.LoadProblems.parse("custom effect", id, version.source(), "$", CustomEffect.codec(id),
+                    IdWildcards.apply(new Dynamic<>(ApoliOps.of(JsonOps.INSTANCE), version.json()), id))
                 .ifPresent(loaded::add);
         }
         loaded.sort(Comparator.comparing(CustomEffect::id));

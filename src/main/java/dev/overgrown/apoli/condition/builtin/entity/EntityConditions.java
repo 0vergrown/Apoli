@@ -149,6 +149,7 @@ public final class EntityConditions {
         if (ModCompat.anyAccessory()) {
             ConditionTypes.ENTITY.register(Apoli.id("accessory_equipped_count"), new AccessoryEquippedCountCondition(),
                 AliasingOptions.builder().addTypeAlias(Apoli.id("equipped_trinket_count")).build());
+            ConditionTypes.ENTITY.register(Apoli.id("equipped_accessory"), new dev.overgrown.apoli.compat.accessory.condition.entity.EquippedAccessoryCondition());
             ConditionTypes.ENTITY.register(Apoli.id("accessory_slot_count"), new AccessorySlotCountCondition(),
                 AliasingOptions.builder().addTypeAlias(Apoli.id("trinket_slot_count")).build());
         }

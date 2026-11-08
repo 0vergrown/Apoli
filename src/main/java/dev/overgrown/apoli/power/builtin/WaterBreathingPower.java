@@ -3,6 +3,7 @@ package dev.overgrown.apoli.power.builtin;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.overgrown.apoli.compat.create.CreateCompat;
 import dev.overgrown.apoli.mixin.flag.LivingEntityAirAccessor;
 import dev.overgrown.apoli.power.ApoliIds;
 import dev.overgrown.apoli.power.PowerContainer;
@@ -77,7 +78,8 @@ public final class WaterBreathingPower extends PowerType<WaterBreathingPower.Con
     private static boolean shouldSuffocate(LivingEntity entity) {
         return !entity.isEyeInFluid(FluidTags.WATER)
             && !entity.hasEffect(MobEffects.WATER_BREATHING)
-            && !entity.hasEffect(MobEffects.CONDUIT_POWER);
+            && !entity.hasEffect(MobEffects.CONDUIT_POWER)
+            && !CreateCompat.breathesFromBacktank(entity);
     }
 
     private static boolean isInRain(LivingEntity entity) {

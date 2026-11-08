@@ -7,6 +7,7 @@ import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.action.BiEntityAction;
 import dev.overgrown.apoli.action.BlockAction;
 import dev.overgrown.apoli.action.EntityAction;
+import dev.overgrown.apoli.compat.sable.SableSubLevels;
 import dev.overgrown.apoli.condition.BiEntityCondition;
 import dev.overgrown.apoli.condition.BlockCondition;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
@@ -281,6 +282,8 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         List<Entity> hitEntities = drawing ? new ArrayList<>(4) : null;
 
         BlockHitResult blockHit = null;
+        Vec3 blockHitPos = null;
+        SableSubLevels.Frame blockHitFrame = null;
         if (cfg.params.block) {
             Vec3 to = origin.add(dir.scale(blockDist));
             if (pierceBlocks) {
@@ -290,30 +293,47 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
                     BlockHitResult hit = level.clip(new ClipContext(from, to, cfg.params.shapeType.vanilla(),
                         cfg.params.fluidHandling.vanilla(), source));
                     if (hit.getType() == HitResult.Type.MISS) break;
-                    if (blockHit == null) blockHit = hit;
+                    SableSubLevels.Frame frame = SableSubLevels.frameAt(level, hit.getLocation());
+                    Vec3 hitPos = frame == null ? hit.getLocation() : frame.toWorld(hit.getLocation());
+                    if (hitPos == null) break;
+                    if (blockHit == null) {
+                        blockHit = hit;
+                        blockHitPos = hitPos;
+                        blockHitFrame = frame;
+                    }
                     BlockPos pos = hit.getBlockPos();
                     BlockState state = level.getBlockState(pos);
                     BlockCtx blockCtx = new BlockCtx(pos, state, level, source, hit.getLocation());
                     if (cfg.hooks.blockCondition.isEmpty() || cfg.hooks.blockCondition.get().test(blockCtx)) {
                         if (cfg.hooks.blockAction.isPresent()) {
-                            try (Scope scope = new Scope(origin, hit.getLocation(), 1, guard)) {
+                            try (Scope scope = new Scope(origin, hitPos, 1, guard)) {
                                 cfg.hooks.blockAction.get().run(blockCtx);
                             }
                         }
                         if (piercedBlocks != null && piercedBlocks.size() < MAX_MARKED_BLOCKS) piercedBlocks.add(pos);
                     }
 
-                    double exitT = cellExitT(origin, dir, pos, blockDist);
+                    double exitT = frame == null
+                        ? cellExitT(origin, dir, pos, blockDist)
+                        : subLevelCellExitT(frame, origin, dir, pos, blockDist);
                     if (exitT >= blockDist) break;
                     from = origin.add(dir.scale(exitT + 1.0e-3));
                 }
             } else {
-                blockHit = level.clip(new ClipContext(origin, to, cfg.params.shapeType.vanilla(),
+                BlockHitResult hit = level.clip(new ClipContext(origin, to, cfg.params.shapeType.vanilla(),
                     cfg.params.fluidHandling.vanilla(), source));
-                if (blockHit.getType() == HitResult.Type.MISS) blockHit = null;
+                if (hit.getType() != HitResult.Type.MISS) {
+                    SableSubLevels.Frame frame = SableSubLevels.frameAt(level, hit.getLocation());
+                    Vec3 hitPos = frame == null ? hit.getLocation() : frame.toWorld(hit.getLocation());
+                    if (hitPos != null) {
+                        blockHit = hit;
+                        blockHitPos = hitPos;
+                        blockHitFrame = frame;
+                    }
+                }
             }
         }
-        double blockHitDistSq = blockHit != null ? origin.distanceToSqr(blockHit.getLocation()) : Double.POSITIVE_INFINITY;
+        double blockHitDistSq = blockHit != null ? origin.distanceToSqr(blockHitPos) : Double.POSITIVE_INFINITY;
 
         double rx = 0.0;
         double ry = 0.0;
@@ -373,7 +393,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         if (entityStops) {
             rayEnd = nearestEntityHit;
         } else if (blockHit != null && !pierceBlocks) {
-            rayEnd = blockHit.getLocation();
+            rayEnd = blockHitPos;
         } else {
             rayEnd = origin.add(dir.scale(blockDist));
         }
@@ -390,7 +410,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
             BlockCtx blockCtx = new BlockCtx(pos, state, level, source, blockHit.getLocation());
             if (cfg.hooks.blockCondition.isEmpty() || cfg.hooks.blockCondition.get().test(blockCtx)) {
                 if (cfg.hooks.blockAction.isPresent()) {
-                    try (Scope scope = new Scope(origin, blockHit.getLocation(), 1, 0)) {
+                    try (Scope scope = new Scope(origin, blockHitPos, 1, 0)) {
                         cfg.hooks.blockAction.get().run(blockCtx);
                     }
                 }
@@ -421,14 +441,14 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
             CommandSourceStack cmdSrc = source.createCommandSourceStack().withPermission(4).withSuppressedOutput();
             if (cfg.hooks.commandAtHit.isPresent() && anyHit) {
                 boolean entityFirst = anyEntityHit && nearestEntityHitDistSq <= blockHitDistSq;
-                Vec3 hitPos = entityFirst || blockHit == null ? nearestEntityHit : blockHit.getLocation();
+                Vec3 hitPos = entityFirst || blockHit == null ? nearestEntityHit : blockHitPos;
                 float off = cfg.hooks.commandHitOffset.isPresent()
                     ? (float) cfg.hooks.commandHitOffset.get().eval(source)
                     : 0.0f;
                 if (off != 0) {
                     Vec3 normal = entityFirst || blockHit == null
                         ? dir.scale(-1.0)
-                        : Vec3.atLowerCornerOf(blockHit.getDirection().getNormal());
+                        : faceNormal(blockHit, blockHitFrame);
                     hitPos = hitPos.add(normal.scale(off));
                 }
                 CommandSourceStack atPos = cmdSrc.withPosition(hitPos);
@@ -447,7 +467,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
         if (cfg.chain.isPresent()) {
 
             Vec3 hitNormal = (blockHit != null && !entityStops && !pierceBlocks)
-                ? Vec3.atLowerCornerOf(blockHit.getDirection().getNormal())
+                ? faceNormal(blockHit, blockHitFrame)
                 : null;
             Vec3 chainOrigin = hitNormal != null ? rayEnd.add(hitNormal.scale(0.01)) : rayEnd;
             cast(cfg.chain.get(), ctx, null, chainOrigin, dir, hitNormal, depth + 1);
@@ -471,6 +491,21 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
             DevParticles.mark(level, kind, blockHit.getBlockPos(), true);
         }
         for (int i = 0; i < hitEntities.size(); i++) DevParticles.mark(level, kind, hitEntities.get(i), true);
+    }
+
+    private static Vec3 faceNormal(BlockHitResult hit, @Nullable SableSubLevels.Frame frame) {
+        Vec3 normal = Vec3.atLowerCornerOf(hit.getDirection().getNormal());
+        if (frame == null) return normal;
+        Vec3 turned = frame.directionToWorld(normal);
+        return turned == null || turned.lengthSqr() < 1.0e-12 ? normal : turned.normalize();
+    }
+
+    private static double subLevelCellExitT(SableSubLevels.Frame frame, Vec3 origin, Vec3 dir, BlockPos pos,
+                                            double maxT) {
+        Vec3 localOrigin = frame.toLocal(origin);
+        Vec3 localAhead = frame.toLocal(origin.add(dir));
+        if (localOrigin == null || localAhead == null) return maxT;
+        return cellExitT(localOrigin, localAhead.subtract(localOrigin), pos, maxT);
     }
 
     private static double cellExitT(Vec3 origin, Vec3 dir, BlockPos pos, double maxT) {

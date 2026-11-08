@@ -31,6 +31,8 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class KeyDispatch {
+    public static final int UNTIL_RELEASED = Integer.MAX_VALUE;
+
     private KeyDispatch() {}
 
     public static void force(Entity entity, String key, int duration, boolean release) {

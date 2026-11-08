@@ -76,7 +76,7 @@ public final class ApoliKeyMappings {
             SAMPLES.put(km, sample);
         }
         boolean wasDown = sample.down;
-        boolean down = switch (probe(km)) {
+        boolean down = ForcedKeys.isForced(km) || switch (probe(km)) {
             case DOWN -> true;
             case UP -> false;
             case UNKNOWN -> wasDown;
@@ -85,11 +85,12 @@ public final class ApoliKeyMappings {
         int clicks = ((KeyMappingClickCountAccessor) km).apoli$getClickCount();
         boolean clicked = sample.clicks >= 0 && clicks > sample.clicks;
         sample.clicks = clicks;
-        while (ForcedKeys.consumeLocalForcedClick(km)) clicked = true;
+        boolean forcedClick = false;
+        while (ForcedKeys.consumeLocalForcedClick(km)) forcedClick = true;
         boolean screen = screenOpen();
         boolean pressedInScreen = sample.screen && !screen && !clicked;
         sample.screen = screen;
-        boolean tap = !wasDown && !pressedInScreen && (down || clicked);
+        boolean tap = forcedClick || (!wasDown && !pressedInScreen && (down || clicked));
         return new KeyState(down, tap);
     }
 

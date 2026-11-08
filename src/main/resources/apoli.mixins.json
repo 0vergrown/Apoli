@@ -146,6 +146,9 @@
   ],
   "client": [
     "session.MinecraftLevelChangeMixin",
+    "glow.ClientLevelBlockGlowMixin",
+    "glow.LevelRendererBlockGlowMixin",
+    "glow.OutlineBufferSourceBlockGlowMixin",
     "camera.AbstractClientPlayerFovMixin",
     "camera.CameraSetupMixin",
     "camera.EntityRenderDispatcherCameraMixin",

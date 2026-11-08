@@ -20,7 +20,7 @@ public final class ApoliCriteria {
         POWER = Registry.register(BuiltInRegistries.TRIGGER_TYPES, Apoli.id("power"), new PowerTrigger());
     }
 
-    public static void resourceChanged(@Nullable Entity owner, ResourceLocation resource, int value) {
+    public static void resourceChanged(@Nullable Entity owner, ResourceLocation resource, double value) {
         if (RESOURCE != null && owner instanceof ServerPlayer player) RESOURCE.trigger(player, resource, value);
     }
 

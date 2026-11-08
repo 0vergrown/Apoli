@@ -5,6 +5,7 @@ import dev.overgrown.apoli.Apoli;
 import dev.overgrown.apoli.alias.AliasDefault;
 import dev.overgrown.apoli.alias.AliasingOptions;
 import dev.overgrown.apoli.compat.ModCompat;
+import dev.overgrown.apoli.compat.create.CreateGogglesPower;
 import dev.overgrown.apoli.compat.walkers.power.ShapePowers;
 import dev.overgrown.apoli.compat.accessory.power.ActionOnAccessoryChangePower;
 import dev.overgrown.apoli.compat.accessory.power.ModifyAccessorySlotsPower;
@@ -176,6 +177,7 @@ public final class PowerTypes {
         );
 
         PowerTypeRegistry.register(Apoli.id("modify_block_render"), new ModifyBlockRenderPower());
+        PowerTypeRegistry.register(Apoli.id("block_glow"), new dev.overgrown.apoli.power.builtin.BlockGlowPower());
         PowerTypeRegistry.register(Apoli.id("modify_break_speed"), new ModifyBreakSpeedPower());
         PowerTypeRegistry.register(Apoli.id("modify_enchantment_level"), new ModifyEnchantmentLevelPower());
         PowerTypeRegistry.register(Apoli.id("modify_exhaustion"), new ModifyExhaustionPower());
@@ -324,6 +326,8 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("action_on_mouse_movement"),
             new dev.overgrown.apoli.power.builtin.ActionOnMouseMovementPower());
         PowerTypeRegistry.register(Apoli.id("game_event_listener"), new GameEventListenerPower());
+
+        PowerTypeRegistry.register(Apoli.id("create_goggles"), new CreateGogglesPower());
 
         if (ModCompat.ICARUS) {
             PowerTypeRegistry.register(Apoli.id("wings"), new WingsPower());

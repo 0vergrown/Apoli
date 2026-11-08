@@ -127,11 +127,13 @@ public final class Apoli implements ModInitializer {
             keybindLoader.attachServer(server);
             dev.overgrown.apoli.entity.GrabManager.clearAll();
             dev.overgrown.apoli.block.GhostBlocks.clear();
+            dev.overgrown.apoli.block.BlockGlows.clear();
             dev.overgrown.apoli.entity.PlayerModelTypes.clear();
             dev.overgrown.apoli.tick.TickRates.clear();
         });
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             dev.overgrown.apoli.power.builtin.EntitySetStorage.attach(server);
+            dev.overgrown.apoli.block.BlockGlows.load(server);
             dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
             ApoliNetwork.broadcastPowers(server);
             ApoliNetwork.broadcastKeybinds(server, SyncKeybindsS2C.fromCurrent());
@@ -172,6 +174,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.power.ResolvedPowers.clear();
             dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.clearServer();
             dev.overgrown.apoli.block.GhostBlocks.clear();
+            dev.overgrown.apoli.block.BlockGlows.clear();
             DelayedActionQueue.clear();
             dev.overgrown.apoli.rope.RopeManager.clear();
             dev.overgrown.apoli.power.builtin.ModifyPlayerSpawnHandler.clearCache();
@@ -235,6 +238,9 @@ public final class Apoli implements ModInitializer {
 
         if (dev.overgrown.apoli.compat.ModCompat.YIGD) {
             dev.overgrown.apoli.compat.yigd.YigdCompat.init();
+        }
+        if (dev.overgrown.apoli.compat.ModCompat.CREATE) {
+            dev.overgrown.apoli.compat.create.CreateCompat.init();
         }
 
         if (dev.overgrown.apoli.compat.ModCompat.GRAVESTONES) {
@@ -472,7 +478,7 @@ public final class Apoli implements ModInitializer {
             PowerContainer c = PowerContainer.of(trackedEntity);
             if (c instanceof PowerContainerImpl impl && !impl.isEmpty()) {
                 ApoliNetwork.sendEntityPowers(player, new SyncEntityPowersS2C(
-                    trackedEntity.getId(), impl.snapshot(), impl.auxIntSnapshot(), impl.suppressedPowers()));
+                    trackedEntity.getId(), impl.snapshot(), impl.auxSnapshot(), impl.suppressedPowers()));
                 dev.overgrown.apoli.network.payload.SyncResourceTablesS2C tables = tablePayload(trackedEntity, impl);
                 if (tables != null) ApoliNetwork.sendResourceTables(player, tables);
             }
@@ -548,25 +554,27 @@ public final class Apoli implements ModInitializer {
         dev.overgrown.apoli.power.PowerTypeUsage.endSweep();
         dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.endScan();
         dev.overgrown.apoli.block.GhostBlocks.tick(server);
+        dev.overgrown.apoli.block.BlockGlows.tick(server);
         dev.overgrown.apoli.power.builtin.ShaderPower.tick(server);
         dev.overgrown.apoli.power.ResolvedPowers.tick(server);
+        dev.overgrown.apoli.loader.LoadProblems.tick(server);
         dev.overgrown.apoli.power.builtin.EntitySetPower.flushPendingRemovals();
         dev.overgrown.apoli.power.builtin.EntitySetPower.flushSync(server);
         CustomEffectRegistry.tick(server);
     }
 
     private static SyncEntityPowersS2C fullPayload(Entity entity, PowerContainerImpl impl) {
-        return new SyncEntityPowersS2C(entity.getId(), impl.snapshot(), impl.auxIntSnapshot(), impl.suppressedPowers());
+        return new SyncEntityPowersS2C(entity.getId(), impl.snapshot(), impl.auxSnapshot(), impl.suppressedPowers());
     }
 
     private static void broadcastAuxState(Entity entity, PowerContainerImpl impl) {
-        dev.overgrown.apoli.network.payload.SyncAuxIntsS2C aux =
-            new dev.overgrown.apoli.network.payload.SyncAuxIntsS2C(entity.getId(), impl.auxIntSnapshot());
+        dev.overgrown.apoli.network.payload.SyncAuxValuesS2C aux =
+            new dev.overgrown.apoli.network.payload.SyncAuxValuesS2C(entity.getId(), impl.auxSnapshot());
         dev.overgrown.apoli.network.payload.SyncResourceTablesS2C tables = tablePayload(entity, impl);
         SyncEntityPowersS2C fallback = null;
         if (entity instanceof ServerPlayer self) {
-            if (ApoliNetwork.canSendAuxInts(self)) {
-                ApoliNetwork.sendAuxInts(self, aux);
+            if (ApoliNetwork.canSendAuxValues(self)) {
+                ApoliNetwork.sendAuxValues(self, aux);
             } else {
                 fallback = fullPayload(entity, impl);
                 ApoliNetwork.sendEntityPowers(self, fallback);
@@ -574,8 +582,8 @@ public final class Apoli implements ModInitializer {
             if (tables != null) ApoliNetwork.sendResourceTables(self, tables);
         }
         for (ServerPlayer viewer : PlayerLookup.tracking(entity)) {
-            if (ApoliNetwork.canSendAuxInts(viewer)) {
-                ApoliNetwork.sendAuxInts(viewer, aux);
+            if (ApoliNetwork.canSendAuxValues(viewer)) {
+                ApoliNetwork.sendAuxValues(viewer, aux);
             } else {
                 if (fallback == null) fallback = fullPayload(entity, impl);
                 ApoliNetwork.sendEntityPowers(viewer, fallback);
@@ -595,7 +603,7 @@ public final class Apoli implements ModInitializer {
 
     private static dev.overgrown.apoli.network.payload.SyncResourceTablesS2C tablePayload(Entity entity,
                                                                                           PowerContainerImpl impl) {
-        java.util.Map<net.minecraft.resources.ResourceLocation, int[]> tables = impl.auxIntsSnapshot();
+        java.util.Map<net.minecraft.resources.ResourceLocation, double[]> tables = impl.auxTablesSnapshot();
         if (tables.isEmpty()) return null;
         return new dev.overgrown.apoli.network.payload.SyncResourceTablesS2C(entity.getId(), tables);
     }
@@ -617,7 +625,7 @@ public final class Apoli implements ModInitializer {
     private static void sendEntitySync(ServerPlayer player) {
         PowerContainer c = PowerContainer.of(player);
         if (!(c instanceof PowerContainerImpl impl)) return;
-        SyncEntityPowersS2C payload = new SyncEntityPowersS2C(player.getId(), impl.snapshot(), impl.auxIntSnapshot(), impl.suppressedPowers());
+        SyncEntityPowersS2C payload = new SyncEntityPowersS2C(player.getId(), impl.snapshot(), impl.auxSnapshot(), impl.suppressedPowers());
         dev.overgrown.apoli.network.payload.SyncResourceTablesS2C tables = tablePayload(player, impl);
         ApoliNetwork.sendEntityPowers(player, payload);
         if (tables != null) ApoliNetwork.sendResourceTables(player, tables);

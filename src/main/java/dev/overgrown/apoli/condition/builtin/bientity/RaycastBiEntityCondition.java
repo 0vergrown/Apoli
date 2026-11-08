@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.builtin.entity.RaycastAction;
 import dev.overgrown.apoli.alias.AliasingMapCodec;
+import dev.overgrown.apoli.compat.sable.SableSubLevels;
 import dev.overgrown.apoli.condition.ConditionType;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
 import dev.overgrown.apoli.data.Expression;
@@ -107,8 +108,9 @@ public final class RaycastBiEntityCondition implements ConditionType<BiEntityCtx
             DevParticles.detection(level, kind, origin, dir, range, rx, ry, rz, coneAngle);
         }
         if (hit == null || !DevParticles.due(level, actor, target, cfg)) return;
+        Vec3 stop = blocker == null ? null : SableSubLevels.worldPosition(level, blocker.getLocation());
         DevParticles.segment(level, kind, origin, hit,
-            blocker == null ? Double.POSITIVE_INFINITY : origin.distanceTo(blocker.getLocation()));
+            stop == null ? Double.POSITIVE_INFINITY : origin.distanceTo(stop));
         if (blocker != null) DevParticles.mark(level, kind, blocker.getBlockPos(), true);
         DevParticles.mark(level, kind, target, passed);
     }

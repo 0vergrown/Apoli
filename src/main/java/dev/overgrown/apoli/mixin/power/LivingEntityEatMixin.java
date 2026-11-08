@@ -1,8 +1,11 @@
 package dev.overgrown.apoli.mixin.power;
 
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.sugar.Share;
 import com.llamalad7.mixinextras.sugar.ref.LocalRef;
+import dev.overgrown.apoli.power.builtin.EdibleItemHandler;
 import dev.overgrown.apoli.power.builtin.ModifyFoodHandler;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodProperties;
@@ -43,5 +46,15 @@ public abstract class LivingEntityEatMixin {
                                 CallbackInfoReturnable<ItemStack> cir,
                                 @Share("apoli$eaten") LocalRef<ModifyFoodHandler.Eaten> eaten) {
         ModifyFoodHandler.afterEat((LivingEntity) (Object) this, stack, eaten.get());
+    }
+
+    @ModifyReturnValue(method = "getEatingSound", at = @At("RETURN"))
+    private SoundEvent apoli$edibleEatingSound(SoundEvent original, ItemStack stack) {
+        return EdibleItemHandler.consumeSound((LivingEntity) (Object) this, stack, original);
+    }
+
+    @ModifyReturnValue(method = "getDrinkingSound", at = @At("RETURN"))
+    private SoundEvent apoli$edibleDrinkingSound(SoundEvent original, ItemStack stack) {
+        return EdibleItemHandler.consumeSound((LivingEntity) (Object) this, stack, original);
     }
 }

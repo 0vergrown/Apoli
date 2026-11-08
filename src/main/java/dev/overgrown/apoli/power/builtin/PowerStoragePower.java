@@ -23,7 +23,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
+import java.util.OptionalDouble;
 import java.util.Set;
 
 public final class PowerStoragePower extends PowerType<PowerStoragePower.Config> {
@@ -232,27 +232,27 @@ public final class PowerStoragePower extends PowerType<PowerStoragePower.Config>
     }
 
     @Override
-    public OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
-        return OptionalInt.of(count(holder, powerId));
+    public OptionalDouble readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+        return OptionalDouble.of(count(holder, powerId));
     }
 
     @Override
-    public OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
-        if (!(holder instanceof PowerContainerImpl impl)) return OptionalInt.empty();
+    public OptionalDouble writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, double value) {
+        if (!(holder instanceof PowerContainerImpl impl)) return OptionalDouble.empty();
         List<ResourceLocation> current = live(impl, powerId);
-        int target = Math.max(0, Math.min(value, current.size()));
+        int target = Math.max(0, Math.min(dev.overgrown.apoli.power.PowerResources.whole(value), current.size()));
         if (target == 0) {
             clear(impl, powerId);
-            return OptionalInt.of(0);
+            return OptionalDouble.of(0);
         }
         replace(impl, powerId, current.subList(current.size() - target, current.size()));
-        return OptionalInt.of(target);
+        return OptionalDouble.of(target);
     }
 
     @Override
-    public OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
-        if (!max) return OptionalInt.of(0);
-        return cfg.slots() > 0 ? OptionalInt.of(cfg.slots()) : OptionalInt.empty();
+    public OptionalDouble resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
+        if (!max) return OptionalDouble.of(0);
+        return cfg.slots() > 0 ? OptionalDouble.of(cfg.slots()) : OptionalDouble.empty();
     }
 
     public static List<ResourceLocation> storagesOf(@Nullable PowerContainer holder) {

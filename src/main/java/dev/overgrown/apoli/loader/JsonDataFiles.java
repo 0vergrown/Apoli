@@ -33,16 +33,24 @@ public final class JsonDataFiles {
     public record Version(Source source, JsonElement json) {}
 
     public static Map<ResourceLocation, JsonElement> load(ResourceManager manager, String directory, Logger log) {
+        return load(manager, directory, log, null);
+    }
+
+    public static Map<ResourceLocation, JsonElement> load(ResourceManager manager, String directory, Logger log,
+                                                          @Nullable Map<ResourceLocation, Source> sourcesOut) {
         Map<ResourceLocation, Source> sources = topSources(manager, directory, log);
         Map<ResourceLocation, JsonElement> loaded = new HashMap<>(sources.size());
         for (Map.Entry<ResourceLocation, Source> entry : sources.entrySet()) {
             JsonElement json = read(entry.getValue(), entry.getKey(), log);
-            if (json != null) loaded.put(entry.getKey(), json);
+            if (json == null) continue;
+            loaded.put(entry.getKey(), json);
+            if (sourcesOut != null) sourcesOut.put(entry.getKey(), entry.getValue());
         }
         return loaded;
     }
 
     public static Map<ResourceLocation, Source> topSources(ResourceManager manager, String directory, Logger log) {
+        LoadProblems.begin(manager);
         Map<ResourceLocation, Resource> files = manager.listResources(directory, JsonDataFiles::isDataFile);
         Map<ResourceLocation, Source> top = new HashMap<>(files.size());
         PackOrder order = null;
@@ -61,6 +69,7 @@ public final class JsonDataFiles {
     }
 
     public static Map<ResourceLocation, List<Source>> stacks(ResourceManager manager, String directory, Logger log) {
+        LoadProblems.begin(manager);
         Map<ResourceLocation, List<Resource>> files = manager.listResourceStacks(directory, JsonDataFiles::isDataFile);
         Map<ResourceLocation, List<Source>> stacks = new HashMap<>(files.size());
         PackOrder order = null;
@@ -118,19 +127,30 @@ public final class JsonDataFiles {
         try (InputStream in = source.resource().open()) {
             bytes = in.readAllBytes();
         } catch (IOException e) {
-            log.error("Couldn't read data file {} ({} in {}): {}", id, source.file(), source.packId(), e.getMessage());
+            LoadProblems.error(LoadProblems.kindOf(source), id, source, "Couldn't read the file: " + e.getMessage());
             return null;
         }
         if (mustMention != null && !contains(bytes, mustMention.getBytes(StandardCharsets.UTF_8))) return null;
         try {
             JsonTextParser.Parsed parsed = JsonTextParser.read(bytes, source.format());
             if (parsed.trailingLine() > 0) {
-                log.warn("Data file {} ({} in {}) has text after its last closing bracket on line {}, which is ignored",
-                    id, source.file(), source.packId(), parsed.trailingLine());
+                LoadProblems.warn(LoadProblems.kindOf(source), id, source,
+                    "There is text after the last closing bracket on line " + parsed.trailingLine() + ", which is ignored");
             }
             return parsed.value();
+        } catch (JsonTextParser.SyntaxError e) {
+            LoadProblems.syntax(source, id, e.reason(), e.path(), e.location());
+            return null;
         } catch (JsonParseException e) {
-            log.error("Couldn't parse data file {} ({} in {}): {}", id, source.file(), source.packId(), e.getMessage());
+            LoadProblems.error(LoadProblems.kindOf(source), id, source, "Couldn't parse the file: " + e.getMessage());
+            return null;
+        }
+    }
+
+    public static JsonTextParser.Location locate(Source source, String path) {
+        try (InputStream in = source.resource().open()) {
+            return JsonTextParser.locate(in.readAllBytes(), source.format(), path);
+        } catch (IOException | RuntimeException e) {
             return null;
         }
     }
@@ -183,8 +203,8 @@ public final class JsonDataFiles {
             int byPack = Integer.compare(topRank(a), topRank(b));
             if (byPack != 0) return byPack;
             Source kept = a.format().ordinal() < b.format().ordinal() ? a : b;
-            log.warn("Data file {} is defined twice in {} ({} and {}); using {}",
-                id, a.packId(), a.file(), b.file(), kept.file());
+            LoadProblems.warn(LoadProblems.kindOf(kept), id, kept, "Defined twice in pack " + a.packId()
+                + " (" + a.file() + " and " + b.file() + "); using " + kept.file());
             return Integer.compare(b.format().ordinal(), a.format().ordinal());
         }
 

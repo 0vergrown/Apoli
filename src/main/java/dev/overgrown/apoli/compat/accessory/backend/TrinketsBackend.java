@@ -15,12 +15,20 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Predicate;
 
 public final class TrinketsBackend implements AccessoryProvider {
     public static final String ID = "trinkets";
+    private static boolean active;
+
+    public static void activate() {
+        active = true;
+    }
 
     @Override
     public String id() {
@@ -53,6 +61,26 @@ public final class TrinketsBackend implements AccessoryProvider {
             if (!ref.getStack().isEmpty()) out.add(ref);
         }
         return out;
+    }
+
+    @Override
+    public int count(LivingEntity entity, List<AccessorySlot> filter, @Nullable Predicate<ItemStack> item, int limit) {
+        TrinketComponent component = TrinketsApi.getTrinketComponent(entity).orElse(null);
+        if (component == null) return 0;
+        int count = 0;
+        for (Map.Entry<String, Map<String, TrinketInventory>> group : component.getInventory().entrySet()) {
+            for (Map.Entry<String, TrinketInventory> slot : group.getValue().entrySet()) {
+                TrinketInventory inventory = slot.getValue();
+                for (int i = 0, n = inventory.getContainerSize(); i < n; i++) {
+                    ItemStack stack = inventory.getItem(i);
+                    if (stack.isEmpty()) continue;
+                    if (!AccessorySlot.matchesAny(filter, ID, group.getKey(), slot.getKey(), i)) continue;
+                    if (item != null && !item.test(stack)) continue;
+                    if (++count >= limit) return count;
+                }
+            }
+        }
+        return count;
     }
 
     @Override
@@ -94,6 +122,7 @@ public final class TrinketsBackend implements AccessoryProvider {
     }
 
     public static void handleChange(TrinketInventory inventory, int slot, ItemStack oldStack, ItemStack newStack) {
+        if (!active) return;
         TrinketComponent comp = inventory.getComponent();
         if (comp == null) return;
         LivingEntity entity = comp.getEntity();

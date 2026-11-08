@@ -21,7 +21,7 @@ import dev.overgrown.apoli.network.payload.RopeSwingC2S;
 import dev.overgrown.apoli.network.payload.RopeVerletLengthS2C;
 import dev.overgrown.apoli.network.PowerSyncCache;
 import dev.overgrown.apoli.network.payload.SyncEntityPowersS2C;
-import dev.overgrown.apoli.network.payload.SyncAuxIntsS2C;
+import dev.overgrown.apoli.network.payload.SyncAuxValuesS2C;
 import dev.overgrown.apoli.network.payload.SyncResourceTablesS2C;
 import dev.overgrown.apoli.network.payload.SyncKeybindsS2C;
 import dev.overgrown.apoli.network.payload.SyncPowersChunkS2C;
@@ -44,7 +44,9 @@ public final class ApoliNetwork {
         PayloadTypeRegistry.playS2C().register(SyncPowersChunkS2C.TYPE, SyncPowersChunkS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SyncEntityPowersS2C.TYPE, SyncEntityPowersS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SyncResourceTablesS2C.TYPE, SyncResourceTablesS2C.STREAM_CODEC);
-        PayloadTypeRegistry.playS2C().register(SyncAuxIntsS2C.TYPE, SyncAuxIntsS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncAuxValuesS2C.TYPE, SyncAuxValuesS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.BlockGlowsS2C.TYPE,
+            dev.overgrown.apoli.network.payload.BlockGlowsS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.DevModeS2C.TYPE,
             dev.overgrown.apoli.network.payload.DevModeS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.SyncEntitySetsS2C.TYPE,
@@ -139,6 +141,13 @@ public final class ApoliNetwork {
         dev.overgrown.apoli.power.builtin.InventoryPower.syncAll(recipient);
     }
 
+    public static void sendBlockGlows(ServerPlayer recipient, dev.overgrown.apoli.network.payload.BlockGlowsS2C payload) {
+        if (connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.BlockGlowsS2C.TYPE)) {
+            ServerPlayNetworking.send(recipient, payload);
+        }
+    }
+
     public static void sendPowerInventory(ServerPlayer recipient,
                                          dev.overgrown.apoli.network.payload.PowerInventoryS2C payload) {
         if (connected(recipient)
@@ -185,11 +194,11 @@ public final class ApoliNetwork {
         }
     }
 
-    public static boolean canSendAuxInts(ServerPlayer recipient) {
-        return connected(recipient) && ServerPlayNetworking.canSend(recipient, SyncAuxIntsS2C.TYPE);
+    public static boolean canSendAuxValues(ServerPlayer recipient) {
+        return connected(recipient) && ServerPlayNetworking.canSend(recipient, SyncAuxValuesS2C.TYPE);
     }
 
-    public static void sendAuxInts(ServerPlayer recipient, SyncAuxIntsS2C payload) {
+    public static void sendAuxValues(ServerPlayer recipient, SyncAuxValuesS2C payload) {
         ServerPlayNetworking.send(recipient, payload);
     }
 

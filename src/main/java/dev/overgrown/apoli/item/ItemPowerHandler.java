@@ -11,7 +11,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.HashSet;
-import java.util.OptionalInt;
+import java.util.OptionalDouble;
 import java.util.Set;
 
 public final class ItemPowerHandler {
@@ -59,21 +59,21 @@ public final class ItemPowerHandler {
         Set<ResourceLocation> current = currentFromSource(container, source);
         for (ResourceLocation p : current) {
             if (!desired.contains(p)) {
-                OptionalInt value = container.getAuxInt(p);
+                OptionalDouble value = container.getAuxDouble(p);
                 if (value.isPresent() && previous != null) {
-                    ItemPowers.saveValue(previous, p, slot, value.getAsInt());
+                    ItemPowers.saveValue(previous, p, slot, value.getAsDouble());
                 }
                 container.removePower(p, source);
             }
         }
         for (ResourceLocation p : desired) {
             if (!current.contains(p)) {
-                boolean hadAux = container.getAuxInt(p).isPresent();
+                boolean hadAux = container.hasAux(p);
                 container.addPower(p, source);
 
                 if (!hadAux && container instanceof PowerContainerImpl impl) {
-                    OptionalInt saved = ItemPowers.readValue(stack, p, slot);
-                    if (saved.isPresent()) impl.setAuxInt(p, saved.getAsInt());
+                    OptionalDouble saved = ItemPowers.readValue(stack, p, slot);
+                    if (saved.isPresent()) impl.setAuxDouble(p, saved.getAsDouble());
                 }
             }
         }

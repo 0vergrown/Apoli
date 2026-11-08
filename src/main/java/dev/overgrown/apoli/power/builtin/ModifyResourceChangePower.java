@@ -24,7 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalInt;
+import java.util.OptionalDouble;
 import java.util.UUID;
 
 public final class ModifyResourceChangePower extends PowerType<ModifyResourceChangePower.Config> {
@@ -103,8 +103,8 @@ public final class ModifyResourceChangePower extends PowerType<ModifyResourceCha
 
     private static boolean applying;
 
-    public static int adjust(@Nullable PowerContainer container, ResourceLocation target,
-                             int current, int proposed) {
+    public static double adjust(@Nullable PowerContainer container, ResourceLocation target,
+                                double current, double proposed) {
         if (applying || current == proposed) return proposed;
         if (container == null || !inUse()) return proposed;
         List<ResourceLocation> powers = container.powersOfType(CANONICAL);
@@ -114,7 +114,7 @@ public final class ModifyResourceChangePower extends PowerType<ModifyResourceCha
 
         boolean cooldown = isCooldownPower(target);
         boolean gaining = proposed > current;
-        double magnitude = Math.abs((double) proposed - current);
+        double magnitude = Math.abs(proposed - current);
         double scaled = magnitude;
         EntityCtx ctx = null;
         for (int i = 0, n = powers.size(); i < n; i++) {
@@ -134,8 +134,7 @@ public final class ModifyResourceChangePower extends PowerType<ModifyResourceCha
             scaled = AttributeModifierHelper.apply(scaled, mods, owner, container);
         }
         if (scaled == magnitude) return proposed;
-        long shifted = Math.round(gaining ? current + scaled : current - scaled);
-        return (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, shifted));
+        return gaining ? current + scaled : current - scaled;
     }
 
     private static boolean isCooldownPower(ResourceLocation powerId) {
@@ -178,16 +177,16 @@ public final class ModifyResourceChangePower extends PowerType<ModifyResourceCha
 
     private void accelerate(PowerContainer holder, UUID entity, ResourceLocation cooldownId) {
         if (holder.isSuppressed(cooldownId)) return;
-        OptionalInt remaining = PowerResources.read(holder, cooldownId);
+        OptionalDouble remaining = PowerResources.read(holder, cooldownId);
         if (remaining.isEmpty()) return;
-        int value = remaining.getAsInt();
+        int value = (int) remaining.getAsDouble();
         CarryKey key = new CarryKey(entity, cooldownId);
         if (value <= 0) {
             carry.remove(key);
             return;
         }
-        int stepped = adjust(holder, cooldownId, value, value - 1);
-        float extra = (value - 1) - stepped + carry.getOrDefault(key, 0.0F);
+        double stepped = adjust(holder, cooldownId, value, value - 1);
+        float extra = (float) ((value - 1) - stepped) + carry.getOrDefault(key, 0.0F);
         int whole = (int) extra;
         float fraction = extra - whole;
         if (fraction < 0.0F) {

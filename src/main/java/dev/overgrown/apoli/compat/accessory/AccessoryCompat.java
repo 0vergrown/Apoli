@@ -9,9 +9,9 @@ public final class AccessoryCompat {
     private AccessoryCompat() {}
 
     public static void init() {
-        if (ModCompat.TRINKETS) {
-
+        if (ModCompat.TRINKETS && !(ModCompat.ACCESSORIES && net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("tclayer"))) {
             Accessories.register(new TrinketsBackend());
+            TrinketsBackend.activate();
         }
 
         if (ModCompat.ACCESSORIES) {

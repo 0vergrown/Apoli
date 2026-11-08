@@ -7,10 +7,17 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMaps;
+import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.DoubleTag;
 import net.minecraft.nbt.EndTag;
+import net.minecraft.nbt.IntArrayTag;
+import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -26,9 +33,9 @@ import java.util.Set;
 
 public final class PowerContainerImpl implements PowerContainer {
     private final Map<ResourceLocation, Set<ResourceLocation>> bySources = new HashMap<>();
-    private final Map<ResourceLocation, Integer> auxInt = new HashMap<>();
+    private final Object2DoubleOpenHashMap<ResourceLocation> auxValues = newAuxMap();
     private final Map<ResourceLocation, CompoundTag> auxNbt = new HashMap<>();
-    private final Map<ResourceLocation, int[]> auxInts = new HashMap<>();
+    private final Map<ResourceLocation, double[]> auxTables = new HashMap<>();
     private final Map<ResourceLocation, int[]> scratchInts = new HashMap<>();
     private final Map<ResourceLocation, Set<ResourceLocation>> suppressedBySources = new HashMap<>();
     private @Nullable Entity owner;
@@ -49,50 +56,56 @@ public final class PowerContainerImpl implements PowerContainer {
 
     public PowerContainerImpl() {}
 
-    public java.util.OptionalInt getAuxInt(ResourceLocation powerId) {
-        Integer v = auxInt.get(powerId);
-        return v == null ? java.util.OptionalInt.empty() : java.util.OptionalInt.of(v);
+    private static Object2DoubleOpenHashMap<ResourceLocation> newAuxMap() {
+        Object2DoubleOpenHashMap<ResourceLocation> map = new Object2DoubleOpenHashMap<>();
+        map.defaultReturnValue(Double.NaN);
+        return map;
     }
 
     @Override
-    public int getAuxIntOr(ResourceLocation powerId, int fallback) {
-        Integer v = auxInt.get(powerId);
-        return v == null ? fallback : v;
+    public double getAuxDoubleOr(ResourceLocation powerId, double fallback) {
+        double value = auxValues.getDouble(powerId);
+        return Double.isNaN(value) ? fallback : value;
+    }
+
+    public void setAuxDouble(ResourceLocation powerId, double value) {
+        double stored = Double.isFinite(value) ? value : 0.0;
+        double previous = auxValues.put(powerId, stored);
+        if (Double.isNaN(previous) || previous != stored) markDirty();
     }
 
     public void setAuxInt(ResourceLocation powerId, int value) {
-        Integer prev = auxInt.put(powerId, value);
-        if (prev == null || prev != value) markDirty();
+        setAuxDouble(powerId, value);
     }
 
     @Override
-    public int @Nullable [] getAuxInts(ResourceLocation powerId) {
-        return auxInts.get(powerId);
+    public double @Nullable [] getAuxDoubles(ResourceLocation powerId) {
+        return auxTables.get(powerId);
     }
 
-    public void setAuxInts(ResourceLocation powerId, int[] values) {
-        int[] previous = auxInts.put(powerId, values);
+    public void setAuxDoubles(ResourceLocation powerId, double[] values) {
+        double[] previous = auxTables.put(powerId, values);
         if (previous == null || !java.util.Arrays.equals(previous, values)) markDirty();
     }
 
-    public int[] auxIntsAtLeast(ResourceLocation powerId, int length, int fill) {
-        int[] existing = auxInts.get(powerId);
+    public double[] auxDoublesAtLeast(ResourceLocation powerId, int length, double fill) {
+        double[] existing = auxTables.get(powerId);
         if (existing != null && existing.length >= length) return existing;
-        int[] grown = new int[length];
-        if (fill != 0) java.util.Arrays.fill(grown, fill);
+        double[] grown = new double[length];
+        if (fill != 0.0) java.util.Arrays.fill(grown, fill);
         if (existing != null) System.arraycopy(existing, 0, grown, 0, existing.length);
-        auxInts.put(powerId, grown);
+        auxTables.put(powerId, grown);
         markDirty();
         return grown;
     }
 
-    public void trimAuxInts(ResourceLocation powerId, int maxLength) {
-        int[] existing = auxInts.get(powerId);
+    public void trimAuxDoubles(ResourceLocation powerId, int maxLength) {
+        double[] existing = auxTables.get(powerId);
         if (existing == null || existing.length <= maxLength) return;
         if (maxLength <= 0) {
-            auxInts.remove(powerId);
+            auxTables.remove(powerId);
         } else {
-            auxInts.put(powerId, java.util.Arrays.copyOf(existing, maxLength));
+            auxTables.put(powerId, java.util.Arrays.copyOf(existing, maxLength));
         }
         markDirty();
     }
@@ -106,14 +119,14 @@ public final class PowerContainerImpl implements PowerContainer {
         return grown;
     }
 
-    public Map<ResourceLocation, int[]> auxIntsSnapshot() {
-        return auxInts.isEmpty() ? Map.of() : new HashMap<>(auxInts);
+    public Map<ResourceLocation, double[]> auxTablesSnapshot() {
+        return auxTables.isEmpty() ? Map.of() : new HashMap<>(auxTables);
     }
 
     public void removeAux(ResourceLocation powerId) {
         scratchInts.remove(powerId);
-        boolean changed = auxInt.remove(powerId) != null;
-        if (auxInts.remove(powerId) != null) changed = true;
+        boolean changed = !Double.isNaN(auxValues.removeDouble(powerId));
+        if (auxTables.remove(powerId) != null) changed = true;
         if (auxNbt.remove(powerId) != null) {
             changed = true;
             if (this.owner instanceof net.minecraft.server.level.ServerPlayer player) {
@@ -124,8 +137,11 @@ public final class PowerContainerImpl implements PowerContainer {
         if (changed) markDirty();
     }
 
-    public Map<ResourceLocation, Integer> auxIntSnapshot() {
-        return Map.copyOf(auxInt);
+    public Object2DoubleMap<ResourceLocation> auxSnapshot() {
+        if (auxValues.isEmpty()) return Object2DoubleMaps.emptyMap();
+        Object2DoubleOpenHashMap<ResourceLocation> copy = new Object2DoubleOpenHashMap<>(auxValues);
+        copy.defaultReturnValue(Double.NaN);
+        return copy;
     }
 
     public @Nullable CompoundTag getAuxNbt(ResourceLocation powerId) {
@@ -244,9 +260,9 @@ public final class PowerContainerImpl implements PowerContainer {
         bySources.clear();
         suppressedBySources.clear();
         notifiedSuppressed = Set.of();
-        if (!auxInt.isEmpty() || !auxInts.isEmpty() || !auxNbt.isEmpty()) {
-            auxInt.clear();
-            auxInts.clear();
+        if (!auxValues.isEmpty() || !auxTables.isEmpty() || !auxNbt.isEmpty()) {
+            auxValues.clear();
+            auxTables.clear();
             auxNbt.clear();
             scratchInts.clear();
             markDirty();
@@ -620,9 +636,11 @@ public final class PowerContainerImpl implements PowerContainer {
     private CompoundTag buildSaveTag() {
         CompoundTag root = new CompoundTag();
         root.put("powers", idListsToTag(bySources));
-        if (!auxInt.isEmpty()) {
+        if (!auxValues.isEmpty()) {
             CompoundTag aux = new CompoundTag();
-            auxInt.forEach((id, value) -> aux.putInt(id.toString(), value));
+            for (Object2DoubleMap.Entry<ResourceLocation> entry : Object2DoubleMaps.fastIterable(auxValues)) {
+                aux.put(entry.getKey().toString(), numberTag(entry.getDoubleValue()));
+            }
             root.put("aux_int", aux);
         }
         if (!auxNbt.isEmpty()) {
@@ -630,9 +648,9 @@ public final class PowerContainerImpl implements PowerContainer {
             auxNbt.forEach((id, stored) -> aux.put(id.toString(), stored.copy()));
             root.put("aux_nbt", aux);
         }
-        if (!auxInts.isEmpty()) {
+        if (!auxTables.isEmpty()) {
             CompoundTag aux = new CompoundTag();
-            auxInts.forEach((id, values) -> aux.putIntArray(id.toString(), values.clone()));
+            auxTables.forEach((id, values) -> aux.put(id.toString(), tableTag(values)));
             root.put("aux_ints", aux);
         }
         if (!suppressedBySources.isEmpty()) {
@@ -640,6 +658,42 @@ public final class PowerContainerImpl implements PowerContainer {
         }
         return root;
     }
+
+    private static boolean storesAsInt(double value) {
+        return value == Math.rint(value) && value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE;
+    }
+
+    private static Tag numberTag(double value) {
+        return storesAsInt(value) ? IntTag.valueOf((int) value) : DoubleTag.valueOf(value);
+    }
+
+    private static Tag tableTag(double[] values) {
+        boolean whole = true;
+        for (double value : values) {
+            if (storesAsInt(value)) continue;
+            whole = false;
+            break;
+        }
+        if (whole) {
+            int[] ints = new int[values.length];
+            for (int i = 0; i < values.length; i++) ints[i] = (int) values[i];
+            return new IntArrayTag(ints);
+        }
+        ListTag list = new ListTag();
+        for (double value : values) list.add(DoubleTag.valueOf(value));
+        return list;
+    }
+
+    private static final Codec<Double> AUX_NUMBER = Codec.of(
+        new com.mojang.serialization.Encoder<Double>() {
+            @Override
+            public <T> DataResult<T> encode(Double input, DynamicOps<T> ops, T prefix) {
+                double value = input;
+                T number = storesAsInt(value) ? ops.createInt((int) value) : ops.createDouble(value);
+                return ops.mergeToPrimitive(prefix, number);
+            }
+        },
+        Codec.DOUBLE);
 
     private static CompoundTag idListsToTag(Map<ResourceLocation, Set<ResourceLocation>> map) {
         CompoundTag out = new CompoundTag();
@@ -659,9 +713,16 @@ public final class PowerContainerImpl implements PowerContainer {
                 c.bySources.forEach((k, v) -> out.put(k, List.copyOf(v)));
                 return out;
             }),
-        Codec.unboundedMap(ResourceLocation.CODEC, Codec.INT)
+        Codec.unboundedMap(ResourceLocation.CODEC, AUX_NUMBER)
             .optionalFieldOf("aux_int", Map.of())
-            .forGetter(c -> Map.copyOf(c.auxInt)),
+            .forGetter(c -> {
+                if (c.auxValues.isEmpty()) return Map.of();
+                Map<ResourceLocation, Double> out = new HashMap<>(c.auxValues.size());
+                for (Object2DoubleMap.Entry<ResourceLocation> entry : Object2DoubleMaps.fastIterable(c.auxValues)) {
+                    out.put(entry.getKey(), entry.getDoubleValue());
+                }
+                return out;
+            }),
         Codec.unboundedMap(ResourceLocation.CODEC, CompoundTag.CODEC)
             .optionalFieldOf("aux_nbt", Map.of())
             .forGetter(c -> Map.copyOf(c.auxNbt)),
@@ -672,14 +733,14 @@ public final class PowerContainerImpl implements PowerContainer {
                 c.suppressedBySources.forEach((k, v) -> out.put(k, List.copyOf(v)));
                 return out;
             }),
-        Codec.unboundedMap(ResourceLocation.CODEC, Codec.INT.listOf())
+        Codec.unboundedMap(ResourceLocation.CODEC, AUX_NUMBER.listOf())
             .optionalFieldOf("aux_ints", Map.of())
             .forGetter(c -> {
-                if (c.auxInts.isEmpty()) return Map.of();
-                Map<ResourceLocation, List<Integer>> out = new HashMap<>(c.auxInts.size());
-                c.auxInts.forEach((k, v) -> {
-                    List<Integer> boxed = new ArrayList<>(v.length);
-                    for (int value : v) boxed.add(value);
+                if (c.auxTables.isEmpty()) return Map.of();
+                Map<ResourceLocation, List<Double>> out = new HashMap<>(c.auxTables.size());
+                c.auxTables.forEach((k, v) -> {
+                    List<Double> boxed = new ArrayList<>(v.length);
+                    for (double value : v) boxed.add(value);
                     out.put(k, boxed);
                 });
                 return out;
@@ -687,12 +748,15 @@ public final class PowerContainerImpl implements PowerContainer {
     ).apply(instance, (powers, aux, nbt, suppressed, tables) -> {
         PowerContainerImpl c = new PowerContainerImpl();
         powers.forEach((k, v) -> c.bySources.put(k, new HashSet<>(v)));
-        c.auxInt.putAll(aux);
+        aux.forEach((k, v) -> c.auxValues.put(k, Double.isFinite(v) ? v : 0.0));
         c.auxNbt.putAll(nbt);
         tables.forEach((k, v) -> {
-            int[] values = new int[v.size()];
-            for (int i = 0; i < values.length; i++) values[i] = v.get(i);
-            c.auxInts.put(k, values);
+            double[] values = new double[v.size()];
+            for (int i = 0; i < values.length; i++) {
+                double value = v.get(i);
+                values[i] = Double.isFinite(value) ? value : 0.0;
+            }
+            c.auxTables.put(k, values);
         });
         suppressed.forEach((k, v) -> c.suppressedBySources.put(k, new HashSet<>(v)));
         c.notifiedSuppressed = c.computeEffectiveSuppressed();

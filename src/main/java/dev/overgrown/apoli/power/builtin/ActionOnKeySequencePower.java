@@ -31,7 +31,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalInt;
+import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
@@ -129,33 +129,33 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
 
 
     @Override
-    public OptionalInt readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
+    public OptionalDouble readResource(ResourceLocation powerId, Config cfg, PowerContainer holder) {
         LivingEntity owner = holder.owner();
-        if (owner == null) return OptionalInt.of(0);
+        if (owner == null) return OptionalDouble.of(0);
         if (owner.level().isClientSide()) {
-            return OptionalInt.of(PowerResources.clientCooldown(holder, powerId));
+            return OptionalDouble.of(PowerResources.clientCooldown(holder, powerId));
         }
         PlayerState ps = states.get(owner.getUUID());
         SeqState st = ps == null ? null : ps.seqs.get(powerId);
-        return OptionalInt.of(st == null ? 0 : Math.max(0, st.cooldown));
+        return OptionalDouble.of(st == null ? 0 : Math.max(0, st.cooldown));
     }
 
     @Override
-    public OptionalInt writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, int value) {
+    public OptionalDouble writeResource(ResourceLocation powerId, Config cfg, PowerContainer holder, double value) {
         LivingEntity owner = holder.owner();
-        if (owner == null || owner.level().isClientSide()) return OptionalInt.empty();
-        int clamped = Math.max(0, Math.min(value, Math.max(PowerResources.cooldownTicks(cfg.cooldown, holder), 0)));
+        if (owner == null || owner.level().isClientSide()) return OptionalDouble.empty();
+        int clamped = Math.max(0, Math.min(PowerResources.whole(value), Math.max(PowerResources.cooldownTicks(cfg.cooldown, holder), 0)));
         states.computeIfAbsent(owner.getUUID(), u -> new PlayerState())
             .seqs.computeIfAbsent(powerId, k -> new SeqState()).cooldown = clamped;
         if (owner instanceof ServerPlayer player) {
             ApoliNetwork.sendActivated(player, new PowerActivatedS2C(powerId, clamped));
         }
-        return OptionalInt.of(clamped);
+        return OptionalDouble.of(clamped);
     }
 
     @Override
-    public OptionalInt resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
-        return OptionalInt.of(max ? Math.max(PowerResources.cooldownTicks(cfg.cooldown, holder), 0) : 0);
+    public OptionalDouble resourceBound(ResourceLocation powerId, Config cfg, PowerContainer holder, boolean max) {
+        return OptionalDouble.of(max ? Math.max(PowerResources.cooldownTicks(cfg.cooldown, holder), 0) : 0);
     }
 
     @Override

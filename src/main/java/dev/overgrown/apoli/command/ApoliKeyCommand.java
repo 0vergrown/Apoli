@@ -54,6 +54,11 @@ public final class ApoliKeyCommand {
                         .executes(ctx -> press(ctx, 1))
                         .then(Commands.argument("duration", IntegerArgumentType.integer(1))
                             .executes(ctx -> press(ctx, IntegerArgumentType.getInteger(ctx, "duration")))))))
+            .then(Commands.literal("hold")
+                .then(Commands.argument("targets", EntityArgument.entities())
+                    .then(Commands.argument("key", StringArgumentType.string())
+                        .suggests(KEY_SUGGESTIONS)
+                        .executes(ApoliKeyCommand::hold))))
             .then(Commands.literal("release")
                 .then(Commands.argument("targets", EntityArgument.entities())
                     .then(Commands.argument("key", StringArgumentType.string())
@@ -86,6 +91,16 @@ public final class ApoliKeyCommand {
         int count = targets.size();
         ctx.getSource().sendSuccess(() -> Component.literal(
             "Held " + key + " for " + duration + " tick(s) on " + count + " entit" + (count == 1 ? "y" : "ies")), true);
+        return count;
+    }
+
+    private static int hold(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
+        String key = StringArgumentType.getString(ctx, "key");
+        for (Entity target : targets) KeyDispatch.force(target, key, KeyDispatch.UNTIL_RELEASED, false);
+        int count = targets.size();
+        ctx.getSource().sendSuccess(() -> Component.literal(
+            "Holding " + key + " on " + count + " entit" + (count == 1 ? "y" : "ies") + " until released"), true);
         return count;
     }
 
