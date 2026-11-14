@@ -97,6 +97,7 @@ public final class ApoliIds {
     public static final ResourceLocation EXTRA_TRADES = Apoli.id("extra_trades");
     public static final ResourceLocation MODIFY_ANVIL = Apoli.id("modify_anvil");
     public static final ResourceLocation PREVENT_LEVEL_EVENT = Apoli.id("prevent_level_event");
+    public static final ResourceLocation ACTION_ON_ADVANCEMENT = Apoli.id("action_on_advancement");
 
     private ApoliIds() {}
 }
