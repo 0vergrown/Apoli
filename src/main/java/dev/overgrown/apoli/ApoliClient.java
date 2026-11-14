@@ -186,6 +186,13 @@ public final class ApoliClient implements ClientModInitializer {
                 mc.execute(() -> dev.overgrown.apoli.client.particle.AnchoredParticleClient.enqueue(payload));
             });
 
+        ClientPlayNetworking.registerGlobalReceiver(
+            dev.overgrown.apoli.network.payload.RayParticlesS2C.CHANNEL, (mc, handler, buf, sender) -> {
+                dev.overgrown.apoli.network.payload.RayParticlesS2C payload =
+                    dev.overgrown.apoli.network.payload.RayParticlesS2C.read(buf);
+                mc.execute(() -> dev.overgrown.apoli.client.particle.RayParticleClient.spawn(payload));
+            });
+
         dev.overgrown.apoli.power.builtin.InventoryPower.setClientLookup((holder, powerId) ->
             holder == net.minecraft.client.Minecraft.getInstance().player
                 ? dev.overgrown.apoli.client.ClientPowerState.powerInventory(powerId)

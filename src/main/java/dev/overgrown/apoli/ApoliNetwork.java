@@ -67,6 +67,16 @@ public final class ApoliNetwork {
         send(recipient, dev.overgrown.apoli.network.payload.AnchoredParticlesS2C.CHANNEL, payload::write);
     }
 
+    public static boolean canSendRayParticles(ServerPlayer recipient) {
+        return connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.RayParticlesS2C.CHANNEL);
+    }
+
+    public static void sendRayParticles(ServerPlayer recipient,
+                                        dev.overgrown.apoli.network.payload.RayParticlesS2C payload) {
+        send(recipient, dev.overgrown.apoli.network.payload.RayParticlesS2C.CHANNEL, payload::write);
+    }
+
     public static void sendResourceTables(ServerPlayer recipient,
                                           dev.overgrown.apoli.network.payload.SyncResourceTablesS2C payload) {
         if (connected(recipient)

@@ -17,6 +17,7 @@ import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.data.ExprVector;
 import dev.overgrown.apoli.data.FluidHandling;
 import dev.overgrown.apoli.data.ParticleEffect;
+import dev.overgrown.apoli.data.RayParticles;
 import dev.overgrown.apoli.data.ShapeType;
 import dev.overgrown.apoli.data.Space;
 import dev.overgrown.apoli.data.Vector;
@@ -33,6 +34,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -228,11 +230,18 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
     public static @Nullable Vec3 entityHit(Entity candidate, Vec3 origin, Vec3 dir, Vec3 end, double range,
                                            double rx, double ry, double rz, boolean cone, double coneCos) {
         if (cone) {
-            Vec3 center = candidate.getBoundingBox().getCenter();
-            Vec3 toEntity = center.subtract(origin);
-            double dist = toEntity.length();
+            AABB box = candidate.getBoundingBox();
+            Vec3 center = box.getCenter();
+            if (box.contains(origin)) return center;
+            double along = Mth.clamp((center.x - origin.x) * dir.x + (center.y - origin.y) * dir.y
+                + (center.z - origin.z) * dir.z, 0.0, range);
+            double nx = Mth.clamp(origin.x + dir.x * along, box.minX, box.maxX) - origin.x;
+            double ny = Mth.clamp(origin.y + dir.y * along, box.minY, box.maxY) - origin.y;
+            double nz = Mth.clamp(origin.z + dir.z * along, box.minZ, box.maxZ) - origin.z;
+            double dist = Math.sqrt(nx * nx + ny * ny + nz * nz);
             if (dist > range) return null;
-            if (dist > 1.0e-4 && toEntity.scale(1.0 / dist).dot(dir) < coneCos) return null;
+            if (dist > 1.0e-4 && (nx * dir.x + ny * dir.y + nz * dir.z) / dist < coneCos
+                && box.clip(origin, end).isEmpty()) return null;
             return center;
         }
         AABB targetBox = Math.max(rx, Math.max(ry, rz)) > 0
@@ -429,10 +438,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
             if (opts != null) {
                 double total = origin.distanceTo(rayEnd);
                 double step = Math.max(0.1, cfg.params.spacing.eval(source));
-                for (double t = 0; t < total; t += step) {
-                    Vec3 p = origin.add(dir.scale(t));
-                    serverLevel.sendParticles(opts, p.x, p.y, p.z, 1, 0, 0, 0, 0);
-                }
+                RayParticles.broadcast(serverLevel, opts, origin, dir, total, step);
             }
         }
 

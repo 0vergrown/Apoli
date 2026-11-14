@@ -51,6 +51,10 @@ import java.util.Map;
 public final class FeatureRenderers {
 
     private static final String[] NONE = new String[0];
+    private static final String[] ARMOR_HEAD = {"armor_head"};
+    private static final String[] ARMOR_CHEST = {"armor_chest"};
+    private static final String[] ARMOR_LEGS = {"armor_legs"};
+    private static final String[] ARMOR_FEET = {"armor_feet"};
     private static final Map<String, Class<?>> MAPPINGS = new LinkedHashMap<>();
 
     private static final ClassValue<String[]> KEYS = new ClassValue<>() {
@@ -135,6 +139,16 @@ public final class FeatureRenderers {
 
     public static String[] keysFor(Class<?> layerClass) {
         return KEYS.get(layerClass);
+    }
+
+    public static String[] armorSlotKeys(net.minecraft.world.entity.EquipmentSlot slot) {
+        return switch (slot) {
+            case HEAD -> ARMOR_HEAD;
+            case CHEST -> ARMOR_CHEST;
+            case LEGS -> ARMOR_LEGS;
+            case FEET -> ARMOR_FEET;
+            default -> NONE;
+        };
     }
 
     public static java.util.Set<String> names() {
