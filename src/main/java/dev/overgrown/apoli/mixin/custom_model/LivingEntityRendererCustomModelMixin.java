@@ -5,7 +5,6 @@ import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import dev.overgrown.apoli.client.render.CustomModelManager;
 import dev.overgrown.apoli.client.render.DynamicTextures;
 import dev.overgrown.apoli.client.render.LivingCustomModelLayer;
-import dev.overgrown.apoli.client.summon.CloneRenderer;
 import dev.overgrown.apoli.entity.summon.MinionEntity;
 import dev.overgrown.apoli.mixin.disguise.LivingEntityRendererAddLayerAccessor;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower;
@@ -32,7 +31,7 @@ public abstract class LivingEntityRendererCustomModelMixin<T extends LivingEntit
     private void apoli$addCustomModelLayer(EntityRendererProvider.Context context, M model, float shadowRadius,
                                            CallbackInfo ci) {
         Object self = this;
-        if (self instanceof PlayerRenderer || self instanceof CloneRenderer) return;
+        if (self instanceof PlayerRenderer) return;
         @SuppressWarnings("unchecked")
         LivingEntityRenderer<T, M> renderer = (LivingEntityRenderer<T, M>) self;
         ((LivingEntityRendererAddLayerAccessor) self).apoli$addLayer(new LivingCustomModelLayer<>(renderer));

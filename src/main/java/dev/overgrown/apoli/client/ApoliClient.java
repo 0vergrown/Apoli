@@ -149,6 +149,10 @@ public final class ApoliClient implements ClientModInitializer {
             dev.overgrown.apoli.network.payload.AnchoredParticlesS2C.TYPE, (payload, context) ->
                 context.client().execute(() -> dev.overgrown.apoli.client.particle.AnchoredParticleClient.enqueue(payload)));
 
+        ClientPlayNetworking.registerGlobalReceiver(
+            dev.overgrown.apoli.network.payload.RayParticlesS2C.TYPE, (payload, context) ->
+                context.client().execute(() -> dev.overgrown.apoli.client.particle.RayParticleClient.spawn(payload)));
+
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.ScaleSyncS2C.TYPE,
             (payload, context) -> context.client().execute(() -> {
                 if (context.client().level == null) return;
