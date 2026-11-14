@@ -109,6 +109,9 @@ public final class ApoliNetwork {
         PayloadTypeRegistry.playS2C().register(
             dev.overgrown.apoli.network.payload.AnchoredParticlesS2C.TYPE,
             dev.overgrown.apoli.network.payload.AnchoredParticlesS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(
+            dev.overgrown.apoli.network.payload.RayParticlesS2C.TYPE,
+            dev.overgrown.apoli.network.payload.RayParticlesS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(RopeCreateS2C.TYPE, RopeCreateS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(RopeDeleteS2C.TYPE, RopeDeleteS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(RopeVerletLengthS2C.TYPE, RopeVerletLengthS2C.STREAM_CODEC);
@@ -177,6 +180,16 @@ public final class ApoliNetwork {
 
     public static void sendAnchoredParticles(ServerPlayer recipient,
                                              dev.overgrown.apoli.network.payload.AnchoredParticlesS2C payload) {
+        ServerPlayNetworking.send(recipient, payload);
+    }
+
+    public static boolean canSendRayParticles(ServerPlayer recipient) {
+        return connected(recipient)
+            && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.RayParticlesS2C.TYPE);
+    }
+
+    public static void sendRayParticles(ServerPlayer recipient,
+                                        dev.overgrown.apoli.network.payload.RayParticlesS2C payload) {
         ServerPlayNetworking.send(recipient, payload);
     }
 
