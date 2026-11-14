@@ -33,7 +33,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public final class ApoliNetwork {
 
-    private static final String PROTOCOL_VERSION = "19";
+    private static final String PROTOCOL_VERSION = "20";
 
     private ApoliNetwork() {}
 
@@ -66,6 +66,8 @@ public final class ApoliNetwork {
             dev.overgrown.apoli.network.payload.MountOffsetS2C.STREAM_CODEC, ApoliNetwork::onMountOffset);
         registrar.playToClient(dev.overgrown.apoli.network.payload.AnchoredParticlesS2C.TYPE,
             dev.overgrown.apoli.network.payload.AnchoredParticlesS2C.STREAM_CODEC, ApoliNetwork::onAnchoredParticles);
+        registrar.playToClient(dev.overgrown.apoli.network.payload.RayParticlesS2C.TYPE,
+            dev.overgrown.apoli.network.payload.RayParticlesS2C.STREAM_CODEC, ApoliNetwork::onRayParticles);
         registrar.playToClient(DisguiseUpdateS2C.TYPE, DisguiseUpdateS2C.STREAM_CODEC, ApoliNetwork::onDisguiseUpdate);
         registrar.playToClient(dev.overgrown.apoli.network.payload.ScaleSyncS2C.TYPE,
             dev.overgrown.apoli.network.payload.ScaleSyncS2C.STREAM_CODEC, ApoliNetwork::onScaleSync);
@@ -199,6 +201,11 @@ public final class ApoliNetwork {
     private static void onAnchoredParticles(dev.overgrown.apoli.network.payload.AnchoredParticlesS2C payload,
                                             IPayloadContext ctx) {
         ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPayloadHandlers.onAnchoredParticles(payload));
+    }
+
+    private static void onRayParticles(dev.overgrown.apoli.network.payload.RayParticlesS2C payload,
+                                       IPayloadContext ctx) {
+        ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPayloadHandlers.onRayParticles(payload));
     }
 
     private static void onApplyVelocity(ApplyVelocityS2C payload, IPayloadContext ctx) {
@@ -366,6 +373,15 @@ public final class ApoliNetwork {
 
     public static void sendAnchoredParticles(ServerPlayer recipient,
                                              dev.overgrown.apoli.network.payload.AnchoredParticlesS2C payload) {
+        PacketDistributor.sendToPlayer(recipient, payload);
+    }
+
+    public static boolean canSendRayParticles(ServerPlayer recipient) {
+        return connected(recipient);
+    }
+
+    public static void sendRayParticles(ServerPlayer recipient,
+                                        dev.overgrown.apoli.network.payload.RayParticlesS2C payload) {
         PacketDistributor.sendToPlayer(recipient, payload);
     }
 

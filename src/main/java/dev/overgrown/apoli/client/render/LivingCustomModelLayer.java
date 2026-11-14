@@ -2,6 +2,8 @@ package dev.overgrown.apoli.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.overgrown.apoli.client.model.CustomModel;
+import dev.overgrown.apoli.client.summon.CloneRenderer;
+import dev.overgrown.apoli.entity.summon.CloneEntity;
 import dev.overgrown.apoli.entity.summon.MinionEntity;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.GeometryRender;
@@ -26,9 +28,10 @@ public class LivingCustomModelLayer<T extends LivingEntity, M extends EntityMode
     public void render(PoseStack pose, MultiBufferSource buffers, int light, T entity, float limbSwing,
                        float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
         List<ResolvedLayer> layers = CustomModelRenderPower.collectTextureOverlays(entity);
+        boolean slim = !layers.isEmpty() && entity instanceof CloneEntity clone && CloneRenderer.resolveSlim(clone);
         for (int i = 0; i < layers.size(); i++) {
             ResolvedLayer layer = layers.get(i);
-            TextureOverlays.render(this.getParentModel(), layer, DynamicTextures.resolve(layer.texture(false), entity),
+            TextureOverlays.render(this.getParentModel(), layer, DynamicTextures.resolve(layer.texture(slim), entity),
                 1.0F, ageInTicks, entity, pose, buffers, light);
         }
         if (entity instanceof MinionEntity) return;

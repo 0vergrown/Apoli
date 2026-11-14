@@ -2,6 +2,8 @@ package dev.overgrown.apoli.mixin.modelparts;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.blaze3d.vertex.PoseStack;
+import dev.overgrown.apoli.access.BodyEditFollow;
 import dev.overgrown.apoli.access.PartVisibilityUndo;
 import dev.overgrown.apoli.compat.entitymodelfeatures.EntityModelFeaturesCompat;
 import dev.overgrown.apoli.client.render.AnimationPlayer;
@@ -27,6 +29,7 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
+import org.joml.Quaternionf;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -42,7 +45,7 @@ import java.util.Map;
 
 @Mixin(HumanoidModel.class)
 @OnlyIn(Dist.CLIENT)
-public abstract class HumanoidModelModifyPartsMixin implements PartVisibilityUndo {
+public abstract class HumanoidModelModifyPartsMixin implements PartVisibilityUndo, BodyEditFollow {
 
     private static final String SETUP_ANIM = "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V";
 
@@ -84,6 +87,12 @@ public abstract class HumanoidModelModifyPartsMixin implements PartVisibilityUnd
     private byte[] apoli$visibilityStates = new byte[4];
     @Unique
     private int apoli$visibilityCount;
+    @Unique
+    private final float[] apoli$bodyBefore = new float[PoseMath.STRIDE];
+    @Unique
+    private final Quaternionf apoli$bodyTurn = new Quaternionf();
+    @Unique
+    private boolean apoli$bodyEdited;
 
     @Inject(method = SETUP_ANIM, at = @At("HEAD"))
     private void apoli$modifyPartsHead(LivingEntity entity, float f, float g, float h, float i, float j, CallbackInfo ci) {
@@ -133,6 +142,9 @@ public abstract class HumanoidModelModifyPartsMixin implements PartVisibilityUnd
 
     @Inject(method = SETUP_ANIM, at = @At("TAIL"))
     private void apoli$modifyPartsTail(LivingEntity entity, float f, float g, float h, float i, float j, CallbackInfo ci) {
+        HumanoidModel<?> edited = (HumanoidModel<?>) (Object) this;
+        boolean watchBody = !HandRenderPass.active();
+        if (watchBody) ModelPartLookup.read(edited.body, apoli$bodyBefore, 0);
         if (apoli$forcedCrouch) {
             ((HumanoidModel<?>) (Object) this).crouching = false;
             apoli$forcedCrouch = false;
@@ -196,6 +208,32 @@ public abstract class HumanoidModelModifyPartsMixin implements PartVisibilityUnd
             model.riding = apoli$savedRiding;
             apoli$poseOverridden = false;
         }
+        apoli$bodyEdited = watchBody && apoli$bodyMoved(edited.body);
+    }
+
+    @Unique
+    private boolean apoli$bodyMoved(ModelPart body) {
+        float[] before = apoli$bodyBefore;
+        return body.x != before[PoseMath.X] || body.y != before[PoseMath.Y] || body.z != before[PoseMath.Z]
+            || body.xRot != before[PoseMath.X_ROT] || body.yRot != before[PoseMath.Y_ROT]
+            || body.zRot != before[PoseMath.Z_ROT] || body.xScale != before[PoseMath.X_SCALE]
+            || body.yScale != before[PoseMath.Y_SCALE] || body.zScale != before[PoseMath.Z_SCALE];
+    }
+
+    @Override
+    public void apoli$followBodyEdit(PoseStack poseStack) {
+        if (!apoli$bodyEdited) return;
+        ModelPart body = ((HumanoidModel<?>) (Object) this).body;
+        float[] before = apoli$bodyBefore;
+        poseStack.translate(body.x / 16.0F, body.y / 16.0F, body.z / 16.0F);
+        poseStack.mulPose(apoli$bodyTurn.rotationZYX(body.zRot, body.yRot, body.xRot));
+        float sx = before[PoseMath.X_SCALE] == 0.0F ? 1.0F : body.xScale / before[PoseMath.X_SCALE];
+        float sy = before[PoseMath.Y_SCALE] == 0.0F ? 1.0F : body.yScale / before[PoseMath.Y_SCALE];
+        float sz = before[PoseMath.Z_SCALE] == 0.0F ? 1.0F : body.zScale / before[PoseMath.Z_SCALE];
+        if (sx != 1.0F || sy != 1.0F || sz != 1.0F) poseStack.scale(sx, sy, sz);
+        poseStack.mulPose(apoli$bodyTurn.rotationZYX(before[PoseMath.Z_ROT], before[PoseMath.Y_ROT],
+            before[PoseMath.X_ROT]).conjugate());
+        poseStack.translate(-before[PoseMath.X] / 16.0F, -before[PoseMath.Y] / 16.0F, -before[PoseMath.Z] / 16.0F);
     }
 
     @Unique

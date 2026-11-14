@@ -51,6 +51,10 @@ public final class ClientPayloadHandlers {
         dev.overgrown.apoli.client.particle.AnchoredParticleClient.enqueue(msg);
     }
 
+    public static void onRayParticles(dev.overgrown.apoli.network.payload.RayParticlesS2C msg) {
+        dev.overgrown.apoli.client.particle.RayParticleClient.spawn(msg);
+    }
+
     public static void onScaleSync(dev.overgrown.apoli.network.payload.ScaleSyncS2C payload) {
         net.minecraft.client.multiplayer.ClientLevel level = Minecraft.getInstance().level;
         if (level == null) return;
