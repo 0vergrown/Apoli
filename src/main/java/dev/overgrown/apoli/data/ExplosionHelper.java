@@ -8,6 +8,9 @@ import dev.overgrown.apoli.condition.context.BlockCtx;
 import dev.overgrown.apoli.data.expr.ExprPeer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.protocol.game.ClientboundExplodePacket;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
@@ -52,7 +55,17 @@ public final class ExplosionHelper {
                 entity -> condition.test(BiEntityCtx.of(self, entity, level)));
         }
         explosion.explode();
-        explosion.finalizeExplosion(true);
+        explosion.finalizeExplosion(false);
+        if (!explosion.interactsWithBlocks()) explosion.clearToBlow();
+        if (level instanceof ServerLevel serverLevel) broadcast(serverLevel, explosion, pos, power);
+    }
+
+    private static void broadcast(ServerLevel level, Explosion explosion, Vec3 pos, float power) {
+        for (ServerPlayer player : level.players()) {
+            if (player.distanceToSqr(pos.x, pos.y, pos.z) >= 4096.0) continue;
+            player.connection.send(new ClientboundExplodePacket(pos.x, pos.y, pos.z, power, explosion.getToBlow(),
+                explosion.getHitPlayers().get(player)));
+        }
     }
 
     public static @Nullable Entity attackerFor(@Nullable Entity entity) {
