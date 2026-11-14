@@ -406,6 +406,8 @@ public final class PowerTypes {
         PowerTypeRegistry.register(Apoli.id("modify_bounciness"), new ModifyBouncinessPower(), AliasingOptions.builder().addTypeAlias(Apoli.id("modify_block_bounciness")).build());
 
         PowerTypeRegistry.register(Apoli.id("modify_fog"), new ModifyFogPower(), AliasingOptions.builder().addTypeAlias(Apoli.id("blindness")).build());
+
+        PowerTypeRegistry.register(Apoli.id("action_on_advancement"), new ActionOnAdvancementPower());
     }
 
     private static AliasDefault<Boolean> selfGlowTarget(boolean value) {
