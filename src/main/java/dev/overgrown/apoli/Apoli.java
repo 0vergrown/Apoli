@@ -26,18 +26,7 @@ import dev.overgrown.apoli.power.PoweredEntities;
 import dev.overgrown.apoli.power.PowerType;
 import dev.overgrown.apoli.power.PowerTypeRegistry;
 import dev.overgrown.apoli.power.PowerTypes;
-import dev.overgrown.apoli.power.builtin.ActionOnCallbackPower;
-import dev.overgrown.apoli.power.builtin.ActionOnKeyPressPower;
-import dev.overgrown.apoli.power.builtin.FireProjectilePower;
-import dev.overgrown.apoli.power.builtin.InventoryPower;
-import dev.overgrown.apoli.power.builtin.ActionOnUseHandler;
-import dev.overgrown.apoli.power.builtin.EntitySetPower;
-import dev.overgrown.apoli.power.builtin.HitActionHandler;
-import dev.overgrown.apoli.power.builtin.ModifyDamageHandler;
-import dev.overgrown.apoli.power.builtin.ModifyProjectileDamageHandler;
-import dev.overgrown.apoli.power.builtin.PreventSleepHandler;
-import dev.overgrown.apoli.power.builtin.SleepDecisionHolder;
-import dev.overgrown.apoli.power.builtin.TogglePower;
+import dev.overgrown.apoli.power.builtin.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
@@ -52,11 +41,11 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.entity.player.AdvancementEvent;
 import net.neoforged.neoforge.network.event.RegisterConfigurationTasksEvent;
 import net.neoforged.neoforge.server.permission.events.PermissionGatherEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
-import dev.overgrown.apoli.power.builtin.EffectImmunityPower;
 import dev.overgrown.apoli.power.PowerResources;
 import net.neoforged.neoforge.event.entity.living.LivingConversionEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
@@ -559,6 +548,7 @@ public final class Apoli {
             }
             if (impl.isEmpty()) PoweredEntities.unregister(entity);
         });
+
         dev.overgrown.apoli.power.PowerTypeUsage.endSweep();
         dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.endScan();
         dev.overgrown.apoli.block.GhostBlocks.tick(event.getServer());
@@ -568,6 +558,12 @@ public final class Apoli {
         dev.overgrown.apoli.loader.LoadProblems.tick(event.getServer());
         EntitySetPower.flushPendingRemovals();
         EntitySetPower.flushSync(event.getServer());
+    }
+
+    @SubscribeEvent
+    void onPlayerAdvancement(AdvancementEvent.AdvancementEarnEvent event) {
+        if (event.getEntity().level().isClientSide()) return;
+        ActionOnAdvancementHandler.run((ServerPlayer) event.getEntity(), event.getAdvancement());
     }
 
     public static void resumePowers(net.minecraft.world.entity.Entity entity) {
