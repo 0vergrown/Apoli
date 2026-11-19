@@ -44,11 +44,13 @@ public record CustomParticleOptions(
     ParticleFrameLayout frameLayout,
     Expression colorVariationExpr,
     Expression hueVariationExpr,
-    boolean alphaBleed
+    boolean alphaBleed,
+    Expression stretchExpr
 ) implements ParticleOptions {
 
     private static final Expression NO_ROLL = Expression.constant(0.0);
     private static final Expression ZERO = Expression.constant(0.0);
+    private static final Expression ONE = Expression.constant(1.0);
     private static final Expression DEFAULT_LIFETIME = Expression.constant(20.0);
     private static final Expression DEFAULT_SIZE = Expression.constant(0.2);
     private static final Expression DEFAULT_FRICTION = Expression.constant(0.98);
@@ -70,10 +72,16 @@ public record CustomParticleOptions(
     private static final int LAYOUT_SHIFT = 6;
     private static final int LAYOUT_MASK = 3;
     private static final int FLAG_ALPHA_BLEED = 256;
+    private static final int FLAG_FACING_HORIZONTAL = 512;
+    private static final int FLAG_FACING_VELOCITY = 1024;
+    private static final int STRETCH_SHIFT = 12;
+    private static final int STRETCH_MASK = 4095;
+    private static final float STRETCH_STEPS = 16.0F;
 
     private record Extra(ParticleBlend blend, ParticleFacing facing, Easing easing,
                          ParticleFrameLayout frameLayout, Expression sizeVariation,
-                         Expression colorVariation, Expression hueVariation, boolean alphaBleed) {}
+                         Expression colorVariation, Expression hueVariation, boolean alphaBleed,
+                         Expression stretch) {}
 
     private static final MapCodec<CustomParticleOptions> BODY_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
         IdCodecs.ID.fieldOf("texture").forGetter(CustomParticleOptions::texture),
@@ -97,7 +105,7 @@ public record CustomParticleOptions(
         new CustomParticleOptions(texture, lifetime, lifetimeVariation, size, ZERO, endSize, color, endColor, gravity,
             friction, roll, rollSpeed, frames, frameTime, loopFrames, physics, emissive,
             ParticleBlend.TRANSLUCENT, ParticleFacing.CAMERA, Easing.LINEAR, ParticleFrameLayout.AUTO, ZERO, ZERO,
-            false)));
+            false, ONE)));
 
     private static final MapCodec<Extra> EXTRA_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
         ParticleBlend.CODEC.optionalFieldOf("blend", ParticleBlend.TRANSLUCENT).forGetter(Extra::blend),
@@ -107,14 +115,15 @@ public record CustomParticleOptions(
         Expression.FLOAT_OR_EXPR.optionalFieldOf("size_variation", ZERO).forGetter(Extra::sizeVariation),
         Expression.FLOAT_OR_EXPR.optionalFieldOf("color_variation", ZERO).forGetter(Extra::colorVariation),
         Expression.FLOAT_OR_EXPR.optionalFieldOf("hue_variation", ZERO).forGetter(Extra::hueVariation),
-        Codec.BOOL.optionalFieldOf("alpha_bleed", false).forGetter(Extra::alphaBleed)
+        Codec.BOOL.optionalFieldOf("alpha_bleed", false).forGetter(Extra::alphaBleed),
+        Expression.FLOAT_OR_EXPR.optionalFieldOf("stretch", ONE).forGetter(Extra::stretch)
     ).apply(instance, Extra::new));
 
     public static final Codec<CustomParticleOptions> CODEC = Codec.mapPair(BODY_CODEC, EXTRA_CODEC).xmap(
         pair -> pair.getFirst().withExtra(pair.getSecond()),
         options -> Pair.of(options, new Extra(options.blend(), options.facing(), options.easing(),
             options.frameLayout(), options.sizeVariationExpr(), options.colorVariationExpr(),
-            options.hueVariationExpr(), options.alphaBleed()))).codec();
+            options.hueVariationExpr(), options.alphaBleed(), options.stretchExpr()))).codec();
 
     public static final Deserializer<CustomParticleOptions> DESERIALIZER = new Deserializer<>() {
         @Override
@@ -134,14 +143,14 @@ public record CustomParticleOptions(
         return new CustomParticleOptions(texture, DEFAULT_LIFETIME, ZERO, DEFAULT_SIZE, ZERO, Optional.empty(),
             0xFFFFFFFF, Optional.empty(), ZERO, DEFAULT_FRICTION, NO_ROLL, NO_ROLL, ZERO, ZERO, Optional.empty(),
             false, false, ParticleBlend.TRANSLUCENT, ParticleFacing.CAMERA, Easing.LINEAR,
-            ParticleFrameLayout.AUTO, ZERO, ZERO, false);
+            ParticleFrameLayout.AUTO, ZERO, ZERO, false, ONE);
     }
 
     private CustomParticleOptions withExtra(Extra extra) {
         return new CustomParticleOptions(texture, lifetimeExpr, lifetimeVariationExpr, sizeExpr, extra.sizeVariation(),
             endSizeExpr, color, endColor, gravityExpr, frictionExpr, roll, rollSpeed, framesExpr, frameTimeExpr,
             loopFrames, physics, emissive, extra.blend(), extra.facing(), extra.easing(), extra.frameLayout(),
-            extra.colorVariation(), extra.hueVariation(), extra.alphaBleed());
+            extra.colorVariation(), extra.hueVariation(), extra.alphaBleed(), extra.stretch());
     }
 
     public int lifetime() {
@@ -188,6 +197,10 @@ public record CustomParticleOptions(
         return (float) hueVariationExpr.eval((Entity) null);
     }
 
+    public float stretch() {
+        return (float) stretchExpr.eval((Entity) null);
+    }
+
     public float endSizeOr() {
         return endSizeExpr.isPresent() ? (float) endSizeExpr.get().eval((Entity) null) : size();
     }
@@ -199,7 +212,8 @@ public record CustomParticleOptions(
     public boolean dynamic() {
         return varies(lifetimeExpr) || varies(lifetimeVariationExpr) || varies(sizeExpr) || varies(sizeVariationExpr)
             || (endSizeExpr.isPresent() && varies(endSizeExpr.get())) || varies(gravityExpr) || varies(frictionExpr)
-            || varies(framesExpr) || varies(frameTimeExpr) || varies(colorVariationExpr) || varies(hueVariationExpr);
+            || varies(framesExpr) || varies(frameTimeExpr) || varies(colorVariationExpr) || varies(hueVariationExpr)
+            || varies(stretchExpr);
     }
 
     public CustomParticleOptions bake(@Nullable Entity actor) {
@@ -207,7 +221,7 @@ public record CustomParticleOptions(
             bake(sizeExpr, actor), bake(sizeVariationExpr, actor), endSizeExpr.map(e -> bake(e, actor)), color,
             endColor, bake(gravityExpr, actor), bake(frictionExpr, actor), roll, rollSpeed, bake(framesExpr, actor),
             bake(frameTimeExpr, actor), loopFrames, physics, emissive, blend, facing, easing, frameLayout,
-            bake(colorVariationExpr, actor), bake(hueVariationExpr, actor), alphaBleed);
+            bake(colorVariationExpr, actor), bake(hueVariationExpr, actor), alphaBleed, bake(stretchExpr, actor));
     }
 
     private static boolean varies(Expression expression) {
@@ -216,6 +230,32 @@ public record CustomParticleOptions(
 
     private static Expression bake(Expression expression, @Nullable Entity actor) {
         return expression.constantValue().isPresent() ? expression : Expression.constant(expression.eval(actor));
+    }
+
+    private static int facingFlags(ParticleFacing facing) {
+        return switch (facing) {
+            case VERTICAL -> FLAG_FACING_VERTICAL;
+            case HORIZONTAL -> FLAG_FACING_HORIZONTAL;
+            case VELOCITY -> FLAG_FACING_VELOCITY;
+            default -> 0;
+        };
+    }
+
+    private static ParticleFacing facingOf(int flags) {
+        if ((flags & FLAG_FACING_VERTICAL) != 0) return ParticleFacing.VERTICAL;
+        if ((flags & FLAG_FACING_HORIZONTAL) != 0) return ParticleFacing.HORIZONTAL;
+        if ((flags & FLAG_FACING_VELOCITY) != 0) return ParticleFacing.VELOCITY;
+        return ParticleFacing.CAMERA;
+    }
+
+    private static int stretchBits(float stretch) {
+        if (stretch == 1.0F || !Float.isFinite(stretch)) return 0;
+        return Math.max(1, Math.min(STRETCH_MASK, Math.round(stretch * STRETCH_STEPS)));
+    }
+
+    private static float stretchOf(int flags) {
+        int bits = (flags >> STRETCH_SHIFT) & STRETCH_MASK;
+        return bits == 0 ? 1.0F : bits / STRETCH_STEPS;
     }
 
     @Override
@@ -238,7 +278,8 @@ public record CustomParticleOptions(
             | (physics ? FLAG_PHYSICS : 0)
             | (emissive ? FLAG_EMISSIVE : 0)
             | (blend == ParticleBlend.ADDITIVE ? FLAG_ADDITIVE : 0)
-            | (facing == ParticleFacing.VERTICAL ? FLAG_FACING_VERTICAL : 0)
+            | facingFlags(facing)
+            | (stretchBits(stretch()) << STRETCH_SHIFT)
             | (loopFrames.isPresent() ? FLAG_LOOP_SET : 0)
             | (alphaBleed ? FLAG_ALPHA_BLEED : 0)
             | (frameLayout.ordinal() << LAYOUT_SHIFT);
@@ -278,8 +319,9 @@ public record CustomParticleOptions(
             Optional.of(endSize), color, Optional.of(endColor), gravity, friction, roll, rollSpeed, frames, frameTime,
             loopFrames, (flags & FLAG_PHYSICS) != 0, (flags & FLAG_EMISSIVE) != 0,
             (flags & FLAG_ADDITIVE) != 0 ? ParticleBlend.ADDITIVE : ParticleBlend.TRANSLUCENT,
-            (flags & FLAG_FACING_VERTICAL) != 0 ? ParticleFacing.VERTICAL : ParticleFacing.CAMERA,
-            easing, layout, colorVariation, hueVariation, (flags & FLAG_ALPHA_BLEED) != 0);
+            facingOf(flags),
+            easing, layout, colorVariation, hueVariation, (flags & FLAG_ALPHA_BLEED) != 0,
+            Expression.constant(stretchOf(flags)));
     }
 
     @Override

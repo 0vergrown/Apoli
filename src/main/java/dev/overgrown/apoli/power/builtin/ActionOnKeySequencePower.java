@@ -64,6 +64,7 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
 
     private static final class PlayerState {
         final Set<String> heldLast = new HashSet<>();
+        final List<String> edges = new ArrayList<>(4);
         final Map<ResourceLocation, SeqState> seqs = new HashMap<>();
         final List<ResourceLocation> ids = new ArrayList<>(4);
         final Map<ResourceLocation, Config> configs = new HashMap<>();
@@ -180,8 +181,10 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
 
         boolean anyStorage = !holder.powersOfType(ApoliIds.POWER_STORAGE).isEmpty();
         EntityCtx ctx = new EntityCtx(player, level);
-        Set<String> held = HeldKeys.serverHeldSet(player.getUUID());
-        List<String> edges = edges(held, ps.heldLast);
+        UUID uuid = player.getUUID();
+        long now = player.server.getTickCount();
+        Set<String> held = HeldKeys.serverHeldSet(uuid);
+        List<String> edges = edges(ps, uuid, held, now);
         ps.heldLast.clear();
         ps.heldLast.addAll(held);
 
@@ -201,7 +204,7 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
             for (int k = 0; k < cfg.keys.size(); k++) {
                 FunctionalKey fk = cfg.keys.get(k);
                 String keyName = fk.key().key();
-                boolean down = held.contains(keyName);
+                boolean down = down(held, uuid, keyName, now);
                 boolean edge = edges != null && edges.contains(keyName);
                 if (fk.key().continuous() ? down : edge) fk.action().ifPresent(a -> a.run(ctx));
             }
@@ -210,7 +213,7 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
             if (st.progress > 0 || st.holdLeft > 0) st.sinceAdvance++;
 
             if (st.holdLeft > 0) {
-                if (!held.contains(cfg.atomKeys.get(st.progress - 1))) {
+                if (!down(held, uuid, cfg.atomKeys.get(st.progress - 1), now)) {
                     breakRun(cfg, st, ctx);
                     continue;
                 }
@@ -332,16 +335,28 @@ public final class ActionOnKeySequencePower extends PowerType<ActionOnKeySequenc
         ApoliNetwork.sendActivated(player, new PowerActivatedS2C(powerId, ticks));
     }
 
-    private static List<String> edges(Set<String> held, Set<String> heldLast) {
-        if (held.isEmpty()) return null;
-        List<String> out = null;
+    private static boolean down(Set<String> held, UUID uuid, String key, long now) {
+        return held.contains(key) || HeldKeys.justReleased(uuid, key, now);
+    }
+
+    private static List<String> edges(PlayerState ps, UUID uuid, Set<String> held, long now) {
+        List<String> out = ps.edges;
+        out.clear();
+        HeldKeys.drainPresses(uuid, now, out);
+        int logged = out.size();
         for (String key : held) {
-            if (heldLast.contains(key)) continue;
-            if (out == null) out = new ArrayList<>(2);
+            if (ps.heldLast.contains(key) || loggedPress(out, logged, key)) continue;
             out.add(key);
         }
-        if (out != null && out.size() > 1) Collections.sort(out);
-        return out;
+        if (out.size() - logged > 1) Collections.sort(out.subList(logged, out.size()));
+        return out.isEmpty() ? null : out;
+    }
+
+    private static boolean loggedPress(List<String> presses, int logged, String key) {
+        for (int i = 0; i < logged; i++) {
+            if (presses.get(i).equals(key)) return true;
+        }
+        return false;
     }
 
     private boolean feed(String key, Config cfg, SeqState state, EntityCtx ctx) {

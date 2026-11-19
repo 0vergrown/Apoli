@@ -224,6 +224,20 @@ public final class ApoliNetwork {
         }
     }
 
+    public static void sendPossession(ServerPlayer recipient, dev.overgrown.apoli.network.payload.PossessionSyncS2C payload) {
+        if (connected(recipient) && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.PossessionSyncS2C.CHANNEL)) {
+            send(recipient, dev.overgrown.apoli.network.payload.PossessionSyncS2C.CHANNEL, payload::write);
+        }
+    }
+
+    public static void broadcastPossession(ServerPlayer possessor, Entity host,
+                                           dev.overgrown.apoli.network.payload.PossessionSyncS2C payload) {
+        java.util.Set<ServerPlayer> recipients = new java.util.HashSet<>(PlayerLookup.tracking(possessor));
+        recipients.addAll(PlayerLookup.tracking(host));
+        recipients.add(possessor);
+        for (ServerPlayer recipient : recipients) sendPossession(recipient, payload);
+    }
+
     public static void sendLabel(ServerPlayer recipient, dev.overgrown.apoli.network.payload.LabelUpdateS2C payload) {
         if (connected(recipient) && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.LabelUpdateS2C.CHANNEL)) {
             send(recipient, dev.overgrown.apoli.network.payload.LabelUpdateS2C.CHANNEL, payload::write);

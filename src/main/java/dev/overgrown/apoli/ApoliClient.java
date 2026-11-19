@@ -253,6 +253,11 @@ public final class ApoliClient implements ClientModInitializer {
             mc.execute(() -> dev.overgrown.apoli.client.ClientLabelState.apply(payload.entityId(), payload.texts()));
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.PossessionSyncS2C.CHANNEL, (mc, handler, buf, sender) -> {
+            dev.overgrown.apoli.network.payload.PossessionSyncS2C payload = dev.overgrown.apoli.network.payload.PossessionSyncS2C.read(buf);
+            mc.execute(() -> dev.overgrown.apoli.client.possession.ClientPossession.apply(payload.possessorId(), payload.hostId()));
+        });
+
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.ForceKeyS2C.CHANNEL, (mc, handler, buf, sender) -> {
             dev.overgrown.apoli.network.payload.ForceKeyS2C payload = dev.overgrown.apoli.network.payload.ForceKeyS2C.read(buf);
             mc.execute(() -> dev.overgrown.apoli.client.ForcedKeys.force(payload.key(), payload.duration(), payload.release()));
@@ -377,6 +382,7 @@ public final class ApoliClient implements ClientModInitializer {
             RopeClientManager.tick();
             dev.overgrown.apoli.client.TextOverlayRenderer.tick();
             dev.overgrown.apoli.client.disguise.ClientDisguiseManager.tick(mc);
+            dev.overgrown.apoli.client.possession.ClientPossession.tick(mc);
             if (dev.overgrown.apoli.compat.ModCompat.FIGURA) {
                 dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.tick(mc);
             }
@@ -424,6 +430,7 @@ public final class ApoliClient implements ClientModInitializer {
         dev.overgrown.apoli.client.BlockedKeys.clear();
         dev.overgrown.apoli.client.CursorSpeedState.reset();
         dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
+        dev.overgrown.apoli.client.possession.ClientPossession.clear();
         dev.overgrown.apoli.client.skill.ClientSkillState.clear();
         dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.clear();
         dev.overgrown.apoli.client.ClientProtocolState.reset();

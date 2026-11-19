@@ -17,6 +17,11 @@ public abstract class PlayerDimensionsScaleMixin {
     @Inject(method = "getDimensions", at = @At("RETURN"), cancellable = true)
     private void apoli$scaleDimensions(Pose pose, CallbackInfoReturnable<EntityDimensions> cir) {
         Entity self = (Entity) (Object) this;
+        EntityDimensions possessed = dev.overgrown.apoli.entity.possession.Possession.hostDimensions(self);
+        if (possessed != null) {
+            cir.setReturnValue(possessed);
+            return;
+        }
         if (Scales.untouched(self)) return;
         float width = Scales.applied(self, ScaleTypes.HITBOX_WIDTH);
         float height = Scales.applied(self, ScaleTypes.HITBOX_HEIGHT);

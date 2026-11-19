@@ -37,6 +37,7 @@
     "flag.ConduitWaterBreathingMixin",
     "flag.EffectImmunityMixin",
     "flag.EntityFlagMixin",
+    "flag.PlayerKnownMovementMixin",
     "flag.EntityIsInvisibleMixin",
     "flag.EntityIsInWallMixin",
     "flag.EntityStuckSpeedMixin",
@@ -120,6 +121,11 @@
     "scale.EntityScaleMixin",
     "scale.EntitySolidHitboxMixin",
     "scale.LivingEntityScaleMixin",
+    "possession.EntityPossessionMixin",
+    "possession.LivingEntityPossessionMixin",
+    "possession.MobPossessionMixin",
+    "possession.PlayerPossessionMixin",
+    "possession.ProjectilePossessionMixin",
     "scale.PlayerDimensionsScaleMixin",
     "sound.EntityPlaySoundMixin",
     "sound.LivingEntitySoundMixin",
@@ -178,6 +184,8 @@
     "disguise.LivingEntitySwingDisguiseMixin",
     "disguise.PlayerRendererDisguiseSkinMixin",
     "disguise.WalkAnimationStateAccessor",
+    "possession.EntityRenderDispatcherPossessionMixin",
+    "possession.PlayerRendererPossessionMixin",
     "effects.MobEffectTextureManagerCustomEffectSpriteMixin",
     "effects.TextureAtlasHolderInvoker",
     "emissive.EntityRendererEmissiveMixin",
@@ -222,6 +230,7 @@
     "keybinding.KeyMappingCategoryAccessor",
     "keybinding.KeyMappingClickCountAccessor",
     "keybinding.KeyMappingForcePressMixin",
+    "keybinding.KeyMappingReleaseCountMixin",
     "keybinding.OptionsAccessor",
     "keybinding.OptionsRetainKeybindsMixin",
     "label.EntityRendererLabelMixin",
@@ -265,7 +274,8 @@
     "tick.LevelRendererTickRateMixin",
     "tick.LivingEntityTickRateMixin",
     "tick.LocalPlayerTickRateMixin",
-    "power.ClientLevelLevelEventMixin"
+    "power.ClientLevelLevelEventMixin",
+    "flag.PlayerJumpSyncMixin"
   ],
   "injectors": {
     "defaultRequire": 1

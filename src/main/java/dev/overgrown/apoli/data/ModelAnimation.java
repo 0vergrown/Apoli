@@ -57,6 +57,11 @@ public record ModelAnimation(List<Entry> entries) {
 
     @Nullable
     public Entry select(Entity entity) {
+        int index = selectIndex(entity);
+        return index < 0 ? null : this.entries.get(index);
+    }
+
+    public int selectIndex(Entity entity) {
         EntityCtx ctx = null;
         for (int i = 0; i < this.entries.size(); i++) {
             Entry entry = this.entries.get(i);
@@ -64,9 +69,9 @@ public record ModelAnimation(List<Entry> entries) {
                 if (ctx == null) ctx = new EntityCtx(entity, entity.level());
                 if (!passes(entry, ctx)) continue;
             }
-            return entry;
+            return i;
         }
-        return null;
+        return -1;
     }
 
     private static boolean passes(Entry entry, EntityCtx ctx) {

@@ -43,6 +43,8 @@ public final class EntityConditions {
             AliasingOptions.builder().addTypeAlias(Apoli.id("set_size")).build()
         );
         ConditionTypes.ENTITY.register(Apoli.id("grabbed"), new GrabbedCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("possessing"), new PossessingCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("possessed"), new PossessedCondition());
         ConditionTypes.ENTITY.register(
             Apoli.id("in_entity_set"),
             new EntitySetMembershipCondition(),

@@ -117,6 +117,7 @@ public final class Apoli implements ModInitializer {
             powerLoader.attachServer(server);
             keybindLoader.attachServer(server);
             dev.overgrown.apoli.entity.GrabManager.clearAll();
+            dev.overgrown.apoli.entity.possession.PossessionManager.clearAll();
             dev.overgrown.apoli.block.GhostBlocks.clear();
             dev.overgrown.apoli.block.BlockGlows.clear();
         });
@@ -337,6 +338,10 @@ public final class Apoli implements ModInitializer {
                     dev.overgrown.apoli.radial.RadialMenuManager.select(player, payload.nonce(), payload.index()));
             });
 
+        ServerPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.JumpC2S.CHANNEL,
+            (server, player, handler, buf, sender) ->
+                server.execute(() -> dev.overgrown.apoli.power.builtin.ModifyJumpHandler.onPlayerJumped(player)));
+
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             HeldKeys.clearServer(handler.player.getUUID());
             dev.overgrown.apoli.entity.OfflinePlayers.forget(handler.player.getUUID());
@@ -519,6 +524,7 @@ public final class Apoli implements ModInitializer {
         dev.overgrown.apoli.entity.LabelManager.setBroadcaster((entity, texts) ->
             ApoliNetwork.broadcastLabel(entity, new dev.overgrown.apoli.network.payload.LabelUpdateS2C(entity.getId(), texts)));
         EntityTrackingEvents.START_TRACKING.register((trackedEntity, player) -> {
+            dev.overgrown.apoli.entity.possession.PossessionManager.syncTo(player, trackedEntity);
             dev.overgrown.apoli.entity.disguise.DisguiseData disguise =
                 dev.overgrown.apoli.entity.disguise.DisguiseManager.get(trackedEntity.getUUID());
             if (disguise != null) {
@@ -534,6 +540,7 @@ public final class Apoli implements ModInitializer {
         });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             dev.overgrown.apoli.entity.disguise.DisguiseManager.onPlayerLeave(handler.player.getUUID());
+            dev.overgrown.apoli.entity.possession.PossessionManager.end(handler.player);
             dev.overgrown.apoli.entity.LabelManager.onEntityGone(handler.player.getUUID());
             dev.overgrown.apoli.action.builtin.entity.TextAction.onPlayerLeave(handler.player.getUUID());
             dev.overgrown.apoli.entity.PlayerModelTypes.remove(handler.player.getUUID());
@@ -551,6 +558,7 @@ public final class Apoli implements ModInitializer {
         dev.overgrown.apoli.keybind.HeldKeys.tickForced(server);
         dev.overgrown.apoli.rope.RopeManager.tick(server);
         dev.overgrown.apoli.entity.GrabManager.tick(server);
+        dev.overgrown.apoli.entity.possession.PossessionManager.tick(server);
         dev.overgrown.apoli.entity.ProjectileTickManager.tick(server);
         dev.overgrown.apoli.tick.TickRates.serverTick(server);
         boolean forcedKeys = dev.overgrown.apoli.keybind.HeldKeys.anyForced();

@@ -180,6 +180,11 @@ public final class GeometryRenderer {
 
     public static void draw(GeometryRender render, CustomModel model, PoseStack pose, MultiBufferSource buffers,
                             int light, @Nullable Entity subject) {
+        draw(render, model, pose, buffers, light, subject, 1.0F);
+    }
+
+    public static void draw(GeometryRender render, CustomModel model, PoseStack pose, MultiBufferSource buffers,
+                            int light, @Nullable Entity subject, float alphaScale) {
         VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forGeometry(render.mode(),
             DynamicTextures.resolve(render.texture(), subject), ModelPartAnimator.ageInTicks(subject), render.scrollSpeed()));
         dev.overgrown.apoli.data.Vector offset = render.offset();
@@ -195,7 +200,7 @@ public final class GeometryRenderer {
             }
         }
         model.root().render(pose, consumer, light, OverlayTexture.NO_OVERLAY,
-            render.red(), render.green(), render.blue(), render.alpha());
+            render.red(), render.green(), render.blue(), render.alpha() * alphaScale);
         if (shifted || scaled) {
             pose.popPose();
         }
