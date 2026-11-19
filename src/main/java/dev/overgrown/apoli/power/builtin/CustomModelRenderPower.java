@@ -65,7 +65,8 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         Optional<ModelAnimation> animations,
         float scrollSpeed,
         boolean bindBodyParts,
-        Vector offset
+        Vector offset,
+        Optional<Boolean> visibleWhileInvisible
     ) {
         @Nullable
         public ResourceLocation wide() {
@@ -89,7 +90,8 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         float alpha,
         boolean showFirstPerson,
         float scale,
-        float scrollSpeed
+        float scrollSpeed,
+        boolean visibleWhileInvisible
     ) {
         public ResourceLocation texture(boolean slimModel) {
             return slimModel ? slim : wide;
@@ -115,7 +117,8 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         Optional<ModelAnimation> animations,
         float scrollSpeed,
         boolean bindBodyParts,
-        Vector offset
+        Vector offset,
+        boolean visibleWhileInvisible
     ) {}
 
     private record Base(
@@ -137,7 +140,8 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         float scale
     ) {}
 
-    private record Extras(Optional<ModelAnimation> animations, float scrollSpeed, boolean bindBodyParts, Vector offset) {}
+    private record Extras(Optional<ModelAnimation> animations, float scrollSpeed, boolean bindBodyParts, Vector offset,
+                          Optional<Boolean> visibleWhileInvisible) {}
 
     private static final MapCodec<Base> BASE_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
         Mode.CODEC.optionalFieldOf("mode", Mode.TEXTURE).forGetter(Base::mode),
@@ -162,7 +166,8 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
         LoggedOptionalField.of("animations", ModelAnimation.CODEC).forGetter(Extras::animations),
         LoggedOptionalField.of("scroll_speed", Codec.FLOAT, 0.0F).forGetter(Extras::scrollSpeed),
         LoggedOptionalField.of("bind_body_parts", Codec.BOOL, true).forGetter(Extras::bindBodyParts),
-        LoggedOptionalField.of("offset", Vector.CODEC, Vector.ZERO).forGetter(Extras::offset)
+        LoggedOptionalField.of("offset", Vector.CODEC, Vector.ZERO).forGetter(Extras::offset),
+        LoggedOptionalField.of("visible_while_invisible", Codec.BOOL).forGetter(Extras::visibleWhileInvisible)
     ).apply(instance, Extras::new));
 
     private static final MapCodec<Config> CONFIG_CODEC =
@@ -170,14 +175,16 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
             .xmap(
                 pair -> merge(pair.getFirst(), pair.getSecond()),
                 config -> com.mojang.datafixers.util.Pair.of(split(config),
-                    new Extras(config.animations(), config.scrollSpeed(), config.bindBodyParts(), config.offset()))
+                    new Extras(config.animations(), config.scrollSpeed(), config.bindBodyParts(), config.offset(),
+                        config.visibleWhileInvisible()))
             );
 
     private static Config merge(Base base, Extras extras) {
         return new Config(base.mode(), base.wideTexture(), base.slimTexture(), base.model(), base.texture(),
             base.renderAsOverlay(), base.hideCape(), base.hiddenSlots(), base.renderType(), base.bodyParts(),
             base.red(), base.green(), base.blue(), base.alpha(), base.showFirstPerson(), base.scale(),
-            extras.animations(), extras.scrollSpeed(), extras.bindBodyParts(), extras.offset());
+            extras.animations(), extras.scrollSpeed(), extras.bindBodyParts(), extras.offset(),
+            extras.visibleWhileInvisible());
     }
 
     private static Base split(Config config) {
@@ -284,7 +291,8 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
             }
             ResourceLocation slim = cfg.slim();
             out.add(new ResolvedLayer(wide, slim != null ? slim : wide, cfg.renderType(), cfg.bodyParts(),
-                cfg.red(), cfg.green(), cfg.blue(), cfg.alpha(), cfg.showFirstPerson(), cfg.scale(), cfg.scrollSpeed()));
+                cfg.red(), cfg.green(), cfg.blue(), cfg.alpha(), cfg.showFirstPerson(), cfg.scale(), cfg.scrollSpeed(),
+                cfg.visibleWhileInvisible().orElse(false)));
         });
         return out;
     }
@@ -307,7 +315,7 @@ public final class CustomModelRenderPower extends PowerType<CustomModelRenderPow
     private static GeometryRender toRender(Config cfg) {
         return new GeometryRender(cfg.model().get(), cfg.texture().get(), cfg.renderType(), cfg.bodyParts(),
             cfg.red(), cfg.green(), cfg.blue(), cfg.alpha(), cfg.showFirstPerson(), cfg.scale(), cfg.renderAsOverlay(),
-            cfg.animations(), cfg.scrollSpeed(), cfg.bindBodyParts(), cfg.offset());
+            cfg.animations(), cfg.scrollSpeed(), cfg.bindBodyParts(), cfg.offset(), cfg.visibleWhileInvisible().orElse(true));
     }
 
     public static List<ResourceLocation> geometryPowerIds(@Nullable net.minecraft.world.entity.Entity entity) {

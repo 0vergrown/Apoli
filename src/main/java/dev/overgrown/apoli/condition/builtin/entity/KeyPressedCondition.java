@@ -33,7 +33,7 @@ public final class KeyPressedCondition implements ConditionType<EntityCtx, KeyPr
         }
         if (dev.overgrown.apoli.keybind.KeyDispatch.blocked(entity, key)) return false;
         MinecraftServer server = level == null ? null : level.getServer();
-        return HeldKeys.serverHeld(entity.getUUID(), key, cfg.grace(),
+        return HeldKeys.serverHeld(entity.getUUID(), key, cfg.grace() + 1,
             server == null ? Long.MIN_VALUE : server.getTickCount());
     }
 }

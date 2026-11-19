@@ -31,19 +31,34 @@ public class CustomModelRenderLayer extends RenderLayer<AbstractClientPlayer, Pl
                        float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
         PlayerModel<AbstractClientPlayer> model = this.getParentModel();
 
+        float body = -1.0F;
         List<ResolvedLayer> layers = CustomModelRenderPower.collectTextureOverlays(player);
         for (int i = 0; i < layers.size(); i++) {
             ResolvedLayer layer = layers.get(i);
+            float alpha = 1.0F;
+            if (!layer.visibleWhileInvisible()) {
+                if (body < 0.0F) body = BodyVisibility.alpha(player);
+                if (body <= 0.0F) continue;
+                alpha = body;
+            }
             ResourceLocation texture = DynamicTextures.resolve(layer.texture(slim), player);
-            TextureOverlays.render(model, layer, texture, 1.0F, ageInTicks, player, pose, buffers, light);
+            TextureOverlays.render(model, layer, texture, alpha, ageInTicks, player, pose, buffers, light);
         }
 
         List<GeometryRender> geometry = CustomModelRenderPower.collectGeometry(player);
+        AnimationPlayback.beginRender(player);
         if (geometry.isEmpty()) {
             return;
         }
         PlayerModel<AbstractClientPlayer> rest = PlayerRestPose.get();
         for (GeometryRender render : geometry) {
+            AnimationPlayback.Track track = AnimationPlayer.track(player, render);
+            float alpha = 1.0F;
+            if (!render.visibleWhileInvisible()) {
+                if (body < 0.0F) body = BodyVisibility.alpha(player);
+                if (body <= 0.0F) continue;
+                alpha = body;
+            }
             CustomModel custom = CustomModelManager.get(render.model(), render.bindBodyParts());
             if (custom == null) {
                 continue;
@@ -53,9 +68,9 @@ public class CustomModelRenderLayer extends RenderLayer<AbstractClientPlayer, Pl
             } else {
                 GeometryRenderer.resetAll(custom);
             }
-            AnimationPlayer.apply(player, render, custom, partialTick);
+            AnimationPlayer.apply(player, track, custom, partialTick);
             GeometryRenderer.applyVisibility(custom, render.bodyParts());
-            GeometryRenderer.draw(render, custom, pose, buffers, light, player);
+            GeometryRenderer.draw(render, custom, pose, buffers, light, player, alpha);
         }
     }
 }

@@ -8,7 +8,6 @@ import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
-import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.client.resources.DefaultPlayerSkin;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
@@ -21,7 +20,8 @@ public class CloneRenderer extends HumanoidMobRenderer<CloneEntity, CloneModel> 
         super(context, new CloneModel(context.bakeLayer(SummonModelLayers.CLONE), false), 0.5f);
         this.wideModel = this.getModel();
         this.slimModel = new CloneModel(context.bakeLayer(SummonModelLayers.CLONE_SLIM), true);
-        this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
+        this.addLayer(new CloneArmorLayer(this, context));
+        this.addLayer(new CloneCapeLayer(this));
         this.addLayer(new CloneTextureOverlayLayer(this));
     }
 

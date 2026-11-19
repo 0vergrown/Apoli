@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import dev.overgrown.apoli.client.model.CustomModel;
+import dev.overgrown.apoli.client.render.AnimationPlayback;
 import dev.overgrown.apoli.client.render.AnimationPlayer;
 import dev.overgrown.apoli.client.render.CustomModelManager;
 import dev.overgrown.apoli.client.render.GeometryRenderer;
@@ -41,6 +42,7 @@ public class CustomProjectileRenderer extends EntityRenderer<CustomProjectileEnt
     @Override
     public void render(CustomProjectileEntity entity, float yaw, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light) {
         List<GeometryRender> geometry = resolveGeometry(entity);
+        AnimationPlayback.beginRender(entity);
         if (geometry.isEmpty() || !renderGeometry(entity, geometry, partialTick, poseStack, buffers, light)) {
             ItemStack stack = entity.getItem();
             if (stack.isEmpty()) {
@@ -112,10 +114,11 @@ public class CustomProjectileRenderer extends EntityRenderer<CustomProjectileEnt
         boolean drew = false;
         for (int i = 0; i < geometry.size(); i++) {
             GeometryRender render = geometry.get(i);
+            AnimationPlayback.Track track = AnimationPlayer.track(entity, render);
             CustomModel custom = CustomModelManager.get(render.model(), false);
             if (custom == null) continue;
             GeometryRenderer.resetAll(custom);
-            AnimationPlayer.apply(entity, render, custom, partialTick);
+            AnimationPlayer.apply(entity, track, custom, partialTick);
             GeometryRenderer.applyVisibility(custom, render.bodyParts());
             GeometryRenderer.draw(render, custom, poseStack, buffers, light, entity);
             drew = true;

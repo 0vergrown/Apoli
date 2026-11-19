@@ -34,26 +34,29 @@ public final class AnimationPlayer {
     }
 
     public static void apply(Entity entity, GeometryRender render, CustomModel model, float partialTick) {
-        ModelAnimation.Entry entry = entry(entity, render);
-        if (entry == null) return;
+        apply(entity, track(entity, render), model, partialTick);
+    }
+
+    public static void apply(Entity entity, @Nullable AnimationPlayback.Track track, CustomModel model, float partialTick) {
+        if (track == null) return;
+        ModelAnimation.Entry entry = track.entry();
         BedrockAnimation animation = animation(entry);
         if (animation == null) return;
-        float time = time(entry, animation,
-            AnimationPlayback.elapsed(entity.getId(), render.model(), entry, entity.tickCount, partialTick));
+        float time = time(track, animation,
+            AnimationPlayback.elapsedSince(track.startTick(), entity.tickCount, partialTick, entry.speed()));
         if (time < 0.0F) return;
         apply(model, animation, time);
     }
 
     @Nullable
-    public static ModelAnimation.Entry entry(Entity entity, GeometryRender render) {
+    public static AnimationPlayback.Track track(Entity entity, GeometryRender render) {
         if (render.animations().isEmpty()) return null;
-        ModelAnimation.Entry entry = render.animations().get().select(entity);
-        if (entry == null && warnOnce(render.model(), "")) {
-            Apoli.LOGGER.warn("[Apoli] No animation entry for the custom model '{}' matched, so it stays in its bind pose. "
-                + "Every entry has a condition and none of them passed — add a last entry with no condition as the fallback.",
-                render.model());
+        AnimationPlayback.Track track = AnimationPlayback.resolve(entity, render.model(), render.animations().get());
+        if (track == null && warnOnce(render.model(), "")) {
+            Apoli.LOGGER.warn("[Apoli] None of the animation entries for the custom model '{}' passed, so it rests in its bind pose "
+                + "until one does. If one of them should always play, give the last entry no condition.", render.model());
         }
-        return entry;
+        return track;
     }
 
     @Nullable
@@ -71,14 +74,16 @@ public final class AnimationPlayer {
         return animation;
     }
 
-    public static float time(ModelAnimation.Entry entry, BedrockAnimation animation, float elapsed) {
+    public static float time(AnimationPlayback.Track track, BedrockAnimation animation, float elapsed) {
+        ModelAnimation.Entry entry = track.entry();
         float time = animation.timeFor(elapsed, entry.loop().orElse(null));
-        if (time < 0.0F) {
+        if (time < 0.0F && track.chosen()) {
             String clip = entry.name().orElse("");
             if (warnOnce(entry.animation(), clip)) {
-                Apoli.LOGGER.warn("[Apoli] The animation '{}'{} has already finished and does not loop, so the model is back in its bind pose. "
-                    + "Blockbench writes no loop flag for a 'Play Once' animation, and playback only restarts when the selected entry changes — "
-                    + "set the clip to Loop in Blockbench, or put \"loop\": true on the animations entry.",
+                Apoli.LOGGER.warn("[Apoli] The animation '{}'{} has finished and does not loop, so the model rests in its bind pose "
+                    + "while its entry stays chosen. It plays again the next time the entry is chosen after its condition stops passing. "
+                    + "Blockbench writes no loop flag for a 'Play Once' animation, so set the clip to Loop, or put \"loop\": true or "
+                    + "\"loop\": \"hold_on_last_frame\" on the animations entry.",
                     entry.animation(), clip.isEmpty() ? "" : " ('" + clip + "')");
             }
         }
@@ -103,11 +108,12 @@ public final class AnimationPlayer {
 
     public static void apply(HumanoidModel<?> model, Entity entity, ModelAnimation animations,
                              ResourceLocation slot, float partialTick) {
-        ModelAnimation.Entry entry = animations.select(entity);
-        if (entry == null) return;
+        AnimationPlayback.Track track = AnimationPlayback.resolve(entity, slot, animations);
+        if (track == null) return;
+        ModelAnimation.Entry entry = track.entry();
         BedrockAnimation animation = AnimationManager.get(entry.animation(), entry.name().orElse(null));
         if (animation == null) return;
-        float elapsed = AnimationPlayback.elapsed(entity.getId(), slot, entry, entity.tickCount, partialTick);
+        float elapsed = AnimationPlayback.elapsedSince(track.startTick(), entity.tickCount, partialTick, entry.speed());
         float time = animation.timeFor(elapsed, entry.loop().orElse(null));
         if (time < 0.0F) return;
         apply(model, animation, time);

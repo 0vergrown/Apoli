@@ -24,6 +24,8 @@ public final class BiEntityActions {
         ActionTypes.BI_ENTITY.register(Apoli.id("explode"), new ExplodeBiEntityAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("mount"), new MountAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("grab"), new GrabAction());
+        ActionTypes.BI_ENTITY.register(Apoli.id("possess"), new PossessAction(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("possession")).build());
         ActionTypes.BI_ENTITY.register(Apoli.id("set_in_love"), new SetInLoveAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("tame"), new TameAction());
         ActionTypes.BI_ENTITY.register(Apoli.id("breed"), new BreedAction());

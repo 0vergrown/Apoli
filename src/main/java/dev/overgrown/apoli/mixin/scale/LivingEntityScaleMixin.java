@@ -19,6 +19,8 @@ public abstract class LivingEntityScaleMixin {
     @WrapMethod(method = "getEyeHeight(Lnet/minecraft/world/entity/Pose;Lnet/minecraft/world/entity/EntityDimensions;)F")
     private float apoli$scaleEyeHeight(Pose pose, EntityDimensions dimensions, Operation<Float> original) {
         LivingEntity self = (LivingEntity) (Object) this;
+        net.minecraft.world.entity.Entity host = dev.overgrown.apoli.entity.possession.Possession.hostOf(self);
+        if (host != null) return host.getEyeHeight(host.getPose());
         if (Scales.untouched(self)) return original.call(pose, dimensions);
         float width = Scales.applied(self, ScaleTypes.HITBOX_WIDTH);
         float height = Scales.applied(self, ScaleTypes.HITBOX_HEIGHT);
