@@ -29,17 +29,32 @@ public class LivingCustomModelLayer<T extends LivingEntity, M extends EntityMode
                        float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
         List<ResolvedLayer> layers = CustomModelRenderPower.collectTextureOverlays(entity);
         boolean slim = !layers.isEmpty() && entity instanceof CloneEntity clone && CloneRenderer.resolveSlim(clone);
+        float body = -1.0F;
         for (int i = 0; i < layers.size(); i++) {
             ResolvedLayer layer = layers.get(i);
+            float alpha = 1.0F;
+            if (!layer.visibleWhileInvisible()) {
+                if (body < 0.0F) body = BodyVisibility.alpha(entity);
+                if (body <= 0.0F) continue;
+                alpha = body;
+            }
             TextureOverlays.render(this.getParentModel(), layer, DynamicTextures.resolve(layer.texture(slim), entity),
-                1.0F, ageInTicks, entity, pose, buffers, light);
+                alpha, ageInTicks, entity, pose, buffers, light);
         }
         if (entity instanceof MinionEntity) return;
         List<GeometryRender> geometry = CustomModelRenderPower.collectGeometry(entity);
+        AnimationPlayback.beginRender(entity);
         if (geometry.isEmpty()) return;
         Map<String, ModelPart> parts = ModelPartNames.of(this.getParentModel());
         for (int i = 0; i < geometry.size(); i++) {
             GeometryRender render = geometry.get(i);
+            AnimationPlayback.Track track = AnimationPlayer.track(entity, render);
+            float alpha = 1.0F;
+            if (!render.visibleWhileInvisible()) {
+                if (body < 0.0F) body = BodyVisibility.alpha(entity);
+                if (body <= 0.0F) continue;
+                alpha = body;
+            }
             CustomModel custom = CustomModelManager.get(render.model(), render.bindBodyParts());
             if (custom == null) continue;
             if (render.bindBodyParts()) {
@@ -47,9 +62,9 @@ public class LivingCustomModelLayer<T extends LivingEntity, M extends EntityMode
             } else {
                 GeometryRenderer.resetAll(custom);
             }
-            AnimationPlayer.apply(entity, render, custom, partialTick);
+            AnimationPlayer.apply(entity, track, custom, partialTick);
             GeometryRenderer.applyVisibility(custom, render.bodyParts());
-            GeometryRenderer.draw(render, custom, pose, buffers, light, entity);
+            GeometryRenderer.draw(render, custom, pose, buffers, light, entity, alpha);
         }
     }
 }

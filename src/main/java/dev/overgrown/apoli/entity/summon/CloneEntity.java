@@ -63,6 +63,15 @@ public class CloneEntity extends Monster implements OwnableEntity, CrossbowAttac
     @Nullable
     private ResourceLocation summonId;
 
+    public double xCloakO;
+    public double yCloakO;
+    public double zCloakO;
+    public double xCloak;
+    public double yCloak;
+    public double zCloak;
+    public float oBob;
+    public float bob;
+
     private MeleeAttackGoal meleeGoal;
     private RangedBowAttackGoal<CloneEntity> bowGoal;
     private RangedCrossbowAttackGoal<CloneEntity> crossbowGoal;
@@ -128,13 +137,36 @@ public class CloneEntity extends Monster implements OwnableEntity, CrossbowAttac
     @Override
     public void tick() {
         super.tick();
-        if (this.level().isClientSide) return;
+        if (this.level().isClientSide) {
+            this.moveCloak();
+            return;
+        }
         if (this.isDeadOrDying()) return;
         LivingEntity owner = this.getOwner();
         boolean expired = this.maxLifeTime > 0 && --this.lifeTicks <= 0;
         if (owner == null || owner.level() != this.level() || expired) {
             Summons.expire(this);
         }
+    }
+
+    private void moveCloak() {
+        this.xCloakO = this.xCloak;
+        this.yCloakO = this.yCloak;
+        this.zCloakO = this.zCloak;
+        double dx = this.getX() - this.xCloak;
+        double dy = this.getY() - this.yCloak;
+        double dz = this.getZ() - this.zCloak;
+        if (Math.abs(dx) > 10.0) this.xCloakO = this.xCloak = this.getX();
+        else this.xCloak += dx * 0.25;
+        if (Math.abs(dy) > 10.0) this.yCloakO = this.yCloak = this.getY();
+        else this.yCloak += dy * 0.25;
+        if (Math.abs(dz) > 10.0) this.zCloakO = this.zCloak = this.getZ();
+        else this.zCloak += dz * 0.25;
+        this.oBob = this.bob;
+        double mx = this.getX() - this.xo;
+        double mz = this.getZ() - this.zo;
+        float step = this.onGround() && !this.isDeadOrDying() ? (float) Math.min(0.1, Math.sqrt(mx * mx + mz * mz)) : 0.0F;
+        this.bob += (step - this.bob) * 0.4F;
     }
 
     @Override

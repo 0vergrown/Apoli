@@ -114,16 +114,18 @@ final class ProjectilePlan {
     }
 
     void tickAnimations(CustomProjectileEntity entity) {
+        AnimationPlayback.beginRender(entity);
         for (Layer layer : this.layers) {
             GeometryRender render = layer.render;
-            ModelAnimation.Entry entry = AnimationPlayer.entry(entity, render);
+            AnimationPlayback.Track track = AnimationPlayer.track(entity, render);
+            ModelAnimation.Entry entry = track == null ? null : track.entry();
             BedrockAnimation animation = entry == null ? null : AnimationPlayer.animation(entry);
             if (animation == null) {
                 layer.clock = null;
                 continue;
             }
-            int start = AnimationPlayback.startTick(entity.getId(), render.model(), entry, entity.tickCount);
-            AnimationPlayer.time(entry, animation,
+            int start = track.startTick();
+            AnimationPlayer.time(track, animation,
                 AnimationPlayback.elapsedSince(start, entity.tickCount, 0.0F, entry.speed()));
             AnimationClock clock = layer.clock;
             if (clock == null || clock.entry() != entry || clock.animation() != animation || clock.startTick() != start) {

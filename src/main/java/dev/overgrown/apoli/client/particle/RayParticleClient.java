@@ -19,6 +19,7 @@ public final class RayParticleClient {
         double length = payload.length();
         double step = Math.max(0.1, payload.spacing());
         int points = (int) Math.min(MAX_POINTS, Math.ceil(length / step));
+        CustomParticle.aimNext(payload.dirX(), payload.dirY(), payload.dirZ());
         try {
             for (int i = 0; i < points; i++) {
                 double t = i * step;
@@ -29,6 +30,8 @@ public final class RayParticleClient {
             }
         } catch (RuntimeException e) {
             Apoli.LOGGER.warn("Could not spawn ray particles {}", payload.particle(), e);
+        } finally {
+            CustomParticle.stopAiming();
         }
     }
 }

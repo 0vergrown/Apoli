@@ -146,6 +146,7 @@ public final class ApoliClient {
             RopeClientManager.tick();
             TextOverlayRenderer.tick();
             dev.overgrown.apoli.client.disguise.ClientDisguiseManager.tick(mc);
+            dev.overgrown.apoli.client.possession.ClientPossession.tick(mc);
             if (dev.overgrown.apoli.compat.ModCompat.FLYWHEEL) {
                 dev.overgrown.apoli.compat.flywheel.FlywheelBridge.clientTick(mc);
             }
@@ -200,6 +201,7 @@ public final class ApoliClient {
                 BlockedKeys.clear();
             CursorSpeedState.reset();
             dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
+            dev.overgrown.apoli.client.possession.ClientPossession.clear();
             dev.overgrown.apoli.client.skill.ClientSkillState.clear();
             dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.clear();
         }

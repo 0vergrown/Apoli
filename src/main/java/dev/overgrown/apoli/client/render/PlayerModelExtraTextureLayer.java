@@ -13,6 +13,7 @@ import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FastColor;
 
 import java.util.List;
 
@@ -29,15 +30,20 @@ public class PlayerModelExtraTextureLayer extends RenderLayer<AbstractClientPlay
         if (!(this.getParentModel() instanceof ExtraTexturedModel model)) return;
         List<ModelPart> parts = model.extraTexturedParts();
         if (parts.isEmpty()) return;
+        float alpha = BodyVisibility.alpha(player);
+        if (alpha <= 0.0F) return;
 
         ResourceLocation declared = ModifyPlayerModelPower.firstActiveModelTexture(player);
         ResourceLocation texture = declared == null
             ? model.defaultExtraTexture()
             : DynamicTextures.resolve(declared, player);
-        VertexConsumer consumer = buffers.getBuffer(RenderType.entityCutoutNoCull(texture));
+        VertexConsumer consumer = buffers.getBuffer(alpha < 1.0F
+            ? RenderType.itemEntityTranslucentCull(texture)
+            : RenderType.entityCutoutNoCull(texture));
         int overlay = LivingEntityRenderer.getOverlayCoords(player, 0.0F);
+        int color = FastColor.ARGB32.colorFromFloat(alpha, 1.0F, 1.0F, 1.0F);
         for (int i = 0; i < parts.size(); i++) {
-            parts.get(i).render(pose, consumer, light, overlay);
+            parts.get(i).render(pose, consumer, light, overlay, color);
         }
     }
 }

@@ -14,7 +14,10 @@ import org.spongepowered.asm.mixin.injection.At;
 public class PreventEntitySelectionMixin {
     @ModifyExpressionValue(method = "lambda$pick$57(Lnet/minecraft/world/entity/Entity;)Z", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;isPickable()Z"))
     private static boolean apoli$preventEntitySelection(boolean original, Entity entity) {
-        if (!original || !ClientRenderFlags.has(ClientRenderFlags.PREVENT_ENTITY_SELECTION)) return original;
+        if (!original) return false;
+        if (dev.overgrown.apoli.client.possession.ClientPossession.active()
+            && dev.overgrown.apoli.client.possession.ClientPossession.isCameraHost(entity)) return false;
+        if (!ClientRenderFlags.has(ClientRenderFlags.PREVENT_ENTITY_SELECTION)) return true;
         LocalPlayer viewer = Minecraft.getInstance().player;
         if (viewer == null) return true;
         return !PreventEntitySelectionPower.prevents(viewer, entity);

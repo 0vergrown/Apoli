@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.client.render;
 
+import dev.overgrown.apoli.client.summon.CloneCapeLayer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.renderer.entity.layers.ArrowLayer;
@@ -57,14 +58,19 @@ public final class FeatureRenderers {
     private static final String[] ARMOR_CHEST = {"armor_chest"};
     private static final String[] ARMOR_LEGS = {"armor_legs"};
     private static final String[] ARMOR_FEET = {"armor_feet"};
-    private static final Map<String, Class<?>> MAPPINGS = new LinkedHashMap<>();
+    private static final Map<String, Class<?>[]> MAPPINGS = new LinkedHashMap<>();
 
     private static final ClassValue<String[]> KEYS = new ClassValue<>() {
         @Override
         protected String[] computeValue(Class<?> type) {
             List<String> out = new ArrayList<>(2);
-            for (Map.Entry<String, Class<?>> entry : MAPPINGS.entrySet()) {
-                if (entry.getValue().isAssignableFrom(type)) out.add(entry.getKey());
+            for (Map.Entry<String, Class<?>[]> entry : MAPPINGS.entrySet()) {
+                for (Class<?> mapped : entry.getValue()) {
+                    if (mapped.isAssignableFrom(type)) {
+                        out.add(entry.getKey());
+                        break;
+                    }
+                }
             }
             return out.isEmpty() ? NONE : out.toArray(String[]::new);
         }
@@ -84,6 +90,9 @@ public final class FeatureRenderers {
                 || DolphinCarryingItemLayer.class.isAssignableFrom(type)) {
                 return HELD;
             }
+            if (HumanoidArmorLayer.class.isAssignableFrom(type) || CloneCapeLayer.class.isAssignableFrom(type)) {
+                return WORN;
+            }
             return type.getName().startsWith("dev.overgrown.apoli.") ? OWN : WORN;
         }
     };
@@ -94,13 +103,13 @@ public final class FeatureRenderers {
         return KINDS.get(layerClass);
     }
 
-    private static void map(String name, Class<?> type) {
-        MAPPINGS.put(name, type);
+    private static void map(String name, Class<?>... types) {
+        MAPPINGS.put(name, types);
     }
 
     static {
         map("armor", HumanoidArmorLayer.class);
-        map("cape", CapeLayer.class);
+        map("cape", CapeLayer.class, CloneCapeLayer.class);
         map("cat_collar", CatCollarLayer.class);
         map("creeper_power", CreeperPowerLayer.class);
         map("deadmau5", Deadmau5EarsLayer.class);

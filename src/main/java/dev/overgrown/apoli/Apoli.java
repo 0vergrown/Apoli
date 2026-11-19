@@ -234,6 +234,7 @@ public final class Apoli {
             dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
         dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(event.getServer());
         dev.overgrown.apoli.entity.GrabManager.clearAll();
+        dev.overgrown.apoli.entity.possession.PossessionManager.clearAll();
         dev.overgrown.apoli.block.GhostBlocks.clear();
         dev.overgrown.apoli.block.BlockGlows.clear();
         dev.overgrown.apoli.block.BlockGlows.load(event.getServer());
@@ -416,6 +417,7 @@ public final class Apoli {
         }
         dev.overgrown.apoli.entity.OfflinePlayers.forget(event.getEntity().getUUID());
         dev.overgrown.apoli.entity.GrabManager.release(event.getEntity().getUUID());
+        dev.overgrown.apoli.entity.possession.PossessionManager.end(event.getEntity());
         dev.overgrown.apoli.entity.CameraPerspectives.remove(event.getEntity().getUUID());
         dev.overgrown.apoli.radial.RadialMenuManager.forget(event.getEntity().getUUID());
         dev.overgrown.apoli.power.builtin.ShaderPower.forget(event.getEntity().getUUID());
@@ -491,6 +493,7 @@ public final class Apoli {
     public void onStartTracking(PlayerEvent.StartTracking event) {
         if (!(event.getEntity() instanceof ServerPlayer viewer)) return;
         Entity target = event.getTarget();
+        dev.overgrown.apoli.entity.possession.PossessionManager.syncTo(viewer, target);
         PowerContainer c = PowerContainer.of(target);
         if (c instanceof PowerContainerImpl impl && !impl.isEmpty()) {
             ApoliNetwork.sendEntityPowers(viewer, new SyncEntityPowersS2C(
@@ -531,6 +534,7 @@ public final class Apoli {
         dev.overgrown.apoli.keybind.HeldKeys.tickForced(event.getServer());
         dev.overgrown.apoli.rope.RopeManager.tick(event.getServer());
         dev.overgrown.apoli.entity.GrabManager.tick(event.getServer());
+        dev.overgrown.apoli.entity.possession.PossessionManager.tick(event.getServer());
         dev.overgrown.apoli.entity.ProjectileTickManager.tick(event.getServer());
         dev.overgrown.apoli.tick.TickRates.serverTick(event.getServer());
         boolean forcedKeys = dev.overgrown.apoli.keybind.HeldKeys.anyForced();

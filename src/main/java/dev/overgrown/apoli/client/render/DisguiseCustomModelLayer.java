@@ -33,16 +33,31 @@ public class DisguiseCustomModelLayer<T extends LivingEntity, M extends EntityMo
 
         boolean slim = isSlim(player);
 
+        float body = -1.0F;
         List<ResolvedLayer> overlays = CustomModelRenderPower.collectTextureOverlays(player);
         for (int i = 0; i < overlays.size(); i++) {
             ResolvedLayer layer = overlays.get(i);
+            float alpha = 1.0F;
+            if (!layer.visibleWhileInvisible()) {
+                if (body < 0.0F) body = BodyVisibility.alpha(player);
+                if (body <= 0.0F) continue;
+                alpha = body;
+            }
             ResourceLocation texture = DynamicTextures.resolve(layer.texture(slim), player);
-            TextureOverlays.render(humanoid, layer, texture, 1.0F, ageInTicks, player, pose, buffers, light);
+            TextureOverlays.render(humanoid, layer, texture, alpha, ageInTicks, player, pose, buffers, light);
         }
 
         List<GeometryRender> geometry = CustomModelRenderPower.collectGeometry(player);
+        AnimationPlayback.beginRender(player);
         for (int i = 0; i < geometry.size(); i++) {
             GeometryRender render = geometry.get(i);
+            AnimationPlayback.Track track = AnimationPlayer.track(player, render);
+            float alpha = 1.0F;
+            if (!render.visibleWhileInvisible()) {
+                if (body < 0.0F) body = BodyVisibility.alpha(player);
+                if (body <= 0.0F) continue;
+                alpha = body;
+            }
             CustomModel custom = CustomModelManager.get(render.model(), render.bindBodyParts());
             if (custom == null) continue;
             if (render.bindBodyParts()) {
@@ -50,9 +65,9 @@ public class DisguiseCustomModelLayer<T extends LivingEntity, M extends EntityMo
             } else {
                 GeometryRenderer.resetAll(custom);
             }
-            AnimationPlayer.apply(player, render, custom, partialTick);
+            AnimationPlayer.apply(player, track, custom, partialTick);
             GeometryRenderer.applyVisibility(custom, render.bodyParts());
-            GeometryRenderer.draw(render, custom, pose, buffers, light, player);
+            GeometryRenderer.draw(render, custom, pose, buffers, light, player, alpha);
         }
     }
 

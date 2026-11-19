@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import dev.overgrown.apoli.access.BodyEditFollow;
 import dev.overgrown.apoli.access.PartVisibilityUndo;
 import dev.overgrown.apoli.compat.entitymodelfeatures.EntityModelFeaturesCompat;
+import dev.overgrown.apoli.client.render.AnimationPlayback;
 import dev.overgrown.apoli.client.render.AnimationPlayer;
 import dev.overgrown.apoli.client.render.ForcedPoseShapes;
 import dev.overgrown.apoli.client.render.HandRenderPass;
@@ -100,6 +101,9 @@ public abstract class HumanoidModelModifyPartsMixin implements PartVisibilityUnd
         this.apoli$modelAnimation = (Object) this instanceof PlayerModel
             ? ModifyPlayerModelPower.firstActiveAnimations(entity)
             : null;
+        if (this.apoli$modelAnimation == null && (Object) this instanceof PlayerModel) {
+            AnimationPlayback.release(entity, ModifyPlayerModelPower.CANONICAL);
+        }
         boolean has = !ModelPartAnimator.update(entity).isEmpty() || this.apoli$modelAnimation != null;
         if (has) {
             if (apoli$originals.isEmpty()) apoli$snapshot();

@@ -33,7 +33,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public final class ApoliNetwork {
 
-    private static final String PROTOCOL_VERSION = "20";
+    private static final String PROTOCOL_VERSION = "22";
 
     private ApoliNetwork() {}
 
@@ -69,6 +69,8 @@ public final class ApoliNetwork {
         registrar.playToClient(dev.overgrown.apoli.network.payload.RayParticlesS2C.TYPE,
             dev.overgrown.apoli.network.payload.RayParticlesS2C.STREAM_CODEC, ApoliNetwork::onRayParticles);
         registrar.playToClient(DisguiseUpdateS2C.TYPE, DisguiseUpdateS2C.STREAM_CODEC, ApoliNetwork::onDisguiseUpdate);
+        registrar.playToClient(dev.overgrown.apoli.network.payload.PossessionSyncS2C.TYPE,
+            dev.overgrown.apoli.network.payload.PossessionSyncS2C.STREAM_CODEC, ApoliNetwork::onPossessionSync);
         registrar.playToClient(dev.overgrown.apoli.network.payload.ScaleSyncS2C.TYPE,
             dev.overgrown.apoli.network.payload.ScaleSyncS2C.STREAM_CODEC, ApoliNetwork::onScaleSync);
         registrar.playToClient(dev.overgrown.apoli.network.payload.TextDisplayS2C.TYPE,
@@ -114,6 +116,8 @@ public final class ApoliNetwork {
             dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.STREAM_CODEC, ApoliNetwork::onRadialMenuOpen);
         registrar.playToServer(dev.overgrown.apoli.network.payload.RadialMenuSelectC2S.TYPE,
             dev.overgrown.apoli.network.payload.RadialMenuSelectC2S.STREAM_CODEC, ApoliNetwork::onRadialMenuSelect);
+        registrar.playToServer(dev.overgrown.apoli.network.payload.JumpC2S.TYPE,
+            dev.overgrown.apoli.network.payload.JumpC2S.STREAM_CODEC, ApoliNetwork::onJump);
 
         registrar.playToClient(RopeCreateS2C.TYPE, RopeCreateS2C.STREAM_CODEC, ApoliNetwork::onRopeCreate);
         registrar.playToClient(RopeDeleteS2C.TYPE, RopeDeleteS2C.STREAM_CODEC, ApoliNetwork::onRopeDelete);
@@ -475,6 +479,22 @@ public final class ApoliNetwork {
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(entity, payload);
     }
 
+    private static void onPossessionSync(dev.overgrown.apoli.network.payload.PossessionSyncS2C payload,
+                                         net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
+        ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPayloadHandlers.onPossessionSync(payload));
+    }
+
+    public static void sendPossession(ServerPlayer recipient, dev.overgrown.apoli.network.payload.PossessionSyncS2C payload) {
+        if (!connected(recipient)) return;
+        PacketDistributor.sendToPlayer(recipient, payload);
+    }
+
+    public static void broadcastPossession(ServerPlayer possessor, Entity host,
+                                           dev.overgrown.apoli.network.payload.PossessionSyncS2C payload) {
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(possessor, payload);
+        PacketDistributor.sendToPlayersTrackingEntity(host, payload);
+    }
+
     private static void onDisguiseUpdate(DisguiseUpdateS2C payload, net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
         ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPayloadHandlers.onDisguiseUpdate(payload));
     }
@@ -578,6 +598,15 @@ public final class ApoliNetwork {
     private static void onRadialMenuOpen(dev.overgrown.apoli.network.payload.RadialMenuOpenS2C payload,
                                          net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
         ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPayloadHandlers.onRadialMenuOpen(payload));
+    }
+
+    private static void onJump(dev.overgrown.apoli.network.payload.JumpC2S payload,
+                               net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
+        ctx.enqueueWork(() -> {
+            if (ctx.player() instanceof ServerPlayer player) {
+                dev.overgrown.apoli.power.builtin.ModifyJumpHandler.onPlayerJumped(player);
+            }
+        });
     }
 
     private static void onRadialMenuSelect(dev.overgrown.apoli.network.payload.RadialMenuSelectC2S payload,

@@ -24,6 +24,10 @@ public final class BedrockAnimation {
         return this.loop;
     }
 
+    public boolean playsOnce(@Nullable dev.overgrown.apoli.data.ModelAnimation.LoopMode override) {
+        return override == null ? this.loop == Loop.ONCE : override == dev.overgrown.apoli.data.ModelAnimation.LoopMode.ONCE;
+    }
+
     public Bone[] bones() {
         return this.bones;
     }

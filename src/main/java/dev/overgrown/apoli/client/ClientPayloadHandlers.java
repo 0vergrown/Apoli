@@ -90,6 +90,10 @@ public final class ClientPayloadHandlers {
         ClientLabelState.apply(msg.entityId(), msg.texts());
     }
 
+    public static void onPossessionSync(dev.overgrown.apoli.network.payload.PossessionSyncS2C msg) {
+        dev.overgrown.apoli.client.possession.ClientPossession.apply(msg.possessorId(), msg.hostId());
+    }
+
     public static void onForceKey(dev.overgrown.apoli.network.payload.ForceKeyS2C msg) {
         ForcedKeys.force(msg.key(), msg.duration(), msg.release());
     }

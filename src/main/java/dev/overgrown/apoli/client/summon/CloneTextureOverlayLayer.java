@@ -28,10 +28,17 @@ public class CloneTextureOverlayLayer extends RenderLayer<CloneEntity, CloneMode
 
         boolean slim = CloneRenderer.resolveSlim(clone);
         CloneModel model = this.getParentModel();
+        float body = -1.0F;
         for (int i = 0; i < layers.size(); i++) {
             ResolvedLayer layer = layers.get(i);
+            float alpha = 1.0F;
+            if (!layer.visibleWhileInvisible()) {
+                if (body < 0.0F) body = dev.overgrown.apoli.client.render.BodyVisibility.alpha(clone);
+                if (body <= 0.0F) continue;
+                alpha = body;
+            }
             ResourceLocation texture = dev.overgrown.apoli.client.render.DynamicTextures.resolve(layer.texture(slim), owner);
-            TextureOverlays.render(model, layer, texture, 1.0F, ageInTicks, owner, pose, buffers, light);
+            TextureOverlays.render(model, layer, texture, alpha, ageInTicks, owner, pose, buffers, light);
         }
     }
 }

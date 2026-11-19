@@ -1,41 +1,78 @@
 package dev.overgrown.apoli.client.render;
 
+import dev.overgrown.apoli.client.model.BedrockAnimation;
 import dev.overgrown.apoli.data.ModelAnimation;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.lang.ref.WeakReference;
+import java.util.List;
 
 public final class AnimationPlayback {
 
-    private static final int SWEEP_INTERVAL = 1200;
-    private static final int STALE_AFTER = 100;
+    private static final int SWEEP_INTERVAL = 200;
 
-    private static final Map<Long, State> ACTIVE = new HashMap<>();
-    private static int nextSweep;
+    private static final Int2ObjectOpenHashMap<Tracks> ENTITIES = new Int2ObjectOpenHashMap<>();
+    private static WeakReference<ClientLevel> level = new WeakReference<>(null);
+    private static long nextSweep;
 
     private AnimationPlayback() {}
 
-    public static float elapsed(int entityId, ResourceLocation model, ModelAnimation.Entry entry,
-                                int tickCount, float partialTick) {
-        return elapsedSince(startTick(entityId, model, entry, tickCount), tickCount, partialTick, entry.speed());
+    public static void beginRender(Entity entity) {
+        if (ENTITIES.isEmpty()) return;
+        Tracks tracks = ENTITIES.get(entity.getId());
+        if (tracks != null) tracks.renders++;
     }
 
-    public static int startTick(int entityId, ResourceLocation model, ModelAnimation.Entry entry, int tickCount) {
-        long slot = ((long) entityId << 32) | (model.hashCode() & 0xFFFFFFFFL);
-        int key = entry.key();
-        State state = ACTIVE.get(slot);
-        if (state == null) {
-            state = new State(key, tickCount);
-            ACTIVE.put(slot, state);
-        } else if (state.key != key || tickCount < state.startTick) {
-            state.key = key;
-            state.startTick = tickCount;
+    public static void release(Entity entity, ResourceLocation model) {
+        if (ENTITIES.isEmpty()) return;
+        Tracks tracks = ENTITIES.get(entity.getId());
+        if (tracks == null) return;
+        Track track = tracks.find(model);
+        if (track != null) track.dropped = true;
+    }
+
+    @Nullable
+    public static Track resolve(Entity entity, ResourceLocation model, ModelAnimation animations) {
+        maintain();
+        int chosen = animations.selectIndex(entity);
+        int tick = entity.tickCount;
+        Tracks tracks = ENTITIES.get(entity.getId());
+        Track track = tracks == null ? null : tracks.find(model);
+        if (track == null) {
+            if (chosen < 0) return null;
+            if (tracks == null) {
+                tracks = new Tracks();
+                ENTITIES.put(entity.getId(), tracks);
+            }
+            track = tracks.add(model);
+            track.start(animations.entries(), chosen, tick);
+            track.seen = tracks.renders;
+            return track;
         }
-        sweep(tickCount);
-        state.lastSeen = tickCount;
-        return state.startTick;
+        boolean dropped = track.dropped || tick < track.startTick || track.seen < tracks.renders - 1;
+        track.seen = tracks.renders;
+        List<ModelAnimation.Entry> entries = animations.entries();
+        if (chosen >= 0 && chosen == track.index && entries.get(chosen) == track.entry) {
+            if (dropped || track.unchosen) track.start(entries, chosen, tick);
+            return track;
+        }
+        if (!dropped && track.finishingOnce(entries, chosen, tick)) {
+            track.unchosen = true;
+            return track;
+        }
+        if (chosen < 0) {
+            track.dropped = true;
+            return null;
+        }
+        track.start(entries, chosen, tick);
+        return track;
     }
 
     public static float elapsedSince(int startTick, int tickCount, float partialTick, float speed) {
@@ -43,28 +80,93 @@ public final class AnimationPlayback {
     }
 
     public static void clear() {
-        ACTIVE.clear();
+        ENTITIES.clear();
     }
 
-    private static void sweep(int now) {
-        if (now < nextSweep) return;
+    private static void maintain() {
+        ClientLevel current = Minecraft.getInstance().level;
+        if (current != level.get()) {
+            ENTITIES.clear();
+            level = new WeakReference<>(current);
+            nextSweep = 0L;
+            return;
+        }
+        if (current == null || ENTITIES.isEmpty()) return;
+        long now = current.getGameTime();
+        if (now < nextSweep && nextSweep - now <= SWEEP_INTERVAL) return;
         nextSweep = now + SWEEP_INTERVAL;
-        Iterator<Map.Entry<Long, State>> iterator = ACTIVE.entrySet().iterator();
+        ObjectIterator<Int2ObjectMap.Entry<Tracks>> iterator = ENTITIES.int2ObjectEntrySet().fastIterator();
         while (iterator.hasNext()) {
-            State state = iterator.next().getValue();
-            if (now - state.lastSeen > STALE_AFTER || state.lastSeen > now) iterator.remove();
+            if (current.getEntity(iterator.next().getIntKey()) == null) iterator.remove();
         }
     }
 
-    private static final class State {
-        private int key;
+    public static final class Track {
+        private final ResourceLocation model;
+        private int index = -1;
+        @Nullable
+        private ModelAnimation.Entry entry;
         private int startTick;
-        private int lastSeen;
+        private int seen;
+        private boolean unchosen;
+        private boolean dropped;
 
-        private State(int key, int startTick) {
-            this.key = key;
-            this.startTick = startTick;
-            this.lastSeen = startTick;
+        private Track(ResourceLocation model) {
+            this.model = model;
+        }
+
+        public ModelAnimation.Entry entry() {
+            return this.entry;
+        }
+
+        public int startTick() {
+            return this.startTick;
+        }
+
+        public boolean chosen() {
+            return !this.unchosen;
+        }
+
+        private void start(List<ModelAnimation.Entry> entries, int index, int tick) {
+            this.index = index;
+            this.entry = entries.get(index);
+            this.startTick = tick;
+            this.unchosen = false;
+            this.dropped = false;
+        }
+
+        private boolean finishingOnce(List<ModelAnimation.Entry> entries, int chosen, int tick) {
+            if (this.entry == null || this.index >= entries.size() || entries.get(this.index) != this.entry) return false;
+            if (chosen >= 0 && chosen < this.index) return false;
+            BedrockAnimation animation = AnimationManager.get(this.entry.animation(), this.entry.name().orElse(null));
+            if (animation == null || !animation.playsOnce(this.entry.loop().orElse(null))) return false;
+            return elapsedSince(this.startTick, tick, 0.0F, this.entry.speed()) <= animation.length();
+        }
+    }
+
+    private static final class Tracks {
+        private int renders;
+        private Track[] tracks = new Track[2];
+        private int size;
+
+        @Nullable
+        private Track find(ResourceLocation model) {
+            for (int i = 0; i < this.size; i++) {
+                Track track = this.tracks[i];
+                if (track.model == model || track.model.equals(model)) return track;
+            }
+            return null;
+        }
+
+        private Track add(ResourceLocation model) {
+            if (this.size == this.tracks.length) {
+                Track[] grown = new Track[this.size * 2];
+                System.arraycopy(this.tracks, 0, grown, 0, this.size);
+                this.tracks = grown;
+            }
+            Track track = new Track(model);
+            this.tracks[this.size++] = track;
+            return track;
         }
     }
 }
