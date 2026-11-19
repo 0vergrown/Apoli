@@ -11,9 +11,12 @@ import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 public class CentaurPlayerModel<T extends LivingEntity> extends PlayerModel<T>
     implements ExtraModelParts, ExtraTexturedModel {
@@ -23,10 +26,21 @@ public class CentaurPlayerModel<T extends LivingEntity> extends PlayerModel<T>
     private static final float TORSO_Y = -7.0F;
     private static final float TORSO_Z = -2.0F;
     private static final float TAIL_PITCH = (float) Math.toRadians(32.5);
-    private static final float LEG_SWING = 0.55F;
+    private static final float FRONT_SWING = 0.8F;
+    private static final float SPRINT_SWING = 0.2F;
+    private static final float HIND_SWING = 0.5F;
     private static final float TAIL_SWING = 0.12F;
     private static final float MANE_SWING = 0.06F;
     private static final float GAIT = 0.6662F;
+    private static final float HORSE_PIVOT_Y = 11.0F;
+    private static final float HORSE_PIVOT_Z = 14.0F;
+    private static final float WAIST_Y = 5.0F;
+    private static final float WAIST_Z = -2.0F;
+    private static final float RIDER_LEAN = 0.6F;
+    private static final float LEAP_RISE_PITCH = -0.42F;
+    private static final float LEAP_FALL_PITCH = 0.2F;
+    private static final float LEAP_BLEND = 0.35F;
+    private static final Map<Entity, Leap> LEAPS = new WeakHashMap<>();
 
     public final ModelPart horseBody;
     public final ModelPart horseMane;
@@ -36,8 +50,15 @@ public class CentaurPlayerModel<T extends LivingEntity> extends PlayerModel<T>
     public final ModelPart backLeftLeg;
     public final ModelPart backRightLeg;
 
+    private final ModelPart cape;
     private final List<ModelPart> horseParts;
     private final List<ModelPart> riderParts;
+
+    private static final class Leap {
+        float air;
+        float rise;
+        float age = Float.NaN;
+    }
 
     public CentaurPlayerModel(ModelPart root, boolean slim) {
         super(root, slim);
@@ -48,12 +69,13 @@ public class CentaurPlayerModel<T extends LivingEntity> extends PlayerModel<T>
         this.frontRightLeg = root.getChild("front_right_leg");
         this.backLeftLeg = root.getChild("back_left_leg");
         this.backRightLeg = root.getChild("back_right_leg");
+        this.cape = root.getChild("cloak");
         this.horseParts = List.of(this.horseBody, this.horseMane, this.horseTail,
             this.frontLeftLeg, this.frontRightLeg, this.backLeftLeg, this.backRightLeg);
         this.riderParts = List.of(
             this.head, this.hat, this.body, this.jacket,
             this.rightArm, this.rightSleeve, this.leftArm, this.leftSleeve,
-            this.rightLeg, this.rightPants, this.leftLeg, this.leftPants);
+            this.rightLeg, this.rightPants, this.leftLeg, this.leftPants, this.cape);
     }
 
     public static LayerDefinition createLayer(boolean slim) {
@@ -96,6 +118,9 @@ public class CentaurPlayerModel<T extends LivingEntity> extends PlayerModel<T>
         for (int i = 0; i < this.riderParts.size(); i++) {
             this.riderParts.get(i).resetPose();
         }
+        for (int i = 0; i < this.horseParts.size(); i++) {
+            this.horseParts.get(i).resetPose();
+        }
 
         super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
 
@@ -104,21 +129,74 @@ public class CentaurPlayerModel<T extends LivingEntity> extends PlayerModel<T>
         this.rightPants.visible = false;
         this.leftPants.visible = false;
 
-        for (int i = 0; i < this.riderParts.size(); i++) {
-            ModelPart part = this.riderParts.get(i);
-            part.y += TORSO_Y;
-            part.z += TORSO_Z;
+        Leap leap = leap(entity, ageInTicks);
+        float air = leap.air;
+        float ground = 1.0F - air;
+        float rising = Math.max(leap.rise, 0.0F);
+        float falling = Math.max(-leap.rise, 0.0F);
+        float sprint = entity.isSprinting() ? 1.0F : 0.0F;
+        float water = entity.isInWater() ? 0.2F : 1.0F;
+        float stride = Mth.cos(water * limbSwing * GAIT + Mth.PI);
+        float front = stride * (FRONT_SWING + SPRINT_SWING * sprint) * limbSwingAmount * ground;
+        float hind = stride * HIND_SWING * limbSwingAmount * ground;
+        float gallop = sprint * ground * limbSwingAmount;
+        float pitch = air * (LEAP_RISE_PITCH * rising + LEAP_FALL_PITCH * falling)
+            + gallop * Mth.cos(limbSwing * GAIT * 2.0F) * 0.05F;
+        float bob = gallop * Mth.sin(limbSwing * GAIT * 2.0F) * 0.7F;
+        float tuck = (-0.45F - 0.75F * rising + 0.1F * falling) * air;
+        float kick = (0.3F + 0.55F * rising - 0.25F * falling) * air;
+
+        this.frontLeftLeg.xRot = pitch + front + tuck;
+        this.frontRightLeg.xRot = pitch - front + tuck + 0.12F * air;
+        this.backLeftLeg.xRot = pitch - hind + kick;
+        this.backRightLeg.xRot = pitch + hind + kick - 0.1F * air;
+        this.horseBody.xRot = pitch;
+        this.horseMane.xRot = pitch - Mth.abs(stride) * MANE_SWING * limbSwingAmount - 0.25F * air;
+        this.horseTail.xRot = pitch + TAIL_PITCH + limbSwingAmount * 0.6F + 0.5F * air;
+        this.horseTail.yRot = Mth.sin(ageInTicks * 0.06F) * TAIL_SWING * (1.0F - 0.5F * limbSwingAmount);
+
+        float cos = Mth.cos(pitch);
+        float sin = Mth.sin(pitch);
+        for (int i = 0; i < this.horseParts.size(); i++) {
+            ModelPart part = this.horseParts.get(i);
+            if (part == this.horseBody) {
+                part.y += bob;
+                continue;
+            }
+            float dy = part.y - HORSE_PIVOT_Y;
+            float dz = part.z - HORSE_PIVOT_Z;
+            part.y = HORSE_PIVOT_Y + dy * cos - dz * sin + bob;
+            part.z = HORSE_PIVOT_Z + dy * sin + dz * cos;
         }
 
-        float swing = Mth.cos(limbSwing * GAIT) * LEG_SWING * limbSwingAmount;
-        this.frontLeftLeg.xRot = -swing;
-        this.backRightLeg.xRot = -swing;
-        this.frontRightLeg.xRot = swing;
-        this.backLeftLeg.xRot = swing;
+        float wy = WAIST_Y - HORSE_PIVOT_Y;
+        float wz = WAIST_Z - HORSE_PIVOT_Z;
+        float waistY = HORSE_PIVOT_Y + wy * cos - wz * sin + bob;
+        float waistZ = HORSE_PIVOT_Z + wy * sin + wz * cos;
+        float lean = pitch * RIDER_LEAN;
+        float leanCos = Mth.cos(lean);
+        float leanSin = Mth.sin(lean);
+        for (int i = 0; i < this.riderParts.size(); i++) {
+            ModelPart part = this.riderParts.get(i);
+            float dy = part.y + TORSO_Y - WAIST_Y;
+            float dz = part.z + TORSO_Z - WAIST_Z;
+            part.y = waistY + dy * leanCos - dz * leanSin;
+            part.z = waistZ + dy * leanSin + dz * leanCos;
+            part.xRot += lean;
+        }
+    }
 
-        this.horseTail.xRot = TAIL_PITCH + Mth.abs(swing) * TAIL_SWING;
-        this.horseTail.yRot = Mth.sin(ageInTicks * 0.06F) * TAIL_SWING;
-        this.horseMane.xRot = -Mth.abs(swing) * MANE_SWING;
+    private static Leap leap(LivingEntity entity, float ageInTicks) {
+        Leap leap = LEAPS.computeIfAbsent(entity, e -> new Leap());
+        float dt = Float.isNaN(leap.age) ? 0.0F : Mth.clamp(ageInTicks - leap.age, 0.0F, 5.0F);
+        leap.age = ageInTicks;
+        boolean airborne = !entity.onGround() && !entity.isPassenger() && !entity.isInWater() && !entity.isFallFlying();
+        float target = airborne ? 1.0F : 0.0F;
+        float rise = Mth.clamp((float) (entity.getY() - entity.yo) / 0.35F, -1.0F, 1.0F);
+        float blend = 1.0F - (float) Math.pow(1.0F - LEAP_BLEND, dt);
+        leap.air += (target - leap.air) * blend;
+        leap.rise += (rise - leap.rise) * blend;
+        return leap;
     }
 
     @Override

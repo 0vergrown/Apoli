@@ -10,6 +10,8 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.ResourceLocation;
 
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,9 +27,14 @@ public final class KeyPressWatcher {
     private static volatile Set<String> heldSnapshot = Set.of();
     private static final Set<String> UNCONFIRMED = new HashSet<>();
     private static final Map<String, Long> RELEASED = new HashMap<>();
+    private static final Object2IntOpenHashMap<String> LAST_RELEASES = new Object2IntOpenHashMap<>();
     private static Set<String> lastSent = Set.of();
     private static long tickCount;
     private static Consumer<List<String>> sender = keys -> {};
+
+    static {
+        LAST_RELEASES.defaultReturnValue(-1);
+    }
 
     private KeyPressWatcher() {}
 
@@ -40,6 +47,7 @@ public final class KeyPressWatcher {
         heldSnapshot = Set.of();
         UNCONFIRMED.clear();
         RELEASED.clear();
+        LAST_RELEASES.clear();
         lastSent = Set.of();
         tickCount = 0;
     }
@@ -68,6 +76,7 @@ public final class KeyPressWatcher {
         if (keys.isEmpty()) {
             if (!heldSnapshot.isEmpty()) heldSnapshot = Set.of();
             UNCONFIRMED.clear();
+            LAST_RELEASES.clear();
             if (!lastSent.isEmpty()) {
                 lastSent = Set.of();
                 sender.accept(List.of());
@@ -75,12 +84,23 @@ public final class KeyPressWatcher {
             return;
         }
         Set<String> previous = heldSnapshot;
+        Set<String> sent = lastSent;
         Set<String> held = new HashSet<>();
+        Set<String> raw = new HashSet<>();
+        List<String> repressed = null;
         for (String key : keys) {
             KeyMapping mapping = ApoliKeyMappings.resolve(key);
-            if (mapping != null && ApoliKeyMappings.isDown(mapping)) {
+            boolean down = mapping != null && ApoliKeyMappings.isDown(mapping);
+            int releases = mapping == null ? 0 : ApoliKeyMappings.releases(mapping);
+            int before = LAST_RELEASES.put(key, releases);
+            if (down) {
+                raw.add(key);
                 UNCONFIRMED.remove(key);
                 held.add(key);
+                if (before >= 0 && before != releases && sent.contains(key)) {
+                    if (repressed == null) repressed = new ArrayList<>(2);
+                    repressed.add(key);
+                }
             } else if (previous.contains(key) && UNCONFIRMED.add(key)) {
                 held.add(key);
             }
@@ -91,10 +111,16 @@ public final class KeyPressWatcher {
         }
         pruneReleased();
         heldSnapshot = held;
-        if (!held.equals(lastSent)) {
-            lastSent = held;
-            sender.accept(new ArrayList<>(held));
+        if (repressed != null) {
+            List<String> gap = new ArrayList<>(raw);
+            gap.removeAll(repressed);
+            sender.accept(gap);
+            sent = Set.copyOf(gap);
         }
+        if (!raw.equals(sent)) {
+            sender.accept(new ArrayList<>(raw));
+        }
+        lastSent = raw;
     }
 
     private static void pruneReleased() {

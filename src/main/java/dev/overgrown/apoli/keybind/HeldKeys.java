@@ -23,6 +23,9 @@ public final class HeldKeys {
     private static final Map<UUID, Set<String>> SERVER = new ConcurrentHashMap<>();
     private static final Map<UUID, Map<String, Integer>> FORCED = new ConcurrentHashMap<>();
     private static final Map<UUID, Map<String, Long>> RELEASED = new ConcurrentHashMap<>();
+    private static final Map<UUID, PressLog> PRESSES = new ConcurrentHashMap<>();
+    private static final int PRESS_LOG_SIZE = 16;
+    private static final long PRESS_MAX_AGE = 2;
     private static volatile ClientLookup clientLookup;
 
     private HeldKeys() {}
@@ -30,8 +33,63 @@ public final class HeldKeys {
     public static void setServerHeld(Entity owner, Collection<String> keys) {
         if (dev.overgrown.apoli.dev.DevMode.isEnabled(owner)) reportChange(owner, keys);
         MinecraftServer server = owner.level().getServer();
-        recordReleases(owner.getUUID(), keys, server == null ? Long.MIN_VALUE : server.getTickCount());
+        long tick = server == null ? Long.MIN_VALUE : server.getTickCount();
+        recordReleases(owner.getUUID(), keys, tick);
+        recordPresses(owner.getUUID(), keys, tick);
         setServerHeld(owner.getUUID(), keys);
+    }
+
+    private static void recordPresses(UUID player, Collection<String> keys, long tick) {
+        if (tick == Long.MIN_VALUE || keys == null || keys.isEmpty()) return;
+        Set<String> before = SERVER.get(player);
+        PressLog log = null;
+        for (String key : keys) {
+            if (before != null && before.contains(key)) continue;
+            if (log == null) log = PRESSES.computeIfAbsent(player, u -> new PressLog());
+            log.add(key, tick);
+        }
+    }
+
+    public static void drainPresses(UUID player, long now, List<String> out) {
+        PressLog log = PRESSES.get(player);
+        if (log == null) return;
+        log.drain(now - PRESS_MAX_AGE, out);
+    }
+
+    public static boolean justReleased(UUID player, String key, long now) {
+        if (now == Long.MIN_VALUE) return false;
+        Map<String, Long> released = RELEASED.get(player);
+        if (released == null) return false;
+        Long at = released.get(key);
+        return at != null && at == now;
+    }
+
+    private static final class PressLog {
+        private final String[] keys = new String[PRESS_LOG_SIZE];
+        private final long[] ticks = new long[PRESS_LOG_SIZE];
+        private int head;
+        private int size;
+
+        private void add(String key, long tick) {
+            int slot = (this.head + this.size) % PRESS_LOG_SIZE;
+            if (this.size == PRESS_LOG_SIZE) {
+                this.head = (this.head + 1) % PRESS_LOG_SIZE;
+            } else {
+                this.size++;
+            }
+            this.keys[slot] = key;
+            this.ticks[slot] = tick;
+        }
+
+        private void drain(long oldest, List<String> out) {
+            for (int i = 0; i < this.size; i++) {
+                int slot = (this.head + i) % PRESS_LOG_SIZE;
+                if (this.ticks[slot] >= oldest) out.add(this.keys[slot]);
+                this.keys[slot] = null;
+            }
+            this.head = 0;
+            this.size = 0;
+        }
     }
 
     private static void reportChange(Entity owner, Collection<String> keys) {
@@ -111,6 +169,7 @@ public final class HeldKeys {
         SERVER.remove(entity);
         FORCED.remove(entity);
         RELEASED.remove(entity);
+        PRESSES.remove(entity);
     }
 
     public static void force(UUID entity, String key, int ticks) {

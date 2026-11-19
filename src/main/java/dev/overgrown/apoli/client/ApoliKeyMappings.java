@@ -60,6 +60,10 @@ public final class ApoliKeyMappings {
         return probe(km) == Probe.DOWN;
     }
 
+    public static int releases(KeyMapping km) {
+        return ((dev.overgrown.apoli.access.KeyReleaseCount) km).apoli$releases();
+    }
+
     private static KeyState state(KeyMapping km) {
         KeyState st = TICK_CACHE.get(km);
         if (st == null) {

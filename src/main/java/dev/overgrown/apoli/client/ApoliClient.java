@@ -187,6 +187,9 @@ public final class ApoliClient implements ClientModInitializer {
             context.client().execute(() -> TextOverlayRenderer.apply(payload)));
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.LabelUpdateS2C.TYPE, (payload, context) ->
             context.client().execute(() -> ClientLabelState.apply(payload.entityId(), payload.texts())));
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.PossessionSyncS2C.TYPE, (payload, context) ->
+            context.client().execute(() -> dev.overgrown.apoli.client.possession.ClientPossession.apply(
+                payload.possessorId(), payload.hostId())));
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.ForceKeyS2C.TYPE, (payload, context) ->
             context.client().execute(() -> ForcedKeys.force(payload.key(), payload.duration(), payload.release())));
         ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.SyncShaderS2C.TYPE, (payload, context) ->
@@ -276,6 +279,7 @@ public final class ApoliClient implements ClientModInitializer {
             RopeClientManager.tick();
             TextOverlayRenderer.tick();
             dev.overgrown.apoli.client.disguise.ClientDisguiseManager.tick(mc);
+            dev.overgrown.apoli.client.possession.ClientPossession.tick(mc);
             if (dev.overgrown.apoli.compat.ModCompat.FLYWHEEL) {
                 dev.overgrown.apoli.compat.flywheel.FlywheelBridge.clientTick(mc);
             }
@@ -334,6 +338,7 @@ public final class ApoliClient implements ClientModInitializer {
         BlockedKeys.clear();
         CursorSpeedState.reset();
         dev.overgrown.apoli.client.disguise.ClientDisguiseManager.clear();
+        dev.overgrown.apoli.client.possession.ClientPossession.clear();
         dev.overgrown.apoli.client.skill.ClientSkillState.clear();
         dev.overgrown.apoli.compat.figura.FiguraModelPowerManager.clear();
         ClientProtocolState.reset();

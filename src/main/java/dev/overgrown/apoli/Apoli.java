@@ -126,6 +126,7 @@ public final class Apoli implements ModInitializer {
             powerLoader.attachServer(server);
             keybindLoader.attachServer(server);
             dev.overgrown.apoli.entity.GrabManager.clearAll();
+            dev.overgrown.apoli.entity.possession.PossessionManager.clearAll();
             dev.overgrown.apoli.block.GhostBlocks.clear();
             dev.overgrown.apoli.block.BlockGlows.clear();
             dev.overgrown.apoli.entity.PlayerModelTypes.clear();
@@ -367,6 +368,10 @@ public final class Apoli implements ModInitializer {
             context.player().server.execute(() ->
                 dev.overgrown.apoli.radial.RadialMenuManager.select(context.player(), payload.nonce(), payload.index())));
 
+        ServerPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.JumpC2S.TYPE, (payload, context) ->
+            context.player().server.execute(() ->
+                dev.overgrown.apoli.power.builtin.ModifyJumpHandler.onPlayerJumped(context.player())));
+
         UseEntityCallback.EVENT.register((player, level, hand, target, hitResult) -> {
             if (dev.overgrown.apoli.power.builtin.PreventUseHandler.isPrevented(player, target, hand)) {
                 return InteractionResult.FAIL;
@@ -494,6 +499,7 @@ public final class Apoli implements ModInitializer {
         dev.overgrown.apoli.entity.LabelManager.setBroadcaster((entity, texts) ->
             ApoliNetwork.broadcastLabel(entity, new dev.overgrown.apoli.network.payload.LabelUpdateS2C(entity.getId(), texts)));
         EntityTrackingEvents.START_TRACKING.register((trackedEntity, player) -> {
+            dev.overgrown.apoli.entity.possession.PossessionManager.syncTo(player, trackedEntity);
             dev.overgrown.apoli.entity.disguise.DisguiseData disguise =
                 dev.overgrown.apoli.entity.disguise.DisguiseManager.get(trackedEntity.getUUID());
             if (disguise != null) {
@@ -509,6 +515,7 @@ public final class Apoli implements ModInitializer {
         });
         net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             dev.overgrown.apoli.entity.disguise.DisguiseManager.onPlayerLeave(handler.player.getUUID());
+            dev.overgrown.apoli.entity.possession.PossessionManager.end(handler.player);
             dev.overgrown.apoli.entity.LabelManager.onEntityGone(handler.player.getUUID());
             dev.overgrown.apoli.action.builtin.entity.TextAction.onPlayerLeave(handler.player.getUUID());
             dev.overgrown.apoli.entity.PlayerModelTypes.remove(handler.player.getUUID());
@@ -524,6 +531,7 @@ public final class Apoli implements ModInitializer {
         dev.overgrown.apoli.keybind.HeldKeys.tickForced(server);
         dev.overgrown.apoli.rope.RopeManager.tick(server);
         dev.overgrown.apoli.entity.GrabManager.tick(server);
+        dev.overgrown.apoli.entity.possession.PossessionManager.tick(server);
         dev.overgrown.apoli.entity.ProjectileTickManager.tick(server);
         dev.overgrown.apoli.tick.TickRates.serverTick(server);
         boolean forcedKeys = dev.overgrown.apoli.keybind.HeldKeys.anyForced();

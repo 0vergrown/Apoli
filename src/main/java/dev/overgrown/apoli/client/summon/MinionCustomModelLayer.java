@@ -2,6 +2,7 @@ package dev.overgrown.apoli.client.summon;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.overgrown.apoli.client.model.CustomModel;
+import dev.overgrown.apoli.client.render.AnimationPlayback;
 import dev.overgrown.apoli.client.render.AnimationPlayer;
 import dev.overgrown.apoli.client.render.CustomModelManager;
 import dev.overgrown.apoli.client.render.GeometryRenderer;
@@ -26,13 +27,22 @@ public class MinionCustomModelLayer extends RenderLayer<MinionEntity, MinionMode
     public void render(PoseStack pose, MultiBufferSource buffers, int light, MinionEntity minion,
                        float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
         List<GeometryRender> geometry = this.renderer.activeGeometry();
+        AnimationPlayback.beginRender(minion);
         if (geometry.isEmpty()) {
             return;
         }
         MinionModel model = this.getParentModel();
         MinionModel rest = this.restPose();
+        float body = -1.0F;
         for (int i = 0; i < geometry.size(); i++) {
             GeometryRender render = geometry.get(i);
+            AnimationPlayback.Track track = AnimationPlayer.track(minion, render);
+            float alpha = 1.0F;
+            if (!render.visibleWhileInvisible()) {
+                if (body < 0.0F) body = dev.overgrown.apoli.client.render.BodyVisibility.alpha(minion);
+                if (body <= 0.0F) continue;
+                alpha = body;
+            }
             CustomModel custom = CustomModelManager.get(render.model(), false);
             if (custom == null) {
                 continue;
@@ -43,9 +53,9 @@ public class MinionCustomModelLayer extends RenderLayer<MinionEntity, MinionMode
                     GeometryRenderer.syncBone(custom, name, model.bone(name), rest.bone(name));
                 }
             }
-            AnimationPlayer.apply(minion, render, custom, partialTick);
+            AnimationPlayer.apply(minion, track, custom, partialTick);
             GeometryRenderer.applyVisibility(custom, render.bodyParts());
-            GeometryRenderer.draw(render, custom, pose, buffers, light, minion);
+            GeometryRenderer.draw(render, custom, pose, buffers, light, minion, alpha);
         }
     }
 
