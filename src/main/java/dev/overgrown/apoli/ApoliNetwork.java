@@ -59,6 +59,8 @@ public final class ApoliNetwork {
         PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.TickRateS2C.TYPE,
             dev.overgrown.apoli.network.payload.TickRateS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(DisguiseUpdateS2C.TYPE, DisguiseUpdateS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.PossessionSyncS2C.TYPE,
+            dev.overgrown.apoli.network.payload.PossessionSyncS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.ScaleSyncS2C.TYPE,
             dev.overgrown.apoli.network.payload.ScaleSyncS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.TextDisplayS2C.TYPE,
@@ -99,6 +101,8 @@ public final class ApoliNetwork {
             dev.overgrown.apoli.network.payload.RadialMenuOpenS2C.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.RadialMenuSelectC2S.TYPE,
             dev.overgrown.apoli.network.payload.RadialMenuSelectC2S.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.JumpC2S.TYPE,
+            dev.overgrown.apoli.network.payload.JumpC2S.STREAM_CODEC);
 
         PayloadTypeRegistry.playS2C().register(
             dev.overgrown.apoli.network.payload.PowerInventoryS2C.TYPE,
@@ -320,6 +324,20 @@ public final class ApoliNetwork {
         if (entity instanceof ServerPlayer self && connected(self)) {
             ServerPlayNetworking.send(self, payload);
         }
+    }
+
+    public static void sendPossession(ServerPlayer recipient, dev.overgrown.apoli.network.payload.PossessionSyncS2C payload) {
+        if (connected(recipient) && ServerPlayNetworking.canSend(recipient, dev.overgrown.apoli.network.payload.PossessionSyncS2C.TYPE)) {
+            ServerPlayNetworking.send(recipient, payload);
+        }
+    }
+
+    public static void broadcastPossession(ServerPlayer possessor, Entity host,
+                                           dev.overgrown.apoli.network.payload.PossessionSyncS2C payload) {
+        java.util.Set<ServerPlayer> recipients = new java.util.HashSet<>(PlayerLookup.tracking(possessor));
+        recipients.addAll(PlayerLookup.tracking(host));
+        recipients.add(possessor);
+        for (ServerPlayer recipient : recipients) sendPossession(recipient, payload);
     }
 
     public static void sendDisguise(ServerPlayer recipient, DisguiseUpdateS2C payload) {

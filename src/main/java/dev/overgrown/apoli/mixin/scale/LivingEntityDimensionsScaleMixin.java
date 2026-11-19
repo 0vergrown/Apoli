@@ -12,6 +12,8 @@ public abstract class LivingEntityDimensionsScaleMixin {
 
     @ModifyReturnValue(method = "getDimensions", at = @At("RETURN"))
     private EntityDimensions apoli$scaleDimensions(EntityDimensions original) {
+        EntityDimensions possessed = dev.overgrown.apoli.entity.possession.Possession.hostDimensions((LivingEntity) (Object) this);
+        if (possessed != null) return possessed;
         return Scales.scaledDimensions((LivingEntity) (Object) this, original);
     }
 }

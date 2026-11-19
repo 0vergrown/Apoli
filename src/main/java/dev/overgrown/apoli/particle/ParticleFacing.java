@@ -10,7 +10,9 @@ import java.util.Map;
 
 public enum ParticleFacing {
     CAMERA,
-    VERTICAL;
+    VERTICAL,
+    HORIZONTAL,
+    VELOCITY;
 
     private static final Map<String, ParticleFacing> BY_NAME = new HashMap<>();
 
@@ -18,6 +20,8 @@ public enum ParticleFacing {
         for (ParticleFacing facing : values()) BY_NAME.put(ModelParts.normalize(facing.name()), facing);
         BY_NAME.put("billboard", CAMERA);
         BY_NAME.put("upright", VERTICAL);
+        BY_NAME.put("flat", HORIZONTAL);
+        BY_NAME.put("motion", VELOCITY);
     }
 
     public static final Codec<ParticleFacing> CODEC = Codec.STRING.comapFlatMap(
@@ -25,7 +29,7 @@ public enum ParticleFacing {
             ParticleFacing facing = BY_NAME.get(ModelParts.normalize(string));
             return facing != null
                 ? DataResult.success(facing)
-                : DataResult.error(() -> "Unknown particle facing: '" + string + "' (expected camera or vertical)");
+                : DataResult.error(() -> "Unknown particle facing: '" + string + "' (expected camera, vertical, horizontal or velocity)");
         },
         facing -> facing.name().toLowerCase(Locale.ROOT)
     );
