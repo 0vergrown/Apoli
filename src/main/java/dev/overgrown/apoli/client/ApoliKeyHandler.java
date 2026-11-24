@@ -10,6 +10,7 @@ import dev.overgrown.apoli.data.Key;
 import dev.overgrown.apoli.power.builtin.ActionOnKeyPressPower;
 import dev.overgrown.apoli.power.builtin.FireProjectilePower;
 import dev.overgrown.apoli.power.builtin.InventoryPower;
+import dev.overgrown.apoli.power.builtin.StationPower;
 import dev.overgrown.apoli.power.builtin.TogglePower;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -49,6 +50,12 @@ public final class ApoliKeyHandler {
                 if (!(power.config() instanceof InventoryPower.Config cfg)) continue;
                 KeyMapping km = ApoliKeyMappings.resolve(cfg.key().key());
                 if (km == null || !ApoliKeyMappings.consumePress(km, cfg.key().continuous())) continue;
+                PacketDistributor.sendToServer(new PowerActivationC2S(powerId));
+                ScreenCloseKeys.expect(km);
+            } else if (type instanceof StationPower<?>) {
+                if (!(power.config() instanceof StationPower.Config cfg)) continue;
+                KeyMapping km = ApoliKeyMappings.resolve(cfg.settings().key().key());
+                if (km == null || !ApoliKeyMappings.consumePress(km, cfg.settings().key().continuous())) continue;
                 PacketDistributor.sendToServer(new PowerActivationC2S(powerId));
                 ScreenCloseKeys.expect(km);
             } else if (type instanceof TogglePower) {

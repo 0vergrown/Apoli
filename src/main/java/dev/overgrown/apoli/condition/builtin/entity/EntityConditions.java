@@ -53,6 +53,7 @@ public final class EntityConditions {
             AliasingOptions.builder().addTypeAlias(Apoli.id("in_set")).build()
         );
         ConditionTypes.ENTITY.register(Apoli.id("resource"), new ResourceCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("station_state"), new StationStateCondition());
         ConditionTypes.ENTITY.register(
             Apoli.id("in_team"),
             new InTeamCondition(),

@@ -16,6 +16,7 @@ import dev.overgrown.apoli.power.builtin.FireProjectilePower;
 import dev.overgrown.apoli.power.builtin.InventoryPower;
 import dev.overgrown.apoli.power.builtin.MultiplePower;
 import dev.overgrown.apoli.power.builtin.PreventKeyPressPower;
+import dev.overgrown.apoli.power.builtin.StationPower;
 import dev.overgrown.apoli.power.builtin.TogglePower;
 import dev.overgrown.apoli.power.PowerResources;
 import dev.overgrown.apoli.network.payload.ForceKeyS2C;
@@ -209,6 +210,12 @@ public final class KeyDispatch {
             if (key != null && !c.key().key().equals(key)) return false;
             inventory.open(id, c, player, impl);
             return true;
+        }
+        if (type instanceof StationPower<?> && cfg instanceof StationPower.Config c) {
+            if (continuousOnly) return false;
+            if (player == null) return false;
+            if (key != null && !c.settings().key().key().equals(key)) return false;
+            return StationPower.open(id, player);
         }
         return false;
     }
