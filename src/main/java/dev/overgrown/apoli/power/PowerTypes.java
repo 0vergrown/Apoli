@@ -312,6 +312,8 @@ public final class PowerTypes {
                 .build());
 
         PowerTypeRegistry.register(Apoli.id("inventory"), new InventoryPower());
+        PowerTypeRegistry.register(Apoli.id("furnace"), new FurnacePower());
+        PowerTypeRegistry.register(Apoli.id("brewing_stand"), new BrewingStandPower());
         PowerTypeRegistry.register(Apoli.id("power_storage"),
             new dev.overgrown.apoli.power.builtin.PowerStoragePower());
         PowerTypeRegistry.register(Apoli.id("recipe"), new RecipePower());
