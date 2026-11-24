@@ -33,6 +33,7 @@ import dev.overgrown.apoli.power.builtin.ActionOnKeyPressPower;
 import dev.overgrown.apoli.power.builtin.ActionOnUseHandler;
 import dev.overgrown.apoli.power.builtin.FireProjectilePower;
 import dev.overgrown.apoli.power.builtin.InventoryPower;
+import dev.overgrown.apoli.power.builtin.StationPower;
 import dev.overgrown.apoli.power.builtin.TogglePower;
 import dev.overgrown.apoli.power.PowerResources;
 import net.fabricmc.api.ModInitializer;
@@ -152,8 +153,10 @@ public final class Apoli implements ModInitializer {
             }
             CustomEffectRegistry.reloading = false;
         });
-        ServerLifecycleEvents.SERVER_STOPPING.register(server ->
-            dev.overgrown.apoli.block.GhostBlocks.restoreAll(server));
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            dev.overgrown.apoli.block.GhostBlocks.restoreAll(server);
+            dev.overgrown.apoli.station.StationStorage.flushAll(server);
+        });
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             PoweredEntities.clear();
             dev.overgrown.apoli.power.builtin.EntitySetPower.reset();
@@ -163,6 +166,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.clearServer();
             dev.overgrown.apoli.block.GhostBlocks.clear();
             dev.overgrown.apoli.block.BlockGlows.clear();
+            dev.overgrown.apoli.station.StationStorage.clear();
             dev.overgrown.apoli.entity.PlayerModelTypes.clear();
             dev.overgrown.apoli.tick.TickRates.clear();
             DelayedActionQueue.clear();
@@ -545,6 +549,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.action.builtin.entity.TextAction.onPlayerLeave(handler.player.getUUID());
             dev.overgrown.apoli.entity.PlayerModelTypes.remove(handler.player.getUUID());
             dev.overgrown.apoli.power.builtin.InventoryPower.onPlayerLeave(handler.player.getUUID());
+            dev.overgrown.apoli.station.StationStorage.onPlayerLeave(handler.player);
             dev.overgrown.apoli.power.ResolvedPowers.forget(handler.player.getUUID());
             CustomEffectRegistry.waiting.remove(handler.player.getUUID());
             CustomEffectNetworking.forget(handler.player.getUUID());
@@ -698,6 +703,8 @@ public final class Apoli implements ModInitializer {
             && loaded.config() instanceof InventoryPower.Config cfg
             && c instanceof PowerContainerImpl impl) {
             inv.open(payload.power(), cfg, player, impl);
+        } else if (type instanceof StationPower<?>) {
+            StationPower.open(payload.power(), player);
         }
     }
 

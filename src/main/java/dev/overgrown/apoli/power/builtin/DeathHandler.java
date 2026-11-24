@@ -43,6 +43,10 @@ public final class DeathHandler {
                 && loaded.config() instanceof InventoryPower.Config cfg
                 && cfg.dropOnDeath()) {
                 inv.dropOnDeath(powerId, cfg, dead, impl, level);
+            } else if (type instanceof StationPower<?> station
+                && loaded.config() instanceof StationPower.Config cfg
+                && cfg.settings().dropOnDeath()) {
+                station.dropOnDeathUnchecked(powerId, cfg, dead, impl, level);
             } else if (type instanceof PowerStoragePower
                 && loaded.config() instanceof PowerStoragePower.Config cfg
                 && cfg.dropOnDeath()) {

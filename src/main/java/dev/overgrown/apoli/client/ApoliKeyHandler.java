@@ -10,6 +10,7 @@ import dev.overgrown.apoli.data.Key;
 import dev.overgrown.apoli.power.builtin.ActionOnKeyPressPower;
 import dev.overgrown.apoli.power.builtin.FireProjectilePower;
 import dev.overgrown.apoli.power.builtin.InventoryPower;
+import dev.overgrown.apoli.power.builtin.StationPower;
 import dev.overgrown.apoli.power.builtin.TogglePower;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -52,6 +53,14 @@ public final class ApoliKeyHandler {
                 if (!(power.config() instanceof InventoryPower.Config cfg)) continue;
                 KeyMapping km = ApoliKeyMappings.resolve(cfg.key().key());
                 if (km == null || !ApoliKeyMappings.consumePress(km, cfg.key().continuous())) continue;
+                FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+                new PowerActivationC2S(powerId).write(buf);
+                ClientPlayNetworking.send(PowerActivationC2S.CHANNEL, buf);
+                ScreenCloseKeys.expect(km);
+            } else if (type instanceof StationPower<?>) {
+                if (!(power.config() instanceof StationPower.Config cfg)) continue;
+                KeyMapping km = ApoliKeyMappings.resolve(cfg.settings().key().key());
+                if (km == null || !ApoliKeyMappings.consumePress(km, cfg.settings().key().continuous())) continue;
                 FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
                 new PowerActivationC2S(powerId).write(buf);
                 ClientPlayNetworking.send(PowerActivationC2S.CHANNEL, buf);
