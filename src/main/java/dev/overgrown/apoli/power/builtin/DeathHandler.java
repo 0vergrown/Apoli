@@ -82,4 +82,18 @@ public final class DeathHandler {
             drops.add(item);
         }
     }
+
+    public static void dropStationContents(LivingEntity dead, Collection<ItemEntity> drops, boolean dropsCancelled) {
+        List<ItemStack> taken = StationPower.deathDrops(dead);
+        for (int i = 0; i < taken.size(); i++) {
+            ItemStack stack = taken.get(i);
+            if (dropsCancelled) {
+                dead.spawnAtLocation(stack);
+                continue;
+            }
+            ItemEntity item = new ItemEntity(dead.level(), dead.getX(), dead.getY(), dead.getZ(), stack);
+            item.setDefaultPickUpDelay();
+            drops.add(item);
+        }
+    }
 }

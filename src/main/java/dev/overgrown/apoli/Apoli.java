@@ -287,6 +287,7 @@ public final class Apoli {
     @SubscribeEvent(receiveCanceled = true)
     public void onLivingDrops(net.neoforged.neoforge.event.entity.living.LivingDropsEvent event) {
         dev.overgrown.apoli.power.builtin.DeathHandler.dropPowerInventories(event.getEntity(), event.getDrops(), event.isCanceled());
+        dev.overgrown.apoli.power.builtin.DeathHandler.dropStationContents(event.getEntity(), event.getDrops(), event.isCanceled());
     }
 
     @SubscribeEvent
@@ -415,6 +416,7 @@ public final class Apoli {
         dev.overgrown.apoli.action.builtin.entity.TextAction.onPlayerLeave(event.getEntity().getUUID());
         dev.overgrown.apoli.entity.PlayerModelTypes.remove(event.getEntity().getUUID());
         dev.overgrown.apoli.power.builtin.InventoryPower.onPlayerLeave(event.getEntity().getUUID());
+        if (event.getEntity() instanceof ServerPlayer leaving) dev.overgrown.apoli.station.StationStorage.onPlayerLeave(leaving);
         dev.overgrown.apoli.power.ResolvedPowers.forget(event.getEntity().getUUID());
         CustomEffectRegistry.waiting.remove(event.getEntity().getUUID());
     }
@@ -453,6 +455,7 @@ public final class Apoli {
     @SubscribeEvent
     public void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
         dev.overgrown.apoli.block.GhostBlocks.restoreAll(event.getServer());
+        dev.overgrown.apoli.station.StationStorage.flushAll(event.getServer());
     }
 
     @SubscribeEvent
@@ -467,6 +470,7 @@ public final class Apoli {
         dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.clearServer();
         dev.overgrown.apoli.block.GhostBlocks.clear();
         dev.overgrown.apoli.block.BlockGlows.clear();
+        dev.overgrown.apoli.station.StationStorage.clear();
         dev.overgrown.apoli.entity.PlayerModelTypes.clear();
             dev.overgrown.apoli.tick.TickRates.clear();
         DelayedActionQueue.clear();
@@ -631,6 +635,8 @@ public final class Apoli {
             && loaded.config() instanceof InventoryPower.Config cfg
             && c instanceof PowerContainerImpl impl) {
             inv.open(payload.power(), cfg, player, impl);
+        } else if (type instanceof StationPower<?>) {
+            StationPower.open(payload.power(), player);
         }
     }
 
