@@ -101,6 +101,7 @@
     "power.EntityCollisionMixin",
     "power.EntityModifyVelocityMixin",
     "power.ExperienceOrbXpGainMixin",
+    "power.FurnaceResultSlotStationMixin",
     "power.ItemAlwaysEdibleMixin",
     "power.ItemStackUseMixin",
     "power.LivingEntityEatMixin",
