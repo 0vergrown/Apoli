@@ -67,6 +67,7 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("extinguish"), new ExtinguishAction());
         ActionTypes.ENTITY.register(Apoli.id("crafting_table"), new CraftingTableAction());
         ActionTypes.ENTITY.register(Apoli.id("ender_chest"), new EnderChestAction());
+        ActionTypes.ENTITY.register(Apoli.id("open_station"), new OpenStationAction());
 
         ActionTypes.ENTITY.register(Apoli.id("add_xp"), new AddXpAction());
         ActionTypes.ENTITY.register(Apoli.id("clear_effect"), new ClearEffectAction());
