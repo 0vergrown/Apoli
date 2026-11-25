@@ -11,7 +11,42 @@ import net.minecraft.resources.ResourceLocation;
 
 public final class ExprParser {
 
-    public record Result(ExprNode root, boolean needsContainer, boolean needsPeer) {}
+    public record Result(ExprNode root, boolean needsContainer, boolean needsPeer, boolean usesMemo) {}
+
+    public record VectorResult(ExprNode x, ExprNode y, ExprNode z, boolean needsContainer, boolean needsPeer,
+                               boolean usesMemo) {}
+
+    private static final class Val {
+        final ExprNode s;
+        final ExprNode x;
+        final ExprNode y;
+        final ExprNode z;
+        final boolean random;
+
+        private Val(ExprNode s, ExprNode x, ExprNode y, ExprNode z, boolean random) {
+            this.s = s;
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.random = random;
+        }
+
+        static Val num(ExprNode node, boolean random) {
+            return new Val(node, null, null, null, random);
+        }
+
+        static Val vec(ExprNode x, ExprNode y, ExprNode z, boolean random) {
+            return new Val(null, x, y, z, random);
+        }
+
+        boolean isVector() {
+            return s == null;
+        }
+
+        ExprNode comp(int axis) {
+            return axis == 0 ? x : axis == 1 ? y : z;
+        }
+    }
 
     private enum T {
         NUM,
@@ -23,6 +58,7 @@ public final class ExprParser {
         LBRACKET,
         RBRACKET,
         COMMA,
+        DOT,
         EOF
     }
 
@@ -34,6 +70,7 @@ public final class ExprParser {
     private int depth;
     private boolean needsContainer;
     private boolean needsPeer;
+    private boolean usesMemo;
 
     private T tokType;
     private boolean bracketFnIdent;
@@ -49,38 +86,60 @@ public final class ExprParser {
     public static Result parse(String src, Function<String, ExprVars.ResolvedVar> resolver) throws ExprParseException {
         ExprParser p = new ExprParser(src, resolver);
         p.advance();
-        ExprNode root = p.parseExpression();
+        Val root = p.parseExpression();
         p.expect(T.EOF, "end of expression");
-        return new Result(root, p.needsContainer, p.needsPeer);
+        if (root.isVector()) {
+            throw new ExprParseException("this gives a vector, but a number is needed here; "
+                + "use length(), dot() or .x, .y, .z to get a number from it", 0);
+        }
+        return new Result(root.s, p.needsContainer, p.needsPeer, p.usesMemo);
     }
 
-    private ExprNode parseExpression() throws ExprParseException {
+    public static VectorResult parseVector(String src, Function<String, ExprVars.ResolvedVar> resolver)
+        throws ExprParseException {
+        ExprParser p = new ExprParser(src, resolver);
+        p.advance();
+        Val root = p.parseExpression();
+        p.expect(T.EOF, "end of expression");
+        if (!root.isVector()) {
+            throw new ExprParseException("this gives a number, but a vector is needed here; build one with vec(x, y, z)", 0);
+        }
+        return new VectorResult(root.x, root.y, root.z, p.needsContainer, p.needsPeer, p.usesMemo);
+    }
+
+    private Val parseExpression() throws ExprParseException {
         if (++depth > MAX_DEPTH) throw new ExprParseException("expression too deeply nested", tokStart);
-        ExprNode node = parseOr();
+        Val node = parseOr();
         depth--;
         return node;
     }
 
-    private ExprNode parseOr() throws ExprParseException {
-        ExprNode left = parseAnd();
+    private Val parseOr() throws ExprParseException {
+        Val left = parseAnd();
         while (tokType == T.OP && (tokText.equals("||") || tokText.equals("|"))) {
+            int at = tokStart;
             advance();
-            left = fold(new ExprNodes.OrN(new ExprNode[] { left, parseAnd() }));
+            Val right = parseAnd();
+            left = Val.num(fold(new ExprNodes.OrN(new ExprNode[] { num(left, at, "'||'"), num(right, at, "'||'") })),
+                left.random || right.random);
         }
         return left;
     }
 
-    private ExprNode parseAnd() throws ExprParseException {
-        ExprNode left = parseComparison();
+    private Val parseAnd() throws ExprParseException {
+        Val left = parseComparison();
         while (tokType == T.OP && (tokText.equals("&&") || tokText.equals("&"))) {
+            int at = tokStart;
             advance();
-            left = fold(new ExprNodes.AndN(new ExprNode[] { left, parseComparison() }));
+            Val right = parseComparison();
+            left = Val.num(fold(new ExprNodes.AndN(new ExprNode[] { num(left, at, "'&&'"), num(right, at, "'&&'") })),
+                left.random || right.random);
         }
         return left;
     }
 
-    private ExprNode parseComparison() throws ExprParseException {
-        ExprNode left = parseAdditive();
+    private Val parseComparison() throws ExprParseException {
+        Val left = parseAdditive();
         while (tokType == T.OP) {
             ExprNodes.Op op = switch (tokText) {
                 case "==", "=" -> ExprNodes.Op.EQ;
@@ -92,24 +151,29 @@ public final class ExprParser {
                 default -> null;
             };
             if (op == null) break;
+            int at = tokStart;
+            String symbol = tokText;
             advance();
-            left = fold(new ExprNodes.Bin(op, left, parseAdditive()));
+            Val right = parseAdditive();
+            left = Val.num(fold(new ExprNodes.Bin(op, num(left, at, "'" + symbol + "'"), num(right, at, "'" + symbol + "'"))),
+                left.random || right.random);
         }
         return left;
     }
 
-    private ExprNode parseAdditive() throws ExprParseException {
-        ExprNode left = parseTerm();
+    private Val parseAdditive() throws ExprParseException {
+        Val left = parseTerm();
         while (tokType == T.OP && (tokText.equals("+") || tokText.equals("-"))) {
             ExprNodes.Op op = tokText.equals("+") ? ExprNodes.Op.ADD : ExprNodes.Op.SUB;
+            int at = tokStart;
             advance();
-            left = fold(new ExprNodes.Bin(op, left, parseTerm()));
+            left = arith(op, left, parseTerm(), at);
         }
         return left;
     }
 
-    private ExprNode parseTerm() throws ExprParseException {
-        ExprNode left = parseUnary();
+    private Val parseTerm() throws ExprParseException {
+        Val left = parseUnary();
         while (true) {
             if (tokType == T.OP) {
                 ExprNodes.Op op = switch (tokText) {
@@ -120,20 +184,25 @@ public final class ExprParser {
                     default -> null;
                 };
                 if (op == null) return left;
+                int at = tokStart;
                 advance();
-                left = fold(new ExprNodes.Bin(op, left, parseUnary()));
+                left = arith(op, left, parseUnary(), at);
             } else if (tokType == T.NUM || tokType == T.IDENT || tokType == T.GEN || tokType == T.LPAREN) {
-                left = fold(new ExprNodes.Bin(ExprNodes.Op.MUL, left, parseUnary()));
+                int at = tokStart;
+                left = arith(ExprNodes.Op.MUL, left, parseUnary(), at);
             } else {
                 return left;
             }
         }
     }
 
-    private ExprNode parseUnary() throws ExprParseException {
+    private Val parseUnary() throws ExprParseException {
         if (tokType == T.OP && tokText.equals("-")) {
             advance();
-            return fold(new ExprNodes.Neg(parseUnary()));
+            Val inner = parseUnary();
+            if (!inner.isVector()) return Val.num(fold(new ExprNodes.Neg(inner.s)), inner.random);
+            return Val.vec(fold(new ExprNodes.Neg(inner.x)), fold(new ExprNodes.Neg(inner.y)),
+                fold(new ExprNodes.Neg(inner.z)), inner.random);
         }
         if (tokType == T.OP && tokText.equals("+")) {
             advance();
@@ -142,40 +211,64 @@ public final class ExprParser {
         return parsePower();
     }
 
-    private ExprNode parsePower() throws ExprParseException {
-        ExprNode base = parsePostfix();
+    private Val parsePower() throws ExprParseException {
+        Val base = parsePostfix();
         if (tokType == T.OP && tokText.equals("^^")) {
+            int at = tokStart;
             advance();
-            return fold(new ExprNodes.Tetra(base, parseUnary()));
+            Val exponent = parseUnary();
+            return Val.num(fold(new ExprNodes.Tetra(num(base, at, "'^^'"), num(exponent, at, "'^^'"))),
+                base.random || exponent.random);
         }
         if (tokType == T.OP && tokText.equals("^")) {
+            int at = tokStart;
             advance();
-            return fold(new ExprNodes.Bin(ExprNodes.Op.POW, base, parseUnary()));
+            Val exponent = parseUnary();
+            return Val.num(fold(new ExprNodes.Bin(ExprNodes.Op.POW, num(base, at, "'^'"), num(exponent, at, "'^'"))),
+                base.random || exponent.random);
         }
         return base;
     }
 
-    private ExprNode parsePostfix() throws ExprParseException {
-        ExprNode node = parsePrimary();
-        while (tokType == T.OP && (tokText.equals("!") || tokText.equals("%"))) {
-            node = tokText.equals("!")
-                ? fold(new ExprNodes.Fact(node))
-                : fold(new ExprNodes.Bin(ExprNodes.Op.MUL, node, new ExprNodes.Const(0.01)));
-            advance();
+    private Val parsePostfix() throws ExprParseException {
+        Val node = parsePrimary();
+        while (true) {
+            if (tokType == T.OP && (tokText.equals("!") || tokText.equals("%"))) {
+                ExprNode inner = num(node, tokStart, "'" + tokText + "'");
+                node = Val.num(tokText.equals("!")
+                    ? fold(new ExprNodes.Fact(inner))
+                    : fold(new ExprNodes.Bin(ExprNodes.Op.MUL, inner, new ExprNodes.Const(0.01))), node.random);
+                advance();
+            } else if (tokType == T.DOT) {
+                int at = tokStart;
+                advance();
+                expect(T.IDENT, "x, y or z after '.'");
+                int axis = switch (tokText) {
+                    case "x" -> 0;
+                    case "y" -> 1;
+                    case "z" -> 2;
+                    default -> -1;
+                };
+                if (axis < 0) throw new ExprParseException("'." + tokText + "' is not a vector component; use .x, .y or .z", tokStart);
+                if (!node.isVector()) throw new ExprParseException("'." + tokText + "' needs a vector, but this is a number", at);
+                node = Val.num(node.comp(axis), node.random);
+                advance();
+            } else {
+                return node;
+            }
         }
-        return node;
     }
 
-    private ExprNode parsePrimary() throws ExprParseException {
+    private Val parsePrimary() throws ExprParseException {
         switch (tokType) {
             case NUM -> {
-                ExprNode n = new ExprNodes.Const(tokNum);
+                Val n = Val.num(new ExprNodes.Const(tokNum), false);
                 advance();
                 return n;
             }
             case LPAREN -> {
                 advance();
-                ExprNode inner = parseExpression();
+                Val inner = parseExpression();
                 expect(T.RPAREN, "')'");
                 advance();
                 return inner;
@@ -183,7 +276,7 @@ public final class ExprParser {
             case GEN -> {
                 ExprNode gen = generator(tokText, tokStart);
                 advance();
-                return gen;
+                return Val.num(gen, true);
             }
             case IDENT -> {
                 String name = tokText;
@@ -194,7 +287,7 @@ public final class ExprParser {
                 }
                 if (tokType == T.LBRACKET) {
                     BracketFnBuilder bracket = BRACKET_FUNCTIONS.get(name);
-                    if (bracket != null) return bracketFunctionCall(name, at, bracket);
+                    if (bracket != null) return Val.num(bracketFunctionCall(name, at, bracket), false);
                     return indexedVariable(name, at);
                 }
                 return variable(name, at);
@@ -203,11 +296,11 @@ public final class ExprParser {
         }
     }
 
-    private ExprNode functionCall(String name, int at) throws ExprParseException {
+    private Val functionCall(String name, int at) throws ExprParseException {
         IdFnBuilder idBuilder = ID_FUNCTIONS.get(name);
         if (idBuilder != null) return idFunctionCall(name, at, idBuilder);
         advance();
-        List<ExprNode> args = new ArrayList<>(4);
+        List<Val> args = new ArrayList<>(4);
         if (tokType != T.RPAREN) {
             args.add(parseExpression());
             while (tokType == T.COMMA) {
@@ -217,28 +310,185 @@ public final class ExprParser {
         }
         expect(T.RPAREN, "')'");
         advance();
+        boolean random = RANDOM_FUNCTIONS.contains(name);
+        boolean anyVector = false;
+        for (Val arg : args) {
+            random |= arg.random;
+            anyVector |= arg.isVector();
+        }
+        Val vector = vectorFunction(name, args, at, random);
+        if (vector != null) return vector;
+        if (anyVector) {
+            DoubleUnaryOperator unary = UNARY.get(name);
+            if (unary != null && args.size() == 1) {
+                Val v = args.get(0);
+                return Val.vec(fold(new ExprNodes.Fn1(unary, v.x)), fold(new ExprNodes.Fn1(unary, v.y)),
+                    fold(new ExprNodes.Fn1(unary, v.z)), random);
+            }
+            throw new ExprParseException(name + " takes numbers, not vectors", at);
+        }
         FnBuilder builder = FUNCTIONS.get(name);
         if (builder == null) throw new ExprParseException("unknown function '" + name + "'", at);
-        return fold(builder.build(args, name, at));
+        List<ExprNode> nodes = new ArrayList<>(args.size());
+        for (Val arg : args) nodes.add(arg.s);
+        return Val.num(fold(builder.build(nodes, name, at)), random);
     }
 
-    private ExprNode idFunctionCall(String name, int at, IdFnBuilder builder) throws ExprParseException {
+    private Val vectorFunction(String name, List<Val> args, int at, boolean random) throws ExprParseException {
+        switch (name) {
+            case "vec", "vec3" -> {
+                arity(args, 3, name, at);
+                return Val.vec(num(args.get(0), at, name), num(args.get(1), at, name), num(args.get(2), at, name), random);
+            }
+            case "length", "len", "magnitude" -> {
+                Val v = vectorArg(args, 1, 0, name, at);
+                return Val.num(fold(new ExprNodes.Length(v.x, v.y, v.z)), random);
+            }
+            case "length_sq", "length_squared" -> {
+                Val v = vectorArg(args, 1, 0, name, at);
+                return Val.num(fold(new ExprNodes.LengthSq(v.x, v.y, v.z)), random);
+            }
+            case "normalize", "normalized" -> {
+                Val v = share(vectorArg(args, 1, 0, name, at));
+                return Val.vec(fold(new ExprNodes.NormComp(0, v.x, v.y, v.z)), fold(new ExprNodes.NormComp(1, v.x, v.y, v.z)),
+                    fold(new ExprNodes.NormComp(2, v.x, v.y, v.z)), random);
+            }
+            case "dot" -> {
+                Val a = vectorArg(args, 2, 0, name, at);
+                Val b = vectorArg(args, 2, 1, name, at);
+                return Val.num(fold(new ExprNodes.Dot(a.x, a.y, a.z, b.x, b.y, b.z)), random);
+            }
+            case "cross" -> {
+                Val a = share(vectorArg(args, 2, 0, name, at));
+                Val b = share(vectorArg(args, 2, 1, name, at));
+                return Val.vec(crossTerm(a.y, b.z, a.z, b.y), crossTerm(a.z, b.x, a.x, b.z), crossTerm(a.x, b.y, a.y, b.x), random);
+            }
+            case "distance", "dist", "distance_sq", "distance_squared" -> {
+                Val a = vectorArg(args, 2, 0, name, at);
+                Val b = vectorArg(args, 2, 1, name, at);
+                boolean squared = name.endsWith("_sq") || name.endsWith("_squared");
+                return Val.num(fold(new ExprNodes.Distance(a.x, a.y, a.z, b.x, b.y, b.z, squared)), random);
+            }
+            case "lerp" -> {
+                if (args.size() != 3 || !args.get(0).isVector() && !args.get(1).isVector()) return null;
+                Val a = vectorArg(args, 3, 0, name, at);
+                Val b = vectorArg(args, 3, 1, name, at);
+                ExprNode t = share(Val.num(num(args.get(2), at, name), args.get(2).random)).s;
+                return Val.vec(fold(new ExprNodes.Fn3(LERP, a.x, b.x, t)), fold(new ExprNodes.Fn3(LERP, a.y, b.y, t)),
+                    fold(new ExprNodes.Fn3(LERP, a.z, b.z, t)), random);
+            }
+            case "if" -> {
+                if (args.size() != 3 || !args.get(1).isVector() && !args.get(2).isVector()) return null;
+                if (!args.get(1).isVector() || !args.get(2).isVector()) {
+                    throw new ExprParseException("if needs both branches to be vectors, or both to be numbers", at);
+                }
+                ExprNode condition = share(Val.num(num(args.get(0), at, name), args.get(0).random)).s;
+                Val a = args.get(1);
+                Val b = args.get(2);
+                return Val.vec(fold(new ExprNodes.If(condition, a.x, b.x)), fold(new ExprNodes.If(condition, a.y, b.y)),
+                    fold(new ExprNodes.If(condition, a.z, b.z)), random);
+            }
+            default -> {
+                return null;
+            }
+        }
+    }
+
+    private static ExprNode crossTerm(ExprNode a, ExprNode b, ExprNode c, ExprNode d) {
+        return fold(new ExprNodes.Bin(ExprNodes.Op.SUB, fold(new ExprNodes.Bin(ExprNodes.Op.MUL, a, b)),
+            fold(new ExprNodes.Bin(ExprNodes.Op.MUL, c, d))));
+    }
+
+    private static void arity(List<Val> args, int expected, String name, int at) throws ExprParseException {
+        if (args.size() != expected) {
+            throw new ExprParseException(name + " expects " + expected + " argument" + (expected == 1 ? "" : "s"), at);
+        }
+    }
+
+    private static Val vectorArg(List<Val> args, int expected, int index, String name, int at) throws ExprParseException {
+        arity(args, expected, name, at);
+        Val v = args.get(index);
+        if (!v.isVector()) throw new ExprParseException(name + " needs a vector, but argument " + (index + 1) + " is a number", at);
+        return v;
+    }
+
+    private static ExprNode num(Val v, int at, String what) throws ExprParseException {
+        if (v.isVector()) throw new ExprParseException(what + " needs a number here, but got a vector", at);
+        return v.s;
+    }
+
+    private Val share(Val v) {
+        if (!v.random) return v;
+        usesMemo = true;
+        if (!v.isVector()) return Val.num(new ExprNodes.Memo(v.s), true);
+        return Val.vec(new ExprNodes.Memo(v.x), new ExprNodes.Memo(v.y), new ExprNodes.Memo(v.z), true);
+    }
+
+    private Val arith(ExprNodes.Op op, Val a, Val b, int at) throws ExprParseException {
+        boolean random = a.random || b.random;
+        if (!a.isVector() && !b.isVector()) return Val.num(fold(new ExprNodes.Bin(op, a.s, b.s)), random);
+        String symbol = switch (op) {
+            case ADD -> "+";
+            case SUB -> "-";
+            case MUL -> "*";
+            case DIV -> "/";
+            case IDIV -> "\\";
+            case MOD -> "#";
+            default -> op.name().toLowerCase(java.util.Locale.ROOT);
+        };
+        switch (op) {
+            case ADD, SUB -> {
+                if (a.isVector() && b.isVector()) return componentwise(op, a, b, random);
+                throw new ExprParseException("'" + symbol + "' cannot mix a number and a vector; build a vector with vec(x, y, z)", at);
+            }
+            case MUL -> {
+                if (a.isVector() && b.isVector()) return componentwise(op, a, b, random);
+                return a.isVector() ? scaled(op, a, share(b).s, false, random) : scaled(op, b, share(a).s, true, random);
+            }
+            case DIV, IDIV, MOD -> {
+                if (a.isVector() && b.isVector()) return componentwise(op, a, b, random);
+                if (a.isVector()) return scaled(op, a, share(b).s, false, random);
+                throw new ExprParseException("'" + symbol + "' cannot divide a number by a vector", at);
+            }
+            default -> throw new ExprParseException("'" + symbol + "' works on numbers, not vectors", at);
+        }
+    }
+
+    private static Val componentwise(ExprNodes.Op op, Val a, Val b, boolean random) {
+        return Val.vec(fold(new ExprNodes.Bin(op, a.x, b.x)), fold(new ExprNodes.Bin(op, a.y, b.y)),
+            fold(new ExprNodes.Bin(op, a.z, b.z)), random);
+    }
+
+    private static Val scaled(ExprNodes.Op op, Val vector, ExprNode scalar, boolean scalarFirst, boolean random) {
+        ExprNode[] parts = new ExprNode[3];
+        for (int i = 0; i < 3; i++) {
+            ExprNode c = vector.comp(i);
+            parts[i] = fold(scalarFirst ? new ExprNodes.Bin(op, scalar, c) : new ExprNodes.Bin(op, c, scalar));
+        }
+        return Val.vec(parts[0], parts[1], parts[2], random);
+    }
+
+    private Val idFunctionCall(String name, int at, IdFnBuilder builder) throws ExprParseException {
         advance();
         expect(T.IDENT, "an id like 'namespace:path'");
         ResourceLocation id = ResourceLocation.tryParse(tokText);
         if (id == null) throw new ExprParseException("'" + tokText + "' is not a valid id", tokStart);
         advance();
         List<ExprNode> args = new ArrayList<>(2);
+        boolean random = false;
         while (tokType == T.COMMA) {
             advance();
-            args.add(parseExpression());
+            int argAt = tokStart;
+            Val arg = parseExpression();
+            random |= arg.random;
+            args.add(num(arg, argAt, name));
         }
         expect(T.RPAREN, "')'");
         advance();
         ExprVars.ResolvedVar rv = builder.build(id, args, name, at);
         needsContainer |= rv.needsContainer();
         needsPeer |= rv.needsPeer();
-        return new ExprNodes.Var(rv.accessor());
+        return Val.num(new ExprNodes.Var(rv.accessor()), random);
     }
 
     private ExprNode bracketFunctionCall(String name, int at, BracketFnBuilder builder) throws ExprParseException {
@@ -343,33 +593,71 @@ public final class ExprParser {
         ID_FUNCTIONS.put(name, builder);
     }
 
-    private ExprNode variable(String name, int at) throws ExprParseException {
+    private Val variable(String name, int at) throws ExprParseException {
         switch (name) {
-            case "pi" -> { return new ExprNodes.Const(Math.PI); }
-            case "e" -> { return new ExprNodes.Const(Math.E); }
+            case "pi" -> { return Val.num(new ExprNodes.Const(Math.PI), false); }
+            case "e" -> { return Val.num(new ExprNodes.Const(Math.E), false); }
             default -> { }
         }
         ExprVars.ResolvedVar rv = resolver.apply(name);
-        if (rv == null) throw new ExprParseException("unknown variable '" + name + "'", at);
-        needsContainer |= rv.needsContainer();
-        needsPeer |= rv.needsPeer();
-        return new ExprNodes.Var(rv.accessor());
+        if (rv != null) {
+            needsContainer |= rv.needsContainer();
+            needsPeer |= rv.needsPeer();
+            return Val.num(new ExprNodes.Var(rv.accessor()), false);
+        }
+        Val vector = vectorVariable(name, at);
+        if (vector != null) return vector;
+        throw new ExprParseException("unknown variable '" + name + "'", at);
     }
 
-    private ExprNode indexedVariable(String name, int at) throws ExprParseException {
+    private static final Map<String, String[]> VECTOR_VARIABLES = Map.of(
+        "pos", new String[] { "x", "y", "z" },
+        "position", new String[] { "x", "y", "z" },
+        "eye_pos", new String[] { "x", "eye_y", "z" },
+        "eye_position", new String[] { "x", "eye_y", "z" },
+        "velocity", new String[] { "velocity_x", "velocity_y", "velocity_z" },
+        "motion", new String[] { "velocity_x", "velocity_y", "velocity_z" },
+        "look", new String[] { "look_x", "look_y", "look_z" },
+        "facing", new String[] { "look_x", "look_y", "look_z" });
+
+    private Val vectorVariable(String name, int at) throws ExprParseException {
+        String prefix = "";
+        String base = name;
+        if (name.startsWith("target_")) {
+            prefix = "target_";
+            base = name.substring(prefix.length());
+        } else if (name.startsWith("actor_")) {
+            prefix = "actor_";
+            base = name.substring(prefix.length());
+        }
+        String[] components = VECTOR_VARIABLES.get(base);
+        if (components == null) return null;
+        ExprNode[] nodes = new ExprNode[3];
+        for (int i = 0; i < 3; i++) {
+            ExprVars.ResolvedVar rv = resolver.apply(prefix + components[i]);
+            if (rv == null) throw new ExprParseException("unknown variable '" + name + "'", at);
+            needsContainer |= rv.needsContainer();
+            needsPeer |= rv.needsPeer();
+            nodes[i] = new ExprNodes.Var(rv.accessor());
+        }
+        return Val.vec(nodes[0], nodes[1], nodes[2], false);
+    }
+
+    private Val indexedVariable(String name, int at) throws ExprParseException {
         ResourceLocation id = name.indexOf(':') < 0 ? null : ResourceLocation.tryParse(name);
         if (id == null) {
             throw new ExprParseException("'" + name + "' is not a resource id like 'namespace:path', "
                 + "so it cannot be indexed with [...]", at);
         }
         advance();
-        ExprNode index = parseExpression();
+        int indexAt = tokStart;
+        Val index = parseExpression();
         expect(T.RBRACKET, "']'");
         advance();
-        ExprVars.ResolvedVar rv = ExprVars.resolveIndexed(id, index);
+        ExprVars.ResolvedVar rv = ExprVars.resolveIndexed(id, num(index, indexAt, "an index"));
         needsContainer |= rv.needsContainer();
         needsPeer |= rv.needsPeer();
-        return new ExprNodes.Var(rv.accessor());
+        return Val.num(new ExprNodes.Var(rv.accessor()), index.random);
     }
 
     private ExprNode generator(String name, int at) throws ExprParseException {
@@ -424,12 +712,21 @@ public final class ExprParser {
 
     private static final Map<String, FnBuilder> FUNCTIONS = new HashMap<>();
 
+    private static final Map<String, DoubleUnaryOperator> UNARY = new HashMap<>();
+
+    private static final java.util.Set<String> RANDOM_FUNCTIONS = java.util.Set.of("rList", "rUni", "rUnid", "rNor");
+
+    private static final ExprNodes.DoubleTernaryOperator LERP = (a, b, t) -> a + (b - a) * t;
+
     private static void fn1(DoubleUnaryOperator fn, String... names) {
         FnBuilder b = (args, name, at) -> {
             if (args.size() != 1) throw new ExprParseException(name + " expects 1 argument", at);
             return new ExprNodes.Fn1(fn, args.get(0));
         };
-        for (String n : names) FUNCTIONS.put(n, b);
+        for (String n : names) {
+            FUNCTIONS.put(n, b);
+            UNARY.put(n, fn);
+        }
     }
 
     private static void fn2(DoubleBinaryOperator fn, String... names) {
@@ -500,7 +797,7 @@ public final class ExprParser {
         fn2((base, x) -> Math.log(x) / Math.log(base), "log");
         fn2(ExprParser::nthRoot, "root");
         fn3((v, lo, hi) -> Math.min(hi, Math.max(lo, v)), "clamp");
-        fn3((a, b, t) -> a + (b - a) * t, "lerp");
+        fn3(LERP, "lerp");
         FUNCTIONS.put("if", (args, name, at) -> {
             if (args.size() != 3) throw new ExprParseException("if expects 3 arguments (condition, then, else)", at);
             return new ExprNodes.If(args.get(0), args.get(1), args.get(2));
@@ -559,6 +856,12 @@ public final class ExprParser {
         if (c == ']') {
             tokType = T.RBRACKET;
             tokText = "]";
+            pos++;
+            return;
+        }
+        if (c == '.') {
+            tokType = T.DOT;
+            tokText = ".";
             pos++;
             return;
         }

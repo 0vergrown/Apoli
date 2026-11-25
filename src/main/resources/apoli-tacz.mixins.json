@@ -1,0 +1,17 @@
+{
+  "required": false,
+  "package": "dev.overgrown.apoli.compat.tacz.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "dev.overgrown.apoli.compat.TargetPresentMixinPlugin",
+  "mixins": [
+    "GunDataMixin",
+    "LivingEntityAimMixin"
+  ],
+  "client": [
+    "CameraSetupEventMixin",
+    "LocalPlayerAimMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

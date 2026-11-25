@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "package": "dev.overgrown.apoli.compat.fastbench.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "dev.overgrown.apoli.compat.TargetPresentMixinPlugin",
+  "mixins": [
+    "CraftResultSlotExtMixin",
+    "FastBenchUtilMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

@@ -27,7 +27,7 @@ public record DamageCondition(ResourceLocation typeId, Object config, boolean in
         id -> {
             ResourceLocation canonical = ConditionTypes.DAMAGE.resolveId(id);
             ConditionType<DamageCtx, ?> t = ConditionTypes.DAMAGE.get(canonical);
-            return t == null ? null : new DispatchedTypeCodec.CodecLookup.Resolution(canonical, t.codec());
+            return t == null ? null : new DispatchedTypeCodec.CodecLookup.Resolution(canonical, ConditionTypes.DAMAGE.applyAliasDefaults(id, t.codec()));
         },
         DamageCondition::new,
         DamageCondition::typeId,

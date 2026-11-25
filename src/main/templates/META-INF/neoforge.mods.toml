@@ -60,6 +60,27 @@ config="${mod_id}-yigd.mixins.json"
 [[mixins]]
 config="${mod_id}-gravestone.mixins.json"
 
+[[mixins]]
+config="${mod_id}-chloride.mixins.json"
+
+[[mixins]]
+config="${mod_id}-polytone.mixins.json"
+
+[[mixins]]
+config="${mod_id}-fastworkbench.mixins.json"
+
+[[mixins]]
+config="${mod_id}-fastsuite.mixins.json"
+
+[[mixins]]
+config="${mod_id}-spellengine.mixins.json"
+
+[[mixins]]
+config="${mod_id}-pointblank.mixins.json"
+
+[[mixins]]
+config="${mod_id}-tacz.mixins.json"
+
 [[dependencies.${mod_id}]]
     modId="neoforge"
     type="required"

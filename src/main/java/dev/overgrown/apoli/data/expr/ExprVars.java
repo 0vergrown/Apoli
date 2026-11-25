@@ -439,6 +439,7 @@ public final class ExprVars {
         registerContext("mouse_x");
         registerContext("mouse_y");
         registerContext("held_ticks");
+        registerContext("slider");
 
         register("health", (e, c, l, v) -> e instanceof LivingEntity le ? le.getHealth() : 0);
         register("max_health", (e, c, l, v) -> e instanceof LivingEntity le ? le.getMaxHealth() : 0);
@@ -457,6 +458,12 @@ public final class ExprVars {
         register("velocity_x", (e, c, l, v) -> e != null ? e.getDeltaMovement().x : 0);
         register("velocity_y", (e, c, l, v) -> e != null ? e.getDeltaMovement().y : 0);
         register("velocity_z", (e, c, l, v) -> e != null ? e.getDeltaMovement().z : 0);
+        register("eye_y", (e, c, l, v) -> e != null ? e.getEyeY() : 0);
+        register("look_x", (e, c, l, v) -> e != null
+            ? Math.sin(Math.toRadians(-e.getYRot())) * Math.cos(Math.toRadians(e.getXRot())) : 0);
+        register("look_y", (e, c, l, v) -> e != null ? -Math.sin(Math.toRadians(e.getXRot())) : 0);
+        register("look_z", (e, c, l, v) -> e != null
+            ? Math.cos(Math.toRadians(-e.getYRot())) * Math.cos(Math.toRadians(e.getXRot())) : 0);
 
         register("food", (e, c, l, v) -> e instanceof Player p ? p.getFoodData().getFoodLevel() : 0);
         register("saturation", (e, c, l, v) -> e instanceof Player p ? p.getFoodData().getSaturationLevel() : 0);

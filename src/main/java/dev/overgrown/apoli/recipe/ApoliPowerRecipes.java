@@ -2,6 +2,8 @@ package dev.overgrown.apoli.recipe;
 
 import com.mojang.serialization.Dynamic;
 import dev.overgrown.apoli.Apoli;
+import dev.overgrown.apoli.compat.ModCompat;
+import dev.overgrown.apoli.compat.fastsuite.FastSuiteRecipeCache;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.PowerContainer;
@@ -84,6 +86,7 @@ public final class ApoliPowerRecipes {
         }
         all.addAll(powerRecipes);
         rm.replaceRecipes(all);
+        if (ModCompat.FASTSUITE) FastSuiteRecipeCache.invalidate(rm);
 
         if (!powerRecipes.isEmpty()) {
             Apoli.LOGGER.info("[Apoli] Registered {} power-gated recipe(s).", powerRecipes.size());

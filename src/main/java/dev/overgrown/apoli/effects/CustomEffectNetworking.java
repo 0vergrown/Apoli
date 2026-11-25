@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.effects;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import dev.overgrown.apoli.Apoli;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.FriendlyByteBuf;
@@ -25,10 +26,11 @@ public final class CustomEffectNetworking {
             ByIdMap.continuous(MobEffectCategory::ordinal, MobEffectCategory.values(), ByIdMap.OutOfBoundsStrategy.ZERO),
             MobEffectCategory::ordinal);
 
-    public record ClientEffectData(ResourceLocation id, MobEffectCategory category, int color,
+    public record ClientEffectData(ResourceLocation id, int networkId, MobEffectCategory category, int color,
                                    Optional<String> name, Optional<ResourceLocation> icon) {
         public static final StreamCodec<FriendlyByteBuf, ClientEffectData> CODEC = StreamCodec.composite(
                 ResourceLocation.STREAM_CODEC, ClientEffectData::id,
+                ByteBufCodecs.VAR_INT, ClientEffectData::networkId,
                 CATEGORY_CODEC, ClientEffectData::category,
                 ByteBufCodecs.INT, ClientEffectData::color,
                 ByteBufCodecs.optional(ByteBufCodecs.STRING_UTF8), ClientEffectData::name,
@@ -37,7 +39,8 @@ public final class CustomEffectNetworking {
         );
 
         static ClientEffectData of(CustomMobEffect effect) {
-            return new ClientEffectData(effect.id, effect.getCategory(), effect.getColor(), effect.name, effect.icon);
+            return new ClientEffectData(effect.id, BuiltInRegistries.MOB_EFFECT.getId(effect), effect.getCategory(),
+                    effect.getColor(), effect.name, effect.icon);
         }
 
         public CustomMobEffect toEffect() {
@@ -56,7 +59,7 @@ public final class CustomEffectNetworking {
     }
 
     public record SyncCustomEffectsPayload(List<ClientEffectData> effects) implements CustomPacketPayload {
-        public static final Type<SyncCustomEffectsPayload> TYPE = new Type<>(Apoli.id("sync_custom_effects"));
+        public static final Type<SyncCustomEffectsPayload> TYPE = new Type<>(Apoli.id("custom_effects"));
 
         public static final StreamCodec<FriendlyByteBuf, SyncCustomEffectsPayload> CODEC = ClientEffectData.CODEC.apply(ByteBufCodecs.list()).map(SyncCustomEffectsPayload::new, SyncCustomEffectsPayload::effects);
 

@@ -56,8 +56,10 @@ public final class ExecuteCommandBlockAction implements ActionType<BlockCtx, Exe
         String command = cfg.command;
         if (cfg.arguments.isPresent()) {
             command = MacroArguments.expand(command, cfg.arguments.get().resolve(server, ctx.actor(), null), ctx.actor());
-            if (command == null) return;
+        } else {
+            command = MacroArguments.expandAmbient(command, ctx.actor());
         }
+        if (command == null) return;
         dev.overgrown.apoli.dev.DevMode.echoCommand(ctx.actor(), command);
         Vec3 pos = Vec3.atCenterOf(ctx.pos());
         CommandSourceStack source = new CommandSourceStack(

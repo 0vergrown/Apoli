@@ -27,7 +27,7 @@ public record FluidCondition(ResourceLocation typeId, Object config, boolean inv
         id -> {
             ResourceLocation canonical = ConditionTypes.FLUID.resolveId(id);
             ConditionType<FluidCtx, ?> t = ConditionTypes.FLUID.get(canonical);
-            return t == null ? null : new DispatchedTypeCodec.CodecLookup.Resolution(canonical, t.codec());
+            return t == null ? null : new DispatchedTypeCodec.CodecLookup.Resolution(canonical, ConditionTypes.FLUID.applyAliasDefaults(id, t.codec()));
         },
         FluidCondition::new,
         FluidCondition::typeId,

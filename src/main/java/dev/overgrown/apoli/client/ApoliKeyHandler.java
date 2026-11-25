@@ -52,6 +52,12 @@ public final class ApoliKeyHandler {
                 if (km == null || !ApoliKeyMappings.consumePress(km, cfg.key().continuous())) continue;
                 PacketDistributor.sendToServer(new PowerActivationC2S(powerId));
                 ScreenCloseKeys.expect(km);
+            } else if (type instanceof dev.overgrown.apoli.power.builtin.GuiPower) {
+                if (!(power.config() instanceof dev.overgrown.apoli.power.builtin.GuiPower.Config cfg)) continue;
+                KeyMapping km = ApoliKeyMappings.resolve(cfg.key().key());
+                if (km == null || !ApoliKeyMappings.consumePress(km, cfg.key().continuous())) continue;
+                PacketDistributor.sendToServer(new PowerActivationC2S(powerId));
+                ScreenCloseKeys.expect(km);
             } else if (type instanceof StationPower<?>) {
                 if (!(power.config() instanceof StationPower.Config cfg)) continue;
                 KeyMapping km = ApoliKeyMappings.resolve(cfg.settings().key().key());

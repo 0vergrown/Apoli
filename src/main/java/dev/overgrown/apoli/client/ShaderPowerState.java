@@ -1,61 +1,68 @@
 package dev.overgrown.apoli.client;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 public final class ShaderPowerState {
 
     public interface GameRendererAccess {
-        void apoli$loadEffect(ResourceLocation shader);
-
-        void apoli$shutdownEffect();
-
-        @Nullable PostChain apoli$postEffect();
+        @Nullable PostChain apoli$loadDetachedEffect(ResourceLocation shader);
     }
 
     private static final Set<ResourceLocation> BROKEN = new HashSet<>();
 
     private static @Nullable ResourceLocation desired;
-    private static @Nullable ResourceLocation applied;
-    private static @Nullable PostChain lastSeen;
     private static boolean desiredToggleable = true;
+    private static boolean toggledOff;
+    private static @Nullable PostChain chain;
+    private static @Nullable ResourceLocation chainId;
 
     private ShaderPowerState() {}
 
     public static void accept(@Nullable ResourceLocation shader, boolean toggleable) {
+        if (!Objects.equals(shader, desired)) toggledOff = false;
         desired = shader;
         desiredToggleable = toggleable;
     }
 
-    public static void sync(GameRendererAccess renderer) {
+    public static void process(GameRendererAccess renderer, float timeDelta) {
         ResourceLocation want = desired;
-        if (want != null && BROKEN.contains(want)) want = null;
         if (want == null) {
-            PostChain current = renderer.apoli$postEffect();
-            if (applied != null || (lastSeen != null && current == lastSeen)) {
-                renderer.apoli$shutdownEffect();
-                applied = null;
-                lastSeen = null;
-            }
+            if (chain != null) close();
             return;
         }
-        PostChain current = renderer.apoli$postEffect();
-        if (want.equals(applied) && current != null && current == lastSeen) return;
+        PostChain current = chain;
+        if (current == null || !want.equals(chainId)) {
+            close();
+            if (BROKEN.contains(want)) return;
+            current = load(renderer, want);
+            if (current == null) return;
+            chain = current;
+            chainId = want;
+        }
+        if (toggledOff) return;
+        RenderSystem.disableBlend();
+        RenderSystem.disableDepthTest();
+        RenderSystem.resetTextureMatrix();
+        current.process(timeDelta);
+    }
 
-        renderer.apoli$loadEffect(want);
-        PostChain loaded = renderer.apoli$postEffect();
-        if (loaded == null) {
-            if (BROKEN.add(want)) warnBroken(want);
-            applied = null;
-            lastSeen = null;
-            return;
+    private static @Nullable PostChain load(GameRendererAccess renderer, ResourceLocation shader) {
+        PostChain loaded;
+        try {
+            loaded = renderer.apoli$loadDetachedEffect(shader);
+        } catch (RuntimeException e) {
+            dev.overgrown.apoli.Apoli.LOGGER.warn("[Apoli] apoli:shader could not build '{}'", shader, e);
+            loaded = null;
         }
-        applied = want;
-        lastSeen = loaded;
+        if (loaded == null && BROKEN.add(shader)) warnBroken(shader);
+        return loaded;
     }
 
     private static void warnBroken(ResourceLocation shader) {
@@ -75,19 +82,38 @@ public final class ShaderPowerState {
         }
     }
 
-    public static boolean locksToggle() {
-        return applied != null && !desiredToggleable;
+    public static void resize(int width, int height) {
+        if (chain != null) chain.resize(width, height);
+    }
+
+    public static void toggle() {
+        if (desired != null && desiredToggleable) toggledOff = !toggledOff;
     }
 
     public static void invalidate() {
-        BROKEN.clear();
-        applied = null;
-        lastSeen = null;
+        if (RenderSystem.isOnRenderThread()) {
+            reset();
+        } else {
+            RenderSystem.recordRenderCall(ShaderPowerState::reset);
+        }
     }
 
     public static void clear() {
-        invalidate();
         desired = null;
         desiredToggleable = true;
+        toggledOff = false;
+        invalidate();
+    }
+
+    private static void reset() {
+        BROKEN.clear();
+        close();
+    }
+
+    private static void close() {
+        PostChain current = chain;
+        chain = null;
+        chainId = null;
+        if (current != null) current.close();
     }
 }

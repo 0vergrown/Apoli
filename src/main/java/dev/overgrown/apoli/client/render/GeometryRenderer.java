@@ -8,6 +8,7 @@ import dev.overgrown.apoli.data.ModelParts;
 import dev.overgrown.apoli.power.builtin.CustomModelRenderPower.GeometryRender;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -186,9 +187,13 @@ public final class GeometryRenderer {
 
     public static void draw(GeometryRender render, CustomModel model, PoseStack pose, MultiBufferSource buffers,
                             int light, @Nullable Entity subject, float alphaScale) {
+        float alpha = render.alpha() * alphaScale;
+        ResourceLocation texture = DynamicTextures.resolve(render.texture(), subject);
+        ResourceLocation bound = ShaderAlpha.texture(texture, render.mode(), alpha);
+        if (bound != texture) alpha = 1.0F;
         VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forGeometry(render.mode(),
-            DynamicTextures.resolve(render.texture(), subject), ModelPartAnimator.ageInTicks(subject), render.scrollSpeed()));
-        int color = FastColor.ARGB32.colorFromFloat(render.alpha() * alphaScale, render.red(), render.green(), render.blue());
+            bound, ModelPartAnimator.ageInTicks(subject), render.scrollSpeed()));
+        int color = FastColor.ARGB32.colorFromFloat(alpha, render.red(), render.green(), render.blue());
         dev.overgrown.apoli.data.Vector offset = render.offset();
         boolean shifted = offset.x() != 0.0F || offset.y() != 0.0F || offset.z() != 0.0F;
         boolean scaled = render.scale() != 1.0F;
@@ -224,9 +229,13 @@ public final class GeometryRenderer {
         if (bound.length == 0) {
             return;
         }
+        float alpha = render.alpha() * alphaScale;
+        ResourceLocation texture = DynamicTextures.resolve(render.texture(), subject);
+        ResourceLocation slotTexture = ShaderAlpha.texture(texture, render.mode(), alpha);
+        if (slotTexture != texture) alpha = 1.0F;
         VertexConsumer consumer = buffers.getBuffer(OverlayRenderTypes.forGeometry(render.mode(),
-            DynamicTextures.resolve(render.texture(), subject), ModelPartAnimator.ageInTicks(subject), render.scrollSpeed()));
-        int color = FastColor.ARGB32.colorFromFloat(render.alpha() * alphaScale, render.red(), render.green(), render.blue());
+            slotTexture, ModelPartAnimator.ageInTicks(subject), render.scrollSpeed()));
+        int color = FastColor.ARGB32.colorFromFloat(alpha, render.red(), render.green(), render.blue());
         boolean scaled = render.scale() != 1.0F;
         if (scaled) {
             pose.pushPose();

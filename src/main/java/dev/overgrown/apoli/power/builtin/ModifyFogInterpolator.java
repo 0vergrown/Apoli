@@ -67,4 +67,8 @@ public final class ModifyFogInterpolator {
                                                       @Nullable Vec3 defaultColorValue) {
         return previous.lerp(target, progress, defaultS, defaultV, defaultColorValue);
     }
+
+    public static boolean isIdle() {
+        return target.isEmpty() && (previous.isEmpty() || progress >= previous.fadeOut + target.fadeIn);
+    }
 }

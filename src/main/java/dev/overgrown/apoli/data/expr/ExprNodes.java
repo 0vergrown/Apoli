@@ -286,6 +286,102 @@ public final class ExprNodes {
         }
     }
 
+    public record Length(ExprNode x, ExprNode y, ExprNode z) implements ExprNode {
+        @Override
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+            double a = x.eval(entity, container, level, value);
+            double b = y.eval(entity, container, level, value);
+            double c = z.eval(entity, container, level, value);
+            return Math.sqrt(a * a + b * b + c * c);
+        }
+
+        @Override
+        public boolean isConstant() {
+            return x.isConstant() && y.isConstant() && z.isConstant();
+        }
+    }
+
+    public record LengthSq(ExprNode x, ExprNode y, ExprNode z) implements ExprNode {
+        @Override
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+            double a = x.eval(entity, container, level, value);
+            double b = y.eval(entity, container, level, value);
+            double c = z.eval(entity, container, level, value);
+            return a * a + b * b + c * c;
+        }
+
+        @Override
+        public boolean isConstant() {
+            return x.isConstant() && y.isConstant() && z.isConstant();
+        }
+    }
+
+    public record Dot(ExprNode ax, ExprNode ay, ExprNode az, ExprNode bx, ExprNode by, ExprNode bz) implements ExprNode {
+        @Override
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+            return ax.eval(entity, container, level, value) * bx.eval(entity, container, level, value)
+                + ay.eval(entity, container, level, value) * by.eval(entity, container, level, value)
+                + az.eval(entity, container, level, value) * bz.eval(entity, container, level, value);
+        }
+
+        @Override
+        public boolean isConstant() {
+            return ax.isConstant() && ay.isConstant() && az.isConstant()
+                && bx.isConstant() && by.isConstant() && bz.isConstant();
+        }
+    }
+
+    public record Distance(ExprNode ax, ExprNode ay, ExprNode az, ExprNode bx, ExprNode by, ExprNode bz,
+                           boolean squared) implements ExprNode {
+        @Override
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+            double dx = ax.eval(entity, container, level, value) - bx.eval(entity, container, level, value);
+            double dy = ay.eval(entity, container, level, value) - by.eval(entity, container, level, value);
+            double dz = az.eval(entity, container, level, value) - bz.eval(entity, container, level, value);
+            double sq = dx * dx + dy * dy + dz * dz;
+            return squared ? sq : Math.sqrt(sq);
+        }
+
+        @Override
+        public boolean isConstant() {
+            return ax.isConstant() && ay.isConstant() && az.isConstant()
+                && bx.isConstant() && by.isConstant() && bz.isConstant();
+        }
+    }
+
+    public record NormComp(int axis, ExprNode x, ExprNode y, ExprNode z) implements ExprNode {
+        @Override
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+            double a = x.eval(entity, container, level, value);
+            double b = y.eval(entity, container, level, value);
+            double c = z.eval(entity, container, level, value);
+            double length = Math.sqrt(a * a + b * b + c * c);
+            if (length < 1.0E-12) return 0.0;
+            return (axis == 0 ? a : axis == 1 ? b : c) / length;
+        }
+
+        @Override
+        public boolean isConstant() {
+            return x.isConstant() && y.isConstant() && z.isConstant();
+        }
+    }
+
+    public static final class Memo implements ExprNode {
+        private static final java.util.concurrent.atomic.AtomicInteger SLOTS = new java.util.concurrent.atomic.AtomicInteger();
+
+        private final int slot = SLOTS.getAndIncrement();
+        private final ExprNode child;
+
+        public Memo(ExprNode child) {
+            this.child = child;
+        }
+
+        @Override
+        public double eval(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
+            return ExprMemo.read(slot, child, entity, container, level, value);
+        }
+    }
+
     private static boolean allConstant(ExprNode[] args) {
         for (ExprNode arg : args) {
             if (!arg.isConstant()) return false;

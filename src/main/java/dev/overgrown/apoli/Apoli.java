@@ -91,11 +91,21 @@ public final class Apoli {
         if (dev.overgrown.apoli.compat.ModCompat.HARDCORE_REVIVAL) {
             dev.overgrown.apoli.compat.hardcorerevival.HardcoreRevivalCompat.init();
         }
+        if (dev.overgrown.apoli.compat.ModCompat.SPELL_ENGINE) {
+            dev.overgrown.apoli.compat.spellengine.SpellEngineCompat.init();
+        }
+        if (dev.overgrown.apoli.compat.ModCompat.TACZ) {
+            dev.overgrown.apoli.compat.tacz.TaczCompat.init();
+        }
+        if (dev.overgrown.apoli.compat.ModCompat.APPLESKIN) {
+            dev.overgrown.apoli.compat.appleskin.AppleSkinCompat.init();
+        }
 
         PowerContainerAttachment.register(modBus);
         dev.overgrown.apoli.skill.SkillDataAttachment.register(modBus);
         dev.overgrown.apoli.advancement.ApoliCriteria.register(modBus);
         dev.overgrown.apoli.entity.ApoliEntities.register(modBus);
+        dev.overgrown.apoli.gui.ApoliMenus.register(modBus);
         dev.overgrown.apoli.particle.ApoliParticles.register(modBus);
         modBus.addListener(dev.overgrown.apoli.entity.ApoliEntities::registerAttributes);
         modBus.addListener(ApoliNetwork::register);
@@ -198,6 +208,7 @@ public final class Apoli {
             ApoliNetwork.broadcastPowers(event.getPlayerList().getServer());
             ApoliNetwork.broadcastKeybinds(event.getPlayerList().getServer(), SyncKeybindsS2C.fromCurrent());
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(event.getPlayerList().getServer());
+            if (dev.overgrown.apoli.compat.ModCompat.SPELL_ENGINE) dev.overgrown.apoli.compat.spellengine.SpellEngineCompat.onPowersReloaded(event.getPlayerList().getServer());
             dev.overgrown.apoli.global.GlobalPowers.reapplyAll(event.getPlayerList().getServer());
             dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
             dev.overgrown.apoli.power.builtin.ModifyPlayerSpawnHandler.clearCache();
@@ -222,6 +233,7 @@ public final class Apoli {
         dev.overgrown.apoli.power.builtin.EntitySetStorage.attach(event.getServer());
             dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
         dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(event.getServer());
+        if (dev.overgrown.apoli.compat.ModCompat.SPELL_ENGINE) dev.overgrown.apoli.compat.spellengine.SpellEngineCompat.onPowersReloaded(event.getServer());
         dev.overgrown.apoli.entity.GrabManager.clearAll();
         dev.overgrown.apoli.entity.possession.PossessionManager.clearAll();
         dev.overgrown.apoli.block.GhostBlocks.clear();
@@ -637,6 +649,8 @@ public final class Apoli {
             inv.open(payload.power(), cfg, player, impl);
         } else if (type instanceof StationPower<?>) {
             StationPower.open(payload.power(), player);
+        } else if (type instanceof dev.overgrown.apoli.power.builtin.GuiPower) {
+            dev.overgrown.apoli.power.builtin.GuiPower.open(payload.power(), player);
         }
     }
 

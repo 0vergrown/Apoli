@@ -11,6 +11,7 @@ import dev.overgrown.apoli.power.PowerTypeRegistry;
 import dev.overgrown.apoli.station.StationContainer;
 import dev.overgrown.apoli.station.StationSettings;
 import dev.overgrown.apoli.station.StationStorage;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -21,14 +22,32 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public abstract class StationPower<C extends StationPower.Config> extends PowerType<C> {
     public interface Config {
         StationSettings settings();
     }
 
-    protected abstract @Nullable StationContainer station(ResourceLocation powerId, C cfg, ServerPlayer player,
-                                                          PowerContainerImpl holder, boolean create);
+    protected abstract StationContainer create(UUID owner, ResourceLocation powerId, C cfg);
+
+    protected abstract boolean matches(StationContainer station, C cfg);
+
+    protected @Nullable StationContainer station(ResourceLocation powerId, C cfg, ServerPlayer player,
+                                                 PowerContainerImpl holder, boolean create) {
+        UUID owner = player.getUUID();
+        StationContainer live = StationStorage.live(owner, powerId);
+        if (live != null) {
+            if (matches(live, cfg)) return live;
+            StationStorage.flush(live, holder);
+            StationStorage.discard(owner, powerId);
+        }
+        CompoundTag stored = holder.getAuxNbt(powerId);
+        if (stored == null && !create) return null;
+        StationContainer made = create(owner, powerId, cfg);
+        StationStorage.adopt(made, stored, holder);
+        return made;
+    }
 
     protected abstract boolean tickStation(StationContainer station, C cfg, ServerPlayer player);
 

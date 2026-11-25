@@ -12,7 +12,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 public final class StationStorage {
     private static final int FLUSH_INTERVAL = 100;
@@ -25,17 +24,9 @@ public final class StationStorage {
         return byPower == null ? null : byPower.get(powerId);
     }
 
-    public static <T extends StationContainer> @Nullable T get(PowerContainerImpl holder, UUID owner, ResourceLocation powerId,
-                                                              Class<T> type, Supplier<T> factory, boolean create) {
-        StationContainer live = live(owner, powerId);
-        if (type.isInstance(live)) return type.cast(live);
-        if (live != null) discard(owner, powerId);
-        CompoundTag stored = holder.getAuxNbt(powerId);
-        if (stored == null && !create) return null;
-        T made = factory.get();
-        made.load(stored, holder.rawOwner().registryAccess());
-        LIVE.computeIfAbsent(owner, k -> new HashMap<>(2)).put(powerId, made);
-        return made;
+    public static void adopt(StationContainer station, @Nullable CompoundTag stored, PowerContainerImpl holder) {
+        station.load(stored, holder.rawOwner().registryAccess());
+        LIVE.computeIfAbsent(station.owner(), k -> new HashMap<>(2)).put(station.powerId(), station);
     }
 
     public static @Nullable StationContainer discard(UUID owner, ResourceLocation powerId) {
@@ -49,7 +40,7 @@ public final class StationStorage {
 
     public static void flush(StationContainer station, PowerContainerImpl holder) {
         if (!holder.allPowers().contains(station.powerId())) return;
-        holder.setAuxNbt(station.powerId(), station.save(holder.rawOwner().registryAccess()));
+        holder.storeAuxNbt(station.powerId(), station.save(holder.rawOwner().registryAccess()));
     }
 
     public static void flush(StationContainer station, Entity owner) {

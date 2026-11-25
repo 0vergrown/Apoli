@@ -33,7 +33,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public final class ApoliNetwork {
 
-    private static final String PROTOCOL_VERSION = "22";
+    private static final String PROTOCOL_VERSION = "25";
 
     private ApoliNetwork() {}
 
@@ -95,6 +95,8 @@ public final class ApoliNetwork {
         registrar.playToServer(dev.overgrown.apoli.network.payload.RefundSkillC2S.TYPE,
             dev.overgrown.apoli.network.payload.RefundSkillC2S.STREAM_CODEC, ApoliNetwork::onRefundSkill);
         registrar.playToServer(PowerActivationC2S.TYPE, PowerActivationC2S.STREAM_CODEC, ApoliNetwork::onPowerActivation);
+        registrar.playToServer(dev.overgrown.apoli.network.payload.GuiSliderC2S.TYPE,
+            dev.overgrown.apoli.network.payload.GuiSliderC2S.STREAM_CODEC, ApoliNetwork::onGuiSlider);
         registrar.playToServer(PowerToggleC2S.TYPE, PowerToggleC2S.STREAM_CODEC, ApoliNetwork::onPowerToggle);
         registrar.playToServer(dev.overgrown.apoli.network.payload.PowerReleaseC2S.TYPE,
             dev.overgrown.apoli.network.payload.PowerReleaseC2S.STREAM_CODEC, ApoliNetwork::onPowerRelease);
@@ -214,6 +216,12 @@ public final class ApoliNetwork {
 
     private static void onApplyVelocity(ApplyVelocityS2C payload, IPayloadContext ctx) {
         ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPayloadHandlers.onApplyVelocity(payload));
+    }
+
+    private static void onGuiSlider(dev.overgrown.apoli.network.payload.GuiSliderC2S payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> {
+            if (ctx.player() instanceof ServerPlayer sp) payload.handle(sp);
+        });
     }
 
     private static void onPowerActivation(PowerActivationC2S payload, IPayloadContext ctx) {
@@ -477,6 +485,10 @@ public final class ApoliNetwork {
 
     public static void sendApplyVelocityToTrackers(Entity entity, ApplyVelocityS2C payload) {
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(entity, payload);
+    }
+
+    public static void pushPlayer(ServerPlayer player, net.minecraft.world.phys.Vec3 push) {
+        PacketDistributor.sendToPlayer(player, new ApplyVelocityS2C(player.getId(), push.x, push.y, push.z, false));
     }
 
     private static void onPossessionSync(dev.overgrown.apoli.network.payload.PossessionSyncS2C payload,

@@ -55,6 +55,11 @@ public final class ApoliClient {
     }
 
     @SubscribeEvent
+    public static void onRegisterMenuScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
+        event.register(dev.overgrown.apoli.gui.ApoliMenus.gui(), dev.overgrown.apoli.client.gui.GuiScreen::new);
+    }
+
+    @SubscribeEvent
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ApoliEntities.CUSTOM_PROJECTILE.get(), CustomProjectileRenderer::new);
         event.registerEntityRenderer(ApoliEntities.MINION.get(), dev.overgrown.apoli.client.summon.MinionRenderer::new);
@@ -87,6 +92,7 @@ public final class ApoliClient {
             dev.overgrown.apoli.client.particle.ParticleSheet.clearCache();
             dev.overgrown.apoli.client.particle.ParticleTextures.clearCache();
             dev.overgrown.apoli.client.render.AnimatedTextures.clearCache();
+            dev.overgrown.apoli.client.render.ShaderAlpha.clear();
             TextureFallbacks.clear();
         });
         event.registerReloadListener(dev.overgrown.apoli.client.render.CustomModelManager.INSTANCE);

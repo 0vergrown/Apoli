@@ -12,15 +12,16 @@ import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.Util;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
@@ -36,6 +37,10 @@ public final class RenderedPoses {
     private static final Int2ObjectOpenHashMap<Pose> POSES = new Int2ObjectOpenHashMap<>();
     private static final Matrix4f[] ROOTS = new Matrix4f[MAX_DEPTH];
     private static final Entity[] ROOT_ENTITIES = new Entity[MAX_DEPTH];
+    private static final Matrix4f HAND_ROOT = new Matrix4f();
+    private static final FirstPersonArm RIGHT_HAND = new FirstPersonArm();
+    private static final FirstPersonArm LEFT_HAND = new FirstPersonArm();
+    private static int handRootFrame = -1;
     private static int depth;
     private static int frame;
 
@@ -44,6 +49,39 @@ public final class RenderedPoses {
     }
 
     private RenderedPoses() {}
+
+    public static final class FirstPersonArm {
+        private final Matrix4f local = new Matrix4f();
+        private final float[] limbs = new float[HumanoidPose.PART_COUNT * PoseMath.STRIDE];
+        private int frame = -MAX_AGE_FRAMES - 1;
+
+        public Matrix4f local() {
+            return local;
+        }
+
+        public float[] limbs() {
+            return limbs;
+        }
+    }
+
+    public static void beginHands(PoseStack poseStack) {
+        HAND_ROOT.set(poseStack.last().pose());
+        handRootFrame = frame;
+    }
+
+    public static void captureHand(Entity player, boolean right, PoseStack poseStack, HumanoidModel<?> model) {
+        if (handRootFrame != frame || player != Minecraft.getInstance().player) return;
+        FirstPersonArm hand = right ? RIGHT_HAND : LEFT_HAND;
+        hand.local.set(HAND_ROOT).invertAffine().mul(poseStack.last().pose());
+        ModelPartLookup.limbPosesInto(model, hand.limbs);
+        hand.frame = frame;
+    }
+
+    @Nullable
+    public static FirstPersonArm recentHand(boolean right) {
+        FirstPersonArm hand = right ? RIGHT_HAND : LEFT_HAND;
+        return frame - hand.frame <= MAX_AGE_FRAMES ? hand : null;
+    }
 
     public static final class Pose {
         private final Matrix4f local = new Matrix4f();
@@ -126,6 +164,9 @@ public final class RenderedPoses {
     public static void clear() {
         WATCHED.clear();
         POSES.clear();
+        RIGHT_HAND.frame = frame - MAX_AGE_FRAMES - 1;
+        LEFT_HAND.frame = frame - MAX_AGE_FRAMES - 1;
+        handRootFrame = -1;
         depth = 0;
     }
 

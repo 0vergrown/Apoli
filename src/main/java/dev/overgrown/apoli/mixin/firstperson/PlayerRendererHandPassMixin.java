@@ -4,15 +4,17 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.overgrown.apoli.access.PartVisibilityUndo;
+import dev.overgrown.apoli.client.particle.RenderedPoses;
 import dev.overgrown.apoli.client.render.FirstPersonHeldItem;
+import dev.overgrown.apoli.client.render.GhostArmState;
 import dev.overgrown.apoli.client.render.HandRenderPass;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -41,6 +43,7 @@ public abstract class PlayerRendererHandPassMixin {
                                    AbstractClientPlayer player, ModelPart arm, ModelPart sleeve,
                                    CallbackInfo ci) {
         PlayerModel<AbstractClientPlayer> model = ((PlayerRenderer) (Object) this).getModel();
+        if (!GhostArmState.isActive()) RenderedPoses.captureHand(player, arm == model.rightArm, poseStack, model);
         if (model instanceof PartVisibilityUndo undo) {
             undo.apoli$undoPartVisibility();
         }

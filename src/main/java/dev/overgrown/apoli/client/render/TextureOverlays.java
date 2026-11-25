@@ -27,9 +27,12 @@ public final class TextureOverlays {
     public static void render(EntityModel<?> model, ResolvedLayer layer, ResourceLocation texture, float alphaScale,
                               float ageInTicks, @Nullable Entity subject, PoseStack pose, MultiBufferSource buffers,
                               int light) {
-        int color = FastColor.ARGB32.colorFromFloat(layer.alpha() * alphaScale, layer.red(), layer.green(), layer.blue());
+        float alpha = layer.alpha() * alphaScale;
+        ResourceLocation bound = ShaderAlpha.texture(texture, layer.mode(), alpha);
+        if (bound != texture) alpha = 1.0F;
+        int color = FastColor.ARGB32.colorFromFloat(alpha, layer.red(), layer.green(), layer.blue());
         VertexConsumer consumer = buffers.getBuffer(
-            OverlayRenderTypes.forMode(layer.mode(), texture, ageInTicks, layer.scrollSpeed()));
+            OverlayRenderTypes.forMode(layer.mode(), bound, ageInTicks, layer.scrollSpeed()));
         boolean scaled = layer.scale() != 1.0F;
         if (scaled) {
             pose.pushPose();
@@ -95,9 +98,12 @@ public final class TextureOverlays {
 
     public static void renderArm(ResolvedLayer layer, ResourceLocation texture, float alphaScale, float ageInTicks,
                                  ModelPart arm, ModelPart sleeve, PoseStack pose, MultiBufferSource buffers, int light) {
-        int color = FastColor.ARGB32.colorFromFloat(layer.alpha() * alphaScale, layer.red(), layer.green(), layer.blue());
+        float alpha = layer.alpha() * alphaScale;
+        ResourceLocation bound = ShaderAlpha.texture(texture, layer.mode(), alpha);
+        if (bound != texture) alpha = 1.0F;
+        int color = FastColor.ARGB32.colorFromFloat(alpha, layer.red(), layer.green(), layer.blue());
         VertexConsumer consumer = buffers.getBuffer(
-            OverlayRenderTypes.forMode(layer.mode(), texture, ageInTicks, layer.scrollSpeed()));
+            OverlayRenderTypes.forMode(layer.mode(), bound, ageInTicks, layer.scrollSpeed()));
         boolean scaled = layer.scale() != 1.0F;
         if (scaled) {
             pose.pushPose();

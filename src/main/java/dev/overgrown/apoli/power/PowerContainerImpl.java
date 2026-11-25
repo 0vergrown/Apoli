@@ -148,9 +148,13 @@ public final class PowerContainerImpl implements PowerContainer {
         return auxNbt.get(powerId);
     }
 
-    public void setAuxNbt(ResourceLocation powerId, CompoundTag tag) {
+    public void storeAuxNbt(ResourceLocation powerId, CompoundTag tag) {
         auxNbt.put(powerId, tag);
         this.cachedSaveTag = null;
+    }
+
+    public void setAuxNbt(ResourceLocation powerId, CompoundTag tag) {
+        storeAuxNbt(powerId, tag);
         if (this.owner instanceof net.minecraft.server.level.ServerPlayer player) {
             dev.overgrown.apoli.ApoliNetwork.sendPowerInventory(player,
                 new dev.overgrown.apoli.network.payload.PowerInventoryS2C(powerId, tag));

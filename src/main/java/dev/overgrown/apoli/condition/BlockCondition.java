@@ -27,7 +27,7 @@ public record BlockCondition(ResourceLocation typeId, Object config, boolean inv
         id -> {
             ResourceLocation canonical = ConditionTypes.BLOCK.resolveId(id);
             ConditionType<BlockCtx, ?> t = ConditionTypes.BLOCK.get(canonical);
-            return t == null ? null : new DispatchedTypeCodec.CodecLookup.Resolution(canonical, t.codec());
+            return t == null ? null : new DispatchedTypeCodec.CodecLookup.Resolution(canonical, ConditionTypes.BLOCK.applyAliasDefaults(id, t.codec()));
         },
         BlockCondition::new,
         BlockCondition::typeId,

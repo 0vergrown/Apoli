@@ -1,0 +1,12 @@
+{
+  "required": false,
+  "package": "dev.overgrown.apoli.compat.fastsuite.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "dev.overgrown.apoli.compat.TargetPresentMixinPlugin",
+  "mixins": [
+    "AuxRecipeManagerAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

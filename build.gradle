@@ -143,6 +143,18 @@ dependencies {
     compileOnly "dev.latvian.mods:kubejs-neoforge:${project.kubejs_version}"
     compileOnly "dev.latvian.mods:rhino:${project.rhino_version}"
 
+    compileOnly "maven.modrinth:fastworkbench:${project.fastworkbench_version}"
+    compileOnly "maven.modrinth:fastsuite:${project.fastsuite_version}"
+
+    compileOnly "maven.modrinth:appleskin:${project.appleskin_version}"
+
+    compileOnly "maven.modrinth:spell-engine:${project.spell_engine_version}"
+    compileOnly "maven.modrinth:spell-power:${project.spell_power_version}"
+
+    compileOnly "maven.modrinth:vics-point-blank:${project.point_blank_version}"
+    compileOnly "maven.modrinth:geckolib:${project.geckolib_version}"
+    compileOnly "maven.modrinth:timeless-and-classics-zero:${project.tacz_version}"
+
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
