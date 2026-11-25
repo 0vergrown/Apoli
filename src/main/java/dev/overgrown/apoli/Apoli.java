@@ -121,6 +121,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.entity.possession.PossessionManager.clearAll();
             dev.overgrown.apoli.block.GhostBlocks.clear();
             dev.overgrown.apoli.block.BlockGlows.clear();
+            dev.overgrown.apoli.block.RedstonePulses.clear();
         });
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             dev.overgrown.apoli.power.builtin.EntitySetStorage.attach(server);
@@ -166,6 +167,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.power.builtin.ModifyEnchantmentLevelHandler.clearServer();
             dev.overgrown.apoli.block.GhostBlocks.clear();
             dev.overgrown.apoli.block.BlockGlows.clear();
+            dev.overgrown.apoli.block.RedstonePulses.clear();
             dev.overgrown.apoli.station.StationStorage.clear();
             dev.overgrown.apoli.entity.PlayerModelTypes.clear();
             dev.overgrown.apoli.tick.TickRates.clear();
@@ -596,6 +598,7 @@ public final class Apoli implements ModInitializer {
         CustomEffectRegistry.tick(server);
         dev.overgrown.apoli.block.GhostBlocks.tick(server);
         dev.overgrown.apoli.block.BlockGlows.tick(server);
+        dev.overgrown.apoli.block.RedstonePulses.tick(server);
         dev.overgrown.apoli.power.builtin.ShaderPower.tick(server);
         dev.overgrown.apoli.power.ResolvedPowers.tick(server);
         dev.overgrown.apoli.loader.LoadProblems.tick(server);
