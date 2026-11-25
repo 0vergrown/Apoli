@@ -130,6 +130,7 @@
     "recipe.CraftingMenuNerbMixin",
     "recipe.CraftingMenuResultMixin",
     "recipe.ResultSlotCraftMixin",
+    "redstone.SignalGetterPulseMixin",
     "rope.PlayerRopeElytraMixin",
     "scale.EntityScaleMixin",
     "scale.EntitySolidHitboxMixin",
