@@ -81,6 +81,7 @@ public final class ApoliNetwork {
         PayloadTypeRegistry.playS2C().register(SkillStateSyncS2C.TYPE, SkillStateSyncS2C.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(BuySkillC2S.TYPE, BuySkillC2S.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(PowerActivationC2S.TYPE, PowerActivationC2S.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.GuiSliderC2S.TYPE, dev.overgrown.apoli.network.payload.GuiSliderC2S.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(PowerToggleC2S.TYPE, PowerToggleC2S.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.PowerReleaseC2S.TYPE, dev.overgrown.apoli.network.payload.PowerReleaseC2S.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(dev.overgrown.apoli.network.payload.RequestSkillStateC2S.TYPE, dev.overgrown.apoli.network.payload.RequestSkillStateC2S.STREAM_CODEC);
@@ -314,6 +315,14 @@ public final class ApoliNetwork {
         }
         if (entity instanceof ServerPlayer self && connected(self)) {
             ServerPlayNetworking.send(self, payload);
+        }
+    }
+
+    public static void pushPlayer(ServerPlayer player, net.minecraft.world.phys.Vec3 push) {
+        if (connected(player) && ServerPlayNetworking.canSend(player, ApplyVelocityS2C.TYPE)) {
+            ServerPlayNetworking.send(player, new ApplyVelocityS2C(player.getId(), push.x, push.y, push.z, false));
+        } else {
+            player.hurtMarked = true;
         }
     }
 

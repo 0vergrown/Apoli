@@ -36,7 +36,7 @@ public final class InventoryCondition implements ConditionType<EntityCtx, Invent
     @Override
     public MapCodec<Cfg> codec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.list(InventoryType.CODEC).optionalFieldOf("inventory_types").forGetter(Cfg::inventoryTypes),
+            InventoryType.LIST_OR_SINGLE.optionalFieldOf("inventory_types").forGetter(Cfg::inventoryTypes),
             ProcessMode.CODEC.optionalFieldOf("process_mode", ProcessMode.ITEMS).forGetter(Cfg::processMode),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("item_condition", ItemCondition.CODEC).forGetter(Cfg::itemCondition),
             Codec.list(ItemSlot.CODEC).optionalFieldOf("slots").forGetter(Cfg::slots),

@@ -29,6 +29,8 @@ public final class PowerKeys {
             out.add(c.key().key());
         } else if (cfg instanceof InventoryPower.Config c) {
             out.add(c.key().key());
+        } else if (cfg instanceof dev.overgrown.apoli.power.builtin.GuiPower.Config c) {
+            out.add(c.key().key());
         } else if (cfg instanceof FireProjectilePower.Config c) {
             c.params().key().map(Key::key).ifPresent(out::add);
         } else if (cfg instanceof ActionOnKeySequencePower.Config c) {
@@ -41,6 +43,7 @@ public final class PowerKeys {
         Object cfg = power.config();
         if (cfg instanceof ActionOnKeyPressPower.Config c) return c.key().key();
         if (cfg instanceof InventoryPower.Config c) return c.key().key();
+        if (cfg instanceof dev.overgrown.apoli.power.builtin.GuiPower.Config c) return c.key().key();
         if (cfg instanceof FireProjectilePower.Config c) return c.params().key().map(Key::key).orElse(null);
         if (cfg instanceof ActionOnKeySequencePower.Config c) {
             List<String> atoms = c.atomKeys();

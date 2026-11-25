@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "package": "dev.overgrown.apoli.compat.polytone.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "dev.overgrown.apoli.compat.TargetPresentMixinPlugin",
+  "mixins": [],
+  "client": [
+    "PolytoneLightmapMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

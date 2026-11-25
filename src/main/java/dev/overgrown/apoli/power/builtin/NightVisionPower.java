@@ -46,9 +46,13 @@ public final class NightVisionPower extends PowerType<NightVisionPower.Config> {
     }
 
     public static float effectScale(LivingEntity entity) {
+        return effectScale(entity, 0f);
+    }
+
+    public static float effectScale(LivingEntity entity, float partialTick) {
         MobEffectInstance effect = entity.getEffect(MobEffects.NIGHT_VISION);
         if (effect == null) return 0f;
         if (!effect.endsWithin(200)) return 1f;
-        return 0.7F + Mth.sin(effect.getDuration() * (float) Math.PI * 0.2F) * 0.3F;
+        return 0.7F + Mth.sin((effect.getDuration() - partialTick) * (float) Math.PI * 0.2F) * 0.3F;
     }
 }

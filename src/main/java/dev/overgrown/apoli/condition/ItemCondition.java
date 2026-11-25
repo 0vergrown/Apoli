@@ -27,7 +27,7 @@ public record ItemCondition(ResourceLocation typeId, Object config, boolean inve
         id -> {
             ResourceLocation canonical = ConditionTypes.ITEM.resolveId(id);
             ConditionType<ItemCtx, ?> t = ConditionTypes.ITEM.get(canonical);
-            return t == null ? null : new DispatchedTypeCodec.CodecLookup.Resolution(canonical, t.codec());
+            return t == null ? null : new DispatchedTypeCodec.CodecLookup.Resolution(canonical, ConditionTypes.ITEM.applyAliasDefaults(id, t.codec()));
         },
         ItemCondition::new,
         ItemCondition::typeId,

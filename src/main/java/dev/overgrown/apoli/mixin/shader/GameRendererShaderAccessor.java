@@ -15,4 +15,13 @@ public interface GameRendererShaderAccessor {
 
     @Accessor("postEffect")
     PostChain apoli$getPostEffect();
+
+    @Accessor("postEffect")
+    void apoli$setPostEffect(PostChain chain);
+
+    @Accessor("effectActive")
+    boolean apoli$isEffectActive();
+
+    @Accessor("effectActive")
+    void apoli$setEffectActive(boolean active);
 }

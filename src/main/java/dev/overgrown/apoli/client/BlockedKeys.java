@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.client;
 
 import dev.overgrown.apoli.data.Key;
+import dev.overgrown.apoli.mixin.keybinding.KeyMappingClickCountAccessor;
 import dev.overgrown.apoli.power.builtin.PreventKeyPressPower;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -40,23 +41,40 @@ public final class BlockedKeys {
         });
 
         boolean wasAny = any;
+        boolean wasAll = all;
+        Set<String> wasNamed = named;
         any = flags[0];
         all = flags[1];
         scroll = flags[2];
         forced = flags[3];
-        named = keys.isEmpty() ? Set.of() : Set.copyOf(keys);
+        if (!keys.equals(named)) named = keys.isEmpty() ? Set.of() : Set.copyOf(keys);
 
-        if (any != wasAny && (!any || flags[4])) KeyMapping.releaseAll();
+        if (any != wasAny || all != wasAll || named != wasNamed) settle(wasAny, wasAll, wasNamed, flags[4]);
     }
 
     public static void clear() {
         boolean wasAny = any;
+        boolean wasAll = all;
+        Set<String> wasNamed = named;
         any = false;
         all = false;
         scroll = false;
         forced = false;
         named = Set.of();
-        if (wasAny) KeyMapping.releaseAll();
+        if (wasAny) settle(true, wasAll, wasNamed, false);
+    }
+
+    private static void settle(boolean wasAny, boolean wasAll, Set<String> wasNamed, boolean unpress) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.options == null) return;
+        for (KeyMapping mapping : mc.options.keyMappings) {
+            String name = mapping.getName();
+            boolean before = wasAny && (wasAll || wasNamed.contains(name));
+            boolean now = any && (all || named.contains(name));
+            if (before == now || now && !unpress) continue;
+            if (now) mapping.setDown(false);
+            ((KeyMappingClickCountAccessor) mapping).apoli$setClickCount(0);
+        }
     }
 
     public static boolean active() {

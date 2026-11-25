@@ -125,20 +125,21 @@ public final class FurnaceStation extends StationContainer implements StackedCon
         boolean wasLit = isLit();
         boolean changed = false;
         boolean finished = false;
-        if (cookTimeStale) {
-            cookingTotalTime = totalCookTime(level, settings);
-            cookTimeStale = false;
-        }
         if (isLit()) litTime--;
 
         ItemStack input = getItem(INPUT);
         ItemStack fuel = getItem(FUEL);
         boolean hasInput = !input.isEmpty();
         boolean hasFuel = settings.fuel() != FuelMode.ITEMS || !fuel.isEmpty();
-        if (isLit() || hasFuel && hasInput) {
+        boolean working = isLit() || hasFuel && hasInput;
+        RecipeHolder<? extends AbstractCookingRecipe> recipe = hasInput && (working || cookTimeStale)
+            ? quickCheck.getRecipeFor(new SingleRecipeInput(input), level).orElse(null) : null;
+        if (cookTimeStale) {
+            cookingTotalTime = cookTime(recipe, settings);
+            cookTimeStale = false;
+        }
+        if (working) {
             RegistryAccess access = level.registryAccess();
-            RecipeHolder<? extends AbstractCookingRecipe> recipe = hasInput
-                ? quickCheck.getRecipeFor(new SingleRecipeInput(input), level).orElse(null) : null;
             if (!isLit() && canBurn(access, recipe)) {
                 litTime = takeFuel(holder, settings);
                 litDuration = litTime;
@@ -148,7 +149,7 @@ public final class FurnaceStation extends StationContainer implements StackedCon
                 cookingProgress++;
                 if (cookingProgress >= cookingTotalTime) {
                     cookingProgress = 0;
-                    cookingTotalTime = totalCookTime(level, settings);
+                    cookingTotalTime = cookTime(recipe, settings);
                     if (burn(access, recipe)) {
                         recipesUsed.addTo(recipe.id(), 1);
                         finished = true;
@@ -189,9 +190,8 @@ public final class FurnaceStation extends StationContainer implements StackedCon
         return Math.max(1, Math.round(ticks * settings.fuelEfficiency()));
     }
 
-    private int totalCookTime(ServerLevel level, StationSettings settings) {
-        int base = quickCheck.getRecipeFor(new SingleRecipeInput(getItem(INPUT)), level)
-            .map(holder -> holder.value().getCookingTime()).orElse(200);
+    private static int cookTime(@Nullable RecipeHolder<? extends AbstractCookingRecipe> recipe, StationSettings settings) {
+        int base = recipe == null ? 200 : recipe.value().getCookingTime();
         return Math.max(1, Mth.ceil(base / settings.cookSpeed()));
     }
 
@@ -201,10 +201,8 @@ public final class FurnaceStation extends StationContainer implements StackedCon
         if (result.isEmpty()) return false;
         ItemStack output = getItem(RESULT);
         if (output.isEmpty()) return true;
-        if (!ItemStack.isSameItem(output, result)) return false;
-        int total = output.getCount() + result.getCount();
-        if (total <= getMaxStackSize() && total <= output.getMaxStackSize()) return true;
-        return total <= result.getMaxStackSize();
+        if (!ItemStack.isSameItemSameComponents(output, result)) return false;
+        return output.getCount() + result.getCount() <= Math.min(getMaxStackSize(), output.getMaxStackSize());
     }
 
     private boolean burn(RegistryAccess access, @Nullable RecipeHolder<? extends AbstractCookingRecipe> recipe) {
@@ -214,7 +212,7 @@ public final class FurnaceStation extends StationContainer implements StackedCon
         ItemStack output = getItem(RESULT);
         if (output.isEmpty()) {
             setItem(RESULT, result.copy());
-        } else if (output.is(result.getItem())) {
+        } else {
             output.grow(result.getCount());
         }
         if (input.is(Blocks.WET_SPONGE.asItem()) && getItem(FUEL).is(Items.BUCKET)) {

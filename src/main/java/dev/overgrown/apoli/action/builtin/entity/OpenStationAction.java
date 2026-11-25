@@ -6,6 +6,8 @@ import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.codec.IdCodecs;
 import dev.overgrown.apoli.condition.context.EntityCtx;
 import dev.overgrown.apoli.data.TextComponent;
+import dev.overgrown.apoli.power.PowerContainer;
+import dev.overgrown.apoli.power.builtin.GuiPower;
 import dev.overgrown.apoli.power.builtin.StationPower;
 import dev.overgrown.apoli.station.PortableStation;
 import net.minecraft.network.chat.Component;
@@ -30,7 +32,9 @@ public final class OpenStationAction implements ActionType<EntityCtx, OpenStatio
     public void run(Cfg cfg, EntityCtx ctx) {
         if (!(ctx.entity() instanceof ServerPlayer player)) return;
         if (cfg.power.isPresent()) {
-            StationPower.open(cfg.power.get(), player);
+            if (StationPower.open(cfg.power.get(), player)) return;
+            ResourceLocation gui = GuiPower.resolve(PowerContainer.of(player), cfg.power.get());
+            if (gui != null) GuiPower.open(gui, player);
             return;
         }
         if (cfg.station.isEmpty()) return;

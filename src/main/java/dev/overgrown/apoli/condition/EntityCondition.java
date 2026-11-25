@@ -28,7 +28,7 @@ public record EntityCondition(ResourceLocation typeId, Object config, boolean in
         id -> {
             ResourceLocation canonical = ConditionTypes.ENTITY.resolveId(id);
             ConditionType<EntityCtx, ?> t = ConditionTypes.ENTITY.get(canonical);
-            return t == null ? null : new DispatchedTypeCodec.CodecLookup.Resolution(canonical, t.codec());
+            return t == null ? null : new DispatchedTypeCodec.CodecLookup.Resolution(canonical, ConditionTypes.ENTITY.applyAliasDefaults(id, t.codec()));
         },
         EntityCondition::new,
         EntityCondition::typeId,

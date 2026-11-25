@@ -96,7 +96,11 @@ public final class Apoli implements ModInitializer {
         if (dev.overgrown.apoli.compat.ModCompat.HARDCORE_REVIVAL) {
             dev.overgrown.apoli.compat.hardcorerevival.HardcoreRevivalCompat.init();
         }
+        if (dev.overgrown.apoli.compat.ModCompat.SPELL_ENGINE) {
+            dev.overgrown.apoli.compat.spellengine.SpellEngineCompat.init();
+        }
         dev.overgrown.apoli.entity.ApoliEntities.register();
+        dev.overgrown.apoli.gui.ApoliMenus.register();
         dev.overgrown.apoli.particle.ApoliParticles.register();
         dev.overgrown.apoli.item.ApoliLootFunctions.register();
 
@@ -141,6 +145,7 @@ public final class Apoli implements ModInitializer {
             ApoliNetwork.broadcastKeybinds(server, SyncKeybindsS2C.fromCurrent());
             if (EffectConfig.get().enabled()) CustomEffectRegistry.finishReload(true);
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(server);
+            if (dev.overgrown.apoli.compat.ModCompat.SPELL_ENGINE) dev.overgrown.apoli.compat.spellengine.SpellEngineCompat.onPowersReloaded(server);
         });
         ServerLifecycleEvents.START_DATA_PACK_RELOAD.register(((server, resourceManager) -> {
             if (EffectConfig.get().enabled()) {
@@ -152,6 +157,7 @@ public final class Apoli implements ModInitializer {
             dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
             dev.overgrown.apoli.power.builtin.ModifyPlayerSpawnHandler.clearCache();
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(server);
+            if (dev.overgrown.apoli.compat.ModCompat.SPELL_ENGINE) dev.overgrown.apoli.compat.spellengine.SpellEngineCompat.onPowersReloaded(server);
             dev.overgrown.apoli.global.GlobalPowers.reapplyAll(server);
             if (EffectConfig.get().enabled()) CustomEffectRegistry.finishReload(success);
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
@@ -259,6 +265,8 @@ public final class Apoli implements ModInitializer {
 
         ServerPlayNetworking.registerGlobalReceiver(PowerActivationC2S.TYPE, (payload, context) ->
             context.player().server.execute(() -> handleActivation(context.player(), payload)));
+        ServerPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.GuiSliderC2S.TYPE, (payload, context) ->
+            context.player().server.execute(() -> payload.handle(context.player())));
 
         ServerPlayNetworking.registerGlobalReceiver(PowerToggleC2S.TYPE, (payload, context) ->
             context.player().server.execute(() -> handleToggle(context.player(), payload)));
@@ -678,6 +686,8 @@ public final class Apoli implements ModInitializer {
             inv.open(payload.power(), cfg, player, impl);
         } else if (type instanceof StationPower<?>) {
             StationPower.open(payload.power(), player);
+        } else if (type instanceof dev.overgrown.apoli.power.builtin.GuiPower) {
+            dev.overgrown.apoli.power.builtin.GuiPower.open(payload.power(), player);
         }
     }
 

@@ -32,6 +32,7 @@ public final class SyncCustomEffectRegistry {
     private static boolean apply(CustomEffectNetworking.SyncCustomEffectsPayload payload) {
         try {
             CustomEffectRegistry.install(payload.toEffects());
+            CustomEffectRegistry.matchServerIds(payload.effects());
             return true;
         } catch (RuntimeException e) {
             Apoli.LOGGER.error("[Apoli] Could not apply the server's custom effects", e);

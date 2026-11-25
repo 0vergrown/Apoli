@@ -143,6 +143,23 @@ public abstract class MobEffectRegistryCustomEffectMixin<T> implements RuntimeMo
         return installed;
     }
 
+    @Override
+    @SuppressWarnings("unchecked")
+    public boolean apoli$placeAt(CustomMobEffect effect, int id) {
+        if (!this.key.equals(Registries.MOB_EFFECT)) return false;
+        T value = (T) effect;
+        int current = this.toId.getInt(value);
+        if (current < 0 || id < 0 || id >= this.byId.size()) return false;
+        if (current == id) return true;
+        Holder.Reference<T> moving = this.byId.get(current);
+        Holder.Reference<T> displaced = this.byId.get(id);
+        this.byId.set(id, moving);
+        this.byId.set(current, displaced);
+        this.toId.put(value, id);
+        if (displaced != null && displaced.isBound()) this.toId.put(displaced.value(), current);
+        return true;
+    }
+
     @Unique
     private static boolean apoli$retires(Holder.Reference<?> reference, Set<ResourceLocation> keep) {
         return reference != null && reference.isBound() && apoli$retires(reference.value(), keep);

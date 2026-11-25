@@ -35,6 +35,7 @@ public record MacroArguments(Optional<ResourceLocation> storage, String path, Op
 
     private static final Logger LOG = LogUtils.getLogger();
     private static final Set<String> WARNED = ConcurrentHashMap.newKeySet();
+    private static final ThreadLocal<CompoundTag> AMBIENT = new ThreadLocal<>();
 
     public MacroArguments {
         resources = Map.copyOf(resources);
@@ -74,6 +75,8 @@ public record MacroArguments(Optional<ResourceLocation> storage, String path, Op
 
     public CompoundTag resolve(MinecraftServer server, @Nullable Entity self, @Nullable Entity target) {
         CompoundTag out = new CompoundTag();
+        CompoundTag ambient = AMBIENT.get();
+        if (ambient != null) out.merge(ambient);
         if (storage.isPresent()) {
             CompoundTag stored = StorageTarget.read(server, storage.get(), path);
             if (stored != null) out.merge(stored);
@@ -132,6 +135,27 @@ public record MacroArguments(Optional<ResourceLocation> storage, String path, Op
 
     public static void resetWarnings() {
         WARNED.clear();
+    }
+
+    public static void runWith(String key, double value, Runnable body) {
+        CompoundTag previous = AMBIENT.get();
+        CompoundTag next = previous == null ? new CompoundTag() : previous.copy();
+        putNumber(next, key, value);
+        AMBIENT.set(next);
+        try {
+            body.run();
+        } finally {
+            if (previous == null) {
+                AMBIENT.remove();
+            } else {
+                AMBIENT.set(previous);
+            }
+        }
+    }
+
+    public static String expandAmbient(String command, @Nullable Entity actor) {
+        CompoundTag ambient = AMBIENT.get();
+        return ambient == null ? command : expand(command, ambient, actor);
     }
 
     public static String expand(String command, CompoundTag arguments, @Nullable Entity actor) {

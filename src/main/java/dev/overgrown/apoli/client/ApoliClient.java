@@ -30,6 +30,8 @@ public final class ApoliClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        net.minecraft.client.gui.screens.MenuScreens.register(dev.overgrown.apoli.gui.ApoliMenus.gui(),
+            dev.overgrown.apoli.client.gui.GuiScreen::new);
         net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
             dev.overgrown.apoli.entity.ApoliEntities.CUSTOM_PROJECTILE,
             dev.overgrown.apoli.client.CustomProjectileRenderer::new);
@@ -242,6 +244,7 @@ public final class ApoliClient implements ClientModInitializer {
                     dev.overgrown.apoli.client.particle.ParticleSheet.clearCache();
                     dev.overgrown.apoli.client.particle.ParticleTextures.clearCache();
                     dev.overgrown.apoli.client.render.AnimatedTextures.clearCache();
+                    dev.overgrown.apoli.client.render.ShaderAlpha.clear();
                     TextureFallbacks.clear();
                 }
             });

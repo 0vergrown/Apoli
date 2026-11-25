@@ -15,8 +15,11 @@ import dev.overgrown.apoli.power.PowerTypeUsage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.phys.AABB;
 
 import java.util.List;
 import java.util.Optional;
@@ -46,6 +49,26 @@ public final class IgnoreFluidPower extends PowerType<IgnoreFluidPower.Config> {
     public static boolean holds(Entity entity) {
         PowerContainer container = PowerContainer.of(entity);
         return container != null && !container.isEmpty() && !container.powersOfType(ApoliIds.IGNORE_FLUID).isEmpty();
+    }
+
+    public static boolean inIgnoredWater(Entity entity) {
+        if (!holds(entity)) return false;
+        AABB box = entity.getBoundingBox().deflate(0.001);
+        int maxX = Mth.ceil(box.maxX);
+        int maxY = Mth.ceil(box.maxY);
+        int maxZ = Mth.ceil(box.maxZ);
+        Level level = entity.level();
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        for (int x = Mth.floor(box.minX); x < maxX; x++) {
+            for (int y = Mth.floor(box.minY); y < maxY; y++) {
+                for (int z = Mth.floor(box.minZ); z < maxZ; z++) {
+                    FluidState fluid = level.getFluidState(pos.set(x, y, z));
+                    if (fluid.is(FluidTags.WATER) && y + fluid.getHeight(level, pos) >= box.minY
+                        && ignores(entity, fluid, pos)) return true;
+                }
+            }
+        }
+        return false;
     }
 
     public static boolean ignores(Entity entity, FluidState fluid, BlockPos pos) {

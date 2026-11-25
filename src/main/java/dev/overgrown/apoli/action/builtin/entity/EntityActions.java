@@ -67,7 +67,8 @@ public final class EntityActions {
         ActionTypes.ENTITY.register(Apoli.id("extinguish"), new ExtinguishAction());
         ActionTypes.ENTITY.register(Apoli.id("crafting_table"), new CraftingTableAction());
         ActionTypes.ENTITY.register(Apoli.id("ender_chest"), new EnderChestAction());
-        ActionTypes.ENTITY.register(Apoli.id("open_station"), new OpenStationAction());
+        ActionTypes.ENTITY.register(Apoli.id("open_station"), new OpenStationAction(),
+            AliasingOptions.builder().addTypeAlias(Apoli.id("open_gui")).build());
 
         ActionTypes.ENTITY.register(Apoli.id("add_xp"), new AddXpAction());
         ActionTypes.ENTITY.register(Apoli.id("clear_effect"), new ClearEffectAction());
@@ -135,6 +136,8 @@ public final class EntityActions {
                 .addTypeAlias(Apoli.id("modify_inventory"))
                 .addTypeAlias(Apoli.id("replace_inventory"), java.util.Map.of("operation", "replace"))
                 .addTypeAlias(Apoli.id("drop_inventory"), java.util.Map.of("operation", "drop"))
+                .addTypeAlias(Apoli.id("change_item_in_gui"), java.util.Map.of("inventory_type", "power"))
+                .renameField("gui", "power")
                 .build());
 
         ActionTypes.ENTITY.register(Apoli.id("change_slot"), new ChangeSlotAction(),
@@ -191,6 +194,11 @@ public final class EntityActions {
         if (ModCompat.HARDCORE_REVIVAL) {
             ActionTypes.ENTITY.register(Apoli.id("knock_out"), new KnockOutAction());
             ActionTypes.ENTITY.register(Apoli.id("revive"), new ReviveAction());
+        }
+
+        if (ModCompat.SPELL_ENGINE) {
+            ActionTypes.ENTITY.register(Apoli.id("cast_spell"), new dev.overgrown.apoli.compat.spellengine.action.CastSpellAction());
+            ActionTypes.ENTITY.register(Apoli.id("clear_spell_cooldown"), new dev.overgrown.apoli.compat.spellengine.action.ClearSpellCooldownAction());
         }
 
         if (ModCompat.WALKERS) {

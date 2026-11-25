@@ -125,6 +125,16 @@ public final class CustomEffectRegistry {
         ids = Set.copyOf(installedIds);
     }
 
+    public static void matchServerIds(List<CustomEffectNetworking.ClientEffectData> effects) {
+        RuntimeMobEffectRegistry registry = (RuntimeMobEffectRegistry) BuiltInRegistries.MOB_EFFECT;
+        for (CustomEffectNetworking.ClientEffectData data : effects) {
+            if (!(BuiltInRegistries.MOB_EFFECT.get(data.id()) instanceof CustomMobEffect effect)) continue;
+            if (registry.apoli$placeAt(effect, data.networkId())) continue;
+            Apoli.LOGGER.warn("[Apoli] Custom effect {} could not take the server's id {}, so it may show the wrong name and icon.",
+                    data.id(), data.networkId());
+        }
+    }
+
     public static void purge(MinecraftServer server) {
         if (active.isEmpty()) return;
         for (ServerLevel level : server.getAllLevels()) {

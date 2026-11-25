@@ -312,6 +312,7 @@ public final class PowerTypes {
                 .build());
 
         PowerTypeRegistry.register(Apoli.id("inventory"), new InventoryPower());
+        PowerTypeRegistry.register(Apoli.id("gui"), new dev.overgrown.apoli.power.builtin.GuiPower());
         PowerTypeRegistry.register(Apoli.id("furnace"), new FurnacePower());
         PowerTypeRegistry.register(Apoli.id("brewing_stand"), new BrewingStandPower());
         PowerTypeRegistry.register(Apoli.id("power_storage"),
@@ -399,6 +400,19 @@ public final class PowerTypes {
         if (ModCompat.HARDCORE_REVIVAL) {
             PowerTypeRegistry.register(Apoli.id("action_on_knockout"), new ActionOnKnockoutPower());
             PowerTypeRegistry.register(Apoli.id("action_on_revive"), new ActionOnRevivePower());
+        }
+
+        if (ModCompat.SPELL_ENGINE) {
+            PowerTypeRegistry.register(Apoli.id("action_on_spell_cast"), new dev.overgrown.apoli.compat.spellengine.power.ActionOnSpellCastPower());
+            PowerTypeRegistry.register(Apoli.id("action_on_spell_hit"), new dev.overgrown.apoli.compat.spellengine.power.ActionOnSpellHitPower());
+            PowerTypeRegistry.register(Apoli.id("action_when_hit_by_spell"), new dev.overgrown.apoli.compat.spellengine.power.ActionWhenHitBySpellPower());
+            PowerTypeRegistry.register(Apoli.id("prevent_spell_cast"), new dev.overgrown.apoli.compat.spellengine.power.PreventSpellCastPower());
+            PowerTypeRegistry.register(Apoli.id("bypass_spell_requirements"), new dev.overgrown.apoli.compat.spellengine.power.BypassSpellRequirementsPower());
+            PowerTypeRegistry.register(Apoli.id("spells"), new dev.overgrown.apoli.compat.spellengine.power.SpellsPower());
+        }
+
+        if (ModCompat.anyGunMod()) {
+            dev.overgrown.apoli.compat.gun.GunPowers.registerPowers();
         }
 
         PowerTypeRegistry.register(Apoli.id("prevent_entity_selection"), new PreventEntitySelectionPower(), AliasingOptions.builder().addTypeAlias("apugli:prevent_entity_selection").build());

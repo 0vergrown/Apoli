@@ -28,7 +28,7 @@ public record BiEntityCondition(ResourceLocation typeId, Object config, boolean 
         id -> {
             ResourceLocation canonical = ConditionTypes.BI_ENTITY.resolveId(id);
             ConditionType<BiEntityCtx, ?> t = ConditionTypes.BI_ENTITY.get(canonical);
-            return t == null ? null : new DispatchedTypeCodec.CodecLookup.Resolution(canonical, t.codec());
+            return t == null ? null : new DispatchedTypeCodec.CodecLookup.Resolution(canonical, ConditionTypes.BI_ENTITY.applyAliasDefaults(id, t.codec()));
         },
         BiEntityCondition::new,
         BiEntityCondition::typeId,
