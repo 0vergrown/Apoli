@@ -16,6 +16,7 @@ public final class BlockActions {
         ActionTypes.BLOCK.register(Apoli.id("ghost_block"), new GhostBlockAction());
         ActionTypes.BLOCK.register(Apoli.id("glow"), new GlowBlockAction());
         ActionTypes.BLOCK.register(Apoli.id("modify_block_state"), new ModifyBlockStateAction());
+        ActionTypes.BLOCK.register(Apoli.id("redstone_pulse"), new RedstonePulseBlockAction());
         ActionTypes.BLOCK.register(Apoli.id("set_block"), new SetBlockAction());
         ActionTypes.BLOCK.register(Apoli.id("spawn_entity"), new SpawnEntityBlockAction());
         ActionTypes.BLOCK.register(Apoli.id("spawn_particles"), new SpawnParticlesBlockAction());
