@@ -8,4 +8,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface KeyMappingClickCountAccessor {
     @Accessor("clickCount")
     int apoli$getClickCount();
+
+    @Accessor("clickCount")
+    void apoli$setClickCount(int count);
 }

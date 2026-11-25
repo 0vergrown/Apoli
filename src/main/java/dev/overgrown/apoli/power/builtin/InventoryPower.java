@@ -196,7 +196,13 @@ public final class InventoryPower extends PowerType<InventoryPower.Config> {
         return load(stored, cfg.containerType().slots());
     }
 
+    private static boolean isInventory(ResourceLocation powerId) {
+        Power loaded = ApoliPowers.get(powerId);
+        return loaded != null && loaded.config() instanceof Config;
+    }
+
     public static SimpleContainer openContainer(LivingEntity holder, ResourceLocation powerId) {
+        if (!isInventory(powerId)) return GuiPower.container(holder, powerId);
         if (holder.level().isClientSide()) return clientContainer(holder, powerId);
         if (!(PowerContainer.of(holder) instanceof PowerContainerImpl impl)) return null;
         Power loaded = ApoliPowers.get(powerId);
@@ -207,6 +213,10 @@ public final class InventoryPower extends PowerType<InventoryPower.Config> {
     }
 
     public static void saveContainer(LivingEntity holder, ResourceLocation powerId, SimpleContainer container) {
+        if (!isInventory(powerId)) {
+            GuiPower.saveContainer(holder, powerId, container);
+            return;
+        }
         if (holder.level().isClientSide()
             || !(PowerContainer.of(holder) instanceof PowerContainerImpl impl)) return;
         impl.setAuxNbt(powerId, save(container));

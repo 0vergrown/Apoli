@@ -29,8 +29,10 @@ public final class ExecuteCommandAction implements ActionType<EntityCtx, Execute
         String command = cfg.command;
         if (cfg.arguments.isPresent()) {
             command = MacroArguments.expand(command, cfg.arguments.get().resolve(server, ctx.raw(), null), ctx.raw());
-            if (command == null) return;
+        } else {
+            command = MacroArguments.expandAmbient(command, ctx.raw());
         }
+        if (command == null) return;
         dev.overgrown.apoli.dev.DevMode.echoCommand(ctx.raw(), command);
         CommandSourceStack source = ctx.raw().createCommandSourceStack()
             .withPermission(4)

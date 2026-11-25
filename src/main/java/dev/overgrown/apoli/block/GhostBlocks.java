@@ -6,6 +6,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.core.SectionPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
@@ -34,6 +36,8 @@ public final class GhostBlocks {
     private static final long RESTORED = -2L;
     private static final int RELOAD_CHECK_INTERVAL = 20;
     private static final int MAX_SHUTDOWN_PASSES = 8;
+    private static final Direction[] FLUID_INFLOW =
+        {Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST};
 
     private GhostBlocks() {}
 
@@ -238,8 +242,18 @@ public final class GhostBlocks {
         }
         level.levelEvent(2001, pos, Block.getId(ghost.original));
 
+        wakeFluids(level, pos);
+
         if (ghost.endAction.isPresent()) {
             ghost.endAction.get().run(new BlockCtx(pos, ghost.original, level));
+        }
+    }
+
+    private static void wakeFluids(ServerLevel level, BlockPos pos) {
+        BlockPos.MutableBlockPos next = new BlockPos.MutableBlockPos();
+        for (int i = 0; i < FLUID_INFLOW.length; i++) {
+            FluidState fluid = level.getFluidState(next.setWithOffset(pos, FLUID_INFLOW[i]));
+            if (!fluid.isEmpty()) level.scheduleTick(next.immutable(), fluid.getType(), fluid.getType().getTickDelay(level));
         }
     }
 

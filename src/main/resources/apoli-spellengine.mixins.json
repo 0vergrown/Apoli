@@ -1,0 +1,14 @@
+{
+  "required": false,
+  "package": "dev.overgrown.apoli.compat.spellengine.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "plugin": "dev.overgrown.apoli.compat.TargetPresentMixinPlugin",
+  "mixins": [
+    "AmmoMixin",
+    "SpellCastingMixin",
+    "SpellImpactsMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

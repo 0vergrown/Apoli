@@ -100,6 +100,10 @@ public final class ModifyFogHandler {
             return s == other.s && v == other.v && color.equals(other.color);
         }
 
+        public boolean isEmpty() {
+            return s == UNSET && v == UNSET && color.equals(UNSET_COLOR);
+        }
+
         public FogData lerp(FogData target, float progress,
                             @Nullable Float defaultS, @Nullable Float defaultV, @Nullable Vec3 defaultColor) {
             float span = this.fadeOut + target.fadeIn;

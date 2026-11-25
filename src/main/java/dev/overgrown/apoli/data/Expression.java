@@ -3,6 +3,7 @@ package dev.overgrown.apoli.data;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import dev.overgrown.apoli.data.expr.ExprMemo;
 import dev.overgrown.apoli.data.expr.ExprNode;
 import dev.overgrown.apoli.data.expr.ExprNodes;
 import dev.overgrown.apoli.data.expr.ExprParseException;
@@ -48,12 +49,14 @@ public final class Expression {
     private final double constVal;
     private final boolean needsContainer;
     private final boolean needsPeer;
+    private final boolean usesMemo;
 
-    private Expression(String source, ExprNode root, boolean needsContainer, boolean needsPeer) {
+    private Expression(String source, ExprNode root, boolean needsContainer, boolean needsPeer, boolean usesMemo) {
         this.source = source;
         this.root = root;
         this.needsContainer = needsContainer;
         this.needsPeer = needsPeer;
+        this.usesMemo = usesMemo;
         if (root instanceof ExprNodes.Const c) {
             this.isConst = true;
             this.constVal = c.v();
@@ -69,7 +72,7 @@ public final class Expression {
         }
         try {
             ExprParser.Result result = ExprParser.parse(src, ExprVars::resolve);
-            return new Expression(src, result.root(), result.needsContainer(), result.needsPeer());
+            return new Expression(src, result.root(), result.needsContainer(), result.needsPeer(), result.usesMemo());
         } catch (ExprParseException e) {
             throw new IllegalArgumentException("Invalid expression \"" + src + "\": " + e.getMessage());
         }
@@ -101,7 +104,11 @@ public final class Expression {
 
     public static Expression constant(double value) {
         String repr = value == (long) value ? Long.toString((long) value) : Double.toString(value);
-        return new Expression(repr, new ExprNodes.Const(value), false, false);
+        return new Expression(repr, new ExprNodes.Const(value), false, false, false);
+    }
+
+    static Expression component(String source, ExprNode root, boolean needsContainer, boolean needsPeer, boolean usesMemo) {
+        return new Expression(source, root, needsContainer, needsPeer, usesMemo);
     }
 
     public String source() {
@@ -118,6 +125,10 @@ public final class Expression {
 
     public boolean needsPeer() {
         return needsPeer;
+    }
+
+    public boolean usesMemo() {
+        return usesMemo;
     }
 
     public double eval(@Nullable Entity entity) {
@@ -154,7 +165,13 @@ public final class Expression {
     }
 
     private double evalFull(@Nullable Entity entity, @Nullable PowerContainer container, @Nullable Level level, double value) {
-        return sanitize(root.eval(entity, container, level, value));
+        if (!usesMemo) return sanitize(root.eval(entity, container, level, value));
+        ExprMemo memo = ExprMemo.enter();
+        try {
+            return sanitize(root.eval(entity, container, level, value));
+        } finally {
+            memo.exit();
+        }
     }
 
     private static double sanitize(double result) {

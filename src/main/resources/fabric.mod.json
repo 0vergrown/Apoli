@@ -23,6 +23,9 @@
     ],
     "modmenu": [
       "dev.overgrown.apoli.compat.modmenu.ApoliModMenu"
+    ],
+    "appleskin": [
+      "dev.overgrown.apoli.compat.appleskin.AppleSkinCompat"
     ]
   },
   "custom": {
@@ -52,7 +55,11 @@
     "apoli-flywheel.mixins.json",
     "apoli-ledger.mixins.json",
     "apoli-yigd.mixins.json",
-    "apoli-gravestones.mixins.json"
+    "apoli-gravestones.mixins.json",
+    "apoli-chloride.mixins.json",
+    "apoli-polytone.mixins.json",
+    "apoli-spellengine.mixins.json",
+    "apoli-pointblank.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.20.1",

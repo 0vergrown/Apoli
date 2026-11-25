@@ -42,8 +42,10 @@ public final class ExecuteCommandBiEntityAction implements ActionType<BiEntityCt
         }
         if (cfg.arguments().isPresent()) {
             command = MacroArguments.expand(command, cfg.arguments().get().resolve(server, actor, target), actor);
-            if (command == null) return;
+        } else {
+            command = MacroArguments.expandAmbient(command, actor);
         }
+        if (command == null) return;
         dev.overgrown.apoli.dev.DevMode.echoCommand(actor, command);
         CommandSourceStack source = actor.createCommandSourceStack()
             .withPermission(4)

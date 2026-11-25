@@ -8,6 +8,7 @@ import dev.overgrown.apoli.data.BodyPart;
 import dev.overgrown.apoli.data.FirstPersonFrame;
 import dev.overgrown.apoli.data.HumanoidPose;
 import dev.overgrown.apoli.data.ModelPartAnchor;
+import dev.overgrown.apoli.data.PoseMath;
 import dev.overgrown.apoli.mixin.firstperson.GameRendererFovInvoker;
 import dev.overgrown.apoli.mixin.firstperson.ItemInHandRendererAccessor;
 import net.fabricmc.api.EnvType;
@@ -24,6 +25,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3f;
+import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 
@@ -84,16 +86,26 @@ public final class FirstPersonHandAnchor {
         float yRot = 0.0F;
         float zRot = 0.0F;
         if (stack.isEmpty() || (ArmEdits.edited(edits, arm) && !stack.is(Items.FILLED_MAP))) {
-            FirstPersonFrame.arm(pose.last().pose(), side, equip, swing);
-            HumanoidPose arms = HumanoidPose.firstPersonArms(player, ModelPartAnimator.timeline(),
-                ModelPartAnimator.now(player));
+            RenderedPoses.FirstPersonArm drawn = RenderedPoses.recentHand(arm == HumanoidArm.RIGHT);
+            Matrix4f armRoot;
+            float[] limbs;
+            if (drawn != null) {
+                armRoot = drawn.local();
+                limbs = drawn.limbs();
+            } else {
+                FirstPersonFrame.arm(pose.last().pose(), side, equip, swing);
+                armRoot = pose.last().pose();
+                limbs = HumanoidPose.firstPersonArms(player, ModelPartAnimator.timeline(),
+                    ModelPartAnimator.now(player)).poses();
+            }
             float[] point = new float[3];
-            sided.pointInto(arms.poses(), new double[3], point);
-            linear = new Matrix3f(pose.last().pose());
-            at = pose.last().pose().transform(new Vector4f(point[0] * PIXEL, point[1] * PIXEL, point[2] * PIXEL, 1.0F));
-            xRot = arms.xRot(limb);
-            yRot = arms.yRot(limb);
-            zRot = arms.zRot(limb);
+            sided.pointInto(limbs, new double[3], point);
+            linear = new Matrix3f(armRoot);
+            at = armRoot.transform(new Vector4f(point[0] * PIXEL, point[1] * PIXEL, point[2] * PIXEL, 1.0F));
+            int offset = limb * PoseMath.STRIDE;
+            xRot = limbs[offset + PoseMath.X_ROT];
+            yRot = limbs[offset + PoseMath.Y_ROT];
+            zRot = limbs[offset + PoseMath.Z_ROT];
         } else {
             itemTransform(pose, side, equip, swing);
             linear = new Matrix3f(pose.last().pose()).scale(-1.0F, -1.0F, 1.0F);

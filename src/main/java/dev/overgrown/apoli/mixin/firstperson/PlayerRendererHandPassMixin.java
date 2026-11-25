@@ -4,7 +4,9 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.overgrown.apoli.access.PartVisibilityUndo;
+import dev.overgrown.apoli.client.particle.RenderedPoses;
 import dev.overgrown.apoli.client.render.FirstPersonHeldItem;
+import dev.overgrown.apoli.client.render.GhostArmState;
 import dev.overgrown.apoli.client.render.HandRenderPass;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -41,6 +43,7 @@ public abstract class PlayerRendererHandPassMixin {
                                    AbstractClientPlayer player, ModelPart arm, ModelPart sleeve,
                                    CallbackInfo ci) {
         PlayerModel<AbstractClientPlayer> model = ((PlayerRenderer) (Object) this).getModel();
+        if (!GhostArmState.isActive()) RenderedPoses.captureHand(player, arm == model.rightArm, poseStack, model);
         if (model instanceof PartVisibilityUndo undo) {
             undo.apoli$undoPartVisibility();
         }

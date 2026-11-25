@@ -141,7 +141,12 @@ public final class EntityConditions {
         ConditionTypes.ENTITY.register(Apoli.id("riding_root"), new RidingRootCondition());
 
         ConditionTypes.ENTITY.register(Apoli.id("elytra_flight_possible"), new ElytraFlightPossibleCondition());
-        ConditionTypes.ENTITY.register(Apoli.id("inventory"), new InventoryCondition());
+        ConditionTypes.ENTITY.register(Apoli.id("inventory"), new InventoryCondition(),
+            AliasingOptions.builder()
+                .addTypeAlias(Apoli.id("item_in_gui"), java.util.Map.of("inventory_types", "power"))
+                .renameField("gui", "power")
+                .build());
+        ConditionTypes.ENTITY.register(Apoli.id("slider"), new SliderCondition());
         ConditionTypes.ENTITY.register(Apoli.id("raycast"), new RaycastEntityCondition());
 
 
@@ -158,6 +163,16 @@ public final class EntityConditions {
 
         if (ModCompat.HARDCORE_REVIVAL) {
             ConditionTypes.ENTITY.register(Apoli.id("knocked_out"), new KnockedOutCondition());
+        }
+
+        if (ModCompat.SPELL_ENGINE) {
+            ConditionTypes.ENTITY.register(Apoli.id("casting_spell"), new dev.overgrown.apoli.compat.spellengine.condition.CastingSpellCondition());
+            ConditionTypes.ENTITY.register(Apoli.id("spell_on_cooldown"), new dev.overgrown.apoli.compat.spellengine.condition.SpellOnCooldownCondition());
+            ConditionTypes.ENTITY.register(Apoli.id("has_spell"), new dev.overgrown.apoli.compat.spellengine.condition.HasSpellCondition());
+        }
+
+        if (ModCompat.anyGunMod()) {
+            ConditionTypes.ENTITY.register(Apoli.id("aiming"), new dev.overgrown.apoli.compat.gun.condition.AimingCondition());
         }
 
         ConditionTypes.ENTITY.register(Apoli.id("has_command_tag"), new HasCommandTagCondition());

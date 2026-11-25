@@ -211,6 +211,12 @@ public final class KeyDispatch {
             inventory.open(id, c, player, impl);
             return true;
         }
+        if (type instanceof dev.overgrown.apoli.power.builtin.GuiPower && cfg instanceof dev.overgrown.apoli.power.builtin.GuiPower.Config c) {
+            if (continuousOnly) return false;
+            if (player == null) return false;
+            if (key != null && !c.key().key().equals(key)) return false;
+            return dev.overgrown.apoli.power.builtin.GuiPower.open(id, player);
+        }
         if (type instanceof StationPower<?> && cfg instanceof StationPower.Config c) {
             if (continuousOnly) return false;
             if (player == null) return false;

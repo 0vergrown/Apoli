@@ -27,7 +27,7 @@ public record BiomeCondition(ResourceLocation typeId, Object config, boolean inv
         id -> {
             ResourceLocation canonical = ConditionTypes.BIOME.resolveId(id);
             ConditionType<BiomeCtx, ?> t = ConditionTypes.BIOME.get(canonical);
-            return t == null ? null : new DispatchedTypeCodec.CodecLookup.Resolution(canonical, t.codec());
+            return t == null ? null : new DispatchedTypeCodec.CodecLookup.Resolution(canonical, ConditionTypes.BIOME.applyAliasDefaults(id, t.codec()));
         },
         BiomeCondition::new,
         BiomeCondition::typeId,

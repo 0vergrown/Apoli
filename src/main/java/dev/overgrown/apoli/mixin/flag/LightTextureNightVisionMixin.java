@@ -1,16 +1,11 @@
 package dev.overgrown.apoli.mixin.flag;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import dev.overgrown.apoli.client.render.LocalNightVision;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
@@ -24,14 +19,5 @@ public abstract class LightTextureNightVisionMixin {
             ordinal = 0))
     private boolean apoli$forceNightVision(boolean original) {
         return original || LocalNightVision.strength(Minecraft.getInstance().player) > 0f;
-    }
-
-    @WrapOperation(method = "updateLightTexture(F)V",
-        at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/renderer/GameRenderer;getNightVisionScale(Lnet/minecraft/world/entity/LivingEntity;F)F"))
-    private float apoli$nightVisionScale(LivingEntity entity, float partialTick, Operation<Float> original) {
-        float power = LocalNightVision.strength(entity);
-        if (!entity.hasEffect(MobEffects.NIGHT_VISION)) return power;
-        return Math.max(original.call(entity, partialTick), power);
     }
 }

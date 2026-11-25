@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.effects;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import dev.overgrown.apoli.Apoli;
 import net.fabricmc.fabric.api.networking.v1.FabricPacket;
 import net.fabricmc.fabric.api.networking.v1.PacketType;
@@ -19,10 +20,11 @@ import java.util.UUID;
 public final class CustomEffectNetworking {
     private static final Set<UUID> PENDING_JOIN = new HashSet<>();
 
-    public record ClientEffectData(ResourceLocation id, MobEffectCategory category, int color,
+    public record ClientEffectData(ResourceLocation id, int networkId, MobEffectCategory category, int color,
                                    Optional<String> name, Optional<ResourceLocation> icon) {
         public ClientEffectData(FriendlyByteBuf buf) {
             this(buf.readResourceLocation(),
+                    buf.readVarInt(),
                     buf.readEnum(MobEffectCategory.class),
                     buf.readInt(),
                     buf.readOptional(FriendlyByteBuf::readUtf),
@@ -31,6 +33,7 @@ public final class CustomEffectNetworking {
 
         public void write(FriendlyByteBuf buf) {
             buf.writeResourceLocation(id);
+            buf.writeVarInt(networkId);
             buf.writeEnum(category);
             buf.writeInt(color);
             buf.writeOptional(name, FriendlyByteBuf::writeUtf);
@@ -38,7 +41,8 @@ public final class CustomEffectNetworking {
         }
 
         static ClientEffectData of(CustomMobEffect effect) {
-            return new ClientEffectData(effect.id, effect.getCategory(), effect.getColor(), effect.name, effect.icon);
+            return new ClientEffectData(effect.id, BuiltInRegistries.MOB_EFFECT.getId(effect), effect.getCategory(),
+                    effect.getColor(), effect.name, effect.icon);
         }
 
         public CustomMobEffect toEffect() {
@@ -47,7 +51,7 @@ public final class CustomEffectNetworking {
     }
 
     public record SyncCustomEffectsPacket(List<ClientEffectData> effects) implements FabricPacket {
-        public static final ResourceLocation CHANNEL = Apoli.id("sync_custom_effects");
+        public static final ResourceLocation CHANNEL = Apoli.id("custom_effects");
         public static final PacketType<SyncCustomEffectsPacket> TYPE = PacketType.create(CHANNEL, SyncCustomEffectsPacket::new);
 
         public SyncCustomEffectsPacket(FriendlyByteBuf buf) {

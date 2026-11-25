@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.BiEntityCtx;
+import dev.overgrown.apoli.data.ExprVector;
 import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.data.Space;
 import dev.overgrown.apoli.network.VelocityUpdater;
@@ -33,7 +34,7 @@ public final class AddVelocityAction implements ActionType<BiEntityCtx, AddVeloc
         }
     }
 
-    public record Cfg(Expression x, Expression y, Expression z, Reference reference,
+    public record Cfg(Expression x, Expression y, Expression z, Optional<ExprVector> vector, Reference reference,
                       Optional<Space> space, boolean set, Expression blend, boolean keepSpeed) {}
 
     private static final Expression ZERO = Expression.constant(0.0);
@@ -45,6 +46,7 @@ public final class AddVelocityAction implements ActionType<BiEntityCtx, AddVeloc
             Expression.DOUBLE_OR_EXPR.optionalFieldOf("x", ZERO).forGetter(Cfg::x),
             Expression.DOUBLE_OR_EXPR.optionalFieldOf("y", ZERO).forGetter(Cfg::y),
             Expression.DOUBLE_OR_EXPR.optionalFieldOf("z", ZERO).forGetter(Cfg::z),
+            dev.overgrown.apoli.codec.LoggedOptionalField.strict("vector", ExprVector.CODEC).forGetter(Cfg::vector),
             Reference.CODEC.optionalFieldOf("reference", Reference.POSITION).forGetter(Cfg::reference),
             dev.overgrown.apoli.codec.LoggedOptionalField.strict("space", Space.CODEC).forGetter(Cfg::space),
             Codec.BOOL.optionalFieldOf("set", false).forGetter(Cfg::set),
@@ -58,7 +60,9 @@ public final class AddVelocityAction implements ActionType<BiEntityCtx, AddVeloc
         Entity actor = ctx.actor();
         Entity target = ctx.target();
         if (actor == null || target == null) return;
-        Vec3 amount = new Vec3(cfg.x.eval(actor), cfg.y.eval(actor), cfg.z.eval(actor));
+        Vec3 amount = cfg.vector.isPresent()
+            ? cfg.vector.get().resolveVec3(actor)
+            : new Vec3(cfg.x.eval(actor), cfg.y.eval(actor), cfg.z.eval(actor));
         Vec3 delta;
         if (cfg.space.isPresent()) {
             delta = cfg.space.get().toGlobal(actor, amount);

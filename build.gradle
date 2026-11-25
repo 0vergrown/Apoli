@@ -103,6 +103,14 @@ dependencies {
 
 	modCompileOnly "me.lucko:fabric-permissions-api:0.3.1"
 
+	modCompileOnly "maven.modrinth:appleskin:${project.appleskin_version}"
+
+	modCompileOnly "maven.modrinth:spell-engine:${project.spell_engine_version}"
+	modCompileOnly "maven.modrinth:spell-power:${project.spell_power_version}"
+
+	modCompileOnly "maven.modrinth:vics-point-blank:${project.point_blank_version}"
+	modCompileOnly "maven.modrinth:geckolib:${project.geckolib_version}"
+
 	modCompileOnly("dev.latvian.mods:kubejs-fabric:${project.kubejs_version}") {
 		transitive = false
 	}

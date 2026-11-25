@@ -3,7 +3,9 @@ package dev.overgrown.apoli.condition;
 import dev.overgrown.apoli.alias.AliasRegistry;
 import dev.overgrown.apoli.alias.AliasingMapCodec;
 import dev.overgrown.apoli.alias.AliasingOptions;
+import dev.overgrown.apoli.alias.DefaultInjectingMapCodec;
 import dev.overgrown.apoli.alias.NamespaceAlias;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,6 +16,7 @@ public final class TypedConditionRegistry<CTX> {
     private final String groupName;
     private final Map<ResourceLocation, Entry<CTX, ?>> byId = new HashMap<>();
     private final AliasRegistry aliases = new AliasRegistry();
+    private final Map<ResourceLocation, Map<String, String>> aliasDefaults = new HashMap<>();
 
     public TypedConditionRegistry(String groupName) {
         this.groupName = groupName;
@@ -51,7 +54,18 @@ public final class TypedConditionRegistry<CTX> {
         for (ResourceLocation old : opts.typeAliases()) {
             aliases.registerTypeAlias(old, id);
         }
+        aliasDefaults.putAll(opts.typeAliasDefaults());
         return wrapped;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public MapCodec<?> applyAliasDefaults(ResourceLocation originalId, MapCodec<?> codec) {
+        Map<String, String> defaults = aliasDefaults.get(originalId);
+        if (defaults == null && NamespaceAlias.hasAlias(originalId.getNamespace())) {
+            defaults = aliasDefaults.get(NamespaceAlias.resolve(originalId));
+        }
+        if (defaults == null || defaults.isEmpty()) return codec;
+        return DefaultInjectingMapCodec.wrap((MapCodec) codec, defaults);
     }
 
     public @Nullable ConditionType<CTX, ?> get(ResourceLocation id) {

@@ -2,12 +2,12 @@ package dev.overgrown.apoli.mixin.recipe;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import dev.overgrown.apoli.recipe.ApoliPowerRecipes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.inventory.CraftingMenu;
 import net.minecraft.world.inventory.ResultContainer;
 import net.minecraft.world.item.ItemStack;
@@ -17,7 +17,7 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 
 import java.util.Optional;
 
@@ -38,16 +38,16 @@ public abstract class CraftingMenuGateMixin {
         return result;
     }
 
-    @Redirect(method = "slotChangedCraftingGrid", at = @At(value = "INVOKE",
-        target = "Lnet/minecraft/world/inventory/ResultContainer;setItem(ILnet/minecraft/world/item/ItemStack;)V"))
-    private static void apoli$stampResultPowers(ResultContainer resultContainer, int slot, ItemStack result,
-                                                AbstractContainerMenu menu, Level level, Player player,
-                                                CraftingContainer grid, ResultContainer rc) {
+    @ModifyArg(method = "slotChangedCraftingGrid", at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/world/inventory/ResultContainer;setItem(ILnet/minecraft/world/item/ItemStack;)V"),
+        index = 1)
+    private static ItemStack apoli$stampResultPowers(ItemStack result,
+                                                     @Local(argsOnly = true) ResultContainer resultContainer) {
         Recipe<?> used = resultContainer.getRecipeUsed();
         if (!result.isEmpty() && used != null) {
             CompoundTag powers = ApoliPowerRecipes.resultPowersFor(used.getId());
             if (powers != null) result.getOrCreateTag().merge(powers);
         }
-        resultContainer.setItem(slot, result);
+        return result;
     }
 }

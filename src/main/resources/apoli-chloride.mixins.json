@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "package": "dev.overgrown.apoli.compat.chloride.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "plugin": "dev.overgrown.apoli.compat.TargetPresentMixinPlugin",
+  "mixins": [],
+  "client": [
+    "ChlorideDarknessMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

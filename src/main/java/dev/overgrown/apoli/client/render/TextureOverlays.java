@@ -27,8 +27,10 @@ public final class TextureOverlays {
                               float ageInTicks, @Nullable Entity subject, PoseStack pose, MultiBufferSource buffers,
                               int light) {
         float alpha = layer.alpha() * alphaScale;
+        ResourceLocation bound = ShaderAlpha.texture(texture, layer.mode(), alpha);
+        if (bound != texture) alpha = 1.0F;
         VertexConsumer consumer = buffers.getBuffer(
-            OverlayRenderTypes.forMode(layer.mode(), texture, ageInTicks, layer.scrollSpeed()));
+            OverlayRenderTypes.forMode(layer.mode(), bound, ageInTicks, layer.scrollSpeed()));
         boolean scaled = layer.scale() != 1.0F;
         if (scaled) {
             pose.pushPose();
@@ -95,8 +97,10 @@ public final class TextureOverlays {
     public static void renderArm(ResolvedLayer layer, ResourceLocation texture, float alphaScale, float ageInTicks,
                                  ModelPart arm, ModelPart sleeve, PoseStack pose, MultiBufferSource buffers, int light) {
         float alpha = layer.alpha() * alphaScale;
+        ResourceLocation bound = ShaderAlpha.texture(texture, layer.mode(), alpha);
+        if (bound != texture) alpha = 1.0F;
         VertexConsumer consumer = buffers.getBuffer(
-            OverlayRenderTypes.forMode(layer.mode(), texture, ageInTicks, layer.scrollSpeed()));
+            OverlayRenderTypes.forMode(layer.mode(), bound, ageInTicks, layer.scrollSpeed()));
         boolean scaled = layer.scale() != 1.0F;
         if (scaled) {
             pose.pushPose();

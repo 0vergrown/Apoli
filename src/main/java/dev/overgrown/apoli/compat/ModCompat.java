@@ -29,6 +29,9 @@ public final class ModCompat {
 
     public static final boolean FLYWHEEL = FabricLoader.getInstance().isModLoaded("flywheel");
 
+    public static final boolean IRIS = FabricLoader.getInstance().isModLoaded("iris")
+        || FabricLoader.getInstance().isModLoaded("oculus");
+
     public static final boolean VANILLIN = FabricLoader.getInstance().isModLoaded("vanillin");
 
     public static final boolean TRINKETS = FabricLoader.getInstance().isModLoaded("trinkets");
@@ -46,6 +49,14 @@ public final class ModCompat {
     public static final boolean BETTER_COMBAT = FabricLoader.getInstance().isModLoaded("bettercombat");
 
     public static final boolean PUFFISH_SKILLS = FabricLoader.getInstance().isModLoaded("puffish_skills");
+
+    public static final boolean SPELL_ENGINE = FabricLoader.getInstance().isModLoaded("spell_engine");
+
+    public static final boolean POINT_BLANK = FabricLoader.getInstance().isModLoaded("pointblank");
+
+    public static boolean anyGunMod() {
+        return POINT_BLANK;
+    }
 
     public static final boolean LEDGER = classPresent("com.github.quiltservertools.ledger.database.ActionQueueService");
 

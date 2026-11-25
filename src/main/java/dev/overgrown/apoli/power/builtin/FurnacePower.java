@@ -2,18 +2,17 @@ package dev.overgrown.apoli.power.builtin;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import dev.overgrown.apoli.power.PowerContainerImpl;
 import dev.overgrown.apoli.station.FurnaceStation;
 import dev.overgrown.apoli.station.FurnaceType;
 import dev.overgrown.apoli.station.StationContainer;
 import dev.overgrown.apoli.station.StationSettings;
-import dev.overgrown.apoli.station.StationStorage;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleMenuProvider;
-import org.jetbrains.annotations.Nullable;
+
+import java.util.UUID;
 
 public final class FurnacePower extends StationPower<FurnacePower.Config> {
     public record Config(FurnaceType furnaceType, StationSettings settings) implements StationPower.Config {}
@@ -27,15 +26,13 @@ public final class FurnacePower extends StationPower<FurnacePower.Config> {
     }
 
     @Override
-    protected @Nullable StationContainer station(ResourceLocation powerId, Config cfg, ServerPlayer player,
-                                                 PowerContainerImpl holder, boolean create) {
-        FurnaceStation station = StationStorage.get(holder, player.getUUID(), powerId, FurnaceStation.class,
-            () -> new FurnaceStation(player.getUUID(), powerId, cfg.furnaceType()), create);
-        if (station == null || station.type() == cfg.furnaceType()) return station;
-        StationStorage.flush(station, holder);
-        StationStorage.discard(player.getUUID(), powerId);
-        return StationStorage.get(holder, player.getUUID(), powerId, FurnaceStation.class,
-            () -> new FurnaceStation(player.getUUID(), powerId, cfg.furnaceType()), create);
+    protected StationContainer create(UUID owner, ResourceLocation powerId, Config cfg) {
+        return new FurnaceStation(owner, powerId, cfg.furnaceType());
+    }
+
+    @Override
+    protected boolean matches(StationContainer station, Config cfg) {
+        return station instanceof FurnaceStation furnace && furnace.type() == cfg.furnaceType();
     }
 
     @Override

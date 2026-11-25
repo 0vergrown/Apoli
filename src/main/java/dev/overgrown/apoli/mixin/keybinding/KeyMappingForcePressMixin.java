@@ -15,7 +15,8 @@ public class KeyMappingForcePressMixin {
     private boolean apoli$forcedIsDown(boolean original) {
         KeyMapping self = (KeyMapping) (Object) this;
         if (BlockedKeys.blocks(self)) return false;
-        return original || ForcedKeys.isForced(self);
+        if (ForcedKeys.isForced(self)) return true;
+        return original && !ForcedKeys.isReleased(self);
     }
 
     @Inject(method = "consumeClick", at = @At("HEAD"), cancellable = true)
@@ -25,6 +26,10 @@ public class KeyMappingForcePressMixin {
             cir.setReturnValue(false);
             return;
         }
-        if (ForcedKeys.consumeForcedClick(self)) cir.setReturnValue(true);
+        if (ForcedKeys.consumeForcedClick(self)) {
+            cir.setReturnValue(true);
+            return;
+        }
+        if (ForcedKeys.isReleased(self)) cir.setReturnValue(false);
     }
 }

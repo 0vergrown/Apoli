@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.data;
 
+import dev.overgrown.apoli.ApoliNetwork;
 import dev.overgrown.apoli.access.ExplosionDamageToggle;
 import dev.overgrown.apoli.condition.BiEntityCondition;
 import dev.overgrown.apoli.condition.BlockCondition;
@@ -8,13 +9,12 @@ import dev.overgrown.apoli.condition.context.BlockCtx;
 import dev.overgrown.apoli.data.expr.ExprPeer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.network.protocol.game.ClientboundExplodePacket;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.TraceableEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.ExplosionDamageCalculator;
 import net.minecraft.world.level.Level;
@@ -23,6 +23,7 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Map;
 import java.util.Optional;
 
 public final class ExplosionHelper {
@@ -57,14 +58,8 @@ public final class ExplosionHelper {
         explosion.explode();
         explosion.finalizeExplosion(false);
         if (!explosion.interactsWithBlocks()) explosion.clearToBlow();
-        if (level instanceof ServerLevel serverLevel) broadcast(serverLevel, explosion, pos, power);
-    }
-
-    private static void broadcast(ServerLevel level, Explosion explosion, Vec3 pos, float power) {
-        for (ServerPlayer player : level.players()) {
-            if (player.distanceToSqr(pos.x, pos.y, pos.z) >= 4096.0) continue;
-            player.connection.send(new ClientboundExplodePacket(pos.x, pos.y, pos.z, power, explosion.getToBlow(),
-                explosion.getHitPlayers().get(player)));
+        for (Map.Entry<Player, Vec3> hit : explosion.getHitPlayers().entrySet()) {
+            if (hit.getKey() instanceof ServerPlayer player) ApoliNetwork.pushPlayer(player, hit.getValue());
         }
     }
 

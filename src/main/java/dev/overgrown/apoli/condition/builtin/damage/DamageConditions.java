@@ -33,5 +33,13 @@ public final class DamageConditions {
         ConditionTypes.DAMAGE.register(Apoli.id("explosive"), new FixedTagDamageCondition(DamageTypeTags.IS_EXPLOSION));
         ConditionTypes.DAMAGE.register(Apoli.id("fire"), new FixedTagDamageCondition(DamageTypeTags.IS_FIRE));
         ConditionTypes.DAMAGE.register(Apoli.id("from_falling"), new FixedTagDamageCondition(DamageTypeTags.IS_FALL));
+
+        if (dev.overgrown.apoli.compat.ModCompat.SPELL_ENGINE) {
+            ConditionTypes.DAMAGE.register(Apoli.id("spell"), new dev.overgrown.apoli.compat.spellengine.condition.SpellDamageCondition());
+        }
+
+        if (dev.overgrown.apoli.compat.ModCompat.anyGunMod()) {
+            ConditionTypes.DAMAGE.register(Apoli.id("gun"), new dev.overgrown.apoli.compat.gun.condition.GunDamageCondition());
+        }
     }
 }

@@ -68,5 +68,9 @@ public final class ItemConditions {
         ConditionTypes.ITEM.register(Apoli.id("send_condition"),
             new dev.overgrown.apoli.condition.builtin.meta.SendConditionMeta.Item(),
             AliasingOptions.builder().addTypeAlias("shappoli:send_condition").build());
+
+        if (ModCompat.anyGunMod()) {
+            ConditionTypes.ITEM.register(Apoli.id("gun"), new dev.overgrown.apoli.compat.gun.condition.GunItemCondition());
+        }
     }
 }

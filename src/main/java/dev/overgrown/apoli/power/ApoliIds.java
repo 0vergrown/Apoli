@@ -98,6 +98,8 @@ public final class ApoliIds {
     public static final ResourceLocation MODIFY_ANVIL = Apoli.id("modify_anvil");
     public static final ResourceLocation PREVENT_LEVEL_EVENT = Apoli.id("prevent_level_event");
     public static final ResourceLocation ACTION_ON_ADVANCEMENT = Apoli.id("action_on_advancement");
+    public static final ResourceLocation PREVENT_BEE_ANGER = Apoli.id("prevent_bee_anger");
+    public static final ResourceLocation GUI = Apoli.id("gui");
 
     private ApoliIds() {}
 }

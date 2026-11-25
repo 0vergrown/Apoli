@@ -34,8 +34,7 @@ public final class AnimationPlayback {
         if (ENTITIES.isEmpty()) return;
         Tracks tracks = ENTITIES.get(entity.getId());
         if (tracks == null) return;
-        Track track = tracks.find(model);
-        if (track != null) track.dropped = true;
+        tracks.dropAll(model);
     }
 
     @Nullable
@@ -44,14 +43,14 @@ public final class AnimationPlayback {
         int chosen = animations.selectIndex(entity);
         int tick = entity.tickCount;
         Tracks tracks = ENTITIES.get(entity.getId());
-        Track track = tracks == null ? null : tracks.find(model);
+        Track track = tracks == null ? null : tracks.find(model, animations);
         if (track == null) {
             if (chosen < 0) return null;
             if (tracks == null) {
                 tracks = new Tracks();
                 ENTITIES.put(entity.getId(), tracks);
             }
-            track = tracks.add(model);
+            track = tracks.claim(model, animations);
             track.start(animations.entries(), chosen, tick);
             track.seen = tracks.renders;
             return track;
@@ -103,6 +102,7 @@ public final class AnimationPlayback {
 
     public static final class Track {
         private final ResourceLocation model;
+        private ModelAnimation animations;
         private int index = -1;
         @Nullable
         private ModelAnimation.Entry entry;
@@ -111,8 +111,9 @@ public final class AnimationPlayback {
         private boolean unchosen;
         private boolean dropped;
 
-        private Track(ResourceLocation model) {
+        private Track(ResourceLocation model, ModelAnimation animations) {
             this.model = model;
+            this.animations = animations;
         }
 
         public ModelAnimation.Entry entry() {
@@ -150,21 +151,37 @@ public final class AnimationPlayback {
         private int size;
 
         @Nullable
-        private Track find(ResourceLocation model) {
+        private Track find(ResourceLocation model, ModelAnimation animations) {
             for (int i = 0; i < this.size; i++) {
                 Track track = this.tracks[i];
-                if (track.model == model || track.model.equals(model)) return track;
+                if (track.animations == animations && (track.model == model || track.model.equals(model))) return track;
             }
             return null;
         }
 
-        private Track add(ResourceLocation model) {
+        private void dropAll(ResourceLocation model) {
+            for (int i = 0; i < this.size; i++) {
+                Track track = this.tracks[i];
+                if (track.model == model || track.model.equals(model)) track.dropped = true;
+            }
+        }
+
+        private Track claim(ResourceLocation model, ModelAnimation animations) {
+            for (int i = 0; i < this.size; i++) {
+                Track track = this.tracks[i];
+                if (track.seen < this.renders - 1 && (track.model == model || track.model.equals(model))) {
+                    track.animations = animations;
+                    track.index = -1;
+                    track.entry = null;
+                    return track;
+                }
+            }
             if (this.size == this.tracks.length) {
                 Track[] grown = new Track[this.size * 2];
                 System.arraycopy(this.tracks, 0, grown, 0, this.size);
                 this.tracks = grown;
             }
-            Track track = new Track(model);
+            Track track = new Track(model, animations);
             this.tracks[this.size++] = track;
             return track;
         }

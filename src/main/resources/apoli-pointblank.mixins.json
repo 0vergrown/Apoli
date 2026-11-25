@@ -1,0 +1,19 @@
+{
+  "required": false,
+  "package": "dev.overgrown.apoli.compat.pointblank.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "plugin": "dev.overgrown.apoli.compat.TargetPresentMixinPlugin",
+  "mixins": [
+    "HurtingItemMixin",
+    "SoundFeatureMixin"
+  ],
+  "client": [
+    "ClientEventHandlerMixin",
+    "GunClientStateMixin",
+    "GunRecoilAnimationControllerMixin",
+    "PlayerRecoilControllerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

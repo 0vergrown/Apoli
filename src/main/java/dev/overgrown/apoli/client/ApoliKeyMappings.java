@@ -84,14 +84,16 @@ public final class ApoliKeyMappings {
             SAMPLES.put(km, sample);
         }
         boolean wasDown = sample.down;
-        boolean down = ForcedKeys.isForced(km) || switch (probe(km)) {
+        boolean forced = ForcedKeys.isForced(km);
+        boolean released = !forced && ForcedKeys.isReleased(km);
+        boolean down = forced || !released && switch (probe(km)) {
             case DOWN -> true;
             case UP -> false;
             case UNKNOWN -> wasDown;
         };
         sample.down = down;
         int clicks = ((KeyMappingClickCountAccessor) km).apoli$getClickCount();
-        boolean clicked = sample.clicks >= 0 && clicks > sample.clicks;
+        boolean clicked = !released && sample.clicks >= 0 && clicks > sample.clicks;
         sample.clicks = clicks;
         boolean forcedClick = false;
         while (ForcedKeys.consumeLocalForcedClick(km)) forcedClick = true;

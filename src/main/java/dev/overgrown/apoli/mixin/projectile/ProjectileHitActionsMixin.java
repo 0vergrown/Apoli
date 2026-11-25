@@ -23,6 +23,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.core.Direction;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -95,9 +96,35 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
     @Unique
     private int apoli$stuckLimit;
 
+    @Unique
+    private boolean apoli$startChecked;
+
+    @Shadow
+    protected abstract boolean canHitEntity(Entity entity);
+
+    @Shadow
+    protected abstract void onHit(HitResult hitResult);
+
     @Override
     public void apoli$setFireConfig(FireProjectilePower.Config config) {
         this.apoli$fireConfig = config;
+    }
+
+    @Unique
+    private boolean apoli$hitOverlapped(Projectile self) {
+        Vec3 pos = self.position();
+        Entity nearest = null;
+        double best = Double.MAX_VALUE;
+        for (Entity candidate : self.level().getEntities(self, self.getBoundingBox(), this::canHitEntity)) {
+            double distance = candidate.getBoundingBox().distanceToSqr(pos);
+            if (distance < best) {
+                best = distance;
+                nearest = candidate;
+            }
+        }
+        if (nearest == null) return false;
+        onHit(new EntityHitResult(nearest));
+        return self.isRemoved();
     }
 
     @Override
@@ -185,6 +212,10 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
         if (config == null) return;
         Projectile self = (Projectile) (Object) this;
         if (self.level().isClientSide() || self.isRemoved()) return;
+        if (!this.apoli$startChecked) {
+            this.apoli$startChecked = true;
+            if (apoli$hitOverlapped(self)) return;
+        }
         if (this.apoli$lifetime > 0 && ++this.apoli$age > this.apoli$lifetime) {
             apoli$expire(self, config);
             return;
@@ -263,6 +294,10 @@ public abstract class ProjectileHitActionsMixin implements ProjectileHitActions 
         Projectile self = (Projectile) (Object) this;
         Level level = self.level();
         if (level.isClientSide()) return;
+        if (self.isRemoved()) {
+            ci.cancel();
+            return;
+        }
 
         FireProjectilePower.Hooks hooks = config.hooks();
         boolean entityHit = result.getType() == HitResult.Type.ENTITY;

@@ -33,6 +33,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.projectile.AbstractHurtingProjectile;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
 
@@ -43,6 +44,8 @@ import java.util.OptionalDouble;
 import java.util.UUID;
 
 public final class FireProjectilePower extends PowerType<FireProjectilePower.Config> {
+    private static final double HURTING_ACCELERATION = 0.1;
+
     public record Config(Params params, Hooks hooks, Optional<Return> returning, Optional<Homing> homing,
                          Optional<Reflect> reflective, Optional<Sticky> sticky, Expression lifetime,
                          Expression pierce) {}
@@ -492,6 +495,12 @@ public final class FireProjectilePower extends PowerType<FireProjectilePower.Con
         if (projectile instanceof Projectile proj) {
             proj.setOwner(owner);
             proj.shootFromRotation(owner, pitch, yaw, 0.0F, speed, divergence);
+            if (proj instanceof AbstractHurtingProjectile hurting) {
+                Vec3 heading = hurting.getDeltaMovement().normalize();
+                hurting.xPower = heading.x * HURTING_ACCELERATION;
+                hurting.yPower = heading.y * HURTING_ACCELERATION;
+                hurting.zPower = heading.z * HURTING_ACCELERATION;
+            }
         } else {
             float f = 0.017453292F;
             double g = 0.0075;

@@ -170,6 +170,14 @@ public final class ApoliNetwork {
         }
     }
 
+    public static void pushPlayer(ServerPlayer player, net.minecraft.world.phys.Vec3 push) {
+        if (connected(player) && ServerPlayNetworking.canSend(player, ApplyVelocityS2C.CHANNEL)) {
+            send(player, ApplyVelocityS2C.CHANNEL, new ApplyVelocityS2C(player.getId(), push.x, push.y, push.z, false)::write);
+        } else {
+            player.hurtMarked = true;
+        }
+    }
+
     public static void broadcastDisguise(Entity entity, DisguiseUpdateS2C payload) {
         for (ServerPlayer viewer : PlayerLookup.tracking(entity)) {
             send(viewer, DisguiseUpdateS2C.CHANNEL, payload::write);

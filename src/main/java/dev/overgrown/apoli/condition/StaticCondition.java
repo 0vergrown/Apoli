@@ -31,7 +31,7 @@ public record StaticCondition(ResourceLocation typeId, Object config, boolean in
         id -> {
             ResourceLocation canonical = ConditionTypes.STATIC.resolveId(id);
             ConditionType<StaticCtx, ?> t = ConditionTypes.STATIC.get(canonical);
-            return t == null ? null : new DispatchedTypeCodec.CodecLookup.Resolution(canonical, t.codec());
+            return t == null ? null : new DispatchedTypeCodec.CodecLookup.Resolution(canonical, ConditionTypes.STATIC.applyAliasDefaults(id, t.codec()));
         },
         StaticCondition::new,
         StaticCondition::typeId,
