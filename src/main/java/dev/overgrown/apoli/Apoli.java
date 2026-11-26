@@ -261,6 +261,8 @@ public final class Apoli implements ModInitializer {
         }
 
         ServerTickEvents.END_SERVER_TICK.register(Apoli::onServerTick);
+        dev.overgrown.apoli.packassets.PackTextures.init();
+        dev.overgrown.apoli.packassets.PackAssets.init();
 
         EntityElytraEvents.CUSTOM.register((entity, tickElytra) ->
             PowerLookup.hasActive(entity, dev.overgrown.apoli.power.ApoliIds.ELYTRA_FLIGHT));
