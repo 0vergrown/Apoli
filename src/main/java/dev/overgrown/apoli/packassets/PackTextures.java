@@ -66,8 +66,9 @@ public final class PackTextures {
     private static void load(ResourceManager manager) {
         Map<ResourceLocation, Stored> found = new TreeMap<>();
         long total = 0;
-        Map<ResourceLocation, Resource> resources = new TreeMap<>(
-            manager.listResources("textures", id -> id.getPath().endsWith(".png")));
+        Map<ResourceLocation, Resource> resources = PackAssetsConfig.get().dataPackTextures()
+            ? new TreeMap<>(manager.listResources("textures", id -> id.getPath().endsWith(".png")))
+            : Map.of();
         for (Map.Entry<ResourceLocation, Resource> entry : resources.entrySet()) {
             ResourceLocation id = entry.getKey();
             if (id.toString().length() > MAX_ID_LENGTH) {

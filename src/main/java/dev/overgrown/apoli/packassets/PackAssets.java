@@ -78,7 +78,8 @@ public final class PackAssets {
         Map<String, Stored> found = new TreeMap<>();
         Path packs = server.getWorldPath(LevelResource.DATAPACK_DIR);
         // Later packs win, as they do for data.
-        for (Pack pack : server.getPackRepository().getSelectedPacks()) {
+        for (Pack pack : PackAssetsConfig.get().dataPackAssets()
+            ? server.getPackRepository().getSelectedPacks() : List.<Pack>of()) {
             String name = pack.getId();
             if (!name.startsWith("file/")) continue;
             try {
