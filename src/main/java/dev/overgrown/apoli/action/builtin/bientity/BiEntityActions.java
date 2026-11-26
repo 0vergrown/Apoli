@@ -61,6 +61,10 @@ public final class BiEntityActions {
             new dev.overgrown.apoli.action.builtin.meta.SendActionMeta.BiEntity(),
             dev.overgrown.apoli.alias.AliasingOptions.builder().addTypeAlias("shappoli:send_action").build());
 
+        if (ModCompat.SPELL_ENGINE) {
+            ActionTypes.BI_ENTITY.register(Apoli.id("cast_spell"), new dev.overgrown.apoli.compat.spellengine.action.CastSpellAction.BiEntity());
+        }
+
         if (ModCompat.WALKERS) {
             ActionTypes.BI_ENTITY.register(Apoli.id("switch_shape"), new ShapeActions.SwitchShapeBiEntity(),
                 dev.overgrown.apoli.alias.AliasingOptions.builder()

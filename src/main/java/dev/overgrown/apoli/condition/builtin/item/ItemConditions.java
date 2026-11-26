@@ -69,6 +69,10 @@ public final class ItemConditions {
             new dev.overgrown.apoli.condition.builtin.meta.SendConditionMeta.Item(),
             AliasingOptions.builder().addTypeAlias("shappoli:send_condition").build());
 
+        if (ModCompat.SPELL_ENGINE) {
+            ConditionTypes.ITEM.register(Apoli.id("has_spell"), new dev.overgrown.apoli.compat.spellengine.condition.ItemHasSpellCondition());
+        }
+
         if (ModCompat.anyGunMod()) {
             ConditionTypes.ITEM.register(Apoli.id("gun"), new dev.overgrown.apoli.compat.gun.condition.GunItemCondition());
         }

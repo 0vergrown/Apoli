@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.compat.spellengine.power;
 
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.Apoli;
@@ -24,14 +25,17 @@ public final class SpellsPower extends PowerType<SpellsPower.Config> {
     public static final ResourceLocation CANONICAL = Apoli.id("spells");
 
     private static final String KEY_PREFIX = "apoli_power:";
+    // Spells from powers with "always": their active spells can be cast whatever the player holds (SpellContainerSourceMixin).
+    public static final String ALWAYS_PREFIX = "apoli_power_always:";
     private static final int CHECK_INTERVAL = 10;
 
-    public record Config(List<ResourceLocation> spells) {}
+    public record Config(List<ResourceLocation> spells, boolean always) {}
 
     @Override
     public MapCodec<Config> configCodec() {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-            SingleOrList.of(IdCodecs.ID).fieldOf("spells").forGetter(Config::spells)
+            SingleOrList.of(IdCodecs.ID).fieldOf("spells").forGetter(Config::spells),
+            Codec.BOOL.optionalFieldOf("always", false).forGetter(Config::always)
         ).apply(i, Config::new));
     }
 
@@ -73,18 +77,24 @@ public final class SpellsPower extends PowerType<SpellsPower.Config> {
         if (!(owner instanceof ServerPlayer player)) return;
         SpellContainerSource.Owner spells = (SpellContainerSource.Owner) player;
         Map<String, SpellContainer> containers = spells.serverSideSpellContainers();
-        String key = KEY_PREFIX + powerId;
+        String key = (cfg.always() ? ALWAYS_PREFIX : KEY_PREFIX) + powerId;
+        String otherKey = (cfg.always() ? KEY_PREFIX : ALWAYS_PREFIX) + powerId;
+        boolean changed = containers.remove(otherKey) != null;
         SpellContainer existing = containers.get(key);
         if (grant) {
-            if (existing != null && sameSpells(existing.spell_ids(), cfg.spells())) return;
-            List<String> ids = new ArrayList<>(cfg.spells().size());
-            for (ResourceLocation id : cfg.spells()) ids.add(id.toString());
-            containers.put(key, new SpellContainer(SpellContainer.ContentType.NONE, "", "", 0, ids));
-        } else {
-            if (existing == null) return;
+            if (existing == null || !sameSpells(existing.spell_ids(), cfg.spells())) {
+                List<String> ids = new ArrayList<>(cfg.spells().size());
+                for (ResourceLocation id : cfg.spells()) ids.add(id.toString());
+                containers.put(key, cfg.always()
+                    ? new SpellContainer(SpellContainer.ContentType.ANY, "", "", ids.size(), ids)
+                    : new SpellContainer(SpellContainer.ContentType.NONE, "", "", 0, ids));
+                changed = true;
+            }
+        } else if (existing != null) {
             containers.remove(key);
+            changed = true;
         }
-        spells.markServerSideSpellContainersDirty();
+        if (changed) spells.markServerSideSpellContainersDirty();
     }
 
     private static boolean sameSpells(List<String> granted, List<ResourceLocation> wanted) {
@@ -99,11 +109,12 @@ public final class SpellsPower extends PowerType<SpellsPower.Config> {
         SpellContainerSource.Owner spells = (SpellContainerSource.Owner) player;
         PowerContainer container = PowerContainer.of(player);
         boolean changed = spells.serverSideSpellContainers().keySet().removeIf(key -> {
-            if (!key.startsWith(KEY_PREFIX)) return false;
-            ResourceLocation powerId = ResourceLocation.tryParse(key.substring(KEY_PREFIX.length()));
+            boolean always = key.startsWith(ALWAYS_PREFIX);
+            if (!always && !key.startsWith(KEY_PREFIX)) return false;
+            ResourceLocation powerId = ResourceLocation.tryParse(key.substring((always ? ALWAYS_PREFIX : KEY_PREFIX).length()));
             if (powerId == null || container == null || !container.hasPower(powerId)) return true;
             Power power = ApoliPowers.get(powerId);
-            return power == null || !(power.config() instanceof Config);
+            return power == null || !(power.config() instanceof Config cfg) || cfg.always() != always;
         });
         if (changed) spells.markServerSideSpellContainersDirty();
     }
