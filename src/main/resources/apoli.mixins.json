@@ -162,6 +162,8 @@
     "typetag.LivingEntityMobTypeMixin"
   ],
   "client": [
+    "packassets.PackRepositoryAssetsMixin",
+    "packassets.ReloadFailureMixin",
     "block.RenderChunkRegionBlockRenderMixin",
     "camera.AbstractClientPlayerFovMixin",
     "camera.CameraSetupMixin",

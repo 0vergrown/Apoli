@@ -345,6 +345,8 @@ public final class ApoliClient implements ClientModInitializer {
             .registerReloadListener(dev.overgrown.apoli.client.render.CustomModelManager.INSTANCE);
         net.fabricmc.fabric.api.resource.ResourceManagerHelper.get(net.minecraft.server.packs.PackType.CLIENT_RESOURCES)
             .registerReloadListener(dev.overgrown.apoli.client.render.AnimationManager.INSTANCE);
+        dev.overgrown.apoli.packassets.client.ClientPackTextures.init();
+        dev.overgrown.apoli.packassets.client.ClientPackAssets.init();
 
         if (dev.overgrown.apoli.compat.ModCompat.LAMBDYNLIGHTS) {
             dev.overgrown.apoli.compat.lambdynlights.LambDynamicLightsCompat.init();
