@@ -39,6 +39,8 @@ public final class ApoliNetwork {
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(Apoli.MOD_ID).versioned(PROTOCOL_VERSION);
+        dev.overgrown.apoli.packassets.PackTextures.registerPayloads(registrar);
+        dev.overgrown.apoli.packassets.PackAssets.registerPayloads(registrar);
         registrar.playToClient(SyncPowersS2C.TYPE, SyncPowersS2C.STREAM_CODEC, ApoliNetwork::onSyncPowers);
         registrar.playToClient(dev.overgrown.apoli.network.payload.SyncPowersChunkS2C.TYPE,
             dev.overgrown.apoli.network.payload.SyncPowersChunkS2C.STREAM_CODEC, ApoliNetwork::onSyncPowersChunk);

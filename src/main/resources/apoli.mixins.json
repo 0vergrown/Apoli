@@ -151,6 +151,8 @@
     "power.ServerLevelLevelEventMixin"
   ],
   "client": [
+    "packassets.PackRepositoryAssetsMixin",
+    "packassets.ReloadFailureMixin",
     "glow.ClientLevelBlockGlowMixin",
     "glow.LevelRendererBlockGlowMixin",
     "session.MinecraftLevelChangeMixin",
