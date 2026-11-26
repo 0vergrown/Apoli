@@ -271,6 +271,7 @@ public final class PowerTypes {
             AliasingOptions.builder().addTypeAlias(Apoli.id("ignore_water")).build()
         );
         PowerTypeRegistry.register(Apoli.id("keep_inventory"), new KeepInventoryPower());
+        PowerTypeRegistry.register(Apoli.id("instant_respawn"), new InstantRespawnPower());
         PowerTypeRegistry.register(Apoli.id("starting_equipment"), new StartingEquipmentPower());
         PowerTypeRegistry.register(Apoli.id("replace_loot_table"), new ReplaceLootTablePower());
         PowerTypeRegistry.register(Apoli.id("stacking_status_effect"), new StackingStatusEffectPower());
