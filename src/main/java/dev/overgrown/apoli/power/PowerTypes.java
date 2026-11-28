@@ -162,6 +162,7 @@ public final class PowerTypes {
 
         PowerTypeRegistry.register(Apoli.id("elytra_flight"), new ElytraFlightPower());
         PowerTypeRegistry.register(Apoli.id("invisibility"), new InvisibilityPower());
+        PowerTypeRegistry.register(SeeInvisiblePower.CANONICAL, new SeeInvisiblePower());
         PowerTypeRegistry.register(Apoli.id("swimming"), new SwimmingPower());
         PowerTypeRegistry.register(Apoli.id("walk_on_fluid"), new WalkOnFluidPower());
         PowerTypeRegistry.register(Apoli.id("phasing"), new PhasingPower());
