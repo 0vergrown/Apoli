@@ -59,6 +59,8 @@ public final class ApoliNetwork {
             dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C.STREAM_CODEC, ApoliNetwork::onSyncTrackedEntitySet);
         registrar.playToClient(PowerActivatedS2C.TYPE, PowerActivatedS2C.STREAM_CODEC, ApoliNetwork::onPowerActivated);
         registrar.playToClient(SyncKeybindsS2C.TYPE, SyncKeybindsS2C.STREAM_CODEC, ApoliNetwork::onSyncKeybinds);
+        registrar.playToClient(dev.overgrown.apoli.network.payload.GameRulesS2C.TYPE,
+            dev.overgrown.apoli.network.payload.GameRulesS2C.STREAM_CODEC, ApoliNetwork::onGameRules);
         registrar.playToClient(ApplyVelocityS2C.TYPE, ApplyVelocityS2C.STREAM_CODEC, ApoliNetwork::onApplyVelocity);
         registrar.playToClient(dev.overgrown.apoli.network.payload.TickRateS2C.TYPE,
             dev.overgrown.apoli.network.payload.TickRateS2C.STREAM_CODEC, ApoliNetwork::onTickRate);
@@ -190,6 +192,10 @@ public final class ApoliNetwork {
 
     private static void onPowerActivated(PowerActivatedS2C payload, IPayloadContext ctx) {
         ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPayloadHandlers.onPowerActivated(payload));
+    }
+
+    private static void onGameRules(dev.overgrown.apoli.network.payload.GameRulesS2C payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> dev.overgrown.apoli.client.ClientPayloadHandlers.onGameRules(payload));
     }
 
     private static void onSyncKeybinds(SyncKeybindsS2C payload, IPayloadContext ctx) {

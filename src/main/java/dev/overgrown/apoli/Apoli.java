@@ -83,6 +83,7 @@ public final class Apoli {
         ConditionTypes.bootstrap();
         ActionTypes.bootstrap();
         PowerTypes.bootstrap();
+        dev.overgrown.apoli.gamerule.DataGameRules.bootstrap();
         if (!dev.overgrown.apoli.compat.ModCompat.BIRDSONG) {
             dev.overgrown.apoli.compat.birdsong.BirdsongPlaceholders.register();
         }
@@ -155,6 +156,7 @@ public final class Apoli {
         event.addListener(skillLoader);
         event.addListener(new dev.overgrown.apoli.global.GlobalPowerLoader());
         event.addListener(new dev.overgrown.apoli.script.ScriptLoader());
+        event.addListener(dev.overgrown.apoli.gamerule.DataGameRules.newLoader());
     }
 
     @SubscribeEvent
@@ -206,11 +208,13 @@ public final class Apoli {
     public void onDatapackSync(OnDatapackSyncEvent event) {
         if (event.getPlayer() != null) {
             ApoliNetwork.sendKeybinds(event.getPlayer(), SyncKeybindsS2C.fromCurrent());
+            dev.overgrown.apoli.gamerule.DataGameRules.sendTo(event.getPlayer());
             ApoliNetwork.sendPowers(event.getPlayer());
             sendEntitySync(event.getPlayer());
         } else {
             ApoliNetwork.broadcastPowers(event.getPlayerList().getServer());
             ApoliNetwork.broadcastKeybinds(event.getPlayerList().getServer(), SyncKeybindsS2C.fromCurrent());
+            dev.overgrown.apoli.gamerule.DataGameRules.onReloaded(event.getPlayerList().getServer());
             dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(event.getPlayerList().getServer());
             if (dev.overgrown.apoli.compat.ModCompat.SPELL_ENGINE) dev.overgrown.apoli.compat.spellengine.SpellEngineCompat.onPowersReloaded(event.getPlayerList().getServer());
             dev.overgrown.apoli.global.GlobalPowers.reapplyAll(event.getPlayerList().getServer());
@@ -234,6 +238,7 @@ public final class Apoli {
 
     @SubscribeEvent
     public void onServerStarted(net.neoforged.neoforge.event.server.ServerStartedEvent event) {
+        dev.overgrown.apoli.gamerule.DataGameRules.onServerStarted(event.getServer());
         dev.overgrown.apoli.power.builtin.EntitySetStorage.attach(event.getServer());
             dev.overgrown.apoli.skill.SkillRegistry.reportOrphanedSkills();
         dev.overgrown.apoli.recipe.ApoliPowerRecipes.inject(event.getServer());
@@ -477,6 +482,7 @@ public final class Apoli {
 
     @SubscribeEvent
     public void onServerStopped(net.neoforged.neoforge.event.server.ServerStoppedEvent event) {
+        dev.overgrown.apoli.gamerule.DataGameRules.onServerStopped();
         dev.overgrown.apoli.codec.ApoliOps.setRegistries(null);
         dev.overgrown.apoli.codec.ApoliOps.setLoadingRegistries(null);
         PoweredEntities.clear();
