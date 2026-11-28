@@ -15,6 +15,7 @@ public final class ApoliIds {
     public static final ResourceLocation SCALE = Apoli.id("scale");
     public static final ResourceLocation SOLID_HITBOX = Apoli.id("solid_hitbox");
     public static final ResourceLocation DISABLE_REGEN = Apoli.id("disable_regen");
+    public static final ResourceLocation INSTANT_RESPAWN = Apoli.id("instant_respawn");
     public static final ResourceLocation MODIFY_HARVEST = Apoli.id("modify_harvest");
     public static final ResourceLocation PREVENT_TELEPORT = Apoli.id("prevent_teleport");
     public static final ResourceLocation PREVENT_USE = Apoli.id("prevent_use");
