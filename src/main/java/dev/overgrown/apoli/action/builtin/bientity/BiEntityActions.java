@@ -54,6 +54,10 @@ public final class BiEntityActions {
             AliasingOptions.builder().addTypeAlias(Apoli.id("raycast_between")).build()
         );
 
+        if (ModCompat.SPELL_ENGINE) {
+            ActionTypes.BI_ENTITY.register(Apoli.id("cast_spell"), new dev.overgrown.apoli.compat.spellengine.action.CastSpellAction.BiEntity());
+        }
+
         if (ModCompat.WALKERS) {
             ActionTypes.BI_ENTITY.register(Apoli.id("switch_shape"), new ShapeActions.SwitchShapeBiEntity(),
                 dev.overgrown.apoli.alias.AliasingOptions.builder()

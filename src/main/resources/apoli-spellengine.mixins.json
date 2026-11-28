@@ -6,6 +6,8 @@
   "mixins": [
     "AmmoMixin",
     "SpellCastingMixin",
+    "SpellContainerSourceMixin",
+    "SpellParametersMixin",
     "SpellImpactsMixin"
   ],
   "injectors": {
