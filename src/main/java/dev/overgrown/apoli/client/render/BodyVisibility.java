@@ -1,6 +1,7 @@
 package dev.overgrown.apoli.client.render;
 
 import dev.overgrown.apoli.power.builtin.InvisibilityPower;
+import dev.overgrown.apoli.power.builtin.SeeInvisiblePower;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -16,6 +17,8 @@ public final class BodyVisibility {
         Player viewer = Minecraft.getInstance().player;
         if (viewer == null) return invisible ? 0.0F : 1.0F;
         if (entity.isInvisibleTo(viewer)) return 0.0F;
-        return invisible ? SEE_THROUGH : 1.0F;
+        if (!invisible) return 1.0F;
+        float opacity = SeeInvisiblePower.revealOpacity(viewer, entity);
+        return Float.isNaN(opacity) ? SEE_THROUGH : 1.0F - opacity;
     }
 }
