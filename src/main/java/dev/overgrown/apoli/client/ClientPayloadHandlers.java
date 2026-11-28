@@ -38,6 +38,10 @@ public final class ClientPayloadHandlers {
         DynamicKeyMappingManager.applyKeybinds(msg.keybinds());
     }
 
+    public static void onGameRules(dev.overgrown.apoli.network.payload.GameRulesS2C msg) {
+        dev.overgrown.apoli.gamerule.DataGameRules.applyClient(msg.values());
+    }
+
     public static void onPowerInventory(dev.overgrown.apoli.network.payload.PowerInventoryS2C msg) {
         dev.overgrown.apoli.client.ClientPowerState.applyPowerInventory(msg);
     }

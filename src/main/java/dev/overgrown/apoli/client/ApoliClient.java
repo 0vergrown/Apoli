@@ -183,6 +183,7 @@ public final class ApoliClient {
         public static void onDisconnect(ClientPlayerNetworkEvent.LoggingOut event) {
             DynamicKeyMappingManager.unregisterAll();
             ClientPowerState.clear();
+            dev.overgrown.apoli.gamerule.DataGameRules.clearClient();
             KeyReleases.clear();
             StatusBarTextures.clear();
             dev.overgrown.apoli.client.ClientEntitySets.clear();
