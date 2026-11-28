@@ -362,6 +362,7 @@ public final class PowerTypes {
             PowerTypeRegistry.register(Apoli.id("prevent_spell_cast"), new dev.overgrown.apoli.compat.spellengine.power.PreventSpellCastPower());
             PowerTypeRegistry.register(Apoli.id("bypass_spell_requirements"), new dev.overgrown.apoli.compat.spellengine.power.BypassSpellRequirementsPower());
             PowerTypeRegistry.register(Apoli.id("spells"), new dev.overgrown.apoli.compat.spellengine.power.SpellsPower());
+            PowerTypeRegistry.register(Apoli.id("modify_spell"), new dev.overgrown.apoli.compat.spellengine.power.ModifySpellPower());
         }
 
         if (ModCompat.anyGunMod()) {

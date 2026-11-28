@@ -26,7 +26,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.spell_engine.api.entity.SpellEntityPredicates;
+import net.minecraft.world.entity.player.Player;
 import net.spell_engine.api.spell.Spell;
+import net.spell_engine.api.spell.container.SpellContainer;
+import net.spell_engine.internals.container.SpellContainerSource;
 import net.spell_engine.api.spell.event.SpellEvents;
 import net.spell_engine.api.spell.event.SpellHandlers;
 import net.spell_engine.api.spell.registry.SpellRegistry;
@@ -85,6 +88,12 @@ public final class SpellEngineCompat {
     }
 
     public static void cast(LivingEntity caster, Holder<Spell> spellEntry) {
+        cast(caster, spellEntry, null, false);
+    }
+
+    // forcedTarget: cast at that entity instead of searching. useCost: a normal cast that uses the spell's cost and starts
+    // its cooldown (players only).
+    public static void cast(LivingEntity caster, Holder<Spell> spellEntry, @Nullable Entity forcedTarget, boolean useCost) {
         Spell spell = spellEntry.value();
         if (spell.active == null) {
             warnOnce("passive:" + spellEntry.unwrapKey().map(k -> k.location().toString()).orElse("?"),
@@ -92,7 +101,12 @@ public final class SpellEngineCompat {
             return;
         }
         Level level = caster.level();
-        SpellTarget.SearchResult found = SpellTarget.findTargets(caster, spellEntry, SpellTarget.SearchResult.empty(), true);
+        SpellTarget.SearchResult found = forcedTarget != null ? SpellTarget.SearchResult.of(forcedTarget)
+            : SpellTarget.findTargets(caster, spellEntry, SpellTarget.SearchResult.empty(), true);
+        if (useCost && caster instanceof Player player) {
+            castWithCost(player, spellEntry, found);
+            return;
+        }
         List<Entity> targets = found.entities();
         if (spell.target != null && spell.target.cap > 0 && targets.size() > spell.target.cap) {
             List<Entity> sorted = new ArrayList<>(targets);
@@ -109,6 +123,28 @@ public final class SpellEngineCompat {
             ReleaseFx.send(level, caster, spellEntry, 1F);
             notifyCast(caster, spellEntry, hit);
         });
+    }
+
+    // Goes through Spell Engine's own release, which takes the cost and starts the cooldown. Spell Engine only performs
+    // spells the player has from some source, so one is lent for the cast if needed.
+    private static void castWithCost(Player player, Holder<Spell> spellEntry, SpellTarget.SearchResult targets) {
+        ResourceLocation id = spellEntry.unwrapKey().map(net.minecraft.resources.ResourceKey::location).orElse(null);
+        if (id == null) return;
+        SpellContainerSource.Owner owner = (SpellContainerSource.Owner) player;
+        SpellContainerSource.Result before = owner.getSpellContainers();
+        boolean lent = SpellContainerSource.getFirstSourceOfSpell(id, player) == null;
+        if (lent) {
+            SpellContainerSource.Result r = before == null ? SpellContainerSource.Result.EMPTY : before;
+            List<SpellContainerSource.SourcedContainer> sources = new ArrayList<>(r.sources() == null ? List.of() : r.sources());
+            sources.add(new SpellContainerSource.SourcedContainer("apoli:cast_spell", null,
+                new SpellContainer(SpellContainer.ContentType.ANY, "", "", 1, List.of(id.toString()))));
+            owner.setSpellContainers(new SpellContainerSource.Result(r.activeContainer(), r.actives(), r.passives(), r.modifiers(), sources));
+        }
+        try {
+            SpellExecution.performSpell(player.level(), player, spellEntry, targets, SpellCast.Action.RELEASE, 1F);
+        } finally {
+            if (lent) owner.setSpellContainers(before);
+        }
     }
 
     public static void notifyCast(LivingEntity caster, Holder<Spell> spell, List<Entity> targets) {
