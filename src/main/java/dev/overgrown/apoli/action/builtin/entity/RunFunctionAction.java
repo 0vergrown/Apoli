@@ -1,12 +1,15 @@
 package dev.overgrown.apoli.action.builtin.entity;
 
+import com.google.gson.JsonPrimitive;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.action.ActionType;
 import dev.overgrown.apoli.condition.context.EntityCtx;
+import dev.overgrown.apoli.data.Expression;
 import dev.overgrown.apoli.power.ApoliPowers;
 import dev.overgrown.apoli.power.Power;
 import dev.overgrown.apoli.power.builtin.FunctionPower;
@@ -15,13 +18,14 @@ import dev.overgrown.apoli.codec.IdCodecs;
 import net.minecraft.resources.ResourceLocation;
 import org.slf4j.Logger;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public final class RunFunctionAction implements ActionType<EntityCtx, RunFunctionAction.Cfg> {
 
     private static final Logger LOG = LogUtils.getLogger();
 
-    public record Cfg(ResourceLocation function, Map<String, Dynamic<?>> arguments) {
+    public record Cfg(ResourceLocation function, Map<String, Dynamic<?>> arguments, boolean useExpressions) {
         public Cfg {
             arguments = Map.copyOf(arguments);
         }
@@ -32,7 +36,8 @@ public final class RunFunctionAction implements ActionType<EntityCtx, RunFunctio
         return RecordCodecBuilder.mapCodec(i -> i.group(
             IdCodecs.ID.fieldOf("function").forGetter(Cfg::function),
             Codec.unboundedMap(Codec.STRING, Codec.PASSTHROUGH)
-                .optionalFieldOf("arguments", Map.of()).forGetter(Cfg::arguments)
+                .optionalFieldOf("arguments", Map.of()).forGetter(Cfg::arguments),
+            Codec.BOOL.optionalFieldOf("use_expressions", false).forGetter(Cfg::useExpressions)
         ).apply(i, Cfg::new));
     }
 
@@ -52,6 +57,22 @@ public final class RunFunctionAction implements ActionType<EntityCtx, RunFunctio
             return;
         }
         if (power.condition().isPresent() && !power.condition().get().test(ctx)) return;
-        FunctionPower.run(cfg.function(), function, cfg.arguments(), ctx);
+        Map<String, Dynamic<?>> finalArgs = new HashMap<>();
+
+        if (cfg.useExpressions) {
+            cfg.arguments().forEach((str, dynamic) -> {
+                Dynamic<?> dynamicOut = dynamic;
+
+                var dynRes = dynamic.asString().result();
+
+                if (dynRes.isPresent()) {
+                    dynamicOut = new Dynamic<>(JsonOps.INSTANCE, new JsonPrimitive(Expression.of(dynRes.get()).eval(ctx.entity())));
+                }
+
+                finalArgs.put(str, dynamicOut);
+            });
+        }
+
+        FunctionPower.run(cfg.function(), function, cfg.useExpressions() ? finalArgs : cfg.arguments(), ctx);
     }
 }
