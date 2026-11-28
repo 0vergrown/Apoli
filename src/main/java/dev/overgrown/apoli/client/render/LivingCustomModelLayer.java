@@ -55,7 +55,7 @@ public class LivingCustomModelLayer<T extends LivingEntity, M extends EntityMode
                 if (body <= 0.0F) continue;
                 alpha = body;
             }
-            CustomModel custom = CustomModelManager.get(render.model(), render.bindBodyParts());
+            CustomModel custom = CustomModelManager.get(render, render.bindBodyParts(), entity);
             if (custom == null) continue;
             if (render.bindBodyParts()) {
                 GeometryRenderer.syncNamed(custom, parts);

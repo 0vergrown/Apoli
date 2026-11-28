@@ -26,7 +26,7 @@ public final class BedrockModelParser {
 
     private BedrockModelParser() {}
 
-    public static <T> CustomModel[] parseVariants(ResourceLocation id, Dynamic<T> json) {
+    public static <T> Parsed parse(ResourceLocation id, Dynamic<T> json) {
         Dynamic<T> geo = json.get("minecraft:geometry").asStreamOpt().result()
             .flatMap(stream -> stream.findFirst())
             .orElseThrow(() -> new IllegalArgumentException("minecraft:geometry is empty"));
@@ -54,23 +54,68 @@ public final class BedrockModelParser {
                 Apoli.LOGGER.warn("[Apoli] Custom model {} bone '{}' has unknown parent '{}'; treating it as a root bone.", id, bone.name, bone.parent);
             }
         }
-        CustomModel bound = assemble(id, ordered, texWidth, texHeight, true);
-        if (!bound.hoisted()) {
-            return new CustomModel[]{bound, bound};
-        }
+        boolean textureMeshes = false;
         for (Bone bone : ordered) {
-            bone.resetAssembly();
+            textureMeshes |= !bone.meshes.isEmpty();
         }
-        return new CustomModel[]{bound, assemble(id, ordered, texWidth, texHeight, false)};
+        return new Parsed(id, ordered, texWidth, texHeight, textureMeshes);
+    }
+
+    public static final class Parsed {
+        private final ResourceLocation id;
+        private final List<Bone> ordered;
+        private final int texWidth;
+        private final int texHeight;
+        private final boolean textureMeshes;
+        private final CustomModel bound;
+        private final CustomModel unbound;
+
+        private Parsed(ResourceLocation id, List<Bone> ordered, int texWidth, int texHeight, boolean textureMeshes) {
+            this.id = id;
+            this.ordered = ordered;
+            this.texWidth = texWidth;
+            this.texHeight = texHeight;
+            this.textureMeshes = textureMeshes;
+            CustomModel[] base = this.variants(null);
+            this.bound = base[0];
+            this.unbound = base[1];
+        }
+
+        public CustomModel bound() {
+            return this.bound;
+        }
+
+        public CustomModel unbound() {
+            return this.unbound;
+        }
+
+        public boolean textureMeshes() {
+            return this.textureMeshes;
+        }
+
+        public synchronized CustomModel[] variants(@Nullable TextureMask mask) {
+            for (Bone bone : this.ordered) {
+                bone.resetAssembly();
+            }
+            CustomModel bound = assemble(this.id, this.ordered, this.texWidth, this.texHeight, true, mask, this.textureMeshes);
+            if (!bound.hoisted()) {
+                return new CustomModel[]{bound, bound};
+            }
+            for (Bone bone : this.ordered) {
+                bone.resetAssembly();
+            }
+            return new CustomModel[]{bound, assemble(this.id, this.ordered, this.texWidth, this.texHeight, false, mask, this.textureMeshes)};
+        }
     }
 
     private static CustomModel assemble(ResourceLocation id, List<Bone> ordered, int texWidth, int texHeight,
-                                        boolean bindBodyParts) {
+                                        boolean bindBodyParts, @Nullable TextureMask mask, boolean textureMeshes) {
+        boolean log = mask == null;
         boolean hoisted = false;
         for (Bone bone : ordered) {
             bone.hoist = bindBodyParts && bone.attachment != null && bone.slot != null;
             hoisted |= bone.hoist;
-            if (bone.hoist && hasRotatedAncestor(bone)) {
+            if (log && bone.hoist && hasRotatedAncestor(bone)) {
                 Apoli.LOGGER.warn("[Apoli] Custom model {} bone '{}' tracks the vanilla '{}' part, so it is lifted out of its rotated parent '{}'; the parent's rotation no longer applies to it.", id, bone.name, bone.slot, bone.parent);
             }
         }
@@ -85,15 +130,15 @@ public final class BedrockModelParser {
         Vector3f origin = new Vector3f(0.0F, BEDROCK_FLOOR, 0.0F);
         for (Bone bone : ordered) {
             if (bone.attachment == null) {
-                children.put(unique(children, bone.name), build(bone, origin, built, texWidth, texHeight));
+                children.put(unique(children, bone.name), build(bone, origin, built, texWidth, texHeight, mask));
             }
         }
         for (Bone bone : ordered) {
             if (!built.contains(bone.name)) {
-                if (bindBodyParts) {
+                if (log && bindBodyParts) {
                     Apoli.LOGGER.warn("[Apoli] Custom model {} bone '{}' is part of a parent cycle; treating it as a root bone.", id, bone.name);
                 }
-                children.put(unique(children, bone.name), build(bone, origin, built, texWidth, texHeight));
+                children.put(unique(children, bone.name), build(bone, origin, built, texWidth, texHeight, mask));
             }
         }
 
@@ -117,7 +162,7 @@ public final class BedrockModelParser {
             lookup.put(entry.getKey(), entry.getValue().toArray(new CustomModel.Bone[0]));
         }
         return new CustomModel(new ModelPart(List.of(), children), lookup,
-            all.toArray(new CustomModel.Bone[0]), hoisted);
+            all.toArray(new CustomModel.Bone[0]), hoisted, textureMeshes);
     }
 
     private static ModelPart[] ancestorsOf(Bone bone) {
@@ -148,7 +193,8 @@ public final class BedrockModelParser {
         return parent != null;
     }
 
-    private static ModelPart build(Bone bone, Vector3f parentPivot, Set<String> built, int texWidth, int texHeight) {
+    private static ModelPart build(Bone bone, Vector3f parentPivot, Set<String> built, int texWidth, int texHeight,
+                                   @Nullable TextureMask mask) {
         built.add(bone.name);
         List<ModelPart.Cube> cubes = new ArrayList<>();
         Map<String, ModelPart> children = new LinkedHashMap<>();
@@ -169,7 +215,20 @@ public final class BedrockModelParser {
                 continue;
             }
             child.builtParent = bone;
-            children.put(unique(children, child.name), build(child, bone.pivot, built, texWidth, texHeight));
+            children.put(unique(children, child.name), build(child, bone.pivot, built, texWidth, texHeight, mask));
+        }
+        if (mask != null) {
+            int meshed = 0;
+            for (TextureMesh mesh : bone.meshes) {
+                TextureMeshCube cube = TextureMeshCube.of(mask, texWidth, texHeight, mesh.scale, mesh.localPivot);
+                if (cube == null) {
+                    continue;
+                }
+                children.put(unique(children, bone.name + "_m" + meshed++), posed(
+                    new ModelPart(List.of(cube), Map.of()),
+                    mesh.position.x - bone.pivot.x, mesh.position.y, mesh.position.z - bone.pivot.z,
+                    mesh.rotX, mesh.rotY, mesh.rotZ));
+            }
         }
         bone.part = posed(new ModelPart(cubes, children),
             bone.pivot.x - parentPivot.x, parentPivot.y - bone.pivot.y, bone.pivot.z - parentPivot.z,
@@ -222,6 +281,9 @@ public final class BedrockModelParser {
         for (Dynamic<T> element : json.get("cubes").asList(java.util.function.Function.identity())) {
             bone.cubes.add(parseCube(element, mirror, inflate, id, bone.name));
         }
+        for (Dynamic<T> element : json.get("texture_meshes").asList(java.util.function.Function.identity())) {
+            bone.meshes.add(parseTextureMesh(element));
+        }
         return bone;
     }
 
@@ -247,6 +309,25 @@ public final class BedrockModelParser {
             }
         }
         return cube;
+    }
+
+    private static <T> TextureMesh parseTextureMesh(Dynamic<T> json) {
+        TextureMesh mesh = new TextureMesh();
+        mesh.position = vector(json, "position");
+        mesh.localPivot = vector(json, "local_pivot");
+        Vector3f rotation = vector(json, "rotation");
+        mesh.rotX = rotation.x * DEG_TO_RAD;
+        mesh.rotY = rotation.y * DEG_TO_RAD;
+        mesh.rotZ = rotation.z * DEG_TO_RAD;
+        List<Float> scale = numbers(json.get("scale").result().orElse(null));
+        if (scale.size() >= 3) {
+            mesh.scale = new Vector3f(scale.get(0), scale.get(1), scale.get(2));
+        } else if (scale.size() == 1) {
+            mesh.scale = new Vector3f(scale.get(0));
+        } else {
+            mesh.scale = new Vector3f(json.get("scale").asNumber().result().map(Number::floatValue).orElse(1.0F));
+        }
+        return mesh;
     }
 
     private static <T> Map<Direction, float[]> parseFaces(Dynamic<T> json, Vector3f size, ResourceLocation id, String boneName) {
@@ -339,6 +420,7 @@ public final class BedrockModelParser {
         float rotZ;
         final List<Bone> children = new ArrayList<>();
         final List<Cube> cubes = new ArrayList<>();
+        final List<TextureMesh> meshes = new ArrayList<>(0);
 
         void resetAssembly() {
             this.attachment = this.linked;
@@ -347,6 +429,15 @@ public final class BedrockModelParser {
             this.part = null;
             this.handle = null;
         }
+    }
+
+    private static final class TextureMesh {
+        Vector3f position = new Vector3f();
+        Vector3f localPivot = new Vector3f();
+        Vector3f scale = new Vector3f(1.0F);
+        float rotX;
+        float rotY;
+        float rotZ;
     }
 
     private static final class Cube {

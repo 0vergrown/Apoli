@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.condition.builtin.bientity;
 
+import dev.overgrown.apoli.util.BlockClips;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.overgrown.apoli.compat.sable.SableSubLevels;
@@ -40,7 +41,7 @@ public final class CanSeeCondition implements ConditionType<BiEntityCtx, CanSeeC
             case NONE        -> ClipContext.Fluid.NONE;
             case SOURCE_ONLY -> ClipContext.Fluid.SOURCE_ONLY;
         };
-        HitResult hit = ctx.level().clip(new ClipContext(from, to, block, fluid, ctx.actor()));
+        HitResult hit = BlockClips.clipBypassingSelectionLock(ctx.level(), new ClipContext(from, to, block, fluid, ctx.actor()));
         boolean seen = hit.getType() == HitResult.Type.MISS;
         if (DevParticles.due(ctx.level(), ctx.actor(), ctx.target(), cfg)) {
             ServerLevel level = (ServerLevel) ctx.level();

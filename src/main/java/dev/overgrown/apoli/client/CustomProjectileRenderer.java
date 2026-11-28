@@ -115,7 +115,7 @@ public class CustomProjectileRenderer extends EntityRenderer<CustomProjectileEnt
         for (int i = 0; i < geometry.size(); i++) {
             GeometryRender render = geometry.get(i);
             AnimationPlayback.Track track = AnimationPlayer.track(entity, render);
-            CustomModel custom = CustomModelManager.get(render.model(), false);
+            CustomModel custom = CustomModelManager.get(render, false, entity);
             if (custom == null) continue;
             GeometryRenderer.resetAll(custom);
             AnimationPlayer.apply(entity, track, custom, partialTick);
