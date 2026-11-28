@@ -55,7 +55,7 @@ public class CustomModelRenderLayer extends RenderLayer<AbstractClientPlayer, Pl
                 if (body <= 0.0F) continue;
                 alpha = body;
             }
-            CustomModel custom = CustomModelManager.get(render.model(), render.bindBodyParts());
+            CustomModel custom = CustomModelManager.get(render, render.bindBodyParts(), player);
             if (custom == null) {
                 continue;
             }

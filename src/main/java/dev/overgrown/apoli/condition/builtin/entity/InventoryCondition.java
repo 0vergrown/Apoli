@@ -54,9 +54,14 @@ public final class InventoryCondition implements ConditionType<EntityCtx, Invent
         List<InventoryType> types = cfg.inventoryTypes.orElse(List.of(InventoryType.INVENTORY));
         int[] count = {0};
 
-        if (types.contains(InventoryType.INVENTORY) && entity instanceof Player player) {
-            InventoryHelper.walk(player.getInventory(), player, cfg.itemCondition, cfg.slot, cfg.slots,
-                cfg.processMode, 0, (idx, stack) -> count[0]++);
+        if (types.contains(InventoryType.INVENTORY)) {
+            if (entity instanceof Player player) {
+                InventoryHelper.walk(player.getInventory(), player, cfg.itemCondition, cfg.slot, cfg.slots,
+                    cfg.processMode, 0, (idx, stack) -> count[0]++);
+            } else {
+                InventoryHelper.walkEntity(entity, cfg.itemCondition, cfg.slot, cfg.slots, cfg.processMode, 0,
+                    false, (access, stack) -> count[0]++);
+            }
         }
         if (types.contains(InventoryType.POWER) && cfg.power.isPresent()) {
             SimpleContainer container = InventoryPower.openContainer(entity, cfg.power.get());

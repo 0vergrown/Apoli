@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.condition.builtin.entity;
 
+import dev.overgrown.apoli.util.BlockClips;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -94,7 +95,7 @@ public final class RaycastEntityCondition implements ConditionType<EntityCtx, Ra
         double blockSq = Double.POSITIVE_INFINITY;
         if (cfg.block) {
             Vec3 to = origin.add(dir.scale(blockDist));
-            BlockHitResult hit = level.clip(new ClipContext(origin, to, cfg.shapeType.vanilla(), cfg.fluidHandling.vanilla(), source));
+            BlockHitResult hit = BlockClips.clipBypassingSelectionLock(level, new ClipContext(origin, to, cfg.shapeType.vanilla(), cfg.fluidHandling.vanilla(), source));
             if (hit.getType() != HitResult.Type.MISS) {
                 Vec3 hitPos = SableSubLevels.worldPosition(level, hit.getLocation());
                 if (hitPos != null) {

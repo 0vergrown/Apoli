@@ -43,7 +43,7 @@ public class MinionCustomModelLayer extends RenderLayer<MinionEntity, MinionMode
                 if (body <= 0.0F) continue;
                 alpha = body;
             }
-            CustomModel custom = CustomModelManager.get(render.model(), false);
+            CustomModel custom = CustomModelManager.get(render, false, minion);
             if (custom == null) {
                 continue;
             }

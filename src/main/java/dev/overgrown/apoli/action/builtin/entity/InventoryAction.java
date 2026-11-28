@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.action.builtin.entity;
 
+import net.minecraft.world.entity.SlotAccess;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -96,35 +97,47 @@ public final class InventoryAction implements ActionType<EntityCtx, InventoryAct
             InventoryPower.saveContainer(entity, powerId, container);
             return;
         }
-        if (!(entity instanceof Player player)) return;
-        apply(cfg, player.getInventory(), entity, ctx);
+        if (entity instanceof Player player) {
+            apply(cfg, player.getInventory(), entity, ctx);
+        } else {
+            applyToSlots(cfg, entity, ctx);
+        }
     }
 
     private void apply(Cfg cfg, Container container, LivingEntity entity, EntityCtx ctx) {
         ProcessMode mode = cfg.operation == Operation.MODIFY ? cfg.processMode : ProcessMode.STACKS;
         InventoryHelper.walk(container, entity, cfg.itemCondition, cfg.slot, cfg.slots, mode, cfg.limit,
             cfg.operation == Operation.REPLACE,
-            (idx, stack) -> {
-                switch (cfg.operation) {
-                    case MODIFY -> cfg.itemAction.ifPresent(a -> a.run(new ItemCtx(stack, ctx.level(), entity)));
-                    case REPLACE -> {
-                        if (cfg.stack.isEmpty()) return;
-                        ItemStack replacement = cfg.stack.get().stack().copy();
-                        if (cfg.mergeNbt && replacement.getItem() != Items.AIR) {
-                            replacement.applyComponents(stack.getComponentsPatch());
-                        }
-                        container.setItem(idx, replacement);
-                        cfg.itemAction.ifPresent(a -> a.run(new ItemCtx(replacement, ctx.level(), entity)));
-                    }
-                    case DROP -> {
-                        int drop = Math.min(cfg.amount.orElse(stack.getCount()), stack.getCount());
-                        ItemStack split = stack.split(drop);
-                        cfg.itemAction.ifPresent(a -> a.run(new ItemCtx(split, ctx.level(), entity)));
-                        dropStack(entity, split, cfg.throwRandomly, cfg.retainOwnership);
-                        container.setItem(idx, stack);
-                    }
+            (idx, stack) -> visit(cfg, SlotAccess.forContainer(container, idx), stack, entity, ctx));
+    }
+
+    private void applyToSlots(Cfg cfg, LivingEntity entity, EntityCtx ctx) {
+        ProcessMode mode = cfg.operation == Operation.MODIFY ? cfg.processMode : ProcessMode.STACKS;
+        InventoryHelper.walkEntity(entity, cfg.itemCondition, cfg.slot, cfg.slots, mode, cfg.limit,
+            cfg.operation == Operation.REPLACE,
+            (access, stack) -> visit(cfg, access, stack, entity, ctx));
+    }
+
+    private void visit(Cfg cfg, SlotAccess access, ItemStack stack, LivingEntity entity, EntityCtx ctx) {
+        switch (cfg.operation) {
+            case MODIFY -> cfg.itemAction.ifPresent(a -> a.run(new ItemCtx(stack, ctx.level(), entity)));
+            case REPLACE -> {
+                if (cfg.stack.isEmpty()) return;
+                ItemStack replacement = cfg.stack.get().stack().copy();
+                if (cfg.mergeNbt && replacement.getItem() != Items.AIR) {
+                    replacement.applyComponents(stack.getComponentsPatch());
                 }
-            });
+                access.set(replacement);
+                cfg.itemAction.ifPresent(a -> a.run(new ItemCtx(replacement, ctx.level(), entity)));
+            }
+            case DROP -> {
+                int drop = Math.min(cfg.amount.orElse(stack.getCount()), stack.getCount());
+                ItemStack split = stack.split(drop);
+                cfg.itemAction.ifPresent(a -> a.run(new ItemCtx(split, ctx.level(), entity)));
+                dropStack(entity, split, cfg.throwRandomly, cfg.retainOwnership);
+                access.set(stack);
+            }
+        }
     }
 
     private static void dropStack(LivingEntity entity, ItemStack stack, boolean throwRandomly, boolean retainOwnership) {

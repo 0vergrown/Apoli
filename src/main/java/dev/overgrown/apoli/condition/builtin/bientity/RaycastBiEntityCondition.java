@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.condition.builtin.bientity;
 
+import dev.overgrown.apoli.util.BlockClips;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -88,7 +89,7 @@ public final class RaycastBiEntityCondition implements ConditionType<BiEntityCtx
             rx, ry, rz, cone, coneCos);
         BlockHitResult blocker = null;
         if (hit != null && cfg.block && origin.distanceToSqr(hit) >= 1.0e-8) {
-            BlockHitResult clip = actor.level().clip(new ClipContext(origin, hit, cfg.shapeType.vanilla(),
+            BlockHitResult clip = BlockClips.clipBypassingSelectionLock(actor.level(), new ClipContext(origin, hit, cfg.shapeType.vanilla(),
                 cfg.fluidHandling.vanilla(), actor));
             if (clip.getType() != HitResult.Type.MISS) blocker = clip;
         }

@@ -122,7 +122,7 @@ public abstract class PlayerRendererCustomModelMixin extends LivingEntityRendere
             if (!render.showFirstPerson()) {
                 continue;
             }
-            CustomModel custom = CustomModelManager.get(render.model(), render.bindBodyParts());
+            CustomModel custom = CustomModelManager.get(render, render.bindBodyParts(), player);
             if (custom == null) {
                 continue;
             }
