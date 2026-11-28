@@ -127,6 +127,11 @@ public final class ApoliClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(SyncKeybindsS2C.TYPE, (payload, context) ->
             context.client().execute(() -> DynamicKeyMappingManager.applyKeybinds(payload.keybinds())));
 
+        ClientPlayNetworking.registerGlobalReceiver(dev.overgrown.apoli.network.payload.GameRulesS2C.TYPE, (payload, context) ->
+            context.client().execute(() -> dev.overgrown.apoli.gamerule.DataGameRules.applyClient(payload.values())));
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) ->
+            mc.execute(dev.overgrown.apoli.gamerule.DataGameRules::clearClient));
+
         ClientPlayNetworking.registerGlobalReceiver(
             dev.overgrown.apoli.network.payload.PowerInventoryS2C.TYPE, (payload, context) ->
                 context.client().execute(() -> ClientPowerState.applyPowerInventory(payload)));

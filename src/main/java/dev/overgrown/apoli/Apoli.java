@@ -125,6 +125,7 @@ public final class Apoli implements ModInitializer {
             new IdentifiedReloader(id("global_powers_reloader"), new dev.overgrown.apoli.global.GlobalPowerLoader()));
         ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(
             new IdentifiedReloader(id("scripts_reloader"), new dev.overgrown.apoli.script.ScriptLoader()));
+        dev.overgrown.apoli.gamerule.DataGameRules.init();
 
         ServerLifecycleEvents.SERVER_STARTING.register(server -> {
             dev.overgrown.apoli.codec.ApoliOps.setRegistries(server.registryAccess());

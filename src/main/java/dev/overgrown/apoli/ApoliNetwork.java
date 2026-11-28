@@ -55,6 +55,8 @@ public final class ApoliNetwork {
             dev.overgrown.apoli.network.payload.SyncTrackedEntitySetS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(PowerActivatedS2C.TYPE, PowerActivatedS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SyncKeybindsS2C.TYPE, SyncKeybindsS2C.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.GameRulesS2C.TYPE,
+            dev.overgrown.apoli.network.payload.GameRulesS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(ApplyVelocityS2C.TYPE, ApplyVelocityS2C.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(dev.overgrown.apoli.network.payload.TickRateS2C.TYPE,
             dev.overgrown.apoli.network.payload.TickRateS2C.STREAM_CODEC);
