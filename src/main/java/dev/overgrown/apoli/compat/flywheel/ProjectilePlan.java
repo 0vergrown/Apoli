@@ -90,7 +90,7 @@ final class ProjectilePlan {
         List<Layer> layers = new ArrayList<>(geometry.size());
         for (int i = 0; i < geometry.size(); i++) {
             GeometryRender render = geometry.get(i);
-            CustomModel model = CustomModelManager.get(render.model(), false);
+            CustomModel model = CustomModelManager.get(render, false, entity);
             models[i] = model;
             if (model == null) continue;
             if (!ProjectileMeshes.supports(render.mode())) return VANILLA;
@@ -105,7 +105,7 @@ final class ProjectilePlan {
     private boolean sameGeometry(List<GeometryRender> current, CustomProjectileEntity entity) {
         if (!this.geometry.equals(current)) return false;
         for (int i = 0; i < current.size(); i++) {
-            if (this.models[i] != CustomModelManager.get(current.get(i).model(), false)) return false;
+            if (this.models[i] != CustomModelManager.get(current.get(i), false, entity)) return false;
         }
         for (Layer layer : this.layers) {
             if (!layer.texture.equals(DynamicTextures.resolve(layer.render.texture(), entity))) return false;

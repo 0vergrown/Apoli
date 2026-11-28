@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.action.builtin.entity;
 
+import dev.overgrown.apoli.util.BlockClips;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -299,7 +300,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
 
                 Vec3 from = origin;
                 for (int guard = 0; guard < MAX_PIERCED_BLOCKS; guard++) {
-                    BlockHitResult hit = level.clip(new ClipContext(from, to, cfg.params.shapeType.vanilla(),
+                    BlockHitResult hit = BlockClips.clipBypassingSelectionLock(level, new ClipContext(from, to, cfg.params.shapeType.vanilla(),
                         cfg.params.fluidHandling.vanilla(), source));
                     if (hit.getType() == HitResult.Type.MISS) break;
                     SableSubLevels.Frame frame = SableSubLevels.frameAt(level, hit.getLocation());
@@ -329,7 +330,7 @@ public final class RaycastAction implements ActionType<EntityCtx, RaycastAction.
                     from = origin.add(dir.scale(exitT + 1.0e-3));
                 }
             } else {
-                BlockHitResult hit = level.clip(new ClipContext(origin, to, cfg.params.shapeType.vanilla(),
+                BlockHitResult hit = BlockClips.clipBypassingSelectionLock(level, new ClipContext(origin, to, cfg.params.shapeType.vanilla(),
                     cfg.params.fluidHandling.vanilla(), source));
                 if (hit.getType() != HitResult.Type.MISS) {
                     SableSubLevels.Frame frame = SableSubLevels.frameAt(level, hit.getLocation());

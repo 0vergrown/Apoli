@@ -14,12 +14,14 @@ public final class CustomModel {
     private final Map<String, Bone[]> bones;
     private final Bone[] all;
     private final boolean hoisted;
+    private final boolean textureMeshes;
 
-    public CustomModel(ModelPart root, Map<String, Bone[]> bones, Bone[] all, boolean hoisted) {
+    public CustomModel(ModelPart root, Map<String, Bone[]> bones, Bone[] all, boolean hoisted, boolean textureMeshes) {
         this.root = root;
         this.bones = bones;
         this.all = all;
         this.hoisted = hoisted;
+        this.textureMeshes = textureMeshes;
     }
 
     public ModelPart root() {
@@ -39,6 +41,10 @@ public final class CustomModel {
         return this.hoisted;
     }
 
+    public boolean textureMeshes() {
+        return this.textureMeshes;
+    }
+
     public CustomModel remapped(ModelPart root, Map<ModelPart, ModelPart> parts) {
         Map<ModelPart, Bone> made = new IdentityHashMap<>(this.all.length * 2);
         Bone[] remappedAll = new Bone[this.all.length];
@@ -54,7 +60,7 @@ public final class CustomModel {
             }
             remappedBones.put(entry.getKey(), target);
         }
-        return new CustomModel(root, remappedBones, remappedAll, this.hoisted);
+        return new CustomModel(root, remappedBones, remappedAll, this.hoisted, this.textureMeshes);
     }
 
     private static Bone remap(Bone source, Map<ModelPart, ModelPart> parts, Map<ModelPart, Bone> made) {

@@ -1,5 +1,6 @@
 package dev.overgrown.apoli.mixin.block;
 
+import dev.overgrown.apoli.util.BlockClips;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import dev.overgrown.apoli.power.builtin.BlockRenderHandler;
 import net.minecraft.core.BlockPos;
@@ -29,6 +30,7 @@ public abstract class BlockStateBaseSelectionMixin {
             return original;
         }
         if (!(level instanceof Level realLevel)) return original;
+        if (BlockClips.bypassesSelectionLock(realLevel)) return original;
         return BlockRenderHandler.preventsSelection(player, realLevel, pos) ? Shapes.empty() : original;
     }
 }
