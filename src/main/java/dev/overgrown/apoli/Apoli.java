@@ -75,6 +75,8 @@ public final class Apoli {
 
         if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
             dev.overgrown.apoli.client.config.ApoliConfigScreens.register(container);
+            dev.overgrown.apoli.packassets.client.ClientPackTextures.init();
+            dev.overgrown.apoli.packassets.client.ClientPackAssets.init();
         }
 
         ApoliAliases.bootstrap();
@@ -109,6 +111,8 @@ public final class Apoli {
         dev.overgrown.apoli.particle.ApoliParticles.register(modBus);
         modBus.addListener(dev.overgrown.apoli.entity.ApoliEntities::registerAttributes);
         modBus.addListener(ApoliNetwork::register);
+        dev.overgrown.apoli.packassets.PackTextures.init();
+        dev.overgrown.apoli.packassets.PackAssets.init();
         modBus.addListener(dev.overgrown.apoli.item.ApoliLootFunctions::register);
         modBus.addListener(Apoli::onConfigTasks);
 
