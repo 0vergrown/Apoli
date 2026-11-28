@@ -80,6 +80,7 @@
     "item.PlayerDropConjuredMixin",
     "item.PlayerKeepInventoryMixin",
     "item.ServerPlayerKeepInventoryMixin",
+    "flag.ServerPlayerInstantRespawnMixin",
     "item.SlotConjuredMixin",
     "label.ChatTypeNameMixin",
     "label.PlayerDisplayNameMixin",
