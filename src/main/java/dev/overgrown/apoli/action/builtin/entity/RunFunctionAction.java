@@ -63,8 +63,10 @@ public final class RunFunctionAction implements ActionType<EntityCtx, RunFunctio
             cfg.arguments().forEach((str, dynamic) -> {
                 Dynamic<?> dynamicOut = dynamic;
 
-                if (dynamic.asString().isSuccess()) {
-                    dynamicOut = new Dynamic<>(JsonOps.INSTANCE, new JsonPrimitive(Expression.of(dynamic.asString().getOrThrow()).eval(ctx.entity())));
+                var dynRes = dynamic.asString().result();
+
+                if (dynRes.isPresent()) {
+                    dynamicOut = new Dynamic<>(JsonOps.INSTANCE, new JsonPrimitive(Expression.of(dynRes.get()).eval(ctx.entity())));
                 }
 
                 finalArgs.put(str, dynamicOut);
